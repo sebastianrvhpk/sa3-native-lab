@@ -518,6 +518,7 @@ except ImportError:
     torchaudio = None
 
 from latent_audio_primitives import LatentMemoryIndex
+from latent_audio_primitives.colab_audio_player import display_audio_player
 from latent_audio_primitives.adapters.stable_audio3 import (
     SAMEAutoencoderAdapter,
     StableAudio3Adapter,
@@ -667,10 +668,9 @@ if RUN_SMOKE_TEST:
     torchaudio.save(str(smoke_path), smoke_audio[0], sa3.sample_rate)
     print("saved:", smoke_path)
     try:
-        from IPython.display import Audio, display
-        display(Audio(str(smoke_path)))
+        display_audio_player([smoke_path], title="SA3 Medium smoke test")
     except Exception as exc:
-        print("Audio display skipped:", exc)
+        print("Custom audio player skipped:", exc)
 """
     ),
     md(
@@ -966,6 +966,40 @@ def compare_flow_velocity_conventions(stable_model, target_latents, prompts, *, 
     ),
     md(
         r"""
+## Custom Colab Audio Player
+
+The notebook uses a small self-contained Web Audio/canvas player instead of `IPython.display.Audio` for generated outputs.
+
+It supports:
+
+```text
+playlist comparison
+waveform seek
+track loop
+loop-region in/out points
+volume and speed
+keyboard shortcuts after clicking the player
+```
+
+The audio is embedded into the notebook output as base64, so keep playlists short when files are long.
+"""
+    ),
+    code(
+        r"""
+# @title Audio player helper
+
+def play_audio_files(paths, *, labels=None, title="Audio Player", peak_count=900, max_embed_mb=96.0):
+    return display_audio_player(
+        paths,
+        labels=labels,
+        title=title,
+        peak_count=peak_count,
+        max_embed_mb=max_embed_mb,
+    )
+"""
+    ),
+    md(
+        r"""
 ## Dataset / Long-File Input Policy
 
 For folders of long recordings, set `DATASET_USE_CHUNKS=True`.
@@ -1115,10 +1149,13 @@ if RUN_MODE_0_RENOISE_VARIATIONS:
     (VARIATION_OUTPUT_DIR / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     print("saved latent memory:", VARIATION_MEMORY_DIR)
     try:
-        from IPython.display import Audio, display
-        display(Audio(manifest[-1]["path"]))
+        display_audio_player(
+            [entry["path"] for entry in manifest],
+            labels=[f"sigma {entry['init_noise_level']:.2f} seed {entry['seed']}" for entry in manifest],
+            title="Mode 0 renoise variations",
+        )
     except Exception as exc:
-        print("Audio display skipped:", exc)
+        print("Custom audio player skipped:", exc)
 """
     ),
     md(
@@ -1310,10 +1347,13 @@ if RUN_MODE_1B_GENERATE_WITH_SOFT_PROMPT:
         print("saved:", out_path)
     (SOFT_PROMPT_GENERATION_DIR / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     try:
-        from IPython.display import Audio, display
-        display(Audio(manifest[-1]["path"]))
+        display_audio_player(
+            [entry["path"] for entry in manifest],
+            labels=[f"soft prompt seed {entry['seed']}" for entry in manifest],
+            title="Mode 1b soft prompt generations",
+        )
     except Exception as exc:
-        print("Audio display skipped:", exc)
+        print("Custom audio player skipped:", exc)
 """
     ),
     md(
@@ -1689,6 +1729,7 @@ if RUN_MODE_6_STYLE_PROFILE:
     out_path = OUTPUT_DIR / "mode_06_profile_styled.wav"
     decode_sa3_latents_to_file(styled_latents, out_path)
     print("saved:", out_path)
+    play_audio_files([out_path], title="Mode 6 SAME profile styled output")
 """
     ),
     md(
@@ -1760,6 +1801,7 @@ if RUN_MODE_7_SAME_DIRECTION:
     out_path = OUTPUT_DIR / "mode_07_direction_styled.wav"
     decode_sa3_latents_to_file(steered_latents, out_path)
     print("saved:", out_path)
+    play_audio_files([out_path], title="Mode 7 SAME direction output")
 """
     ),
     md(
@@ -1833,6 +1875,11 @@ if RUN_MODE_8_PROMPT_RESIDUAL_STEERING:
         save_audio=True,
     )
     print(sweep_outputs)
+    play_audio_files(
+        [output.audio_path for output in sweep_outputs if output.audio_path],
+        labels=[f"alpha {output.alpha:+.2f}" for output in sweep_outputs if output.audio_path],
+        title="Mode 8 residual alpha sweep",
+    )
 """
     ),
     md(
@@ -2074,6 +2121,7 @@ if RUN_MODE_11_CONTINUATION:
     out_path = OUTPUT_DIR / "mode_11_continuation.wav"
     decode_sa3_latents_to_file(latents, out_path)
     print("saved:", out_path)
+    play_audio_files([out_path], title="Mode 11 continuation")
 """
     ),
     md(
@@ -2340,6 +2388,7 @@ if RUN_COMBINED_CHAIN:
     decode_sa3_latents_to_file(styled_latents, out_path)
     save_items([sa3_tensor_to_item(styled_latents, item_id="combined_final", prompt="soft+residual+profile")], MEMORY_DIR / "combined")
     print("saved:", out_path)
+    play_audio_files([out_path], title="Combined chain output")
 """
     ),
     md(

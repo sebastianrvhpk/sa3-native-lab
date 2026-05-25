@@ -50,6 +50,7 @@ from .style import (
     style_direction,
 )
 from .experiments.soft_prompt import SoftPromptState
+from .colab_audio_player import audio_player_html, display_audio_player
 
 __all__ = [
     "LatentItem",
@@ -66,6 +67,7 @@ __all__ = [
     "apply_profile_attraction",
     "apply_profile_to_item",
     "apply_style_direction",
+    "audio_player_html",
     "as_time_major",
     "best_path",
     "boundary_summary",
@@ -73,6 +75,7 @@ __all__ = [
     "cosine_similarity",
     "coordinate_prompt_search",
     "default_modifier_axes",
+    "display_audio_player",
     "euclidean_distance",
     "frame_mean_direction",
     "greedy_token_prompt_search",
