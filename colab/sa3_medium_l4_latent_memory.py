@@ -36,7 +36,7 @@ run(["nvidia-smi"])
 # layer.
 
 # %%
-COMBINED_REPO_URL = ""  # e.g. "https://github.com/<you>/sa3-native-lab.git"
+COMBINED_REPO_URL = "https://github.com/sebastianrvhpk/sa3-native-lab.git"
 REPO = Path("/content/sa3-native-lab")
 if not REPO.exists():
     if not COMBINED_REPO_URL:

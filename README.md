@@ -29,10 +29,10 @@ Push this repo to GitHub, then use the Colab notebook:
 
 `colab/sa3_same_native_experimental_modes.ipynb`
 
-Set:
+The notebook is already configured to clone:
 
 ```python
-COMBINED_REPO_URL = "https://github.com/<you>/<repo>.git"
+COMBINED_REPO_URL = "https://github.com/sebastianrvhpk/sa3-native-lab.git"
 ```
 
 The notebook installs this single repo. No zip upload is needed.

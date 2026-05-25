@@ -244,8 +244,7 @@ LMDM adaptation is conceptual unless SA3 attention/sampler code is modified and 
 # @title 0. Colab L4 setup for the combined SA3 Native Lab repo
 
 # Push this combined repository to GitHub, then put that URL here.
-# Example: COMBINED_REPO_URL = "https://github.com/sebas/sa3-native-lab.git"
-COMBINED_REPO_URL = ""
+COMBINED_REPO_URL = "https://github.com/sebastianrvhpk/sa3-native-lab.git"
 
 # Defaults are ON for Stable Audio 3 Medium experiments.
 CLONE_COMBINED_REPO = True

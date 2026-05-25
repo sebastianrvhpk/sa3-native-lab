@@ -35,7 +35,7 @@ The notebook `sa3_same_native_experimental_modes.ipynb` is configured as a
 top-to-bottom Colab L4 setup for the combined Git repo. The setup/model/smoke-test defaults are ON. The
 only expected manual actions are:
 
-1. Set `COMBINED_REPO_URL` to the GitHub URL for this combined repo.
+1. Confirm `COMBINED_REPO_URL` points to `https://github.com/sebastianrvhpk/sa3-native-lab.git`.
 2. Paste a Hugging Face token when prompted.
 
 ## Access Requirements
