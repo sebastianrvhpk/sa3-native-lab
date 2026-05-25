@@ -252,6 +252,8 @@ INSTALL_REPO = True
 INSTALL_TORCH_CU126 = True
 INSTALL_FLASH_ATTN = True
 USE_UV = True
+PIN_NUMPY = True
+REMOVE_TRANSFORMERS_OPTIONAL_SKLEARN = True
 
 PROJECT_DIR = "/content/sa3-native-lab"
 FLASH_ATTN_WHEEL_URL = ""  # Optional direct wheel URL matching Python/Torch/CUDA.
@@ -264,8 +266,11 @@ import subprocess
 import shutil
 from pathlib import Path
 
+os.environ.setdefault("USE_TF", "0")
+os.environ.setdefault("USE_FLAX", "0")
 
-def run(cmd, cwd=None, env=None):
+
+def run(cmd, cwd=None, env=None, check=True):
     print("+", " ".join(str(part) for part in cmd))
     proc = subprocess.run(
         [str(part) for part in cmd],
@@ -276,7 +281,7 @@ def run(cmd, cwd=None, env=None):
         stderr=subprocess.STDOUT,
     )
     print(proc.stdout)
-    if proc.returncode != 0:
+    if check and proc.returncode != 0:
         raise RuntimeError(
             f"Command failed with exit code {proc.returncode}: "
             + " ".join(str(part) for part in cmd)
@@ -421,6 +426,18 @@ if INSTALL_FLASH_ATTN:
 
 if INSTALL_REPO:
     install(["-e", PROJECT_DIR])
+
+if PIN_NUMPY:
+    # The upstream lower bound is numpy>=2.2.6. On Colab, resolving to newer
+    # NumPy can leave optional scipy/sklearn stacks ABI-inconsistent. Pin the
+    # minimum SA3-compatible version before importing transformers/T5Gemma.
+    install(["--force-reinstall", "numpy==2.2.6"])
+
+if REMOVE_TRANSFORMERS_OPTIONAL_SKLEARN:
+    # Transformers imports sklearn opportunistically for generation utilities.
+    # SA3/T5Gemma does not need it, and Colab's sklearn/scipy wheels can become
+    # incompatible after the NumPy resolver changes above.
+    run([sys.executable, "-m", "pip", "uninstall", "-y", "scikit-learn", "sklearn"], check=False)
 
 if PROJECT_DIR not in sys.path:
     sys.path.insert(0, PROJECT_DIR)
