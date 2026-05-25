@@ -41,7 +41,7 @@ SA3 Medium
 Torch 2.7.1 + CUDA 12.6
 FlashAttention
 NumPy pinning for Colab binary compatibility
-optional sklearn removal to avoid Transformers -> sklearn -> scipy import failures
+optional sklearn/torchvision removal to avoid Transformers optional import failures
 this repo's latent_audio_primitives package
 Hugging Face login
 model loading
@@ -53,9 +53,10 @@ Why the dependency cleanup exists:
 ```text
 uv resolves the requested dependency graph correctly, but Colab starts with many
 preinstalled packages outside that graph. Transformers may opportunistically
-import optional sklearn/scipy modules while loading T5Gemma. Those wheels can be
-ABI-incompatible after the NumPy/Torch stack changes. SA3 does not need sklearn,
-so the setup pins NumPy and removes that optional import path.
+import optional sklearn/scipy/torchvision modules while loading T5Gemma. Those
+wheels can be ABI/API-incompatible after the NumPy/Torch stack changes. SA3 does
+not need sklearn or torchvision for inference, so the setup pins NumPy and
+removes those optional import paths.
 ```
 
 The goal is not to build a final app. The goal is to expose experimental primitives that can be measured, broken, repaired, and recombined.
@@ -266,6 +267,7 @@ INSTALL_FLASH_ATTN = True
 USE_UV = True
 PIN_NUMPY = True
 REMOVE_TRANSFORMERS_OPTIONAL_SKLEARN = True
+REMOVE_TRANSFORMERS_OPTIONAL_TORCHVISION = True
 
 PROJECT_DIR = "/content/sa3-native-lab"
 FLASH_ATTN_WHEEL_URL = ""  # Optional direct wheel URL matching Python/Torch/CUDA.
@@ -450,6 +452,12 @@ if REMOVE_TRANSFORMERS_OPTIONAL_SKLEARN:
     # SA3/T5Gemma does not need it, and Colab's sklearn/scipy wheels can become
     # incompatible after the NumPy resolver changes above.
     run([sys.executable, "-m", "pip", "uninstall", "-y", "scikit-learn", "sklearn"], check=False)
+
+if REMOVE_TRANSFORMERS_OPTIONAL_TORCHVISION:
+    # Transformers also imports torchvision opportunistically from image_utils.
+    # Colab's preinstalled torchvision is tied to its original Torch build and
+    # can fail after pinning Torch to SA3's 2.7.1+cu126 requirement.
+    run([sys.executable, "-m", "pip", "uninstall", "-y", "torchvision"], check=False)
 
 if PROJECT_DIR not in sys.path:
     sys.path.insert(0, PROJECT_DIR)

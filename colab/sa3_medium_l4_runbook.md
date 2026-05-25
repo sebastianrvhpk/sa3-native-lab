@@ -85,14 +85,17 @@ pip install -U uv
 uv pip install --system torch==2.7.1 torchaudio==2.7.1 --index-url https://download.pytorch.org/whl/cu126
 uv pip install --system -e /content/sa3-native-lab
 uv pip install --system --force-reinstall numpy==2.2.6
-python -m pip uninstall -y scikit-learn sklearn
+python -m pip uninstall -y scikit-learn sklearn torchvision
 ```
 
-The NumPy/sklearn cleanup is Colab-specific. `uv` resolves the SA3 dependency
+The NumPy/sklearn/torchvision cleanup is Colab-specific. `uv` resolves the SA3 dependency
 graph, but Colab already has optional packages outside that graph. Transformers
 can opportunistically import `sklearn`, which imports `scipy`, which may be ABI
 incompatible after the NumPy stack changes. SA3/T5Gemma does not need sklearn
-for inference, so the notebook removes it.
+for inference, so the notebook removes it. Transformers can also import
+`torchvision` through optional image utilities; Colab's preinstalled torchvision
+is tied to the original Torch build and can fail after Torch is repinned to
+SA3's `2.7.1+cu126`, so the notebook removes torchvision too.
 
 First try the wheel-enabled path:
 
