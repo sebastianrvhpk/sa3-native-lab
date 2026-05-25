@@ -48,8 +48,13 @@ For SA3 Medium on Linux CUDA:
 ```bash
 uv pip install --system torch==2.7.1 torchaudio==2.7.1 --index-url https://download.pytorch.org/whl/cu126
 uv pip install --system -e .
+uv pip install --system --force-reinstall numpy==2.2.6
+python -m pip uninstall -y scikit-learn sklearn
 uv pip install --system flash-attn --no-build-isolation --no-cache-dir --no-deps
 ```
+
+The NumPy/sklearn cleanup is mainly for Colab. It prevents Transformers'
+optional sklearn import path from reaching a stale SciPy/NumPy binary stack.
 
 ## Native Spaces
 

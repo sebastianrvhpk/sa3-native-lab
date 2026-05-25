@@ -40,10 +40,22 @@ Run the setup cells top-to-bottom on a fresh L4 runtime. The setup defaults are 
 SA3 Medium
 Torch 2.7.1 + CUDA 12.6
 FlashAttention
+NumPy pinning for Colab binary compatibility
+optional sklearn removal to avoid Transformers -> sklearn -> scipy import failures
 this repo's latent_audio_primitives package
 Hugging Face login
 model loading
 one short smoke test
+```
+
+Why the dependency cleanup exists:
+
+```text
+uv resolves the requested dependency graph correctly, but Colab starts with many
+preinstalled packages outside that graph. Transformers may opportunistically
+import optional sklearn/scipy modules while loading T5Gemma. Those wheels can be
+ABI-incompatible after the NumPy/Torch stack changes. SA3 does not need sklearn,
+so the setup pins NumPy and removes that optional import path.
 ```
 
 The goal is not to build a final app. The goal is to expose experimental primitives that can be measured, broken, repaired, and recombined.

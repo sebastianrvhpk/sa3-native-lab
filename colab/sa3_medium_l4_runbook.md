@@ -84,7 +84,15 @@ Before Flash Attention, force the PyTorch wheel tuple expected by the SA3 repo:
 pip install -U uv
 uv pip install --system torch==2.7.1 torchaudio==2.7.1 --index-url https://download.pytorch.org/whl/cu126
 uv pip install --system -e /content/sa3-native-lab
+uv pip install --system --force-reinstall numpy==2.2.6
+python -m pip uninstall -y scikit-learn sklearn
 ```
+
+The NumPy/sklearn cleanup is Colab-specific. `uv` resolves the SA3 dependency
+graph, but Colab already has optional packages outside that graph. Transformers
+can opportunistically import `sklearn`, which imports `scipy`, which may be ABI
+incompatible after the NumPy stack changes. SA3/T5Gemma does not need sklearn
+for inference, so the notebook removes it.
 
 First try the wheel-enabled path:
 
