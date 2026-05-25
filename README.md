@@ -49,15 +49,14 @@ For SA3 Medium on Linux CUDA:
 uv pip install --system torch==2.7.1 torchaudio==2.7.1 --index-url https://download.pytorch.org/whl/cu126
 uv pip install --system -e .
 uv pip install --system --force-reinstall numpy==2.2.6
-python -m pip uninstall -y scikit-learn sklearn torchvision
+python -m pip uninstall -y scipy scikit-learn sklearn torchvision
 uv pip install --system flash-attn --no-build-isolation --no-cache-dir --no-deps
 ```
 
-The NumPy/sklearn cleanup is mainly for Colab. It prevents Transformers'
-optional sklearn import path from reaching a stale SciPy/NumPy binary stack.
-The torchvision removal prevents Transformers' optional vision import path from
-loading Colab's preinstalled torchvision build after Torch is repinned to
-SA3's `2.7.1+cu126`.
+The NumPy/scipy/sklearn/torchvision cleanup is mainly for Colab. It prevents
+Transformers' optional scientific/vision import paths from reaching stale binary
+packages after Torch/NumPy are repinned. Restart the Colab runtime once after
+the install phase so old binary modules are cleared from memory.
 
 ## Native Spaces
 

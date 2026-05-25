@@ -41,7 +41,8 @@ SA3 Medium
 Torch 2.7.1 + CUDA 12.6
 FlashAttention
 NumPy pinning for Colab binary compatibility
-optional sklearn/torchvision removal to avoid Transformers optional import failures
+optional scipy/sklearn/torchvision removal to avoid Transformers optional import failures
+one automatic runtime restart after first install
 this repo's latent_audio_primitives package
 Hugging Face login
 model loading
@@ -53,10 +54,11 @@ Why the dependency cleanup exists:
 ```text
 uv resolves the requested dependency graph correctly, but Colab starts with many
 preinstalled packages outside that graph. Transformers may opportunistically
-import optional sklearn/scipy/torchvision modules while loading T5Gemma. Those
+import optional scipy/sklearn/torchvision modules while loading T5Gemma. Those
 wheels can be ABI/API-incompatible after the NumPy/Torch stack changes. SA3 does
-not need sklearn or torchvision for inference, so the setup pins NumPy and
-removes those optional import paths.
+not need scipy, sklearn, or torchvision for inference, so the setup pins NumPy
+and removes those optional import paths. Because Torch/NumPy are binary packages,
+the setup intentionally restarts the Colab runtime once after the first install.
 ```
 
 The goal is not to build a final app. The goal is to expose experimental primitives that can be measured, broken, repaired, and recombined.
@@ -266,10 +268,13 @@ INSTALL_TORCH_CU126 = True
 INSTALL_FLASH_ATTN = True
 USE_UV = True
 PIN_NUMPY = True
-REMOVE_TRANSFORMERS_OPTIONAL_SKLEARN = True
+REMOVE_TRANSFORMERS_OPTIONAL_SCIPY_SKLEARN = True
 REMOVE_TRANSFORMERS_OPTIONAL_TORCHVISION = True
+RESTART_RUNTIME_AFTER_FIRST_INSTALL = True
+FORCE_FULL_SETUP = False
 
 PROJECT_DIR = "/content/sa3-native-lab"
+SETUP_MARKER = "/content/.sa3_native_lab_setup_complete"
 FLASH_ATTN_WHEEL_URL = ""  # Optional direct wheel URL matching Python/Torch/CUDA.
 FLASH_ATTN_MAX_JOBS = "2"
 FLASH_ATTN_FROM_SOURCE = False
@@ -278,6 +283,7 @@ import os
 import sys
 import subprocess
 import shutil
+import time
 from pathlib import Path
 
 os.environ.setdefault("USE_TF", "0")
@@ -350,6 +356,8 @@ def ensure_project_dir():
         and (project / "latent_audio_primitives").exists()
     )
     if has_project:
+        if CLONE_COMBINED_REPO and (project / ".git").exists():
+            run(["git", "-C", str(project), "pull", "--ff-only"], check=False)
         return project
 
     if CLONE_COMBINED_REPO:
@@ -380,12 +388,19 @@ def ensure_project_dir():
     )
 
 
+setup_marker = Path(SETUP_MARKER)
+setup_complete = setup_marker.exists() and not FORCE_FULL_SETUP
+
 if INSTALL_REPO:
     PROJECT_DIR = str(ensure_project_dir())
     if PROJECT_DIR not in sys.path:
         sys.path.insert(0, PROJECT_DIR)
 
-if INSTALL_TORCH_CU126:
+if setup_complete:
+    print(f"Setup marker found: {SETUP_MARKER}")
+    print("Skipping dependency installation. Delete the marker or set FORCE_FULL_SETUP=True to reinstall.")
+
+if not setup_complete and INSTALL_TORCH_CU126:
     install(
         [
             "torch==2.7.1",
@@ -395,7 +410,7 @@ if INSTALL_TORCH_CU126:
         ]
     )
 
-if INSTALL_FLASH_ATTN:
+if not setup_complete and INSTALL_FLASH_ATTN:
     if module_available("flash_attn"):
         print("flash_attn already importable; skipping FlashAttention install.")
     else:
@@ -438,26 +453,35 @@ if INSTALL_FLASH_ATTN:
             )
     run([sys.executable, "-c", "import flash_attn; from flash_attn import flash_attn_func; print('flash_attn', flash_attn.__version__)"])
 
-if INSTALL_REPO:
+if not setup_complete and INSTALL_REPO:
     install(["-e", PROJECT_DIR])
 
-if PIN_NUMPY:
+if not setup_complete and PIN_NUMPY:
     # The upstream lower bound is numpy>=2.2.6. On Colab, resolving to newer
     # NumPy can leave optional scipy/sklearn stacks ABI-inconsistent. Pin the
     # minimum SA3-compatible version before importing transformers/T5Gemma.
     install(["--force-reinstall", "numpy==2.2.6"])
 
-if REMOVE_TRANSFORMERS_OPTIONAL_SKLEARN:
-    # Transformers imports sklearn opportunistically for generation utilities.
-    # SA3/T5Gemma does not need it, and Colab's sklearn/scipy wheels can become
-    # incompatible after the NumPy resolver changes above.
-    run([sys.executable, "-m", "pip", "uninstall", "-y", "scikit-learn", "sklearn"], check=False)
+if not setup_complete and REMOVE_TRANSFORMERS_OPTIONAL_SCIPY_SKLEARN:
+    # Transformers imports scipy/sklearn opportunistically for generation/loss
+    # utilities. SA3/T5Gemma does not need them, and Colab's scipy/sklearn wheels
+    # can become incompatible after the NumPy resolver changes above.
+    run([sys.executable, "-m", "pip", "uninstall", "-y", "scipy", "scikit-learn", "sklearn"], check=False)
 
-if REMOVE_TRANSFORMERS_OPTIONAL_TORCHVISION:
+if not setup_complete and REMOVE_TRANSFORMERS_OPTIONAL_TORCHVISION:
     # Transformers also imports torchvision opportunistically from image_utils.
     # Colab's preinstalled torchvision is tied to its original Torch build and
     # can fail after pinning Torch to SA3's 2.7.1+cu126 requirement.
     run([sys.executable, "-m", "pip", "uninstall", "-y", "torchvision"], check=False)
+
+if not setup_complete:
+    setup_marker.write_text("complete\n", encoding="utf-8")
+    if RESTART_RUNTIME_AFTER_FIRST_INSTALL:
+        print("\n=== first install complete ===")
+        print("Restarting the Colab runtime now to clear old Torch/NumPy modules.")
+        print("After Colab reconnects, rerun this cell. It will skip installs and verify imports.")
+        time.sleep(2)
+        os.kill(os.getpid(), 9)
 
 if PROJECT_DIR not in sys.path:
     sys.path.insert(0, PROJECT_DIR)
