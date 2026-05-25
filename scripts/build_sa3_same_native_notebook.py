@@ -146,6 +146,7 @@ The exact target convention is an implementation detail. The research claim is n
         r"""
 ## Experimental Modes Covered
 
+0. Renoise variation / local neighborhood sampling
 1. Audio -> soft prompt
 2. Audio -> babble / hard prompt
 3. Audio -> readable prompt
@@ -238,6 +239,7 @@ LMDM adaptation is conceptual unless SA3 attention/sampler code is modified and 
 
 | Notebook mode | Native object edited | Closest literature |
 |---|---|---|
+| 0. Renoise variation | SAME latent neighborhood around \(E(x)\) | SDEdit/img2img-style noising, SA3 `init_audio` path |
 | 1. Audio -> soft prompt | SA3 conditioning tensor \(c\) | Flow matching, PEZ/soft prompts, DITTO-style inference optimization |
 | 2. Audio -> babble prompt | hard text/token sequence \(p\) | PEZ / hard prompt optimization |
 | 3. Audio -> readable prompt | constrained text prompt \(p\) | prompt search, SA3 text-conditioned generation |
@@ -519,6 +521,7 @@ from latent_audio_primitives import LatentMemoryIndex
 from latent_audio_primitives.adapters.stable_audio3 import (
     SAMEAutoencoderAdapter,
     StableAudio3Adapter,
+    audio_chunk_windows,
     latents_to_items,
 )
 from latent_audio_primitives.adapters.audioscope_sa3 import SteeringVectors, ResidualSteerer
@@ -760,13 +763,102 @@ def encode_audio_file_to_item(path, item_id=None, prompt=None, duration=None):
     )
 
 
-def encode_audio_folder_to_items(directory, *, limit=None, duration=None, prompt_from_path=True):
+def encode_audio_file_to_items(
+    path,
+    *,
+    item_id=None,
+    prompt=None,
+    duration=None,
+    use_chunks=False,
+    chunk_duration=None,
+    hop_duration=None,
+    max_chunks=None,
+    drop_last=False,
+):
+    require_models()
+    path = Path(path)
+    if use_chunks:
+        chunk_duration = chunk_duration or duration
+        if chunk_duration is None:
+            raise ValueError("chunk_duration or duration is required when use_chunks=True.")
+        return same.encode_file_chunks(
+            path,
+            chunk_duration=chunk_duration,
+            hop_duration=hop_duration,
+            max_chunks=max_chunks,
+            drop_last=drop_last,
+            item_id_prefix=item_id or path.stem,
+            prompt=prompt,
+            chunked=False,
+            metadata={"path": str(path), "encoding_mode": "chunked_folder_window"},
+        )
+    return [encode_audio_file_to_item(path, item_id=item_id, prompt=prompt, duration=duration)]
+
+
+def encode_audio_folder_to_items(
+    directory,
+    *,
+    limit=None,
+    duration=None,
+    prompt_from_path=True,
+    use_chunks=False,
+    chunk_duration=None,
+    hop_duration=None,
+    max_chunks_per_file=None,
+    drop_last=False,
+):
     items = []
     for path in list_audio_files(directory, limit=limit):
         prompt = prompt_seed_from_audio_path(path) if prompt_from_path else None
-        item = encode_audio_file_to_item(path, item_id=path.stem, prompt=prompt, duration=duration)
-        items.append(item)
+        file_items = encode_audio_file_to_items(
+            path,
+            item_id=path.stem,
+            prompt=prompt,
+            duration=duration,
+            use_chunks=use_chunks,
+            chunk_duration=chunk_duration,
+            hop_duration=hop_duration,
+            max_chunks=max_chunks_per_file,
+            drop_last=drop_last,
+        )
+        items.extend(file_items)
+        print(f"{path.name}: {len(file_items)} item(s)")
+    print(f"encoded {len(items)} latent item(s) from {directory}")
     return items
+
+
+def preview_audio_folder_chunk_plan(
+    directory,
+    *,
+    limit=None,
+    chunk_duration=12.0,
+    hop_duration=None,
+    max_chunks_per_file=None,
+    drop_last=False,
+):
+    if torchaudio is None:
+        raise RuntimeError("torchaudio is required.")
+    plan = []
+    for path in list_audio_files(directory, limit=limit):
+        info = torchaudio.info(str(path))
+        windows = audio_chunk_windows(
+            int(info.num_frames),
+            int(info.sample_rate),
+            chunk_duration,
+            hop_duration=hop_duration,
+            max_chunks=max_chunks_per_file,
+            drop_last=drop_last,
+        )
+        plan.append(
+            {
+                "path": str(path),
+                "source_seconds": round(info.num_frames / info.sample_rate, 3),
+                "chunks": len(windows),
+                "first_start": round(windows[0]["start_seconds"], 3) if windows else None,
+                "last_start": round(windows[-1]["start_seconds"], 3) if windows else None,
+            }
+        )
+    return plan
 
 
 def pad_or_crop_channel_first(tensor, target_frames):
@@ -874,6 +966,163 @@ def compare_flow_velocity_conventions(stable_model, target_latents, prompts, *, 
     ),
     md(
         r"""
+## Dataset / Long-File Input Policy
+
+For folders of long recordings, set `DATASET_USE_CHUNKS=True`.
+
+Without chunking, each file is encoded as one item and `DATASET_DURATION=8.0` means "use the first 8 seconds of each file." With chunking, each long file becomes many SAME latent items:
+
+$$
+x_{file} \rightarrow \{x_{[0,L]}, x_{[H,H+L]}, x_{[2H,2H+L]}, \ldots\}
+$$
+
+and then:
+
+$$
+z_i = E(x_i)
+$$
+
+This is the right default for DJ sets, live sets, mixtapes, stems, and archives where the interesting distribution is spread across time.
+"""
+    ),
+    code(
+        r"""
+# @title Dataset / long-file chunking controls
+
+DATASET_DIR = INPUT_DIR / "dataset_positive"
+REFERENCE_DIR = INPUT_DIR / "dataset_reference"
+
+DATASET_DURATION = 8.0
+DATASET_LIMIT = 2  # number of files before chunking; raise after the pipeline works
+
+DATASET_USE_CHUNKS = True
+DATASET_CHUNK_DURATION = 12.0
+DATASET_HOP_DURATION = 12.0  # use 6.0 for 50% overlap on 12s chunks
+DATASET_MAX_CHUNKS_PER_FILE = 4  # L4-safe default for optimization modes
+DATASET_DROP_LAST_CHUNK = False
+
+RUN_DATASET_CHUNK_PREVIEW = False
+
+
+def dataset_effective_duration():
+    return DATASET_CHUNK_DURATION if DATASET_USE_CHUNKS else DATASET_DURATION
+
+
+if RUN_DATASET_CHUNK_PREVIEW:
+    plan = preview_audio_folder_chunk_plan(
+        DATASET_DIR,
+        limit=DATASET_LIMIT,
+        chunk_duration=DATASET_CHUNK_DURATION,
+        hop_duration=DATASET_HOP_DURATION,
+        max_chunks_per_file=DATASET_MAX_CHUNKS_PER_FILE,
+        drop_last=DATASET_DROP_LAST_CHUNK,
+    )
+    print(json.dumps(plan, indent=2))
+"""
+    ),
+    md(
+        r"""
+## Mode 0. Renoise Variation / Local Neighborhood Sampling
+
+This is the Tero-style loop neighborhood primitive.
+
+Encode an existing loop as a SAME latent, partially renoise it, then let SA3 flow it back to the data manifold:
+
+$$
+z_0 = E(x)
+$$
+
+$$
+z_\sigma \approx (1-\sigma) z_0 + \sigma \epsilon,\qquad
+\epsilon \sim \mathcal{N}(0,I)
+$$
+
+$$
+\tilde z = \operatorname{sample}_\theta(z_\sigma, c=\emptyset)
+$$
+
+$$
+\tilde x = D(\tilde z)
+$$
+
+`init_noise_level` is the local-neighborhood radius:
+
+```text
+0.10-0.30: conservative timbral/performance variants
+0.40-0.60: neighborhood variants, often keeps harmony/feel
+0.70-1.00: increasingly free regeneration
+```
+
+This is not text steering. It is local manifold resampling around an audio memory.
+"""
+    ),
+    code(
+        r"""
+# @title Mode 0. Renoise variations from an existing loop/audio
+
+RUN_MODE_0_RENOISE_VARIATIONS = False
+
+VARIATION_AUDIO = INPUT_DIR / "loop.wav"
+VARIATION_OUTPUT_DIR = OUTPUT_DIR / "mode_00_renoise_variations"
+VARIATION_MEMORY_DIR = MEMORY_DIR / "mode_00_renoise_variations"
+
+VARIATION_PROMPT = ""  # Empty string + cfg_scale=1.0 is a practical "no semantic prompt" baseline.
+VARIATION_DURATION = 8.0
+VARIATION_STEPS = 8
+VARIATION_CFG_SCALE = 1.0
+VARIATION_NOISE_LEVELS = [0.25, 0.5, 0.75]
+VARIATION_SEEDS = [0, 1, 2]
+
+if RUN_MODE_0_RENOISE_VARIATIONS:
+    require_models()
+    VARIATION_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    audio, sample_rate = load_audio(VARIATION_AUDIO, duration=VARIATION_DURATION, stereo=True)
+    items = []
+    manifest = []
+
+    for sigma in VARIATION_NOISE_LEVELS:
+        for seed in VARIATION_SEEDS:
+            latents = sa3.generate_latents(
+                prompt=VARIATION_PROMPT,
+                duration=VARIATION_DURATION,
+                steps=VARIATION_STEPS,
+                cfg_scale=VARIATION_CFG_SCALE,
+                seed=seed,
+                init_audio=(sample_rate, audio),
+                init_noise_level=float(sigma),
+            )
+            item_id = f"renoise_sigma_{sigma:.2f}_seed_{seed}"
+            out_path = VARIATION_OUTPUT_DIR / f"{item_id}.wav"
+            decode_sa3_latents_to_file(latents, out_path)
+            item = sa3_tensor_to_item(
+                latents,
+                item_id=item_id,
+                prompt=VARIATION_PROMPT,
+                metadata={
+                    "source_audio": str(VARIATION_AUDIO),
+                    "init_noise_level": float(sigma),
+                    "seed": int(seed),
+                    "duration": VARIATION_DURATION,
+                    "steps": VARIATION_STEPS,
+                    "cfg_scale": VARIATION_CFG_SCALE,
+                },
+            )
+            items.append(item)
+            manifest.append({"path": str(out_path), "init_noise_level": float(sigma), "seed": int(seed)})
+            print("saved:", out_path)
+
+    save_items(items, VARIATION_MEMORY_DIR)
+    (VARIATION_OUTPUT_DIR / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    print("saved latent memory:", VARIATION_MEMORY_DIR)
+    try:
+        from IPython.display import Audio, display
+        display(Audio(manifest[-1]["path"]))
+    except Exception as exc:
+        print("Audio display skipped:", exc)
+"""
+    ),
+    md(
+        r"""
 ## Flow Sign Diagnostic
 
 Before doing serious prompt inversion, test both velocity conventions on one target audio and several candidate prompts.
@@ -964,7 +1213,17 @@ This produces a continuous conditioning preset:
 audio.wav -> soft_prompt.pt
 ```
 
-It is not language. It is an optimized conditioning key inside SA3.
+It is not language and it is not a SAME audio latent. It is an optimized SA3 conditioning state:
+
+```text
+soft_prompt.pt =
+  conditioning dicts
+  optimized conditioning tensors
+  loss curve
+  metadata
+```
+
+Use Mode 1b to hear what the `.pt` does. Use Mode 2 or Mode 3 if you want an actual text prompt.
 """
     ),
     code(
@@ -1005,6 +1264,56 @@ if RUN_MODE_1_AUDIO_TO_SOFT_PROMPT:
     soft_state.save(SOFT_PROMPT_PATH)
     print("saved:", SOFT_PROMPT_PATH)
     print("initial/final loss:", soft_state.losses[0], soft_state.losses[-1])
+"""
+    ),
+    md(
+        r"""
+## Mode 1b. Generate With A Soft Prompt
+
+This consumes the `.pt` from Mode 1:
+
+$$
+c^\* \rightarrow \operatorname{sample}_\theta(\epsilon, c^\*) \rightarrow z \rightarrow D(z)
+$$
+
+The output should be judged like an instrument preset, not like a readable prompt.
+"""
+    ),
+    code(
+        r"""
+# @title Mode 1b. Generate audio from a saved soft prompt
+
+RUN_MODE_1B_GENERATE_WITH_SOFT_PROMPT = False
+
+SOFT_PROMPT_GENERATION_DIR = OUTPUT_DIR / "mode_01b_soft_prompt_generations"
+SOFT_PROMPT_GENERATION_STEPS = 8
+SOFT_PROMPT_GENERATION_CFG = 1.0
+SOFT_PROMPT_GENERATION_SEEDS = [10, 11, 12]
+
+if RUN_MODE_1B_GENERATE_WITH_SOFT_PROMPT:
+    require_models()
+    SOFT_PROMPT_GENERATION_DIR.mkdir(parents=True, exist_ok=True)
+    soft_state = SoftPromptState.load(SOFT_PROMPT_PATH)
+    manifest = []
+    for seed in SOFT_PROMPT_GENERATION_SEEDS:
+        latents = generate_with_soft_prompt(
+            sa3_model,
+            soft_state,
+            steps=SOFT_PROMPT_GENERATION_STEPS,
+            cfg_scale=SOFT_PROMPT_GENERATION_CFG,
+            seed=seed,
+            return_latents=True,
+        )
+        out_path = SOFT_PROMPT_GENERATION_DIR / f"soft_prompt_seed_{seed}.wav"
+        decode_sa3_latents_to_file(latents, out_path)
+        manifest.append({"path": str(out_path), "seed": int(seed)})
+        print("saved:", out_path)
+    (SOFT_PROMPT_GENERATION_DIR / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    try:
+        from IPython.display import Audio, display
+        display(Audio(manifest[-1]["path"]))
+    except Exception as exc:
+        print("Audio display skipped:", exc)
 """
     ),
     md(
@@ -1173,19 +1482,22 @@ This asks: what single conditioning key makes SA3 explain this folder?
 
 RUN_MODE_4_DATASET_TO_SOFT_PROMPT = False
 
-DATASET_DIR = INPUT_DIR / "dataset_positive"
 DATASET_SOFT_PROMPT_PATH = OUTPUT_DIR / "mode_04_dataset_soft_prompt.pt"
-DATASET_DURATION = 8.0
-DATASET_LIMIT = 8
 
 if RUN_MODE_4_DATASET_TO_SOFT_PROMPT:
     require_models()
     freeze_sa3_and_same()
+    run_duration = dataset_effective_duration()
     dataset_items = encode_audio_folder_to_items(
         DATASET_DIR,
         limit=DATASET_LIMIT,
         duration=DATASET_DURATION,
         prompt_from_path=True,
+        use_chunks=DATASET_USE_CHUNKS,
+        chunk_duration=DATASET_CHUNK_DURATION,
+        hop_duration=DATASET_HOP_DURATION,
+        max_chunks_per_file=DATASET_MAX_CHUNKS_PER_FILE,
+        drop_last=DATASET_DROP_LAST_CHUNK,
     )
     dataset_latents = items_to_latent_batch(
         dataset_items,
@@ -1196,7 +1508,7 @@ if RUN_MODE_4_DATASET_TO_SOFT_PROMPT:
         sa3_model,
         dataset_latents,
         seed_prompt="audio dataset texture",
-        duration=DATASET_DURATION,
+        duration=run_duration,
         optimization_steps=SOFT_STEPS,
         lr=SOFT_LR,
         train_keys=("prompt",),
@@ -1262,11 +1574,17 @@ def kmeans_numpy(x, k, iterations=50, seed=0):
 if RUN_MODE_5_DATASET_TO_PROMPT_FAMILY:
     require_models()
     PROMPT_FAMILY_DIR.mkdir(parents=True, exist_ok=True)
+    run_duration = dataset_effective_duration()
     dataset_items = encode_audio_folder_to_items(
         DATASET_DIR,
         limit=DATASET_LIMIT,
         duration=DATASET_DURATION,
         prompt_from_path=True,
+        use_chunks=DATASET_USE_CHUNKS,
+        chunk_duration=DATASET_CHUNK_DURATION,
+        hop_duration=DATASET_HOP_DURATION,
+        max_chunks_per_file=DATASET_MAX_CHUNKS_PER_FILE,
+        drop_last=DATASET_DROP_LAST_CHUNK,
     )
     summaries = np.stack([latent_summary(item) for item in dataset_items])
     labels, centers = kmeans_numpy(summaries, CLUSTERS, seed=2)
@@ -1285,7 +1603,7 @@ if RUN_MODE_5_DATASET_TO_PROMPT_FAMILY:
             sa3_model,
             cluster_latents,
             seed_prompt=f"audio cluster {cluster_id} texture",
-            duration=DATASET_DURATION,
+            duration=run_duration,
             optimization_steps=SOFT_STEPS,
             lr=SOFT_LR,
             train_keys=("prompt",),
@@ -1340,18 +1658,24 @@ STYLE_PROFILE_TEST_PROMPT = "a sparse evolving electronic texture, detailed, wid
 
 if RUN_MODE_6_STYLE_PROFILE:
     require_models()
+    run_duration = dataset_effective_duration()
     dataset_items = encode_audio_folder_to_items(
         DATASET_DIR,
         limit=DATASET_LIMIT,
         duration=DATASET_DURATION,
         prompt_from_path=True,
+        use_chunks=DATASET_USE_CHUNKS,
+        chunk_duration=DATASET_CHUNK_DURATION,
+        hop_duration=DATASET_HOP_DURATION,
+        max_chunks_per_file=DATASET_MAX_CHUNKS_PER_FILE,
+        drop_last=DATASET_DROP_LAST_CHUNK,
     )
     profile = fit_style_profile(dataset_items, name="positive_dataset")
     save_style_profile(profile, STYLE_PROFILE_PATH)
 
     latents = sa3.generate_latents(
         prompt=STYLE_PROFILE_TEST_PROMPT,
-        duration=DATASET_DURATION,
+        duration=run_duration,
         steps=8,
         cfg_scale=1.0,
         seed=42,
@@ -1392,14 +1716,32 @@ This requires a reference/baseline set if you want a true direction. With only p
 
 RUN_MODE_7_SAME_DIRECTION = False
 
-REFERENCE_DIR = INPUT_DIR / "dataset_reference"
 STYLE_DIRECTION_PATH = OUTPUT_DIR / "mode_07_style_direction.npz"
 STYLE_DIRECTION_ALPHA = 1.0
 
 if RUN_MODE_7_SAME_DIRECTION:
     require_models()
-    positive_items = encode_audio_folder_to_items(DATASET_DIR, limit=DATASET_LIMIT, duration=DATASET_DURATION)
-    reference_items = encode_audio_folder_to_items(REFERENCE_DIR, limit=DATASET_LIMIT, duration=DATASET_DURATION)
+    run_duration = dataset_effective_duration()
+    positive_items = encode_audio_folder_to_items(
+        DATASET_DIR,
+        limit=DATASET_LIMIT,
+        duration=DATASET_DURATION,
+        use_chunks=DATASET_USE_CHUNKS,
+        chunk_duration=DATASET_CHUNK_DURATION,
+        hop_duration=DATASET_HOP_DURATION,
+        max_chunks_per_file=DATASET_MAX_CHUNKS_PER_FILE,
+        drop_last=DATASET_DROP_LAST_CHUNK,
+    )
+    reference_items = encode_audio_folder_to_items(
+        REFERENCE_DIR,
+        limit=DATASET_LIMIT,
+        duration=DATASET_DURATION,
+        use_chunks=DATASET_USE_CHUNKS,
+        chunk_duration=DATASET_CHUNK_DURATION,
+        hop_duration=DATASET_HOP_DURATION,
+        max_chunks_per_file=DATASET_MAX_CHUNKS_PER_FILE,
+        drop_last=DATASET_DROP_LAST_CHUNK,
+    )
     positive_profile = fit_style_profile(positive_items, name="positive")
     reference_profile = fit_style_profile(reference_items, name="reference")
     direction = style_direction(positive_profile, reference_profile, name="positive_minus_reference")
@@ -1407,7 +1749,7 @@ if RUN_MODE_7_SAME_DIRECTION:
 
     latents = sa3.generate_latents(
         prompt=STYLE_PROFILE_TEST_PROMPT,
-        duration=DATASET_DURATION,
+        duration=run_duration,
         steps=8,
         cfg_scale=1.0,
         seed=43,
@@ -1534,6 +1876,7 @@ AUDIO_RESIDUAL_NOISE = 0.35
 
 if RUN_MODE_9_AUDIO_RESIDUAL_STEERING:
     require_models()
+    run_duration = dataset_effective_duration()
     positive_paths = list_audio_files(DATASET_DIR, limit=DATASET_LIMIT)
     negative_paths = list_audio_files(REFERENCE_DIR, limit=DATASET_LIMIT) if AUDIO_RESIDUAL_BASELINE == "negative_audio" else None
     extractor = SA3AudioResidualVectorExtractor(
@@ -1545,7 +1888,7 @@ if RUN_MODE_9_AUDIO_RESIDUAL_STEERING:
         positive_paths=positive_paths,
         negative_paths=negative_paths,
         prompt=AUDIO_RESIDUAL_PROMPT,
-        duration=DATASET_DURATION,
+        duration=run_duration,
         steps=8,
         cfg_scale=1.0,
         seed=200,
@@ -2042,8 +2385,14 @@ manifest = {
     "sa3_model": SA3_MODEL_NAME,
     "same_model": SAME_MODEL_NAME,
     "device": DEVICE,
+    "dataset_use_chunks": DATASET_USE_CHUNKS,
+    "dataset_chunk_duration": DATASET_CHUNK_DURATION,
+    "dataset_hop_duration": DATASET_HOP_DURATION,
+    "dataset_max_chunks_per_file": DATASET_MAX_CHUNKS_PER_FILE,
     "modes": {
+        "0_renoise_variations": RUN_MODE_0_RENOISE_VARIATIONS,
         "1_audio_to_soft_prompt": RUN_MODE_1_AUDIO_TO_SOFT_PROMPT,
+        "1b_generate_with_soft_prompt": RUN_MODE_1B_GENERATE_WITH_SOFT_PROMPT,
         "2_audio_to_babble_prompt": RUN_MODE_2_AUDIO_TO_BABBLE_PROMPT,
         "3_audio_to_readable_prompt": RUN_MODE_3_AUDIO_TO_READABLE_PROMPT,
         "4_dataset_to_soft_prompt": RUN_MODE_4_DATASET_TO_SOFT_PROMPT,

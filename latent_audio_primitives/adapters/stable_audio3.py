@@ -81,6 +81,64 @@ def stable_audio3_latent_rate(model: Any, model_config: dict[str, Any] | None = 
     return _sample_rate(model, model_config) / _downsampling_ratio(model)
 
 
+def audio_chunk_windows(
+    num_frames: int,
+    sample_rate: int,
+    chunk_duration: float,
+    *,
+    hop_duration: float | None = None,
+    max_chunks: int | None = None,
+    drop_last: bool = False,
+) -> list[dict[str, float | int | bool]]:
+    """Return deterministic audio chunk windows in sample units.
+
+    The windows are designed for long DJ/live files: each window has a stable
+    sample offset, a requested read length, and metadata in seconds. If
+    ``drop_last`` is false, the final short window is kept and marked for
+    padding by the caller.
+    """
+
+    if sample_rate <= 0:
+        raise ValueError("sample_rate must be positive")
+    if num_frames < 0:
+        raise ValueError("num_frames must be non-negative")
+    if chunk_duration <= 0:
+        raise ValueError("chunk_duration must be positive")
+    if hop_duration is not None and hop_duration <= 0:
+        raise ValueError("hop_duration must be positive when provided")
+    if max_chunks is not None and max_chunks <= 0:
+        return []
+
+    chunk_frames = max(1, int(round(chunk_duration * sample_rate)))
+    hop_frames = max(1, int(round((hop_duration if hop_duration is not None else chunk_duration) * sample_rate)))
+    windows: list[dict[str, float | int | bool]] = []
+    start = 0
+
+    while start < num_frames:
+        available = num_frames - start
+        if available < chunk_frames and drop_last:
+            break
+        read_frames = min(chunk_frames, available)
+        windows.append(
+            {
+                "chunk_index": len(windows),
+                "frame_offset": start,
+                "num_frames": read_frames,
+                "target_num_frames": chunk_frames,
+                "pad_to_target": read_frames < chunk_frames,
+                "start_seconds": start / sample_rate,
+                "duration_seconds": read_frames / sample_rate,
+                "target_duration_seconds": chunk_frames / sample_rate,
+                "hop_seconds": hop_frames / sample_rate,
+            }
+        )
+        if max_chunks is not None and len(windows) >= max_chunks:
+            break
+        start += hop_frames
+
+    return windows
+
+
 def latents_to_items(
     latents: Any,
     *,
@@ -331,6 +389,94 @@ class SAMEAutoencoderAdapter:
             **encode_kwargs,
         )
         return item
+
+    def encode_file_chunks(
+        self,
+        path: str | Path,
+        *,
+        chunk_duration: float,
+        hop_duration: float | None = None,
+        max_chunks: int | None = None,
+        drop_last: bool = False,
+        item_id_prefix: str | None = None,
+        prompt: str | None = None,
+        chunked: bool = False,
+        descriptors: dict[str, float] | None = None,
+        metadata: dict[str, Any] | None = None,
+        **encode_kwargs: Any,
+    ) -> list[LatentItem]:
+        """Encode a long audio file as multiple SAME latent chunks.
+
+        This uses ``torchaudio.load(..., frame_offset=..., num_frames=...)`` so
+        long WAV/FLAC/AIFF files can be traversed as windows instead of loading
+        an entire DJ set into memory. For compressed formats where frame counts
+        are unknown, torchaudio may still need to decode internally.
+        """
+
+        try:
+            import torch
+            import torchaudio
+        except ImportError as exc:
+            raise StableAudio3IntegrationError("torch and torchaudio are required for encode_file_chunks().") from exc
+
+        path = Path(path)
+        info = torchaudio.info(str(path))
+        if info.num_frames <= 0:
+            raise StableAudio3IntegrationError(
+                f"torchaudio could not determine frame count for {path}. "
+                "Convert the file to WAV/FLAC first for chunked long-file encoding."
+            )
+
+        windows = audio_chunk_windows(
+            int(info.num_frames),
+            int(info.sample_rate),
+            chunk_duration,
+            hop_duration=hop_duration,
+            max_chunks=max_chunks,
+            drop_last=drop_last,
+        )
+        prefix = item_id_prefix or path.stem
+        source_duration = info.num_frames / info.sample_rate
+        items: list[LatentItem] = []
+
+        for window in windows:
+            audio, sample_rate = torchaudio.load(
+                str(path),
+                frame_offset=int(window["frame_offset"]),
+                num_frames=int(window["num_frames"]),
+            )
+            target_num_frames = int(window["target_num_frames"])
+            if audio.shape[-1] < target_num_frames:
+                audio = torch.nn.functional.pad(audio, (0, target_num_frames - audio.shape[-1]))
+
+            chunk_index = int(window["chunk_index"])
+            start_ms = int(round(float(window["start_seconds"]) * 1000))
+            item_id = f"{prefix}__chunk_{chunk_index:05d}_{start_ms:010d}ms"
+            item = self.encode_tensor(
+                audio,
+                sample_rate,
+                item_id=item_id,
+                prompt=prompt,
+                chunked=chunked,
+                descriptors=descriptors,
+                metadata={
+                    "path": str(path),
+                    "source_path": str(path),
+                    "source_num_frames": int(info.num_frames),
+                    "source_duration_seconds": source_duration,
+                    "chunk_index": chunk_index,
+                    "chunk_start_seconds": float(window["start_seconds"]),
+                    "chunk_duration_seconds": float(window["target_duration_seconds"]),
+                    "chunk_read_duration_seconds": float(window["duration_seconds"]),
+                    "chunk_hop_seconds": float(window["hop_seconds"]),
+                    "chunk_padded": bool(window["pad_to_target"]),
+                    **(metadata or {}),
+                },
+                **encode_kwargs,
+            )
+            items.append(item)
+
+        return items
 
     def decode_latents(self, latents: Any, **decode_kwargs: Any) -> Any:
         return self.autoencoder.decode(latents, **decode_kwargs)
