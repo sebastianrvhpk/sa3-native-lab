@@ -1542,9 +1542,16 @@ if RUN_MODE_3_AUDIO_TO_READABLE_PROMPT:
         scorer,
         rounds=3,
     )
-    READABLE_PROMPT_JSON.write_text(json.dumps(result.__dict__, indent=2), encoding="utf-8")
+    payload = {
+        "prompt": result.prompt,
+        "score": result.score,
+        "seed_prompt": seed_prompt,
+        "history_tail": result.history[-20:],
+    }
+    READABLE_PROMPT_JSON.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     print(result.prompt)
     print("score:", result.score)
+    print("saved:", READABLE_PROMPT_JSON)
 """
     ),
     md(

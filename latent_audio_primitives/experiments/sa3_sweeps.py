@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
@@ -84,7 +84,7 @@ def alpha_sweep(
     for output, item_dir in zip(outputs, item_dirs):
         output.latent_path = str(item_dir)
     with (output_dir / "sweep.json").open("w", encoding="utf-8") as f:
-        json.dump([output.__dict__ for output in outputs], f, indent=2, sort_keys=True)
+        json.dump([asdict(output) for output in outputs], f, indent=2, sort_keys=True)
     return outputs
 
 
