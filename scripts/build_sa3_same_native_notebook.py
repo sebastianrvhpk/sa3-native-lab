@@ -148,6 +148,7 @@ The exact target convention is an implementation detail. The research claim is n
 
 0. Renoise variation / local neighborhood sampling
 0c. Latent-selective renoise playground
+0e. Cross-audio latent channel graft
 0d. Latent blur playground
 1. Audio -> soft prompt
 2. Audio -> babble / hard prompt
@@ -243,6 +244,7 @@ LMDM adaptation is conceptual unless SA3 attention/sampler code is modified and 
 |---|---|---|
 | 0. Renoise variation | SAME latent neighborhood around \(E(x)\) | SDEdit/img2img-style noising, SA3 `init_audio` path |
 | 0c. Latent-selective renoise | SAME channel subsets / masked init noise | latent traversal, representation probing, img2img-style variation |
+| 0e. Cross-audio graft | SAME source channels mixed with donor channels | latent arithmetic, channel transplant, representation probing |
 | 0d. Latent blur | SAME low-pass / low-rank / detail attenuation | representation smoothing, latent traversal, manifold projection |
 | 1. Audio -> soft prompt | SA3 conditioning tensor \(c\) | Flow matching, PEZ/soft prompts, DITTO-style inference optimization |
 | 2. Audio -> babble prompt | hard text/token sequence \(p\) | PEZ / hard prompt optimization |
@@ -557,8 +559,10 @@ from latent_audio_primitives.latent_blur import (
 )
 from latent_audio_primitives.selective_renoise import (
     LatentMaskSpec,
+    graft_latent_channels,
     masked_latent_noise,
     select_latent_channels,
+    selective_graft_sa3,
     selective_renoise_sa3,
 )
 from latent_audio_primitives.tokenizer_vocab import (
@@ -1565,6 +1569,279 @@ if RUN_MODE_0C_SEARCH_ANNOTATIONS:
             max_embed_mb=160.0,
             annotation_path=ANNOTATION_SEARCH_PATH,
         )
+"""
+    ),
+    md(
+        r"""
+## Mode 0e. Cross-Audio Latent Channel Graft
+
+This is the donor-audio version of Mode 0c.
+
+Instead of putting Gaussian noise into selected source channels, use another encoded audio file as the replacement direction:
+
+$$
+z^{noise}_{c,t} =
+\begin{cases}
+z^{donor}_{c,t}, & c \in S \\
+z^{source}_{c,t}, & c \notin S
+\end{cases}
+$$
+
+SA3 then starts from:
+
+$$
+z_{start} = (1-\alpha)z^{source} + \alpha z^{noise}
+$$
+
+so selected channels become:
+
+$$
+z_{start,c,t} = z^{source}_{c,t} + \alpha(z^{donor}_{c,t} - z^{source}_{c,t})
+$$
+
+and unselected channels remain exactly the source at sampler start.
+
+Interpretation:
+
+```text
+direct graft decode = literal source/donor channel splice through SAME
+SA3 graft          = source/donor splice reprojected by SA3's learned music prior
+alpha              = graft amount, analogous to init_noise_level
+```
+
+This is closer to latent transplantation than variation. It is useful for asking whether a SAME channel block carries portable rhythmic, timbral, spatial, or textural information across two audios.
+"""
+    ),
+    code(
+        r"""
+# @title Mode 0e. Cross-audio latent channel graft
+
+RUN_MODE_0E_CROSS_AUDIO_GRAFT = False
+
+LATENT_GRAFT_SOURCE_AUDIO = INPUT_DIR / "known_9s.wav"
+LATENT_GRAFT_DONOR_AUDIO = INPUT_DIR / "donor_9s.wav"
+LATENT_GRAFT_OUTPUT_DIR = OUTPUT_DIR / "mode_00e_cross_audio_graft"
+LATENT_GRAFT_DURATION = 9.0
+LATENT_GRAFT_PROMPT = ""
+LATENT_GRAFT_STEPS = 8
+LATENT_GRAFT_CFG = 1.0
+LATENT_GRAFT_AMOUNT = 0.40
+LATENT_GRAFT_BASE_SEED = 880
+
+LATENT_GRAFT_RUN_DIRECT_DECODE = False
+LATENT_GRAFT_RUN_SA3_SAMPLER = True
+LATENT_GRAFT_SAVE_PT = True
+LATENT_GRAFT_ANNOTATION_PATH = LATENT_GRAFT_OUTPUT_DIR / "annotations.json"
+
+LATENT_GRAFT_SPECS = [
+    {"name": "random_10_s0", "mode": "random_channels", "fraction": 0.10, "seed": 0},
+    {"name": "random_10_s1", "mode": "random_channels", "fraction": 0.10, "seed": 1},
+    {"name": "random_25_s0", "mode": "random_channels", "fraction": 0.25, "seed": 0},
+    {"name": "high_var_10", "mode": "high_variance", "fraction": 0.10, "seed": 0},
+    {"name": "high_activity_10", "mode": "high_activity", "fraction": 0.10, "seed": 0},
+    {"name": "block_000_16", "mode": "channel_block", "block_size": 16, "start_channel": 0},
+    {"name": "block_064_16", "mode": "channel_block", "block_size": 16, "start_channel": 64},
+    {"name": "block_128_16", "mode": "channel_block", "block_size": 16, "start_channel": 128},
+    {"name": "block_192_16", "mode": "channel_block", "block_size": 16, "start_channel": 192},
+]
+
+
+def graft_mask_spec_from_dict(payload):
+    return LatentMaskSpec(
+        name=payload["name"],
+        mode=payload.get("mode", "random_channels"),
+        fraction=float(payload.get("fraction", 0.25)),
+        seed=int(payload.get("seed", 0)),
+        channels=tuple(payload["channels"]) if payload.get("channels") is not None else None,
+        start_channel=payload.get("start_channel"),
+        block_size=payload.get("block_size"),
+    )
+
+
+def safe_graft_audio_name(name):
+    return "".join(ch if ch.isalnum() or ch in "-_." else "_" for ch in name)[:96]
+
+
+if RUN_MODE_0E_CROSS_AUDIO_GRAFT:
+    require_models()
+    LATENT_GRAFT_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+    source_audio, source_sr = load_audio(
+        LATENT_GRAFT_SOURCE_AUDIO,
+        duration=LATENT_GRAFT_DURATION,
+        stereo=True,
+    )
+    donor_audio, donor_sr = load_audio(
+        LATENT_GRAFT_DONOR_AUDIO,
+        duration=LATENT_GRAFT_DURATION,
+        stereo=True,
+    )
+    source_item = encode_audio_file_to_item(
+        LATENT_GRAFT_SOURCE_AUDIO,
+        item_id="latent_graft_source",
+        duration=LATENT_GRAFT_DURATION,
+    )
+    donor_item = encode_audio_file_to_item(
+        LATENT_GRAFT_DONOR_AUDIO,
+        item_id="latent_graft_donor",
+        duration=LATENT_GRAFT_DURATION,
+    )
+    source_latents = item_to_sa3_tensor(
+        source_item,
+        device=DEVICE,
+        dtype=next(sa3_model.model.model.parameters()).dtype,
+    )
+    donor_latents = item_to_sa3_tensor(
+        donor_item,
+        device=DEVICE,
+        dtype=next(sa3_model.model.model.parameters()).dtype,
+    )
+
+    player_paths = []
+    player_labels = []
+    player_metadata = []
+    manifest = []
+
+    source_path = LATENT_GRAFT_OUTPUT_DIR / "source_reference.wav"
+    donor_path = LATENT_GRAFT_OUTPUT_DIR / "donor_reference.wav"
+    torchaudio.save(str(source_path), source_audio.cpu(), source_sr)
+    torchaudio.save(str(donor_path), donor_audio.cpu(), donor_sr)
+    player_paths.extend([source_path, donor_path])
+    player_labels.extend(["source reference", "donor reference"])
+    player_metadata.extend(
+        [
+            {"kind": "source_reference", "path": str(source_path)},
+            {"kind": "donor_reference", "path": str(donor_path)},
+        ]
+    )
+
+    for variant_index, spec_dict in enumerate(LATENT_GRAFT_SPECS):
+        spec = graft_mask_spec_from_dict(spec_dict)
+        name = safe_graft_audio_name(spec.name)
+        seed = LATENT_GRAFT_BASE_SEED + variant_index
+        channels = select_latent_channels(source_latents, spec)
+        sampler_spec = LatentMaskSpec(
+            name=spec.name,
+            mode=spec.mode,
+            fraction=spec.fraction,
+            seed=spec.seed,
+            channels=tuple(channels),
+            start_channel=spec.start_channel,
+            block_size=spec.block_size,
+        )
+        entry = {
+            "name": spec.name,
+            "mode": spec.mode,
+            "fraction": spec.fraction,
+            "seed": spec.seed,
+            "sampler_seed": seed,
+            "graft_amount": LATENT_GRAFT_AMOUNT,
+            "selected_channel_count": len(channels),
+            "selected_channels": channels,
+            "source_audio": str(LATENT_GRAFT_SOURCE_AUDIO),
+            "donor_audio": str(LATENT_GRAFT_DONOR_AUDIO),
+            "outputs": {},
+        }
+
+        if LATENT_GRAFT_RUN_DIRECT_DECODE:
+            grafted_latents = graft_latent_channels(
+                source_latents,
+                donor_latents,
+                channels,
+                amount=LATENT_GRAFT_AMOUNT,
+            )
+            direct_path = LATENT_GRAFT_OUTPUT_DIR / f"direct_graft_{name}.wav"
+            decode_sa3_latents_to_file_cropped(
+                grafted_latents,
+                direct_path,
+                duration=LATENT_GRAFT_DURATION,
+            )
+            entry["outputs"]["direct_same_decode"] = str(direct_path)
+            player_paths.append(direct_path)
+            player_labels.append(f"direct graft {spec.name} ({len(channels)} ch)")
+            player_metadata.append(
+                {
+                    "kind": "direct_same_graft",
+                    "variant": spec.name,
+                    "mask_mode": spec.mode,
+                    "graft_amount": LATENT_GRAFT_AMOUNT,
+                    "selected_channel_count": len(channels),
+                    "selected_channels": channels,
+                    "sampler_seed": seed,
+                    "source_audio": str(LATENT_GRAFT_SOURCE_AUDIO),
+                    "donor_audio": str(LATENT_GRAFT_DONOR_AUDIO),
+                    "path": str(direct_path),
+                }
+            )
+
+        if LATENT_GRAFT_RUN_SA3_SAMPLER:
+            result = selective_graft_sa3(
+                sa3_model,
+                source_audio,
+                source_sr,
+                donor_audio,
+                donor_sr,
+                spec=sampler_spec,
+                prompt=LATENT_GRAFT_PROMPT,
+                duration=LATENT_GRAFT_DURATION,
+                steps=LATENT_GRAFT_STEPS,
+                cfg_scale=LATENT_GRAFT_CFG,
+                init_noise_level=LATENT_GRAFT_AMOUNT,
+                seed=seed,
+            )
+            sampled_path = LATENT_GRAFT_OUTPUT_DIR / f"sa3_graft_{name}.wav"
+            decode_sa3_latents_to_file_cropped(
+                result.sampled_latents,
+                sampled_path,
+                duration=LATENT_GRAFT_DURATION,
+            )
+            entry["outputs"]["sa3_grafted"] = str(sampled_path)
+            player_paths.append(sampled_path)
+            player_labels.append(f"SA3 graft {spec.name} ({len(channels)} ch)")
+            player_metadata.append(
+                {
+                    "kind": "sa3_grafted",
+                    "variant": spec.name,
+                    "mask_mode": spec.mode,
+                    "graft_amount": LATENT_GRAFT_AMOUNT,
+                    "selected_channel_count": len(channels),
+                    "selected_channels": channels,
+                    "sampler_seed": seed,
+                    "source_audio": str(LATENT_GRAFT_SOURCE_AUDIO),
+                    "donor_audio": str(LATENT_GRAFT_DONOR_AUDIO),
+                    "path": str(sampled_path),
+                }
+            )
+            entry.update(result.metadata)
+
+            if LATENT_GRAFT_SAVE_PT:
+                pt_path = LATENT_GRAFT_OUTPUT_DIR / f"{name}.pt"
+                torch.save(
+                    {
+                        "source_latents": result.init_latents.detach().cpu(),
+                        "donor_latents": result.donor_latents.detach().cpu(),
+                        "mixed_latents": result.mixed_latents.detach().cpu(),
+                        "sampled_latents": result.sampled_latents.detach().cpu(),
+                        "metadata": result.metadata,
+                    },
+                    pt_path,
+                )
+                entry["outputs"]["pt"] = str(pt_path)
+
+        manifest.append(entry)
+        print(spec.name, "channels:", len(channels), channels[:24])
+
+    manifest_path = LATENT_GRAFT_OUTPUT_DIR / "manifest.json"
+    manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    print("saved manifest:", manifest_path)
+    play_audio_files(
+        player_paths,
+        labels=player_labels,
+        metadata=player_metadata,
+        title="Mode 0e cross-audio latent graft",
+        max_embed_mb=180.0,
+        annotation_path=LATENT_GRAFT_ANNOTATION_PATH,
+    )
 """
     ),
     md(

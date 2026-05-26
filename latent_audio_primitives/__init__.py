@@ -64,12 +64,16 @@ from .tokenizer_vocab import (
     preview_native_tokenizer_vocabulary,
 )
 from .selective_renoise import (
+    LatentGraftResult,
     LatentMaskSpec,
     SelectiveRenoiseResult,
     channel_mask_like,
+    graft_latent_channels,
     masked_latent_noise,
+    sampler_noise_from_donor_channels,
     sampler_noise_for_channels,
     select_latent_channels,
+    selective_graft_sa3,
     selective_renoise_sa3,
 )
 from .latent_blur import (
@@ -89,6 +93,7 @@ __all__ = [
     "SearchResult",
     "TransitionWeights",
     "TokenizerVocabularyConfig",
+    "LatentGraftResult",
     "LatentMaskSpec",
     "LatentBlurSpec",
     "SelectiveRenoiseResult",
@@ -120,6 +125,7 @@ __all__ = [
     "frame_mean_direction",
     "greedy_token_prompt_search",
     "fit_style_profile",
+    "graft_latent_channels",
     "latent_summary",
     "load_audio_annotations",
     "load_item",
@@ -143,8 +149,10 @@ __all__ = [
     "save_audio_frame_direction",
     "save_audio_annotation",
     "sa3_sample_from_init_latents",
+    "sampler_noise_from_donor_channels",
     "sampler_noise_for_channels",
     "search_audio_annotations",
+    "selective_graft_sa3",
     "select_latent_channels",
     "selective_renoise_sa3",
     "style_direction",

@@ -1,9 +1,12 @@
 import torch
 
 from latent_audio_primitives.selective_renoise import (
+    LatentGraftResult,
     LatentMaskSpec,
     channel_mask_like,
+    graft_latent_channels,
     masked_latent_noise,
+    sampler_noise_from_donor_channels,
     sampler_noise_for_channels,
     select_latent_channels,
 )
@@ -65,3 +68,49 @@ def test_sampler_noise_preserves_unselected_channels_before_sampler_mix():
 
     torch.testing.assert_close(noise[:, 0, :], latents[:, 0, :])
     assert not torch.allclose(noise[:, 2, :], latents[:, 2, :])
+
+
+def test_graft_latent_channels_replaces_only_selected_channels():
+    source = torch.zeros(1, 4, 3)
+    donor = torch.ones(1, 4, 3)
+
+    grafted = graft_latent_channels(source, donor, [1, 3])
+
+    torch.testing.assert_close(grafted[:, 0, :], source[:, 0, :])
+    torch.testing.assert_close(grafted[:, 1, :], donor[:, 1, :])
+    torch.testing.assert_close(grafted[:, 2, :], source[:, 2, :])
+    torch.testing.assert_close(grafted[:, 3, :], donor[:, 3, :])
+
+
+def test_graft_latent_channels_supports_partial_amount():
+    source = torch.zeros(1, 2, 2)
+    donor = torch.ones(1, 2, 2)
+
+    grafted = graft_latent_channels(source, donor, [0], amount=0.25)
+
+    torch.testing.assert_close(grafted[:, 0, :], torch.full((1, 2), 0.25))
+    torch.testing.assert_close(grafted[:, 1, :], source[:, 1, :])
+
+
+def test_sampler_noise_from_donor_channels_preserves_unselected_channels():
+    source = torch.zeros(1, 4, 3)
+    donor = torch.ones(1, 4, 3)
+
+    sampler_noise = sampler_noise_from_donor_channels(source, donor, [2])
+
+    torch.testing.assert_close(sampler_noise[:, 0, :], source[:, 0, :])
+    torch.testing.assert_close(sampler_noise[:, 2, :], donor[:, 2, :])
+
+
+def test_latent_graft_result_is_available_for_sampler_outputs():
+    result = LatentGraftResult(
+        sampled_latents="sampled",
+        init_latents="source",
+        donor_latents="donor",
+        mixed_latents="mixed",
+        selected_channels=[0],
+        metadata={"intervention": "donor_channel_graft"},
+    )
+
+    assert result.donor_latents == "donor"
+    assert result.metadata["intervention"] == "donor_channel_graft"
