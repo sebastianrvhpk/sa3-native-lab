@@ -547,6 +547,14 @@ from latent_audio_primitives.experiments.soft_prompt import (
 )
 from latent_audio_primitives.io import save_items, load_items
 from latent_audio_primitives.latent_math import latent_summary
+from latent_audio_primitives.geometry import (
+    covariance_transport,
+    fit_latent_geometry,
+    geometry_report,
+    mahalanobis_summary_distance,
+)
+from latent_audio_primitives.periodic import periodicity_report
+from latent_audio_primitives.observability import fit_linear_control_probe, predict_control
 from latent_audio_primitives.prompt_optimization import (
     beam_token_prompt_search,
     coordinate_prompt_search,
@@ -4212,6 +4220,141 @@ if RUN_MODE_14_LATENT_MEMORY:
     ),
     md(
         r"""
+## Mode 15. SAME Geometry and Intervention Audit
+
+This is the first serious measurement layer for the seven better operators.
+
+It does not try to make a new sound first. It asks what is measurable in the
+current latent collection:
+
+```text
+latent geometry:     PCA spectrum, covariance, Mahalanobis distances
+periodicity:         autocorrelation lags, boundary mismatch, latent FFT centroid
+transport:           full-covariance Gaussian style transport probe
+observability:       simple linear probes for existing descriptors/labels
+```
+
+The reason is methodological: before steering a control, check whether it is
+visible in SAME latents and whether simple operators behave coherently.
+"""
+    ),
+    code(
+        r"""
+# @title Mode 15. SAME geometry and intervention audit
+
+RUN_MODE_15_GEOMETRY_AUDIT = False
+
+GEOMETRY_AUDIT_OUTPUT = OUTPUT_DIR / "mode_15_same_geometry_audit.json"
+GEOMETRY_AUDIT_SOURCE = "dataset"  # "dataset" or "memory"
+GEOMETRY_AUDIT_COMPONENTS = 16
+GEOMETRY_AUDIT_PERIOD_MIN_LAG = 2
+GEOMETRY_AUDIT_PERIOD_MAX_LAG = 128
+GEOMETRY_AUDIT_CONTROL_KEYS = []  # Example: ["brightness", "density", "usable_loop"]
+GEOMETRY_AUDIT_TRANSPORT_DEMO = False
+
+
+def load_geometry_audit_items():
+    if GEOMETRY_AUDIT_SOURCE == "memory":
+        return load_items(MEMORY_DIR)
+    if GEOMETRY_AUDIT_SOURCE == "dataset":
+        require_models()
+        return encode_audio_directory(
+            DATASET_DIR,
+            limit=DATASET_LIMIT,
+            duration=DATASET_DURATION,
+            item_id_prefix="geometry_dataset",
+            use_chunks=DATASET_USE_CHUNKS,
+            chunk_duration=DATASET_CHUNK_DURATION,
+            hop_duration=DATASET_HOP_DURATION,
+            max_chunks_per_file=DATASET_MAX_CHUNKS_PER_FILE,
+            drop_last=DATASET_DROP_LAST_CHUNK,
+        )
+    raise ValueError("GEOMETRY_AUDIT_SOURCE must be 'dataset' or 'memory'")
+
+
+if RUN_MODE_15_GEOMETRY_AUDIT:
+    items = load_geometry_audit_items()
+    if len(items) < 2:
+        raise ValueError("Mode 15 needs at least two latent items.")
+
+    geometry = fit_latent_geometry(items, n_components=GEOMETRY_AUDIT_COMPONENTS)
+    report = geometry_report(items, n_components=GEOMETRY_AUDIT_COMPONENTS)
+    periodic = []
+    for item in items:
+        p = periodicity_report(
+            item,
+            min_lag=GEOMETRY_AUDIT_PERIOD_MIN_LAG,
+            max_lag=GEOMETRY_AUDIT_PERIOD_MAX_LAG,
+        )
+        periodic.append(
+            {
+                "item_id": item.item_id,
+                "best_lag": p.best_lag,
+                "best_score": p.best_score,
+                "boundary_l2": p.boundary_l2,
+                "velocity_l2": p.velocity_l2,
+                "spectral_centroid": p.spectral_centroid,
+            }
+        )
+
+    distances = []
+    anchor = items[0]
+    for item in items[1:]:
+        distances.append(
+            {
+                "from": anchor.item_id,
+                "to": item.item_id,
+                "mahalanobis_summary_distance": mahalanobis_summary_distance(anchor, item, geometry),
+            }
+        )
+
+    probes = []
+    for key in GEOMETRY_AUDIT_CONTROL_KEYS:
+        try:
+            probe = fit_linear_control_probe(items, key)
+            predictions = [
+                {"item_id": item.item_id, "prediction": predict_control(probe, item)}
+                for item in items
+            ]
+            probes.append(
+                {
+                    "control": key,
+                    "item_count": probe.item_count,
+                    "train_r2": probe.r2_train,
+                    "predictions": predictions,
+                }
+            )
+        except Exception as exc:
+            probes.append({"control": key, "error": str(exc)})
+
+    transport_demo = None
+    if GEOMETRY_AUDIT_TRANSPORT_DEMO and len(items) >= 2:
+        transported = covariance_transport(items[0], items[1:], alpha=1.0)
+        transport_demo = {
+            "source": items[0].item_id,
+            "reference_count": len(items) - 1,
+            "source_mean_norm": float(np.linalg.norm(items[0].latent.mean(axis=0))),
+            "transported_mean_norm": float(np.linalg.norm(transported.mean(axis=0))),
+        }
+
+    payload = {
+        "item_count": len(items),
+        "source": GEOMETRY_AUDIT_SOURCE,
+        "geometry": report,
+        "pca_variances": geometry.variances.astype(float).tolist(),
+        "periodicity": periodic,
+        "anchor_distances": distances,
+        "control_probes": probes,
+        "transport_demo": transport_demo,
+    }
+    GEOMETRY_AUDIT_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+    GEOMETRY_AUDIT_OUTPUT.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    print(json.dumps(payload, indent=2)[:6000])
+    print("saved:", GEOMETRY_AUDIT_OUTPUT)
+"""
+    ),
+    md(
+        r"""
 ## Combined Experiment: Audio-Derived Prompt + Residual Knob + SAME Style Push
 
 A practical first research chain:
@@ -4334,6 +4477,7 @@ manifest = {
         "12_control_head": RUN_MODE_12_CONTROL_HEAD,
         "13_lora_scaffold": RUN_MODE_13_LORA_SCAFFOLD,
         "14_memory": RUN_MODE_14_LATENT_MEMORY,
+        "15_geometry_audit": RUN_MODE_15_GEOMETRY_AUDIT,
         "combined_chain": RUN_COMBINED_CHAIN,
     },
 }

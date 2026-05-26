@@ -343,6 +343,7 @@ larger BABBLE_LOGSNR_VALUES        -> better probe coverage, more compute
 | 12 | LatCH-style head | sidecar `h_psi(z)` | sidecar only | `h_psi(z)->controls` |
 | 13 | LoRA scaffold | small weight adapters | yes, LoRA | `theta + BA` |
 | 14 | Latent memory | indexed latent items | no | retrieval over summaries/metadata |
+| 15 | SAME geometry audit | latent set + control labels | no | PCA, periodicity, probes, transport |
 
 ## Mode 0: Renoise Variations
 
@@ -589,6 +590,90 @@ W' = W + alpha/r * B A
 
 Use it for domain/style adaptation after lighter probes show that prompt inversion, latent edits, or residual steering are insufficient.
 
+## Mode 15: SAME Geometry and Intervention Audit
+
+Mode 15 is a measurement mode for the seven stronger operators documented in:
+
+```text
+docs/research/seven-better-operators.md
+```
+
+It starts from a latent collection:
+
+```text
+{z_i}, z_i in R^{T_i x D}
+```
+
+and concatenates latent frames:
+
+```text
+X = concat_i z_i, X in R^{N x D}
+mu = mean(X)
+Sigma = Cov(X)
+Sigma = Q Lambda Q^T
+```
+
+The report stores:
+
+```text
+explained_variance_k = lambda_k / trace(Sigma)
+kept_variance_fraction = sum_{k in kept} lambda_k / trace(Sigma)
+```
+
+This matters because 16 retained components should not pretend to explain 100%
+of the dataset unless they actually do.
+
+Whole-clip latent distances use the PCA covariance:
+
+```text
+d_M(a,b) =
+sqrt((mean_t z_a - mean_t z_b)^T Sigma^{-1} (mean_t z_a - mean_t z_b))
+```
+
+Periodicity probes use latent-time autocorrelation:
+
+```text
+rho(k) = <z_{0:T-k}, z_{k:T}> / ||z||^2
+```
+
+and boundary mismatch:
+
+```text
+L_boundary =
+||mean(z_start)-mean(z_end)||_2
++ lambda ||mean(Delta z_start)-mean(Delta z_end)||_2
+```
+
+Optional covariance transport tests full-covariance style movement:
+
+```text
+z' = (z - mu_s) Sigma_s^{-1/2} Sigma_r^{1/2} + mu_r
+```
+
+Optional control probes use existing numeric descriptors or labels:
+
+```text
+s(z) = concat(mean_t z, std_t z, mean_t |Delta z|)
+h(z) = w^T normalize(s(z)) + b
+```
+
+with ridge regression:
+
+```text
+min_{w,b} ||Xw + b - y||^2 + lambda ||w||^2
+```
+
+Interpretation:
+
+```text
+observable     -> descriptor/label y exists and is robust enough
+predictable    -> h(z) predicts y better than a trivial baseline
+intervenable   -> an edit changes h(z) and the heard audio in the intended way
+```
+
+Mode 15 does not prove a control exists. It tells us which latent statistics are
+worth probing before building more invasive steering modes.
+
 ## Open Measurement Questions
 
 - Does Mode 2's flow score correlate with actual generation similarity or only teacher-forced vector-field agreement?
@@ -598,6 +683,8 @@ Use it for domain/style adaptation after lighter probes show that prompt inversi
 - Which latent filters in Mode 0d are merely destructive, and which become musical after SA3 polish?
 - Does Mode 0g produce useful cyclic continuity, or mostly half-period collapse?
 - Which residual layers in SA3 carry stable mood, density, brightness, or section-role information?
+- Which Mode 15 geometry signals are stable across chunk length, musical style, and dataset size?
+- Which controls are observable in simple SAME summaries but fail under actual intervention?
 
 ## Implementation Safety Notes
 

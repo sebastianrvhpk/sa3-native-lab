@@ -88,7 +88,16 @@ The current repo-specific math and implementation map is:
 That document covers the current Colab modes, including renoise, selective latent
 renoise, blur/sharpen/filtering, cross-audio grafting, cyclic sampler mixing,
 soft prompt inversion, Mode 2 beam prompt inversion, SAME statistical controls,
-residual steering, LatCH-style sidecars, and LoRA boundaries.
+residual steering, LatCH-style sidecars, LoRA boundaries, and Mode 15 geometry
+audits.
+
+The seven-operator research layer is:
+
+`docs/research/seven-better-operators.md`
+
+It maps latent geometry, covariance transport, periodic operators, direct
+guidance, prompt inversion, residual feature discovery, and control
+observability to the current helper modules and Colab exposure.
 
 Older root-level research notes are historical context from before this repo was
 consolidated around the combined SA3 Native Lab implementation.
