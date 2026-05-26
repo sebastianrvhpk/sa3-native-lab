@@ -148,6 +148,7 @@ The exact target convention is an implementation detail. The research claim is n
 
 0. Renoise variation / local neighborhood sampling
 0c. Latent-selective renoise playground
+0d. Latent blur playground
 1. Audio -> soft prompt
 2. Audio -> babble / hard prompt
 3. Audio -> readable prompt
@@ -242,6 +243,7 @@ LMDM adaptation is conceptual unless SA3 attention/sampler code is modified and 
 |---|---|---|
 | 0. Renoise variation | SAME latent neighborhood around \(E(x)\) | SDEdit/img2img-style noising, SA3 `init_audio` path |
 | 0c. Latent-selective renoise | SAME channel subsets / masked init noise | latent traversal, representation probing, img2img-style variation |
+| 0d. Latent blur | SAME low-pass / low-rank / detail attenuation | representation smoothing, latent traversal, manifold projection |
 | 1. Audio -> soft prompt | SA3 conditioning tensor \(c\) | Flow matching, PEZ/soft prompts, DITTO-style inference optimization |
 | 2. Audio -> babble prompt | hard text/token sequence \(p\) | PEZ / hard prompt optimization |
 | 3. Audio -> readable prompt | constrained text prompt \(p\) | prompt search, SA3 text-conditioned generation |
@@ -548,6 +550,11 @@ from latent_audio_primitives.prompt_optimization import (
     prompt_seed_from_audio_path,
 )
 from latent_audio_primitives.schema import LatentItem
+from latent_audio_primitives.latent_blur import (
+    LatentBlurSpec,
+    apply_latent_blur,
+    sa3_sample_from_init_latents,
+)
 from latent_audio_primitives.selective_renoise import (
     LatentMaskSpec,
     masked_latent_noise,
@@ -1396,6 +1403,210 @@ if RUN_MODE_0C_LATENT_SELECTIVE_RENOISE:
         labels=player_labels,
         title="Mode 0c latent-selective renoise playground",
         max_embed_mb=160.0,
+    )
+"""
+    ),
+    md(
+        r"""
+## Mode 0d. Latent Blur Playground
+
+Latent blur asks: what happens if we remove or smooth detail inside SAME space before decoding?
+
+Temporal blur:
+
+$$
+z'_{c,t} = \sum_{\tau} K_\sigma(\tau) z_{c,t-\tau}
+$$
+
+Channel blur:
+
+$$
+z'_{c,t} = \sum_{j} K_\sigma(j) z_{c-j,t}
+$$
+
+Low-rank blur:
+
+$$
+Z_{T \times C} \approx U_k \Sigma_k V_k^\top
+$$
+
+Detail attenuation:
+
+$$
+z' = \operatorname{blur}(z) + \gamma (z - \operatorname{blur}(z))
+$$
+
+where \(\gamma < 1\) suppresses latent detail residuals.
+
+Interpretation warnings:
+
+```text
+direct SAME decode = microscope, may be off-manifold or artifacty
+SA3 polish        = blurred latent used as init_data with small noise, more manifold-like but less pure
+channel blur      = probes whether channel index has structure; it may not
+low-rank blur     = probes global vs fine latent components
+```
+"""
+    ),
+    code(
+        r"""
+# @title Mode 0d. Latent blur playground
+
+RUN_MODE_0D_LATENT_BLUR = False
+
+LATENT_BLUR_AUDIO = INPUT_DIR / "known_9s.wav"
+LATENT_BLUR_OUTPUT_DIR = OUTPUT_DIR / "mode_00d_latent_blur"
+LATENT_BLUR_DURATION = 9.0
+LATENT_BLUR_PROMPT = ""
+LATENT_BLUR_STEPS = 8
+LATENT_BLUR_CFG = 1.0
+LATENT_BLUR_POLISH_NOISE = 0.12
+LATENT_BLUR_BASE_SEED = 900
+
+LATENT_BLUR_RUN_DIRECT_DECODE = True
+LATENT_BLUR_RUN_SA3_POLISH = True
+LATENT_BLUR_SAVE_PT = True
+
+LATENT_BLUR_SPECS = [
+    {"name": "time_r2", "mode": "temporal", "temporal_radius": 2, "strength": 1.0},
+    {"name": "time_r4", "mode": "temporal", "temporal_radius": 4, "strength": 1.0},
+    {"name": "time_r8", "mode": "temporal", "temporal_radius": 8, "strength": 1.0},
+    {"name": "channel_r1", "mode": "channel", "channel_radius": 1, "strength": 1.0},
+    {"name": "channel_r4", "mode": "channel", "channel_radius": 4, "strength": 1.0},
+    {"name": "time_channel_soft", "mode": "temporal_channel", "temporal_radius": 3, "channel_radius": 2, "strength": 0.75},
+    {"name": "low_rank_8", "mode": "low_rank", "rank": 8, "strength": 1.0},
+    {"name": "low_rank_24", "mode": "low_rank", "rank": 24, "strength": 1.0},
+    {"name": "detail_gain_025", "mode": "detail_attenuate", "temporal_radius": 4, "detail_gain": 0.25, "strength": 1.0},
+    {"name": "mean_blend_025", "mode": "mean_blend", "strength": 0.25},
+]
+
+
+def latent_blur_spec_from_dict(payload):
+    return LatentBlurSpec(
+        name=payload["name"],
+        mode=payload.get("mode", "temporal"),
+        strength=float(payload.get("strength", 1.0)),
+        temporal_radius=int(payload.get("temporal_radius", 4)),
+        temporal_sigma=payload.get("temporal_sigma"),
+        channel_radius=int(payload.get("channel_radius", 2)),
+        channel_sigma=payload.get("channel_sigma"),
+        rank=int(payload.get("rank", 16)),
+        detail_gain=float(payload.get("detail_gain", 0.25)),
+    )
+
+
+if RUN_MODE_0D_LATENT_BLUR:
+    require_models()
+    LATENT_BLUR_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    source_audio, source_sr = load_audio(
+        LATENT_BLUR_AUDIO,
+        duration=LATENT_BLUR_DURATION,
+        stereo=True,
+    )
+    source_item = encode_audio_file_to_item(
+        LATENT_BLUR_AUDIO,
+        item_id="latent_blur_source",
+        duration=LATENT_BLUR_DURATION,
+    )
+    source_latents = item_to_sa3_tensor(
+        source_item,
+        device=DEVICE,
+        dtype=next(sa3_model.model.model.parameters()).dtype,
+    )
+
+    player_paths = []
+    player_labels = []
+    manifest = []
+    source_path = LATENT_BLUR_OUTPUT_DIR / "source_reference.wav"
+    torchaudio.save(str(source_path), source_audio.cpu(), source_sr)
+    player_paths.append(source_path)
+    player_labels.append("source reference")
+
+    for variant_index, spec_dict in enumerate(LATENT_BLUR_SPECS):
+        spec = latent_blur_spec_from_dict(spec_dict)
+        name = safe_audio_name(spec.name)
+        seed = LATENT_BLUR_BASE_SEED + variant_index
+        blurred_latents = apply_latent_blur(source_latents, spec)
+        entry = {
+            "name": spec.name,
+            "mode": spec.mode,
+            "strength": spec.strength,
+            "temporal_radius": spec.temporal_radius,
+            "channel_radius": spec.channel_radius,
+            "rank": spec.rank,
+            "detail_gain": spec.detail_gain,
+            "polish_noise": LATENT_BLUR_POLISH_NOISE,
+            "seed": seed,
+            "outputs": {},
+        }
+
+        if LATENT_BLUR_RUN_DIRECT_DECODE:
+            direct_path = LATENT_BLUR_OUTPUT_DIR / f"direct_{name}.wav"
+            decode_sa3_latents_to_file_cropped(
+                blurred_latents,
+                direct_path,
+                duration=LATENT_BLUR_DURATION,
+            )
+            entry["outputs"]["direct_same_decode"] = str(direct_path)
+            player_paths.append(direct_path)
+            player_labels.append(f"direct {spec.name}")
+
+        if LATENT_BLUR_RUN_SA3_POLISH:
+            polished_latents = sa3_sample_from_init_latents(
+                sa3_model,
+                blurred_latents,
+                prompt=LATENT_BLUR_PROMPT,
+                duration=LATENT_BLUR_DURATION,
+                steps=LATENT_BLUR_STEPS,
+                cfg_scale=LATENT_BLUR_CFG,
+                init_noise_level=LATENT_BLUR_POLISH_NOISE,
+                seed=seed,
+            )
+            polished_path = LATENT_BLUR_OUTPUT_DIR / f"sa3_polish_{name}.wav"
+            decode_sa3_latents_to_file_cropped(
+                polished_latents,
+                polished_path,
+                duration=LATENT_BLUR_DURATION,
+            )
+            entry["outputs"]["sa3_polished"] = str(polished_path)
+            player_paths.append(polished_path)
+            player_labels.append(f"SA3 polish {spec.name}")
+
+            if LATENT_BLUR_SAVE_PT:
+                pt_path = LATENT_BLUR_OUTPUT_DIR / f"{name}.pt"
+                torch.save(
+                    {
+                        "source_latents": source_latents.detach().cpu(),
+                        "blurred_latents": blurred_latents.detach().cpu(),
+                        "polished_latents": polished_latents.detach().cpu(),
+                        "spec": spec_dict,
+                    },
+                    pt_path,
+                )
+                entry["outputs"]["pt"] = str(pt_path)
+        elif LATENT_BLUR_SAVE_PT:
+            pt_path = LATENT_BLUR_OUTPUT_DIR / f"{name}.pt"
+            torch.save(
+                {
+                    "source_latents": source_latents.detach().cpu(),
+                    "blurred_latents": blurred_latents.detach().cpu(),
+                    "spec": spec_dict,
+                },
+                pt_path,
+            )
+            entry["outputs"]["pt"] = str(pt_path)
+
+        manifest.append(entry)
+        print(spec.name, "mode:", spec.mode)
+
+    manifest_path = LATENT_BLUR_OUTPUT_DIR / "manifest.json"
+    manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    print("saved manifest:", manifest_path)
+    play_audio_files(
+        player_paths,
+        labels=player_labels,
+        title="Mode 0d latent blur playground",
+        max_embed_mb=180.0,
     )
 """
     ),
