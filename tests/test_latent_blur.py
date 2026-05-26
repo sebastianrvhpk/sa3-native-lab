@@ -6,6 +6,9 @@ from latent_audio_primitives.latent_blur import (
     channel_blur_latents,
     channel_sharpen_latents,
     detail_attenuate_latents,
+    fft_bandpass_latents,
+    fft_highpass_latents,
+    fft_lowpass_latents,
     low_rank_latents,
     sharpen_latents,
     temporal_box_blur_latents,
@@ -97,6 +100,37 @@ def test_channel_sharpen_latents_amplifies_channel_detail_residual():
     assert sharpened[0, 3, 0] > latents[0, 3, 0]
 
 
+def test_fft_lowpass_latents_attenuates_fast_alternation():
+    latents = torch.tensor([[[1.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, -1.0]]])
+
+    filtered = fft_lowpass_latents(latents, cutoff=0.25, high_gain=0.0)
+
+    assert tuple(filtered.shape) == tuple(latents.shape)
+    assert filtered.std() < latents.std()
+
+
+def test_fft_highpass_latents_attenuates_dc_component():
+    latents = torch.ones(1, 2, 8)
+
+    filtered = fft_highpass_latents(latents, cutoff=0.25, low_gain=0.0)
+
+    torch.testing.assert_close(filtered, torch.zeros_like(latents), atol=1e-6, rtol=0)
+
+
+def test_fft_bandpass_latents_preserves_shape_and_validates_cutoffs():
+    latents = torch.randn(1, 3, 16)
+
+    filtered = fft_bandpass_latents(latents, low_cutoff=0.2, high_cutoff=0.8, low_gain=0.5, high_gain=0.5)
+
+    assert tuple(filtered.shape) == tuple(latents.shape)
+    try:
+        fft_bandpass_latents(latents, low_cutoff=0.8, high_cutoff=0.2)
+    except ValueError as exc:
+        assert "high_cutoff" in str(exc)
+    else:
+        raise AssertionError("expected ValueError")
+
+
 def test_apply_latent_blur_strength_zero_returns_original():
     latents = torch.randn(1, 3, 12)
     spec = LatentBlurSpec(name="none", mode="temporal", temporal_radius=2, temporal_kernel="box", strength=0.0)
@@ -123,3 +157,12 @@ def test_apply_latent_blur_sharpen_mode():
     out = apply_latent_blur(latents, spec)
 
     assert out[0, 0, 4] > latents[0, 0, 4]
+
+
+def test_apply_latent_blur_fft_lowpass_mode():
+    latents = torch.tensor([[[1.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, -1.0]]])
+    spec = LatentBlurSpec(name="lp", mode="fft_lowpass", filter_cutoff=0.25, filter_high_gain=0.0)
+
+    out = apply_latent_blur(latents, spec)
+
+    assert out.std() < latents.std()

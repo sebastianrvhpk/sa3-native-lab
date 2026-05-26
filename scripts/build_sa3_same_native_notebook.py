@@ -1899,6 +1899,14 @@ $$
 
 where \(\beta > 0\) amplifies detail residuals. This can emphasize transient-like or high-activity latent structure, but large values may push the latent off-manifold.
 
+Latent FFT filters:
+
+$$
+\hat z'_{c,\omega} = g(\omega)\hat z_{c,\omega}
+$$
+
+where the FFT is over SAME latent frames, not decoded audio samples. This is a filter over latent-channel trajectories. It can damp fast latent-frame jitter before SAME decode, but it is not equivalent to an audio EQ.
+
 Interpretation warnings:
 
 ```text
@@ -1907,6 +1915,7 @@ SA3 polish        = blurred latent used as init_data with small noise, more mani
 channel blur      = probes whether channel index has structure; it may not
 channel sharpen   = also a probe; channel adjacency is not guaranteed semantic
 low-rank blur     = probes global vs fine latent components
+FFT filter        = latent-time filter, not decoded-audio EQ
 ```
 """
     ),
@@ -1920,7 +1929,7 @@ LATENT_BLUR_AUDIO = INPUT_DIR / "known_9s.wav"
 LATENT_BLUR_OUTPUT_DIR = OUTPUT_DIR / "mode_00d_latent_blur"
 LATENT_BLUR_DURATION = 9.0
 LATENT_BLUR_PROMPT = ""
-LATENT_BLUR_STEPS = 8
+LATENT_BLUR_STEPS = 20
 LATENT_BLUR_CFG = 1.0
 LATENT_BLUR_POLISH_NOISE = 0.06
 LATENT_BLUR_BASE_SEED = 900
@@ -1930,9 +1939,22 @@ LATENT_BLUR_BASE_SEED = 900
 #   r=4 is 9 frames (~0.84s), r=8 is 17 frames (~1.58s).
 # - strength: 0.0 is no edit, 0.10-0.35 is gentle, 1.0 is full replacement by the blurred latent.
 # - LATENT_BLUR_POLISH_NOISE: 0.03-0.08 is light SA3 projection, 0.12+ starts behaving more like regeneration.
+# - LATENT_BLUR_STEPS: 8 is fast/draft, 20 is usually much cleaner for off-manifold edits.
 LATENT_BLUR_RUN_DIRECT_DECODE = False
 LATENT_BLUR_RUN_SA3_POLISH = True
 LATENT_BLUR_SAVE_PT = True
+
+# Optional filter on the final SA3-polished latent before SAME decode.
+# This is useful when the sampler output is musically right but has latent-frame grit.
+LATENT_BLUR_POST_FILTER = None
+# Example:
+# LATENT_BLUR_POST_FILTER = {
+#     "name": "post_low_shelf_c065_g060_s025",
+#     "mode": "fft_lowpass",
+#     "filter_cutoff": 0.65,
+#     "filter_high_gain": 0.60,
+#     "strength": 0.25,
+# }
 
 # Gentle defaults. The earlier full-strength temporal blurs are intentionally not the default
 # because SA3 polish often treats them as over-damaged latents.
@@ -1947,6 +1969,9 @@ LATENT_BLUR_SPECS = [
     {"name": "motion_future_r2_s020", "mode": "temporal", "temporal_kernel": "box", "temporal_direction": "future", "temporal_radius": 2, "strength": 0.20},
     {"name": "channel_r1_s020", "mode": "channel", "channel_radius": 1, "strength": 0.20},
     {"name": "time_channel_t1_c1_s020", "mode": "temporal_channel", "temporal_kernel": "box", "temporal_radius": 1, "channel_radius": 1, "strength": 0.20},
+    {"name": "filter_low_shelf_c065_g060_s025", "mode": "fft_lowpass", "filter_cutoff": 0.65, "filter_high_gain": 0.60, "strength": 0.25},
+    {"name": "filter_low_shelf_c045_g070_s025", "mode": "fft_lowpass", "filter_cutoff": 0.45, "filter_high_gain": 0.70, "strength": 0.25},
+    {"name": "filter_band_shelf_010_070_s025", "mode": "fft_bandpass", "filter_low_cutoff": 0.10, "filter_high_cutoff": 0.70, "filter_low_gain": 0.70, "filter_high_gain": 0.60, "strength": 0.25},
     {"name": "low_rank_8", "mode": "low_rank", "rank": 8, "strength": 1.0},
     {"name": "low_rank_24", "mode": "low_rank", "rank": 24, "strength": 1.0},
     {"name": "detail_gain_050", "mode": "detail_attenuate", "temporal_radius": 4, "detail_gain": 0.50, "strength": 1.0},
@@ -1985,6 +2010,12 @@ def latent_blur_spec_from_dict(payload):
         rank=int(payload.get("rank", 16)),
         detail_gain=float(payload.get("detail_gain", 0.25)),
         sharpen_amount=float(payload.get("sharpen_amount", 0.5)),
+        filter_cutoff=float(payload.get("filter_cutoff", 0.5)),
+        filter_low_cutoff=float(payload.get("filter_low_cutoff", 0.1)),
+        filter_high_cutoff=float(payload.get("filter_high_cutoff", 0.6)),
+        filter_low_gain=float(payload.get("filter_low_gain", 0.0)),
+        filter_mid_gain=float(payload.get("filter_mid_gain", 1.0)),
+        filter_high_gain=float(payload.get("filter_high_gain", 0.0)),
     )
 
 
@@ -2031,7 +2062,14 @@ if RUN_MODE_0D_LATENT_BLUR:
             "rank": spec.rank,
             "detail_gain": spec.detail_gain,
             "sharpen_amount": spec.sharpen_amount,
+            "filter_cutoff": spec.filter_cutoff,
+            "filter_low_cutoff": spec.filter_low_cutoff,
+            "filter_high_cutoff": spec.filter_high_cutoff,
+            "filter_low_gain": spec.filter_low_gain,
+            "filter_mid_gain": spec.filter_mid_gain,
+            "filter_high_gain": spec.filter_high_gain,
             "polish_noise": LATENT_BLUR_POLISH_NOISE,
+            "polish_steps": LATENT_BLUR_STEPS,
             "seed": seed,
             "outputs": {},
         }
@@ -2058,6 +2096,10 @@ if RUN_MODE_0D_LATENT_BLUR:
                 init_noise_level=LATENT_BLUR_POLISH_NOISE,
                 seed=seed,
             )
+            if LATENT_BLUR_POST_FILTER is not None:
+                post_filter_spec = latent_blur_spec_from_dict(LATENT_BLUR_POST_FILTER)
+                polished_latents = apply_latent_blur(polished_latents, post_filter_spec)
+                entry["post_filter"] = dict(LATENT_BLUR_POST_FILTER)
             polished_path = LATENT_BLUR_OUTPUT_DIR / f"sa3_polish_{name}.wav"
             decode_sa3_latents_to_file_cropped(
                 polished_latents,

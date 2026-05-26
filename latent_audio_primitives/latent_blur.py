@@ -20,6 +20,12 @@ class LatentBlurSpec:
     rank: int = 16
     detail_gain: float = 0.25
     sharpen_amount: float = 0.5
+    filter_cutoff: float = 0.5
+    filter_low_cutoff: float = 0.1
+    filter_high_cutoff: float = 0.6
+    filter_low_gain: float = 0.0
+    filter_mid_gain: float = 1.0
+    filter_high_gain: float = 0.0
 
 
 def apply_latent_blur(latents: Any, spec: LatentBlurSpec) -> Any:
@@ -71,6 +77,27 @@ def apply_latent_blur(latents: Any, spec: LatentBlurSpec) -> Any:
             radius=spec.channel_radius,
             sigma=spec.channel_sigma,
             amount=spec.sharpen_amount,
+        )
+    elif mode in {"fft_lowpass", "spectral_lowpass", "low_shelf", "high_damp"}:
+        target = fft_lowpass_latents(
+            x,
+            cutoff=spec.filter_cutoff,
+            high_gain=spec.filter_high_gain,
+        )
+    elif mode in {"fft_highpass", "spectral_highpass", "high_shelf", "low_damp"}:
+        target = fft_highpass_latents(
+            x,
+            cutoff=spec.filter_cutoff,
+            low_gain=spec.filter_low_gain,
+        )
+    elif mode in {"fft_bandpass", "spectral_bandpass", "bandpass"}:
+        target = fft_bandpass_latents(
+            x,
+            low_cutoff=spec.filter_low_cutoff,
+            high_cutoff=spec.filter_high_cutoff,
+            low_gain=spec.filter_low_gain,
+            mid_gain=spec.filter_mid_gain,
+            high_gain=spec.filter_high_gain,
         )
     elif mode in {"mean_blend", "time_mean", "static"}:
         target = x.mean(dim=-1, keepdim=True).expand_as(x)
@@ -224,6 +251,86 @@ def channel_sharpen_latents(
     return x + float(amount) * (x - low)
 
 
+def fft_filter_latents(
+    latents: Any,
+    *,
+    low_cutoff: float | None = None,
+    high_cutoff: float | None = None,
+    low_gain: float = 1.0,
+    mid_gain: float = 1.0,
+    high_gain: float = 1.0,
+) -> Any:
+    """Apply a simple frequency-domain filter along latent time.
+
+    Frequencies are normalized so 0 is DC and 1 is the Nyquist frequency of the
+    SAME latent frame sequence. This filters each latent channel trajectory over
+    time, not decoded audio samples.
+    """
+
+    torch = _require_torch()
+    x = _as_bct(latents, torch)
+    if x.shape[-1] <= 1:
+        return x.clone()
+    spectrum = torch.fft.rfft(x.float(), dim=-1)
+    freqs = torch.linspace(0.0, 1.0, spectrum.shape[-1], device=x.device, dtype=torch.float32)
+    gain = torch.full_like(freqs, float(mid_gain))
+    if low_cutoff is not None:
+        low_cutoff = _clamp_cutoff(low_cutoff)
+        gain = torch.where(freqs < low_cutoff, torch.full_like(gain, float(low_gain)), gain)
+    if high_cutoff is not None:
+        high_cutoff = _clamp_cutoff(high_cutoff)
+        gain = torch.where(freqs > high_cutoff, torch.full_like(gain, float(high_gain)), gain)
+    filtered = torch.fft.irfft(spectrum * gain.view(1, 1, -1), n=x.shape[-1], dim=-1)
+    return filtered.to(dtype=x.dtype)
+
+
+def fft_lowpass_latents(latents: Any, *, cutoff: float = 0.5, high_gain: float = 0.0) -> Any:
+    """Low-pass or high-damping shelf over latent-frame frequency."""
+
+    return fft_filter_latents(
+        latents,
+        high_cutoff=cutoff,
+        low_gain=1.0,
+        mid_gain=1.0,
+        high_gain=high_gain,
+    )
+
+
+def fft_highpass_latents(latents: Any, *, cutoff: float = 0.2, low_gain: float = 0.0) -> Any:
+    """High-pass or low-damping shelf over latent-frame frequency."""
+
+    return fft_filter_latents(
+        latents,
+        low_cutoff=cutoff,
+        low_gain=low_gain,
+        mid_gain=1.0,
+        high_gain=1.0,
+    )
+
+
+def fft_bandpass_latents(
+    latents: Any,
+    *,
+    low_cutoff: float = 0.1,
+    high_cutoff: float = 0.6,
+    low_gain: float = 0.0,
+    mid_gain: float = 1.0,
+    high_gain: float = 0.0,
+) -> Any:
+    """Band-pass or band-shelf over latent-frame frequency."""
+
+    if high_cutoff <= low_cutoff:
+        raise ValueError("high_cutoff must be greater than low_cutoff")
+    return fft_filter_latents(
+        latents,
+        low_cutoff=low_cutoff,
+        high_cutoff=high_cutoff,
+        low_gain=low_gain,
+        mid_gain=mid_gain,
+        high_gain=high_gain,
+    )
+
+
 def sa3_sample_from_init_latents(
     stable_model: Any,
     init_latents: Any,
@@ -370,6 +477,13 @@ def _normalize_direction(direction: str):
     if direction in {"future", "leading", "forward", "right", "anti_causal"}:
         return "future"
     raise ValueError(f"unknown temporal blur direction: {direction}")
+
+
+def _clamp_cutoff(value: float) -> float:
+    value = float(value)
+    if value < 0.0 or value > 1.0:
+        raise ValueError("filter cutoffs are normalized to [0, 1]")
+    return value
 
 
 def _pad_1d(x: Any, left: int, right: int, *, torch):
