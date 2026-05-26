@@ -57,6 +57,15 @@ from .tokenizer_vocab import (
     native_tokenizer_vocabulary,
     preview_native_tokenizer_vocabulary,
 )
+from .selective_renoise import (
+    LatentMaskSpec,
+    SelectiveRenoiseResult,
+    channel_mask_like,
+    masked_latent_noise,
+    sampler_noise_for_channels,
+    select_latent_channels,
+    selective_renoise_sa3,
+)
 
 __all__ = [
     "LatentItem",
@@ -64,6 +73,8 @@ __all__ = [
     "SearchResult",
     "TransitionWeights",
     "TokenizerVocabularyConfig",
+    "LatentMaskSpec",
+    "SelectiveRenoiseResult",
     "LatentStyleDirection",
     "LatentStyleProfile",
     "AudioSetDirection",
@@ -79,6 +90,7 @@ __all__ = [
     "best_path",
     "boundary_summary",
     "bridge_cost",
+    "channel_mask_like",
     "cosine_similarity",
     "coordinate_prompt_search",
     "default_modifier_axes",
@@ -95,6 +107,7 @@ __all__ = [
     "load_style_profile",
     "load_summary_direction",
     "loop_cost",
+    "masked_latent_noise",
     "native_tokenizer_vocabulary",
     "preview_native_tokenizer_vocabulary",
     "prompt_seed_from_audio_path",
@@ -106,6 +119,9 @@ __all__ = [
     "save_style_profile",
     "save_summary_direction",
     "save_audio_frame_direction",
+    "sampler_noise_for_channels",
+    "select_latent_channels",
+    "selective_renoise_sa3",
     "style_direction",
     "summary_direction",
     "transition_cost",

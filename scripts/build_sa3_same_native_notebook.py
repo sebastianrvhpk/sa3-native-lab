@@ -147,6 +147,7 @@ The exact target convention is an implementation detail. The research claim is n
 ## Experimental Modes Covered
 
 0. Renoise variation / local neighborhood sampling
+0c. Latent-selective renoise playground
 1. Audio -> soft prompt
 2. Audio -> babble / hard prompt
 3. Audio -> readable prompt
@@ -240,6 +241,7 @@ LMDM adaptation is conceptual unless SA3 attention/sampler code is modified and 
 | Notebook mode | Native object edited | Closest literature |
 |---|---|---|
 | 0. Renoise variation | SAME latent neighborhood around \(E(x)\) | SDEdit/img2img-style noising, SA3 `init_audio` path |
+| 0c. Latent-selective renoise | SAME channel subsets / masked init noise | latent traversal, representation probing, img2img-style variation |
 | 1. Audio -> soft prompt | SA3 conditioning tensor \(c\) | Flow matching, PEZ/soft prompts, DITTO-style inference optimization |
 | 2. Audio -> babble prompt | hard text/token sequence \(p\) | PEZ / hard prompt optimization |
 | 3. Audio -> readable prompt | constrained text prompt \(p\) | prompt search, SA3 text-conditioned generation |
@@ -546,6 +548,12 @@ from latent_audio_primitives.prompt_optimization import (
     prompt_seed_from_audio_path,
 )
 from latent_audio_primitives.schema import LatentItem
+from latent_audio_primitives.selective_renoise import (
+    LatentMaskSpec,
+    masked_latent_noise,
+    select_latent_channels,
+    selective_renoise_sa3,
+)
 from latent_audio_primitives.tokenizer_vocab import (
     native_tokenizer_vocabulary,
     preview_native_tokenizer_vocabulary,
@@ -750,6 +758,18 @@ def decode_sa3_latents_to_file(latents, path):
     path.parent.mkdir(parents=True, exist_ok=True)
     with torch.inference_mode():
         audio = sa3.decode_latents(latents).float().clamp(-1, 1).cpu()
+    torchaudio.save(str(path), audio[0], sa3.sample_rate)
+    return path
+
+
+def decode_sa3_latents_to_file_cropped(latents, path, *, duration=None):
+    require_models()
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with torch.inference_mode():
+        audio = sa3.decode_latents(latents).float().clamp(-1, 1).cpu()
+    if duration is not None:
+        audio = audio[..., : int(round(duration * sa3.sample_rate))]
     torchaudio.save(str(path), audio[0], sa3.sample_rate)
     return path
 
@@ -1160,6 +1180,223 @@ if RUN_MODE_0_RENOISE_VARIATIONS:
         )
     except Exception as exc:
         print("Custom audio player skipped:", exc)
+"""
+    ),
+    md(
+        r"""
+## Mode 0c. Latent-Selective Renoise Playground
+
+This is for one short source you know well, e.g. a 9-second loop.
+
+Instead of renoising every latent channel equally:
+
+$$
+z_\sigma = (1-\sigma)z_0 + \sigma\epsilon
+$$
+
+select a subset of SAME channels:
+
+$$
+S \subset \{0,\dots,255\}
+$$
+
+and perturb only those channels at the sampler start:
+
+$$
+\epsilon_S =
+\begin{cases}
+\epsilon_c, & c \in S \\
+z_{0,c}, & c \notin S
+\end{cases}
+$$
+
+SA3 then starts from:
+
+$$
+z_{start} = (1-\sigma)z_0 + \sigma \epsilon_S
+$$
+
+Unselected channels are not mathematically frozen during denoising; they simply start unchanged. That is enough for a first probe of emergent channel structure.
+
+Useful listening questions:
+
+```text
+Which masks preserve rhythm?
+Which masks change timbre?
+Which masks change stereo/space?
+Which masks create artifacts?
+Are effects reproducible for the same channel set?
+Do high-variance and low-variance channels form different families?
+```
+"""
+    ),
+    code(
+        r"""
+# @title Mode 0c. Latent-selective renoise playground
+
+RUN_MODE_0C_LATENT_SELECTIVE_RENOISE = False
+
+LATENT_PLAYGROUND_AUDIO = INPUT_DIR / "known_9s.wav"
+LATENT_PLAYGROUND_OUTPUT_DIR = OUTPUT_DIR / "mode_00c_latent_selective_renoise"
+LATENT_PLAYGROUND_DURATION = 9.0
+LATENT_PLAYGROUND_PROMPT = ""
+LATENT_PLAYGROUND_STEPS = 8
+LATENT_PLAYGROUND_CFG = 1.0
+LATENT_PLAYGROUND_NOISE = 0.40
+LATENT_PLAYGROUND_BASE_SEED = 700
+
+# Direct decode is cheap and off-manifold: useful as a microscope for SAME channels.
+# SA3 sampler is slower and maps the masked perturbation back toward the model manifold.
+LATENT_PLAYGROUND_RUN_DIRECT_DECODE = True
+LATENT_PLAYGROUND_RUN_SA3_SAMPLER = True
+LATENT_PLAYGROUND_SAVE_PT = True
+
+LATENT_PLAYGROUND_SPECS = [
+    {"name": "random_10_s0", "mode": "random_channels", "fraction": 0.10, "seed": 0},
+    {"name": "random_10_s1", "mode": "random_channels", "fraction": 0.10, "seed": 1},
+    {"name": "random_25_s0", "mode": "random_channels", "fraction": 0.25, "seed": 0},
+    {"name": "high_var_10", "mode": "high_variance", "fraction": 0.10, "seed": 0},
+    {"name": "low_var_10", "mode": "low_variance", "fraction": 0.10, "seed": 0},
+    {"name": "high_activity_10", "mode": "high_activity", "fraction": 0.10, "seed": 0},
+    {"name": "block_000_16", "mode": "channel_block", "block_size": 16, "start_channel": 0},
+    {"name": "block_128_16", "mode": "channel_block", "block_size": 16, "start_channel": 128},
+]
+
+
+def latent_mask_spec_from_dict(payload):
+    return LatentMaskSpec(
+        name=payload["name"],
+        mode=payload.get("mode", "random_channels"),
+        fraction=float(payload.get("fraction", 0.25)),
+        seed=int(payload.get("seed", 0)),
+        channels=tuple(payload["channels"]) if payload.get("channels") is not None else None,
+        start_channel=payload.get("start_channel"),
+        block_size=payload.get("block_size"),
+    )
+
+
+def safe_audio_name(name):
+    return "".join(ch if ch.isalnum() or ch in "-_." else "_" for ch in name)[:96]
+
+
+if RUN_MODE_0C_LATENT_SELECTIVE_RENOISE:
+    require_models()
+    LATENT_PLAYGROUND_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    source_audio, source_sr = load_audio(
+        LATENT_PLAYGROUND_AUDIO,
+        duration=LATENT_PLAYGROUND_DURATION,
+        stereo=True,
+    )
+    source_item = encode_audio_file_to_item(
+        LATENT_PLAYGROUND_AUDIO,
+        item_id="latent_playground_source",
+        duration=LATENT_PLAYGROUND_DURATION,
+    )
+    source_latents = item_to_sa3_tensor(
+        source_item,
+        device=DEVICE,
+        dtype=next(sa3_model.model.model.parameters()).dtype,
+    )
+
+    player_paths = []
+    player_labels = []
+    manifest = []
+    source_path = LATENT_PLAYGROUND_OUTPUT_DIR / "source_reference.wav"
+    torchaudio.save(str(source_path), source_audio.cpu(), source_sr)
+    player_paths.append(source_path)
+    player_labels.append("source reference")
+
+    for variant_index, spec_dict in enumerate(LATENT_PLAYGROUND_SPECS):
+        spec = latent_mask_spec_from_dict(spec_dict)
+        name = safe_audio_name(spec.name)
+        seed = LATENT_PLAYGROUND_BASE_SEED + variant_index
+        channels = select_latent_channels(source_latents, spec)
+        sampler_spec = LatentMaskSpec(
+            name=spec.name,
+            mode=spec.mode,
+            fraction=spec.fraction,
+            seed=spec.seed,
+            channels=tuple(channels),
+            start_channel=spec.start_channel,
+            block_size=spec.block_size,
+        )
+        entry = {
+            "name": spec.name,
+            "mode": spec.mode,
+            "fraction": spec.fraction,
+            "seed": spec.seed,
+            "sampler_seed": seed,
+            "noise_level": LATENT_PLAYGROUND_NOISE,
+            "selected_channel_count": len(channels),
+            "selected_channels": channels,
+            "outputs": {},
+        }
+
+        if LATENT_PLAYGROUND_RUN_DIRECT_DECODE:
+            mixed_latents = masked_latent_noise(
+                source_latents,
+                channels,
+                sigma=LATENT_PLAYGROUND_NOISE,
+                seed=seed,
+            )
+            direct_path = LATENT_PLAYGROUND_OUTPUT_DIR / f"direct_{name}.wav"
+            decode_sa3_latents_to_file_cropped(
+                mixed_latents,
+                direct_path,
+                duration=LATENT_PLAYGROUND_DURATION,
+            )
+            entry["outputs"]["direct_same_decode"] = str(direct_path)
+            player_paths.append(direct_path)
+            player_labels.append(f"direct {spec.name} ({len(channels)} ch)")
+
+        if LATENT_PLAYGROUND_RUN_SA3_SAMPLER:
+            result = selective_renoise_sa3(
+                sa3_model,
+                source_audio,
+                source_sr,
+                spec=sampler_spec,
+                prompt=LATENT_PLAYGROUND_PROMPT,
+                duration=LATENT_PLAYGROUND_DURATION,
+                steps=LATENT_PLAYGROUND_STEPS,
+                cfg_scale=LATENT_PLAYGROUND_CFG,
+                init_noise_level=LATENT_PLAYGROUND_NOISE,
+                seed=seed,
+            )
+            sampled_path = LATENT_PLAYGROUND_OUTPUT_DIR / f"sa3_{name}.wav"
+            decode_sa3_latents_to_file_cropped(
+                result.sampled_latents,
+                sampled_path,
+                duration=LATENT_PLAYGROUND_DURATION,
+            )
+            entry["outputs"]["sa3_sampled"] = str(sampled_path)
+            player_paths.append(sampled_path)
+            player_labels.append(f"SA3 {spec.name} ({len(channels)} ch)")
+            entry.update(result.metadata)
+            if LATENT_PLAYGROUND_SAVE_PT:
+                pt_path = LATENT_PLAYGROUND_OUTPUT_DIR / f"{name}.pt"
+                torch.save(
+                    {
+                        "init_latents": result.init_latents.detach().cpu(),
+                        "mixed_latents": result.mixed_latents.detach().cpu(),
+                        "sampled_latents": result.sampled_latents.detach().cpu(),
+                        "metadata": result.metadata,
+                    },
+                    pt_path,
+                )
+                entry["outputs"]["pt"] = str(pt_path)
+
+        manifest.append(entry)
+        print(spec.name, "channels:", len(channels), channels[:24])
+
+    manifest_path = LATENT_PLAYGROUND_OUTPUT_DIR / "manifest.json"
+    manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    print("saved manifest:", manifest_path)
+    play_audio_files(
+        player_paths,
+        labels=player_labels,
+        title="Mode 0c latent-selective renoise playground",
+        max_embed_mb=160.0,
+    )
 """
     ),
     md(
