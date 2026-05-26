@@ -150,6 +150,7 @@ The exact target convention is an implementation detail. The research claim is n
 0c. Latent-selective renoise playground
 0e. Cross-audio latent channel graft
 0d. Latent blur playground
+0f. Cyclic time-roll loop lab
 1. Audio -> soft prompt
 2. Audio -> babble / hard prompt
 3. Audio -> readable prompt
@@ -246,6 +247,7 @@ LMDM adaptation is conceptual unless SA3 attention/sampler code is modified and 
 | 0c. Latent-selective renoise | SAME channel subsets / masked init noise | latent traversal, representation probing, img2img-style variation |
 | 0e. Cross-audio graft | SAME source channels mixed with donor channels | latent arithmetic, channel transplant, representation probing |
 | 0d. Latent blur | SAME low-pass / low-rank / detail attenuation | representation smoothing, latent traversal, manifold projection |
+| 0f. Cyclic roll loop lab | time-rolled audio/SAME latents | tiling augmentation, circular optimization, SA3 inpainting |
 | 1. Audio -> soft prompt | SA3 conditioning tensor \(c\) | Flow matching, PEZ/soft prompts, DITTO-style inference optimization |
 | 2. Audio -> babble prompt | hard text/token sequence \(p\) | PEZ / hard prompt optimization |
 | 3. Audio -> readable prompt | constrained text prompt \(p\) | prompt search, SA3 text-conditioned generation |
@@ -556,6 +558,15 @@ from latent_audio_primitives.latent_blur import (
     LatentBlurSpec,
     apply_latent_blur,
     sa3_sample_from_init_latents,
+)
+from latent_audio_primitives.looping import (
+    cyclic_roll_audio,
+    cyclic_roll_latents,
+    frames_from_fraction,
+    loop_boundary_metrics,
+    repeated_loop_preview_audio,
+    samples_from_fraction,
+    seam_inpaint_bounds,
 )
 from latent_audio_primitives.selective_renoise import (
     LatentMaskSpec,
@@ -2145,6 +2156,221 @@ if RUN_MODE_0D_LATENT_BLUR:
         labels=player_labels,
         title="Mode 0d latent blur playground",
         max_embed_mb=180.0,
+    )
+"""
+    ),
+    md(
+        r"""
+## Mode 0f. Cyclic Time-Roll Loop Lab
+
+This is the audio version of the old image-tiling trick: move the seam away from the boundary, let the model operate while that seam is inside the signal, then roll back.
+
+Cyclic roll operator:
+
+$$
+R_s(z)_t = z_{(t-s) \bmod T}
+$$
+
+Latent roll polish:
+
+$$
+z_{rolled}=R_s(z),\quad
+\tilde z_{rolled}=F_\theta(z_{rolled}),\quad
+\tilde z=R_{-s}(\tilde z_{rolled})
+$$
+
+Audio seam inpaint:
+
+```text
+roll audio by half
+the original loop boundary is now in the middle
+inpaint a small window around that middle seam
+roll audio back
+repeat it several times and listen to the seam
+```
+
+This is not a perfect-loop guarantee. It is a cyclic augmentation experiment that gives SA3 a chance to repair the loop boundary as normal musical interior rather than as the edge of a file.
+"""
+    ),
+    code(
+        r"""
+# @title Mode 0f. Cyclic time-roll loop lab
+
+RUN_MODE_0F_CYCLIC_LOOP = False
+
+LOOP_AUDIO = INPUT_DIR / "known_9s.wav"
+LOOP_OUTPUT_DIR = OUTPUT_DIR / "mode_00f_cyclic_loop"
+LOOP_DURATION = 9.0
+LOOP_PROMPT = ""
+LOOP_STEPS = 20
+LOOP_CFG = 1.0
+LOOP_BASE_SEED = 970
+
+LOOP_SHIFT_FRACTIONS = [0.5]
+LOOP_PREVIEW_REPEATS = 4
+
+# Latent path: roll SAME latents, SA3-polish, unroll, decode.
+LOOP_RUN_LATENT_ROLL_POLISH = True
+LOOP_LATENT_POLISH_NOISE = 0.25
+
+# Audio path: roll waveform, inpaint seam window, unroll waveform.
+LOOP_RUN_AUDIO_ROLL_INPAINT = True
+LOOP_INPAINT_WINDOW_SECONDS = 1.0
+
+
+def safe_loop_name(value):
+    return "".join(ch if ch.isalnum() or ch in "-_." else "_" for ch in str(value))[:96]
+
+
+def save_loop_preview(audio_path, repeats, label):
+    audio, sample_rate = torchaudio.load(str(audio_path))
+    preview = repeated_loop_preview_audio(audio, repeats=repeats).cpu().float().clamp(-1, 1)
+    preview_path = audio_path.with_name(f"{audio_path.stem}_x{repeats}_{safe_loop_name(label)}.wav")
+    torchaudio.save(str(preview_path), preview, sample_rate)
+    return preview_path
+
+
+def metrics_payload(latents, *, k=8):
+    metrics = loop_boundary_metrics(latents, window_frames=k)
+    return {
+        "state_l2": metrics.state_l2,
+        "velocity_l2": metrics.velocity_l2,
+        "total": metrics.total,
+        "window_frames": metrics.window_frames,
+    }
+
+
+if RUN_MODE_0F_CYCLIC_LOOP:
+    require_models()
+    LOOP_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    source_audio, source_sr = load_audio(
+        LOOP_AUDIO,
+        target_sample_rate=sa3.sample_rate,
+        duration=LOOP_DURATION,
+        stereo=True,
+    )
+    source_item = encode_audio_file_to_item(
+        LOOP_AUDIO,
+        item_id="loop_source",
+        duration=LOOP_DURATION,
+    )
+    source_latents = item_to_sa3_tensor(
+        source_item,
+        device=DEVICE,
+        dtype=next(sa3_model.model.model.parameters()).dtype,
+    )
+
+    manifest = []
+    player_paths = []
+    player_labels = []
+
+    source_path = LOOP_OUTPUT_DIR / "source_reference.wav"
+    torchaudio.save(str(source_path), source_audio.cpu(), source_sr)
+    source_preview_path = save_loop_preview(source_path, LOOP_PREVIEW_REPEATS, "preview")
+    player_paths.extend([source_path, source_preview_path])
+    player_labels.extend(["source reference", f"source x{LOOP_PREVIEW_REPEATS} seam preview"])
+    source_metrics = metrics_payload(source_latents)
+    print("source latent loop metrics:", source_metrics)
+
+    for index, shift_fraction in enumerate(LOOP_SHIFT_FRACTIONS):
+        shift_tag = safe_loop_name(f"{shift_fraction:.3f}")
+        seed = LOOP_BASE_SEED + index
+        shift_frames = frames_from_fraction(source_latents, shift_fraction)
+        shift_samples = samples_from_fraction(source_audio, shift_fraction)
+        start_sec, end_sec = seam_inpaint_bounds(
+            LOOP_DURATION,
+            shift_fraction,
+            LOOP_INPAINT_WINDOW_SECONDS,
+        )
+        entry = {
+            "shift_fraction": float(shift_fraction),
+            "shift_frames": int(shift_frames),
+            "shift_samples": int(shift_samples),
+            "seed": int(seed),
+            "source_metrics": source_metrics,
+            "outputs": {},
+        }
+
+        if LOOP_RUN_LATENT_ROLL_POLISH:
+            rolled_latents = cyclic_roll_latents(source_latents, shift_frames)
+            polished_rolled = sa3_sample_from_init_latents(
+                sa3_model,
+                rolled_latents,
+                prompt=LOOP_PROMPT,
+                duration=LOOP_DURATION,
+                steps=LOOP_STEPS,
+                cfg_scale=LOOP_CFG,
+                init_noise_level=LOOP_LATENT_POLISH_NOISE,
+                seed=seed,
+            )
+            unrolled_latents = cyclic_roll_latents(polished_rolled, -shift_frames)
+            latent_path = LOOP_OUTPUT_DIR / f"latent_roll_polish_shift_{shift_tag}.wav"
+            decode_sa3_latents_to_file_cropped(
+                unrolled_latents,
+                latent_path,
+                duration=LOOP_DURATION,
+            )
+            latent_preview_path = save_loop_preview(latent_path, LOOP_PREVIEW_REPEATS, "preview")
+            latent_metrics = metrics_payload(unrolled_latents)
+            entry["latent_roll_polish"] = {
+                "polish_noise": LOOP_LATENT_POLISH_NOISE,
+                "steps": LOOP_STEPS,
+                "metrics": latent_metrics,
+            }
+            entry["outputs"]["latent_roll_polish"] = str(latent_path)
+            entry["outputs"]["latent_roll_polish_preview"] = str(latent_preview_path)
+            player_paths.extend([latent_path, latent_preview_path])
+            player_labels.extend(
+                [
+                    f"latent roll polish shift {shift_fraction:.2f}",
+                    f"latent roll polish shift {shift_fraction:.2f} x{LOOP_PREVIEW_REPEATS}",
+                ]
+            )
+            print("latent roll metrics", shift_fraction, latent_metrics)
+
+        if LOOP_RUN_AUDIO_ROLL_INPAINT:
+            rolled_audio = cyclic_roll_audio(source_audio, shift_samples)
+            with torch.inference_mode():
+                repaired_rolled = sa3_model.generate(
+                    prompt=LOOP_PROMPT,
+                    duration=LOOP_DURATION,
+                    steps=LOOP_STEPS,
+                    cfg_scale=LOOP_CFG,
+                    seed=seed + 100,
+                    inpaint_audio=(source_sr, rolled_audio),
+                    inpaint_mask_start_seconds=start_sec,
+                    inpaint_mask_end_seconds=end_sec,
+                    truncate_output_to_duration=True,
+                )
+            repaired_audio = cyclic_roll_audio(repaired_rolled[0], -shift_samples).cpu().float().clamp(-1, 1)
+            inpaint_path = LOOP_OUTPUT_DIR / f"audio_roll_inpaint_shift_{shift_tag}.wav"
+            torchaudio.save(str(inpaint_path), repaired_audio, sa3.sample_rate)
+            inpaint_preview_path = save_loop_preview(inpaint_path, LOOP_PREVIEW_REPEATS, "preview")
+            entry["audio_roll_inpaint"] = {
+                "inpaint_start_seconds": start_sec,
+                "inpaint_end_seconds": end_sec,
+                "steps": LOOP_STEPS,
+            }
+            entry["outputs"]["audio_roll_inpaint"] = str(inpaint_path)
+            entry["outputs"]["audio_roll_inpaint_preview"] = str(inpaint_preview_path)
+            player_paths.extend([inpaint_path, inpaint_preview_path])
+            player_labels.extend(
+                [
+                    f"audio roll inpaint shift {shift_fraction:.2f}",
+                    f"audio roll inpaint shift {shift_fraction:.2f} x{LOOP_PREVIEW_REPEATS}",
+                ]
+            )
+
+        manifest.append(entry)
+
+    manifest_path = LOOP_OUTPUT_DIR / "manifest.json"
+    manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    print("saved manifest:", manifest_path)
+    play_audio_files(
+        player_paths,
+        labels=player_labels,
+        title="Mode 0f cyclic time-roll loop lab",
+        max_embed_mb=220.0,
     )
 """
     ),
