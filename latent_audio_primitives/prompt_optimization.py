@@ -88,6 +88,7 @@ def greedy_token_prompt_search(
     tokens_generated: int = 16,
     runs: int = 8,
     token_subset: int | None = None,
+    candidate_batch_size: int | None = None,
     seed: int = 0,
     prefix: str = "",
     suffix: str = "",
@@ -122,7 +123,7 @@ def greedy_token_prompt_search(
             else:
                 candidates = rng.sample(list(vocabulary), token_subset)
             prompts = [_assemble_prompt([*selected, token], prefix, suffix, separator) for token in candidates]
-            scores = [float(score) for score in scorer(prompts)]
+            scores = _score_prompts_in_batches(scorer, prompts, candidate_batch_size)
             if len(scores) != len(prompts):
                 raise ValueError("batch scorer must return one score per prompt")
             pick = max(range(len(scores)), key=scores.__getitem__) if higher_is_better else min(range(len(scores)), key=scores.__getitem__)
@@ -130,7 +131,7 @@ def greedy_token_prompt_search(
             run_history.extend(zip(prompts, scores))
 
         final_prompt = _assemble_prompt(selected, prefix, suffix, separator)
-        final_score = float(scorer([final_prompt])[0])
+        final_score = _score_prompts_in_batches(scorer, [final_prompt], candidate_batch_size)[0]
         result = GreedyPromptSearchResult(
             prompt=final_prompt,
             score=final_score,
@@ -182,3 +183,18 @@ def _assemble_prompt(tokens: list[str], prefix: str, suffix: str, separator: str
     body = separator.join(token.strip() for token in tokens if token.strip())
     parts = [part.strip() for part in [prefix, body, suffix] if part.strip()]
     return separator.join(parts)
+
+
+def _score_prompts_in_batches(
+    scorer: BatchPromptScorer,
+    prompts: list[str],
+    batch_size: int | None,
+) -> list[float]:
+    if batch_size is None or batch_size <= 0 or batch_size >= len(prompts):
+        return [float(score) for score in scorer(prompts)]
+
+    scores: list[float] = []
+    for start in range(0, len(prompts), batch_size):
+        chunk = prompts[start : start + batch_size]
+        scores.extend(float(score) for score in scorer(chunk))
+    return scores

@@ -54,3 +54,25 @@ def test_greedy_token_prompt_search_builds_prompt_with_batch_scorer():
     assert "bright" in result.tokens
     assert "wide" in result.tokens
     assert result.score == 2.0
+
+
+def test_greedy_token_prompt_search_batches_candidate_scoring():
+    vocab = ["a", "b", "c", "d", "e"]
+    batch_sizes = []
+
+    def scorer(prompts):
+        batch_sizes.append(len(prompts))
+        return [float(prompt.endswith("e")) for prompt in prompts]
+
+    result = greedy_token_prompt_search(
+        vocab,
+        scorer,
+        tokens_generated=1,
+        runs=1,
+        token_subset=None,
+        candidate_batch_size=2,
+        seed=0,
+    )
+
+    assert result.tokens == ["e"]
+    assert batch_sizes[:3] == [2, 2, 1]

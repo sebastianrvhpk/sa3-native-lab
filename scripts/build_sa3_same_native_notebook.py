@@ -945,6 +945,8 @@ def sa3_flow_losses_for_prompts(
     seed=0,
     min_t=0.05,
     max_t=0.95,
+    score_samples=1,
+    shared_noise=True,
     velocity_convention=None,
 ):
     # Native scorer:
@@ -964,6 +966,7 @@ def sa3_flow_losses_for_prompts(
         target = target.expand(len(prompts), -1, -1).contiguous()
     if target.shape[0] != len(prompts):
         raise ValueError("target batch must be 1 or match number of prompts.")
+    score_samples = max(1, int(score_samples))
 
     conditioning = [{"prompt": prompt, "seconds_total": duration} for prompt in prompts]
     with torch.inference_mode():
@@ -977,15 +980,24 @@ def sa3_flow_losses_for_prompts(
             key: value.to(dtype) if isinstance(value, torch.Tensor) and value.is_floating_point() else value
             for key, value in cond_inputs.items()
         }
-        generator = torch.Generator(device=device)
-        generator.manual_seed(seed)
-        t = min_t + (max_t - min_t) * torch.rand(batch, device=device, generator=generator)
-        noise = torch.randn(target.shape, device=device, dtype=dtype, generator=generator)
-        t_view = t[:, None, None].to(dtype)
-        z_t = (1 - t_view) * target + t_view * noise
-        velocity_target = flow_velocity_target(target, noise, convention=velocity_convention)
-        pred = core.model(z_t, t, **cond_inputs, cfg_scale=1.0, batch_cfg=True)
-        losses = torch.mean((pred.float() - velocity_target.float()) ** 2, dim=(1, 2))
+        losses = torch.zeros((batch,), device=device, dtype=torch.float32)
+        for sample_index in range(score_samples):
+            generator = torch.Generator(device=device)
+            generator.manual_seed(int(seed) + sample_index * 1009)
+            if shared_noise:
+                t_scalar = min_t + (max_t - min_t) * torch.rand((), device=device, generator=generator)
+                t = t_scalar.expand(batch)
+                noise_base = torch.randn((1, channels, frames), device=device, dtype=dtype, generator=generator)
+                noise = noise_base.expand(batch, -1, -1).contiguous()
+            else:
+                t = min_t + (max_t - min_t) * torch.rand(batch, device=device, generator=generator)
+                noise = torch.randn(target.shape, device=device, dtype=dtype, generator=generator)
+            t_view = t[:, None, None].to(dtype)
+            z_t = (1 - t_view) * target + t_view * noise
+            velocity_target = flow_velocity_target(target, noise, convention=velocity_convention)
+            pred = core.model(z_t, t, **cond_inputs, cfg_scale=1.0, batch_cfg=True)
+            losses = losses + torch.mean((pred.float() - velocity_target.float()) ** 2, dim=(1, 2))
+        losses = losses / score_samples
     return [float(loss.detach().cpu()) for loss in losses]
 
 
@@ -2976,11 +2988,24 @@ So this is native to the text-conditioning path, not a symbolic music vocabulary
 Search-cost rule:
 
 ```text
-VRAM/time per greedy step mainly follows BABBLE_TOKEN_SUBSET.
-BABBLE_TOKENIZER_VOCAB_LIMIT controls how broad the candidate universe is.
+search width per position      = BABBLE_TOKEN_SUBSET
+GPU prompts per forward chunk  = BABBLE_CANDIDATE_BATCH_SIZE
+positions per run              = BABBLE_TOKENS_GENERATED
+independent greedy restarts    = BABBLE_RUNS
+noise/timestep samples averaged= BABBLE_SCORE_SAMPLES
 ```
 
-The default uses a large tokenizer-derived universe but samples only a smaller subset per step.
+Approximate DiT forward count:
+
+$$
+\text{forwards} \approx
+\text{runs}\times\text{tokens}\times
+\left\lceil\frac{\text{subset}}{\text{batch}}\right\rceil\times
+\text{score samples}
+$$
+
+The previous default was roughly \(4\times12\times1=48\) DiT forwards. The
+current medium setting is intentionally heavier and should use the L4 better.
 """
     ),
     code(
@@ -2996,9 +3021,21 @@ BABBLE_REQUIRE_WORD_START = True
 BABBLE_MIN_CHARS = 3
 BABBLE_REJECT_STOPWORDS = True
 BABBLE_AUDIO_PRIOR = True
-BABBLE_TOKEN_SUBSET = 64
-BABBLE_TOKENS_GENERATED = 12
-BABBLE_RUNS = 4
+
+# Search compute knobs.
+# TOKEN_SUBSET is the search width. CANDIDATE_BATCH_SIZE is the GPU batch/chunk size.
+BABBLE_TOKEN_SUBSET = 256
+BABBLE_CANDIDATE_BATCH_SIZE = 128
+BABBLE_TOKENS_GENERATED = 18
+BABBLE_RUNS = 6
+
+# Average the native SA3 flow loss over multiple shared noise/timestep probes.
+# This is slower but much less random than scoring each candidate under different noise.
+BABBLE_SCORE_SAMPLES = 2
+BABBLE_SHARED_NOISE = True
+BABBLE_T_MIN = 0.05
+BABBLE_T_MAX = 0.95
+BABBLE_SCORE_SEED = 123
 
 FALLBACK_BABBLE_VOCAB = [
     "shimmer", "velvet", "glass", "grain", "pressure", "hollow", "dense", "thin",
@@ -3030,6 +3067,28 @@ if RUN_MODE_2_AUDIO_TO_BABBLE_PROMPT:
         babble_vocab = FALLBACK_BABBLE_VOCAB
         print(f"Using {len(babble_vocab)} fallback hand-written candidates.")
 
+    search_width = min(BABBLE_TOKEN_SUBSET or len(babble_vocab), len(babble_vocab))
+    gpu_batch = BABBLE_CANDIDATE_BATCH_SIZE or search_width
+    approx_forward_chunks = (
+        BABBLE_RUNS
+        * BABBLE_TOKENS_GENERATED
+        * math.ceil(search_width / gpu_batch)
+        * BABBLE_SCORE_SAMPLES
+    )
+    approx_prompt_scores = BABBLE_RUNS * BABBLE_TOKENS_GENERATED * search_width * BABBLE_SCORE_SAMPLES
+    print(
+        "Mode 2 budget:",
+        {
+            "search_width": search_width,
+            "gpu_batch": gpu_batch,
+            "tokens_generated": BABBLE_TOKENS_GENERATED,
+            "runs": BABBLE_RUNS,
+            "score_samples": BABBLE_SCORE_SAMPLES,
+            "approx_prompt_scores": approx_prompt_scores,
+            "approx_dit_forwards": approx_forward_chunks,
+        },
+    )
+
     target_item = encode_audio_file_to_item(TARGET_AUDIO, item_id="target", duration=TARGET_DURATION)
     target_latents = item_to_sa3_tensor(
         target_item,
@@ -3043,7 +3102,11 @@ if RUN_MODE_2_AUDIO_TO_BABBLE_PROMPT:
             target_latents,
             prompts,
             duration=TARGET_DURATION,
-            seed=123,
+            seed=BABBLE_SCORE_SEED,
+            min_t=BABBLE_T_MIN,
+            max_t=BABBLE_T_MAX,
+            score_samples=BABBLE_SCORE_SAMPLES,
+            shared_noise=BABBLE_SHARED_NOISE,
             velocity_convention=FLOW_TARGET_CONVENTION,
         )
         return [-loss for loss in losses]
@@ -3054,6 +3117,7 @@ if RUN_MODE_2_AUDIO_TO_BABBLE_PROMPT:
         tokens_generated=BABBLE_TOKENS_GENERATED,
         runs=BABBLE_RUNS,
         token_subset=BABBLE_TOKEN_SUBSET,
+        candidate_batch_size=BABBLE_CANDIDATE_BATCH_SIZE,
         seed=0,
         higher_is_better=True,
     )
@@ -3063,6 +3127,13 @@ if RUN_MODE_2_AUDIO_TO_BABBLE_PROMPT:
         "tokens": result.tokens,
         "vocab_source": "sa3_t5gemma_tokenizer" if USE_SA3_TOKENIZER_VOCAB else "fallback_hand_vocab",
         "vocab_size": len(babble_vocab),
+        "search_width": search_width,
+        "candidate_batch_size": BABBLE_CANDIDATE_BATCH_SIZE,
+        "tokens_generated": BABBLE_TOKENS_GENERATED,
+        "runs": BABBLE_RUNS,
+        "score_samples": BABBLE_SCORE_SAMPLES,
+        "shared_noise": BABBLE_SHARED_NOISE,
+        "t_range": [BABBLE_T_MIN, BABBLE_T_MAX],
         "history_tail": result.history[-20:],
     }
     HARD_PROMPT_JSON.write_text(json.dumps(payload, indent=2), encoding="utf-8")
