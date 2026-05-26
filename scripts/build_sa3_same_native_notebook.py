@@ -950,6 +950,9 @@ def sa3_flow_losses_for_prompts(
     shared_noise=True,
     timestep_values=None,
     cosine_weight=0.0,
+    antithetic_noise=False,
+    normalize_mse=True,
+    conditional_delta_weight=0.0,
     velocity_convention=None,
 ):
     # Native scorer:
@@ -975,6 +978,7 @@ def sa3_flow_losses_for_prompts(
     else:
         score_samples = max(1, int(score_samples))
     cosine_weight = float(cosine_weight)
+    conditional_delta_weight = float(conditional_delta_weight)
 
     conditioning = [{"prompt": prompt, "seconds_total": duration} for prompt in prompts]
     with torch.inference_mode():
@@ -988,7 +992,25 @@ def sa3_flow_losses_for_prompts(
             key: value.to(dtype) if isinstance(value, torch.Tensor) and value.is_floating_point() else value
             for key, value in cond_inputs.items()
         }
+
+        null_cond_inputs = None
+        if conditional_delta_weight:
+            null_conditioning = [{"prompt": "", "seconds_total": duration} for _ in prompts]
+            null_cond = core.conditioner(null_conditioning, device)
+            null_cond = dict(null_cond)
+            batch, channels, frames = target.shape
+            null_cond["inpaint_mask"] = [torch.zeros((batch, 1, frames), device=device)]
+            null_cond["inpaint_masked_input"] = [
+                torch.zeros((batch, channels, frames), device=device, dtype=dtype)
+            ]
+            null_cond_inputs = core.get_conditioning_inputs(null_cond)
+            null_cond_inputs = {
+                key: value.to(dtype) if isinstance(value, torch.Tensor) and value.is_floating_point() else value
+                for key, value in null_cond_inputs.items()
+            }
+
         losses = torch.zeros((batch,), device=device, dtype=torch.float32)
+        loss_terms = 0
         for sample_index in range(score_samples):
             generator = torch.Generator(device=device)
             generator.manual_seed(int(seed) + sample_index * 1009)
@@ -1006,19 +1028,45 @@ def sa3_flow_losses_for_prompts(
                 else:
                     t = min_t + (max_t - min_t) * torch.rand(batch, device=device, generator=generator)
                 noise = torch.randn(target.shape, device=device, dtype=dtype, generator=generator)
-            t_view = t[:, None, None].to(dtype)
-            z_t = (1 - t_view) * target + t_view * noise
-            velocity_target = flow_velocity_target(target, noise, convention=velocity_convention)
-            pred = core.model(z_t, t, **cond_inputs, cfg_scale=1.0, batch_cfg=True)
-            mse = torch.mean((pred.float() - velocity_target.float()) ** 2, dim=(1, 2))
-            if cosine_weight:
-                pred_flat = pred.float().reshape(batch, -1)
-                target_flat = velocity_target.float().reshape(batch, -1)
-                cosine = torch.nn.functional.cosine_similarity(pred_flat, target_flat, dim=1, eps=1e-8)
-                mse = mse + cosine_weight * (1.0 - cosine)
-            losses = losses + mse
-        losses = losses / score_samples
+
+            noise_signs = [1.0, -1.0] if antithetic_noise else [1.0]
+            for noise_sign in noise_signs:
+                signed_noise = noise * noise_sign
+                t_view = t[:, None, None].to(dtype)
+                z_t = (1 - t_view) * target + t_view * signed_noise
+                velocity_target = flow_velocity_target(target, signed_noise, convention=velocity_convention)
+                pred = core.model(z_t, t, **cond_inputs, cfg_scale=1.0, batch_cfg=True)
+                residual = pred.float() - velocity_target.float()
+                mse = torch.mean(residual ** 2, dim=(1, 2))
+                if normalize_mse:
+                    target_scale = torch.mean(velocity_target.float() ** 2, dim=(1, 2)).clamp_min(1e-8)
+                    mse = mse / target_scale
+                if cosine_weight:
+                    pred_flat = pred.float().reshape(batch, -1)
+                    target_flat = velocity_target.float().reshape(batch, -1)
+                    cosine = torch.nn.functional.cosine_similarity(pred_flat, target_flat, dim=1, eps=1e-8)
+                    mse = mse + cosine_weight * (1.0 - cosine)
+                if conditional_delta_weight and null_cond_inputs is not None:
+                    null_pred = core.model(z_t, t, **null_cond_inputs, cfg_scale=1.0, batch_cfg=True)
+                    delta = (pred.float() - null_pred.float()).reshape(batch, -1)
+                    wanted_delta = (velocity_target.float() - null_pred.float()).reshape(batch, -1)
+                    delta_cosine = torch.nn.functional.cosine_similarity(
+                        delta,
+                        wanted_delta,
+                        dim=1,
+                        eps=1e-8,
+                    )
+                    mse = mse + conditional_delta_weight * (1.0 - delta_cosine)
+                losses = losses + mse
+                loss_terms += 1
+        losses = losses / max(loss_terms, 1)
     return [float(loss.detach().cpu()) for loss in losses]
+
+
+def timesteps_from_logsnr_values(logsnr_values):
+    if not logsnr_values:
+        return []
+    return [float(1.0 / (1.0 + math.exp(float(value)))) for value in logsnr_values]
 
 
 def flow_velocity_target(target, noise, *, convention):
@@ -3017,9 +3065,12 @@ noise/timestep samples averaged= BABBLE_SCORE_SAMPLES
 
 Better-math defaults:
 
-- fixed shared timestep/noise probe bank, so candidates are compared fairly
+- fixed shared log-SNR timestep/noise probe bank, so candidates are compared fairly
+- antithetic noise pairs \(\epsilon,-\epsilon\), which reduce Monte Carlo variance
+- normalized flow residuals, so a high-energy probe does not dominate just by scale
 - beam search, so a useful token can survive even if it is not the greedy winner at one position
 - MSE plus optional cosine direction loss over the SA3 velocity field
+- optional conditional-delta score, comparing the prompt-specific vector-field change against the target-specific residual from the null prompt
 - chunked GPU scoring, so you can raise search width without needing all candidates in VRAM at once
 
 This is still prompt inversion through a frozen model, not a captioner. Good
@@ -3055,17 +3106,23 @@ BABBLE_CANDIDATE_BATCH_SIZE = 128
 BABBLE_TOKENS_GENERATED = 16
 BABBLE_GREEDY_RUNS = 6
 
-# Native SA3 flow score.
-# If BABBLE_TIMESTEP_VALUES is non-empty, it overrides BABBLE_SCORE_SAMPLES.
-# The default fixed bank is slower but compares all candidates under the same
-# corruption levels, which is the cleaner prompt-inversion objective.
-BABBLE_TIMESTEP_VALUES = [0.12, 0.32, 0.55, 0.78]
+# Native SA3 flow score. If BABBLE_LOGSNR_VALUES is non-empty, it becomes the
+# timestep probe bank using t = sigmoid(-logSNR).
+# These values span clean-ish, mid, and noisy regimes.
+BABBLE_LOGSNR_VALUES = [2.0, 0.0, -2.0]
+BABBLE_TIMESTEP_VALUES = []  # Manual override. Example: [0.12, 0.32, 0.55, 0.78]
 BABBLE_SCORE_SAMPLES = 4
 BABBLE_SHARED_NOISE = True
+BABBLE_ANTITHETIC_NOISE = True
+BABBLE_NORMALIZE_MSE = True
 BABBLE_T_MIN = 0.05
 BABBLE_T_MAX = 0.95
 BABBLE_SCORE_SEED = 123
 BABBLE_COSINE_WEIGHT = 0.25
+
+# Expensive but conceptually useful. 0.0 disables it. Try 0.10-0.25 if you want
+# to score the prompt-specific vector-field contribution relative to null text.
+BABBLE_CONDITIONAL_DELTA_WEIGHT = 0.0
 
 FALLBACK_BABBLE_VOCAB = [
     "shimmer", "velvet", "glass", "grain", "pressure", "hollow", "dense", "thin",
@@ -3098,7 +3155,10 @@ if RUN_MODE_2_AUDIO_TO_BABBLE_PROMPT:
         print(f"Using {len(babble_vocab)} fallback hand-written candidates.")
 
     strategy = BABBLE_SEARCH_STRATEGY.lower()
-    effective_score_samples = len(BABBLE_TIMESTEP_VALUES) if BABBLE_TIMESTEP_VALUES else BABBLE_SCORE_SAMPLES
+    resolved_timesteps = BABBLE_TIMESTEP_VALUES or timesteps_from_logsnr_values(BABBLE_LOGSNR_VALUES)
+    effective_score_samples = len(resolved_timesteps) if resolved_timesteps else BABBLE_SCORE_SAMPLES
+    antithetic_multiplier = 2 if BABBLE_ANTITHETIC_NOISE else 1
+    null_multiplier = 2 if BABBLE_CONDITIONAL_DELTA_WEIGHT else 1
     greedy_width = min(BABBLE_TOKEN_SUBSET or len(babble_vocab), len(babble_vocab))
     branch_factor = min(BABBLE_BRANCH_FACTOR or greedy_width, len(babble_vocab))
     gpu_batch = BABBLE_CANDIDATE_BATCH_SIZE or greedy_width
@@ -3108,8 +3168,15 @@ if RUN_MODE_2_AUDIO_TO_BABBLE_PROMPT:
             BABBLE_TOKENS_GENERATED
             * math.ceil(candidates_per_position / gpu_batch)
             * effective_score_samples
+            * antithetic_multiplier
+            * null_multiplier
         )
-        approx_prompt_scores = BABBLE_TOKENS_GENERATED * candidates_per_position * effective_score_samples
+        approx_prompt_scores = (
+            BABBLE_TOKENS_GENERATED
+            * candidates_per_position
+            * effective_score_samples
+            * antithetic_multiplier
+        )
     else:
         candidates_per_position = greedy_width
         approx_forward_chunks = (
@@ -3117,8 +3184,16 @@ if RUN_MODE_2_AUDIO_TO_BABBLE_PROMPT:
             * BABBLE_TOKENS_GENERATED
             * math.ceil(greedy_width / gpu_batch)
             * effective_score_samples
+            * antithetic_multiplier
+            * null_multiplier
         )
-        approx_prompt_scores = BABBLE_GREEDY_RUNS * BABBLE_TOKENS_GENERATED * greedy_width * effective_score_samples
+        approx_prompt_scores = (
+            BABBLE_GREEDY_RUNS
+            * BABBLE_TOKENS_GENERATED
+            * greedy_width
+            * effective_score_samples
+            * antithetic_multiplier
+        )
     print(
         "Mode 2 budget:",
         {
@@ -3131,8 +3206,12 @@ if RUN_MODE_2_AUDIO_TO_BABBLE_PROMPT:
             "tokens_generated": BABBLE_TOKENS_GENERATED,
             "greedy_runs": BABBLE_GREEDY_RUNS if strategy == "greedy" else None,
             "score_samples": effective_score_samples,
-            "timesteps": BABBLE_TIMESTEP_VALUES if BABBLE_TIMESTEP_VALUES else "random",
+            "logsnr_values": BABBLE_LOGSNR_VALUES if BABBLE_LOGSNR_VALUES and not BABBLE_TIMESTEP_VALUES else None,
+            "timesteps": resolved_timesteps if resolved_timesteps else "random",
+            "antithetic_noise": BABBLE_ANTITHETIC_NOISE,
+            "normalize_mse": BABBLE_NORMALIZE_MSE,
             "cosine_weight": BABBLE_COSINE_WEIGHT,
+            "conditional_delta_weight": BABBLE_CONDITIONAL_DELTA_WEIGHT,
             "approx_prompt_scores": approx_prompt_scores,
             "approx_dit_forwards": approx_forward_chunks,
         },
@@ -3156,8 +3235,11 @@ if RUN_MODE_2_AUDIO_TO_BABBLE_PROMPT:
             max_t=BABBLE_T_MAX,
             score_samples=BABBLE_SCORE_SAMPLES,
             shared_noise=BABBLE_SHARED_NOISE,
-            timestep_values=BABBLE_TIMESTEP_VALUES or None,
+            timestep_values=resolved_timesteps or None,
             cosine_weight=BABBLE_COSINE_WEIGHT,
+            antithetic_noise=BABBLE_ANTITHETIC_NOISE,
+            normalize_mse=BABBLE_NORMALIZE_MSE,
+            conditional_delta_weight=BABBLE_CONDITIONAL_DELTA_WEIGHT,
             velocity_convention=FLOW_TARGET_CONVENTION,
         )
         return [-loss for loss in losses]
@@ -3202,9 +3284,13 @@ if RUN_MODE_2_AUDIO_TO_BABBLE_PROMPT:
         "greedy_runs": BABBLE_GREEDY_RUNS if strategy == "greedy" else None,
         "score_samples": effective_score_samples,
         "shared_noise": BABBLE_SHARED_NOISE,
-        "timesteps": BABBLE_TIMESTEP_VALUES if BABBLE_TIMESTEP_VALUES else None,
-        "t_range": [BABBLE_T_MIN, BABBLE_T_MAX] if not BABBLE_TIMESTEP_VALUES else None,
+        "logsnr_values": BABBLE_LOGSNR_VALUES if BABBLE_LOGSNR_VALUES and not BABBLE_TIMESTEP_VALUES else None,
+        "timesteps": resolved_timesteps if resolved_timesteps else None,
+        "t_range": [BABBLE_T_MIN, BABBLE_T_MAX] if not resolved_timesteps else None,
+        "antithetic_noise": BABBLE_ANTITHETIC_NOISE,
+        "normalize_mse": BABBLE_NORMALIZE_MSE,
         "cosine_weight": BABBLE_COSINE_WEIGHT,
+        "conditional_delta_weight": BABBLE_CONDITIONAL_DELTA_WEIGHT,
         "final_beams": getattr(result, "beams", None),
         "history_tail": result.history[-20:],
     }
