@@ -39,6 +39,36 @@ def cyclic_roll_audio(audio: Any, shift_samples: int) -> Any:
     return torch.roll(x, shifts=int(shift_samples), dims=-1)
 
 
+def cyclic_mix_latents(
+    latents: Any,
+    shift_frames: int,
+    *,
+    strength: float = 1.0,
+    symmetric: bool = True,
+) -> Any:
+    """Mix a latent trajectory with a cyclically shifted copy.
+
+    With ``symmetric=True`` this is a soft projection toward half-roll
+    consistency:
+
+        target = 0.5 * (z + R_s z)
+        z' = z + strength * (target - z)
+
+    For ``shift_frames = T/2`` and ``strength = 1``, the two halves become the
+    same latent pattern after one application. Smaller strengths make this a
+    gradual denoising-time pressure instead of a hard copy/paste operation.
+    """
+
+    torch = _require_torch()
+    x = _as_bct(latents, torch)
+    strength = float(strength)
+    if strength < 0.0 or strength > 1.0:
+        raise ValueError("strength must be in [0, 1]")
+    rolled = cyclic_roll_latents(x, int(shift_frames))
+    target = 0.5 * (x + rolled) if symmetric else rolled
+    return x + strength * (target - x)
+
+
 def repeated_loop_preview_audio(audio: Any, repeats: int = 4) -> Any:
     """Concatenate repeated copies of an audio tensor for seam listening."""
 
@@ -103,6 +133,9 @@ def sample_cyclic_roll_euler(
     *,
     roll_frames: int,
     mode: str = "alternate",
+    roll_mix: float = 0.10,
+    mix_every_n: int = 1,
+    symmetric_mix: bool = True,
     unroll_output: bool = True,
     callback: Any = None,
     disable_tqdm: bool = False,
@@ -121,6 +154,14 @@ def sample_cyclic_roll_euler(
 
         v_cyc = 0.5 * (v_theta(x, t, c) + R_-s v_theta(R_s x, t, c))
 
+    ``mode="cyclic_mix"`` is the most direct tiling-style intervention. After
+    each Euler update it softly projects the latent state toward agreement with
+    its half-rolled copy:
+
+        x <- x + beta * (0.5 * (x + R_s x) - x)
+
+    This mode changes the state even when the init-noise schedule has dt=0.
+
     This helper is intentionally Euler-only. It is an experimental probe, not a
     replacement for SA3's full sampler zoo.
     """
@@ -134,9 +175,10 @@ def sample_cyclic_roll_euler(
     if per_element_schedule and t.shape[0] != state.shape[0]:
         raise ValueError("2D sigma schedule batch dimension must match latent batch dimension")
     mode = mode.lower()
-    if mode not in {"alternate", "paired_average"}:
-        raise ValueError("mode must be 'alternate' or 'paired_average'")
+    if mode not in {"alternate", "paired_average", "cyclic_mix", "mix", "projection"}:
+        raise ValueError("mode must be 'alternate', 'paired_average', or 'cyclic_mix'")
     roll_frames = int(roll_frames)
+    mix_every_n = max(1, int(mix_every_n))
     net_shift = 0
     ones = state.new_ones([state.shape[0]])
     num_steps = t.shape[-1] - 1
@@ -172,6 +214,7 @@ def sample_cyclic_roll_euler(
                     "sigma": t_curr_tensor,
                     "denoised": denoised,
                     "roll_frames": roll_frames,
+                    "roll_mix": roll_mix,
                     "net_shift_frames": net_shift,
                     "mode": mode,
                 }
@@ -182,6 +225,13 @@ def sample_cyclic_roll_euler(
         if mode == "alternate":
             state = cyclic_roll_latents(state, roll_frames)
             net_shift += roll_frames
+        elif mode in {"cyclic_mix", "mix", "projection"} and i % mix_every_n == 0:
+            state = cyclic_mix_latents(
+                state,
+                roll_frames,
+                strength=roll_mix,
+                symmetric=symmetric_mix,
+            )
 
     if mode == "alternate" and unroll_output and net_shift:
         state = cyclic_roll_latents(state, -net_shift)
@@ -200,6 +250,9 @@ def sa3_cyclic_roll_sample_from_init_latents(
     roll_fraction: float = 0.5,
     roll_frames: int | None = None,
     mode: str = "alternate",
+    roll_mix: float = 0.10,
+    mix_every_n: int = 1,
+    symmetric_mix: bool = True,
     unroll_output: bool = True,
     seed: int = 0,
     negative_prompt: str | None = None,
@@ -303,6 +356,9 @@ def sa3_cyclic_roll_sample_from_init_latents(
             sigmas,
             roll_frames=roll_frames,
             mode=mode,
+            roll_mix=roll_mix,
+            mix_every_n=mix_every_n,
+            symmetric_mix=symmetric_mix,
             unroll_output=unroll_output,
             callback=callback,
             disable_tqdm=disable_tqdm,

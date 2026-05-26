@@ -1,6 +1,7 @@
 import torch
 
 from latent_audio_primitives.looping import (
+    cyclic_mix_latents,
     cyclic_roll_audio,
     cyclic_roll_latents,
     frames_from_fraction,
@@ -26,6 +27,22 @@ def test_cyclic_roll_audio_rolls_sample_axis():
     rolled = cyclic_roll_audio(audio, -2)
 
     torch.testing.assert_close(rolled, torch.tensor([[2.0, 3.0, 4.0, 5.0, 0.0, 1.0]]))
+
+
+def test_cyclic_mix_latents_projects_toward_half_roll():
+    latents = torch.tensor([[[0.0, 0.0, 2.0, 2.0]]])
+
+    mixed = cyclic_mix_latents(latents, 2, strength=1.0)
+
+    torch.testing.assert_close(mixed, torch.ones(1, 1, 4))
+
+
+def test_cyclic_mix_latents_supports_soft_strength():
+    latents = torch.tensor([[[0.0, 0.0, 2.0, 2.0]]])
+
+    mixed = cyclic_mix_latents(latents, 2, strength=0.25)
+
+    torch.testing.assert_close(mixed, torch.tensor([[[0.25, 0.25, 1.75, 1.75]]]))
 
 
 def test_repeated_loop_preview_audio_concatenates_repeats():
@@ -157,3 +174,24 @@ def test_cyclic_roll_euler_paired_average_uses_both_origins():
 
     assert model.calls == 2
     torch.testing.assert_close(sampled, torch.full((1, 1, 4), 0.5))
+
+
+def test_cyclic_roll_euler_cyclic_mix_changes_state_without_dt():
+    class ZeroModel:
+        def __call__(self, x, t, **kwargs):
+            return torch.zeros_like(x)
+
+    latents = torch.tensor([[[0.0, 0.0, 2.0, 2.0]]])
+    sigmas = torch.tensor([0.0, 0.0])
+
+    mixed = sample_cyclic_roll_euler(
+        ZeroModel(),
+        latents,
+        sigmas,
+        roll_frames=2,
+        mode="cyclic_mix",
+        roll_mix=1.0,
+        disable_tqdm=True,
+    )
+
+    torch.testing.assert_close(mixed, torch.ones(1, 1, 4))

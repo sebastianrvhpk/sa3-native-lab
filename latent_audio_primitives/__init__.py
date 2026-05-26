@@ -28,6 +28,7 @@ from .latent_math import (
 )
 from .looping import (
     LoopBoundaryMetrics,
+    cyclic_mix_latents,
     cyclic_roll_audio,
     cyclic_roll_latents,
     frames_from_fraction,
@@ -137,6 +138,7 @@ __all__ = [
     "channel_sharpen_latents",
     "cosine_similarity",
     "coordinate_prompt_search",
+    "cyclic_mix_latents",
     "cyclic_roll_audio",
     "cyclic_roll_latents",
     "default_modifier_axes",

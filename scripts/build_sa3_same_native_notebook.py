@@ -2540,32 +2540,40 @@ $$
 z_0 = E(x), \qquad x_T = (1-\sigma)z_0 + \sigma \epsilon
 $$
 
-Then run an Euler sampler, but force the model to keep seeing alternate temporal
-origins.
+The SAME decoder itself is feed-forward, so there is no decoder-time iterative
+loop to scroll. The iterative signal we can actually intervene on is SA3's
+denoising / rectified-flow state \(x_i\).
 
-Literal alternating-roll version:
+The mode closest to the tiling intuition is cyclic mixing:
 
 $$
-x_{i+1} = R_s\left(x_i + \Delta t_i\, v_\theta(x_i,t_i,c)\right)
+\bar x_i=\frac{1}{2}(x_i+R_s x_i)
 $$
 
-where \(R_s\) is a cyclic time roll, usually \(s=T/2\).
+$$
+x_{i+1}=\left[x_i+\Delta t_i\,v_\theta(x_i,t_i,c)\right]
+\quad\text{then}\quad
+x_{i+1}\leftarrow x_{i+1}+\beta(\bar x_{i+1}-x_{i+1})
+$$
 
-Paired-origin version:
+where \(R_s\) is a cyclic time roll, usually \(s=T/2\), and \(\beta\) is the
+soft projection strength.
+
+Unlike the earlier literal roll/unroll probe, this changes the latent state. It
+also changes the latent state when `CYCLIC_STEP_INIT_NOISE = 0`, because the
+projection itself still runs even if the flow update has \(\Delta t=0\).
+
+Two older diagnostic modes remain available:
+
+- `alternate`: literally rolls the state after every step. This is mostly a
+  coordinate transform if the output is unrolled.
+- `paired_average`: evaluates the velocity field at both origins and averages:
 
 $$
 v_{cyc}(x_i,t_i,c)=\frac{1}{2}\left[
 v_\theta(x_i,t_i,c)+R_{-s}v_\theta(R_s x_i,t_i,c)
 \right]
 $$
-
-$$
-x_{i+1}=x_i+\Delta t_i\,v_{cyc}(x_i,t_i,c)
-$$
-
-The paired version costs roughly 2x model forwards per step but is often the
-cleaner mathematical interpretation: at every denoising step, the velocity field
-is asked to agree across two cyclic origins.
 
 No inpainting boundary is used here. The helper still passes zero inpaint tensors
 because the SA3 model architecture expects them, but no mask region is active.
@@ -2586,19 +2594,29 @@ CYCLIC_STEP_STEPS = 20
 CYCLIC_STEP_CFG = 1.0
 CYCLIC_STEP_SEED = 1070
 
-# 0.15 = subtle, 0.35 = clear but still anchored, 0.60+ = stronger rewrite.
-CYCLIC_STEP_INIT_NOISE = 0.35
+# Start at 0.0 to isolate the cyclic projection. Raise to 0.08-0.25 if you want
+# SA3 to re-musicalize / re-denoise the projected latent.
+CYCLIC_STEP_INIT_NOISE = 0.0
 
 # 0.5 is the faithful half-scroll analogue.
 CYCLIC_STEP_ROLL_FRACTION = 0.5
 
-# "alternate" literally rolls the state after every step.
-# "paired_average" evaluates both origins at each step and averages velocities.
-CYCLIC_STEP_MODES = ["alternate", "paired_average"]
+# "cyclic_mix" is the useful tiling-style version.
+# Optional diagnostics: "alternate", "paired_average".
+CYCLIC_STEP_MODES = ["cyclic_mix"]
+
+# Soft projection strength per step:
+#   0.02-0.06 = gentle
+#   0.08-0.15 = audible
+#   0.25+     = strong half-period collapse risk
+CYCLIC_STEP_ROLL_MIXES = [0.08]
+CYCLIC_STEP_MIX_EVERY_N = 1
+CYCLIC_STEP_SYMMETRIC_MIX = True
 
 # For alternate mode, unroll the final state back into the source orientation.
 CYCLIC_STEP_UNROLL_OUTPUT = True
-CYCLIC_STEP_PREVIEW_REPEATS = 4
+CYCLIC_STEP_ADD_REPEATED_PREVIEW = False
+CYCLIC_STEP_PREVIEW_REPEATS = 2
 CYCLIC_STEP_SAVE_PT = True
 
 
@@ -2625,7 +2643,6 @@ if RUN_MODE_0G_CYCLIC_STEP_ROLL:
 
     source_path = CYCLIC_STEP_OUTPUT_DIR / "source_reference.wav"
     torchaudio.save(str(source_path), source_audio.cpu(), source_sr)
-    source_preview_path = save_loop_preview(source_path, CYCLIC_STEP_PREVIEW_REPEATS, "preview")
 
     roll_frames = frames_from_fraction(source_latents, CYCLIC_STEP_ROLL_FRACTION)
     manifest = {
@@ -2637,74 +2654,86 @@ if RUN_MODE_0G_CYCLIC_STEP_ROLL:
         "init_noise": float(CYCLIC_STEP_INIT_NOISE),
         "roll_fraction": float(CYCLIC_STEP_ROLL_FRACTION),
         "roll_frames": int(roll_frames),
+        "mix_every_n": int(CYCLIC_STEP_MIX_EVERY_N),
+        "symmetric_mix": bool(CYCLIC_STEP_SYMMETRIC_MIX),
         "source_metrics": metrics_payload(source_latents),
         "outputs": [],
     }
-    player_paths = [source_path, source_preview_path]
-    player_labels = [
-        "source reference",
-        f"source x{CYCLIC_STEP_PREVIEW_REPEATS} seam preview",
-    ]
+    player_paths = [source_path]
+    player_labels = ["source reference"]
+    if CYCLIC_STEP_ADD_REPEATED_PREVIEW:
+        source_preview_path = save_loop_preview(source_path, CYCLIC_STEP_PREVIEW_REPEATS, "preview")
+        player_paths.append(source_preview_path)
+        player_labels.append(f"source x{CYCLIC_STEP_PREVIEW_REPEATS}")
 
-    for mode_index, mode in enumerate(CYCLIC_STEP_MODES):
-        print("running cyclic step roll:", mode)
-        out_latents = sa3_cyclic_roll_sample_from_init_latents(
-            sa3_model,
-            source_latents,
-            prompt=CYCLIC_STEP_PROMPT,
-            duration=CYCLIC_STEP_DURATION,
-            steps=CYCLIC_STEP_STEPS,
-            cfg_scale=CYCLIC_STEP_CFG,
-            init_noise_level=CYCLIC_STEP_INIT_NOISE,
-            roll_fraction=CYCLIC_STEP_ROLL_FRACTION,
-            mode=mode,
-            unroll_output=CYCLIC_STEP_UNROLL_OUTPUT,
-            seed=CYCLIC_STEP_SEED + mode_index,
-        )
-
-        safe_mode = safe_loop_name(mode)
-        out_path = CYCLIC_STEP_OUTPUT_DIR / f"cyclic_step_roll_{safe_mode}.wav"
-        decode_sa3_latents_to_file_cropped(
-            out_latents,
-            out_path,
-            duration=CYCLIC_STEP_DURATION,
-        )
-        preview_path = save_loop_preview(out_path, CYCLIC_STEP_PREVIEW_REPEATS, "preview")
-        metrics = metrics_payload(out_latents)
-
-        pt_path = None
-        if CYCLIC_STEP_SAVE_PT:
-            pt_path = CYCLIC_STEP_OUTPUT_DIR / f"cyclic_step_roll_{safe_mode}.pt"
-            torch.save(
-                {
-                    "latents": out_latents.detach().cpu(),
-                    "mode": mode,
-                    "roll_fraction": CYCLIC_STEP_ROLL_FRACTION,
-                    "roll_frames": roll_frames,
-                    "init_noise": CYCLIC_STEP_INIT_NOISE,
-                    "steps": CYCLIC_STEP_STEPS,
-                    "seed": CYCLIC_STEP_SEED + mode_index,
-                },
-                pt_path,
+    variant_index = 0
+    for mode in CYCLIC_STEP_MODES:
+        for roll_mix in CYCLIC_STEP_ROLL_MIXES:
+            print("running cyclic step roll:", mode, "mix", roll_mix)
+            out_latents = sa3_cyclic_roll_sample_from_init_latents(
+                sa3_model,
+                source_latents,
+                prompt=CYCLIC_STEP_PROMPT,
+                duration=CYCLIC_STEP_DURATION,
+                steps=CYCLIC_STEP_STEPS,
+                cfg_scale=CYCLIC_STEP_CFG,
+                init_noise_level=CYCLIC_STEP_INIT_NOISE,
+                roll_fraction=CYCLIC_STEP_ROLL_FRACTION,
+                mode=mode,
+                roll_mix=roll_mix,
+                mix_every_n=CYCLIC_STEP_MIX_EVERY_N,
+                symmetric_mix=CYCLIC_STEP_SYMMETRIC_MIX,
+                unroll_output=CYCLIC_STEP_UNROLL_OUTPUT,
+                seed=CYCLIC_STEP_SEED + variant_index,
             )
 
-        manifest["outputs"].append(
-            {
-                "mode": mode,
-                "audio": str(out_path),
-                "preview": str(preview_path),
-                "latents_pt": str(pt_path) if pt_path else None,
-                "metrics": metrics,
-            }
-        )
-        player_paths.extend([out_path, preview_path])
-        player_labels.extend(
-            [
-                f"cyclic step roll {mode}",
-                f"cyclic step roll {mode} x{CYCLIC_STEP_PREVIEW_REPEATS}",
-            ]
-        )
-        print(mode, metrics)
+            safe_mode = safe_loop_name(mode)
+            mix_tag = safe_loop_name(f"{roll_mix:.3f}")
+            out_path = CYCLIC_STEP_OUTPUT_DIR / f"cyclic_step_roll_{safe_mode}_mix_{mix_tag}.wav"
+            decode_sa3_latents_to_file_cropped(
+                out_latents,
+                out_path,
+                duration=CYCLIC_STEP_DURATION,
+            )
+            preview_path = None
+            if CYCLIC_STEP_ADD_REPEATED_PREVIEW:
+                preview_path = save_loop_preview(out_path, CYCLIC_STEP_PREVIEW_REPEATS, "preview")
+            metrics = metrics_payload(out_latents)
+
+            pt_path = None
+            if CYCLIC_STEP_SAVE_PT:
+                pt_path = CYCLIC_STEP_OUTPUT_DIR / f"cyclic_step_roll_{safe_mode}_mix_{mix_tag}.pt"
+                torch.save(
+                    {
+                        "latents": out_latents.detach().cpu(),
+                        "mode": mode,
+                        "roll_mix": roll_mix,
+                        "roll_fraction": CYCLIC_STEP_ROLL_FRACTION,
+                        "roll_frames": roll_frames,
+                        "init_noise": CYCLIC_STEP_INIT_NOISE,
+                        "steps": CYCLIC_STEP_STEPS,
+                        "seed": CYCLIC_STEP_SEED + variant_index,
+                    },
+                    pt_path,
+                )
+
+            manifest["outputs"].append(
+                {
+                    "mode": mode,
+                    "roll_mix": float(roll_mix),
+                    "audio": str(out_path),
+                    "preview": str(preview_path) if preview_path else None,
+                    "latents_pt": str(pt_path) if pt_path else None,
+                    "metrics": metrics,
+                }
+            )
+            player_paths.append(out_path)
+            player_labels.append(f"cyclic step {mode} mix {roll_mix:.3f}")
+            if preview_path is not None:
+                player_paths.append(preview_path)
+                player_labels.append(f"cyclic step {mode} mix {roll_mix:.3f} x{CYCLIC_STEP_PREVIEW_REPEATS}")
+            print(mode, "mix", roll_mix, metrics)
+            variant_index += 1
 
     manifest_path = CYCLIC_STEP_OUTPUT_DIR / "manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
