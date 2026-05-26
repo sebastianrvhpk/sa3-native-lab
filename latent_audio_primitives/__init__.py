@@ -12,8 +12,10 @@ from .composition import (
 from .index import LatentMemoryIndex, SearchResult
 from .io import load_item, load_items, save_item, save_items
 from .prompt_optimization import (
+    BeamPromptSearchResult,
     GreedyPromptSearchResult,
     PromptOptimizationResult,
+    beam_token_prompt_search,
     coordinate_prompt_search,
     default_modifier_axes,
     greedy_token_prompt_search,
@@ -119,6 +121,7 @@ __all__ = [
     "LatentStyleDirection",
     "LatentStyleProfile",
     "AudioSetDirection",
+    "BeamPromptSearchResult",
     "LoopBoundaryMetrics",
     "PromptOptimizationResult",
     "GreedyPromptSearchResult",
@@ -131,6 +134,7 @@ __all__ = [
     "audio_player_html",
     "as_time_major",
     "best_path",
+    "beam_token_prompt_search",
     "boundary_summary",
     "bridge_cost",
     "channel_mask_like",

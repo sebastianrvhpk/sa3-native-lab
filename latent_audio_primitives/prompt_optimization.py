@@ -26,6 +26,15 @@ class GreedyPromptSearchResult:
     history: list[tuple[str, float]] = field(default_factory=list)
 
 
+@dataclass(frozen=True, slots=True)
+class BeamPromptSearchResult:
+    prompt: str
+    score: float
+    tokens: list[str]
+    beams: list[tuple[str, float]]
+    history: list[tuple[str, float]] = field(default_factory=list)
+
+
 def prompt_seed_from_audio_path(path: str | Path, *, extra_tags: list[str] | None = None) -> str:
     """Make a crude prompt seed from path tokens.
 
@@ -151,6 +160,91 @@ def greedy_token_prompt_search(
         prompt=best_global.prompt,
         score=best_global.score,
         tokens=best_global.tokens,
+        history=full_history,
+    )
+
+
+def beam_token_prompt_search(
+    vocabulary: Sequence[str],
+    scorer: BatchPromptScorer,
+    *,
+    tokens_generated: int = 16,
+    beam_width: int = 4,
+    branch_factor: int | None = 256,
+    candidate_batch_size: int | None = None,
+    seed: int = 0,
+    prefix: str = "",
+    suffix: str = "",
+    separator: str = " ",
+    higher_is_better: bool = True,
+) -> BeamPromptSearchResult:
+    """Beam search over hard prompt tokens with batched candidate scoring.
+
+    Greedy search commits to one token at each position. Beam search keeps the
+    best ``beam_width`` partial prompts, so a locally mediocre token can survive
+    if it becomes useful after later tokens are added.
+    """
+
+    if not vocabulary:
+        raise ValueError("vocabulary must be non-empty")
+    if tokens_generated < 1:
+        raise ValueError("tokens_generated must be at least 1")
+    if beam_width < 1:
+        raise ValueError("beam_width must be at least 1")
+
+    rng = random.Random(seed)
+    beams: list[tuple[list[str], float]] = [([], float("-inf") if higher_is_better else float("inf"))]
+    full_history: list[tuple[str, float]] = []
+
+    for _position in range(tokens_generated):
+        expansions: list[tuple[list[str], str]] = []
+        for tokens, _score in beams:
+            if branch_factor is None or branch_factor >= len(vocabulary):
+                candidates = list(vocabulary)
+            else:
+                candidates = rng.sample(list(vocabulary), branch_factor)
+            for token in candidates:
+                expanded = [*tokens, token]
+                prompt = _assemble_prompt(expanded, prefix, suffix, separator)
+                expansions.append((expanded, prompt))
+
+        prompts = [prompt for _tokens_for_prompt, prompt in expansions]
+        scores = _score_prompts_in_batches(scorer, prompts, candidate_batch_size)
+        if len(scores) != len(prompts):
+            raise ValueError("batch scorer must return one score per prompt")
+        full_history.extend(zip(prompts, scores))
+
+        scored_expansions = [
+            (tokens, float(score)) for (tokens, _prompt), score in zip(expansions, scores)
+        ]
+        scored_expansions.sort(key=lambda item: item[1], reverse=higher_is_better)
+
+        next_beams: list[tuple[list[str], float]] = []
+        seen_prompts: set[str] = set()
+        for tokens, score in scored_expansions:
+            prompt = _assemble_prompt(tokens, prefix, suffix, separator)
+            if prompt in seen_prompts:
+                continue
+            seen_prompts.add(prompt)
+            next_beams.append((tokens, score))
+            if len(next_beams) >= beam_width:
+                break
+        beams = next_beams
+
+    final_prompts = [_assemble_prompt(tokens, prefix, suffix, separator) for tokens, _score in beams]
+    final_scores = _score_prompts_in_batches(scorer, final_prompts, candidate_batch_size)
+    final_beams = list(zip(final_prompts, [float(score) for score in final_scores]))
+    best_index = (
+        max(range(len(final_scores)), key=final_scores.__getitem__)
+        if higher_is_better
+        else min(range(len(final_scores)), key=final_scores.__getitem__)
+    )
+    best_tokens = beams[best_index][0]
+    return BeamPromptSearchResult(
+        prompt=final_prompts[best_index],
+        score=float(final_scores[best_index]),
+        tokens=list(best_tokens),
+        beams=final_beams,
         history=full_history,
     )
 

@@ -1,4 +1,5 @@
 from latent_audio_primitives.prompt_optimization import (
+    beam_token_prompt_search,
     coordinate_prompt_search,
     default_modifier_axes,
     greedy_token_prompt_search,
@@ -76,3 +77,34 @@ def test_greedy_token_prompt_search_batches_candidate_scoring():
 
     assert result.tokens == ["e"]
     assert batch_sizes[:3] == [2, 2, 1]
+
+
+def test_beam_token_prompt_search_keeps_multiple_partial_prompts():
+    vocab = ["a", "bridge", "wide", "noise"]
+
+    def scorer(prompts):
+        scores = []
+        for prompt in prompts:
+            score = 0.0
+            if "wide" in prompt:
+                score += 1.0
+            if "bridge wide" in prompt:
+                score += 2.0
+            if prompt.startswith("bridge"):
+                score += 0.9
+            scores.append(score)
+        return scores
+
+    result = beam_token_prompt_search(
+        vocab,
+        scorer,
+        tokens_generated=2,
+        beam_width=2,
+        branch_factor=None,
+        candidate_batch_size=3,
+        seed=0,
+    )
+
+    assert result.prompt == "bridge wide"
+    assert result.score == 3.9
+    assert len(result.beams) == 2

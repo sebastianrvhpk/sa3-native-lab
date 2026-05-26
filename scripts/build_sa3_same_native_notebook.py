@@ -548,6 +548,7 @@ from latent_audio_primitives.experiments.soft_prompt import (
 from latent_audio_primitives.io import save_items, load_items
 from latent_audio_primitives.latent_math import latent_summary
 from latent_audio_primitives.prompt_optimization import (
+    beam_token_prompt_search,
     coordinate_prompt_search,
     default_modifier_axes,
     greedy_token_prompt_search,
@@ -947,6 +948,8 @@ def sa3_flow_losses_for_prompts(
     max_t=0.95,
     score_samples=1,
     shared_noise=True,
+    timestep_values=None,
+    cosine_weight=0.0,
     velocity_convention=None,
 ):
     # Native scorer:
@@ -966,7 +969,12 @@ def sa3_flow_losses_for_prompts(
         target = target.expand(len(prompts), -1, -1).contiguous()
     if target.shape[0] != len(prompts):
         raise ValueError("target batch must be 1 or match number of prompts.")
-    score_samples = max(1, int(score_samples))
+    if timestep_values is not None:
+        timestep_values = [float(value) for value in timestep_values]
+        score_samples = len(timestep_values)
+    else:
+        score_samples = max(1, int(score_samples))
+    cosine_weight = float(cosine_weight)
 
     conditioning = [{"prompt": prompt, "seconds_total": duration} for prompt in prompts]
     with torch.inference_mode():
@@ -985,18 +993,30 @@ def sa3_flow_losses_for_prompts(
             generator = torch.Generator(device=device)
             generator.manual_seed(int(seed) + sample_index * 1009)
             if shared_noise:
-                t_scalar = min_t + (max_t - min_t) * torch.rand((), device=device, generator=generator)
+                if timestep_values is not None:
+                    t_scalar = torch.tensor(timestep_values[sample_index], device=device)
+                else:
+                    t_scalar = min_t + (max_t - min_t) * torch.rand((), device=device, generator=generator)
                 t = t_scalar.expand(batch)
                 noise_base = torch.randn((1, channels, frames), device=device, dtype=dtype, generator=generator)
                 noise = noise_base.expand(batch, -1, -1).contiguous()
             else:
-                t = min_t + (max_t - min_t) * torch.rand(batch, device=device, generator=generator)
+                if timestep_values is not None:
+                    t = torch.full((batch,), timestep_values[sample_index], device=device)
+                else:
+                    t = min_t + (max_t - min_t) * torch.rand(batch, device=device, generator=generator)
                 noise = torch.randn(target.shape, device=device, dtype=dtype, generator=generator)
             t_view = t[:, None, None].to(dtype)
             z_t = (1 - t_view) * target + t_view * noise
             velocity_target = flow_velocity_target(target, noise, convention=velocity_convention)
             pred = core.model(z_t, t, **cond_inputs, cfg_scale=1.0, batch_cfg=True)
-            losses = losses + torch.mean((pred.float() - velocity_target.float()) ** 2, dim=(1, 2))
+            mse = torch.mean((pred.float() - velocity_target.float()) ** 2, dim=(1, 2))
+            if cosine_weight:
+                pred_flat = pred.float().reshape(batch, -1)
+                target_flat = velocity_target.float().reshape(batch, -1)
+                cosine = torch.nn.functional.cosine_similarity(pred_flat, target_flat, dim=1, eps=1e-8)
+                mse = mse + cosine_weight * (1.0 - cosine)
+            losses = losses + mse
         losses = losses / score_samples
     return [float(loss.detach().cpu()) for loss in losses]
 
@@ -2989,23 +3009,21 @@ Search-cost rule:
 
 ```text
 search width per position      = BABBLE_TOKEN_SUBSET
+beam width                    = BABBLE_BEAM_WIDTH
 GPU prompts per forward chunk  = BABBLE_CANDIDATE_BATCH_SIZE
 positions per run              = BABBLE_TOKENS_GENERATED
-independent greedy restarts    = BABBLE_RUNS
 noise/timestep samples averaged= BABBLE_SCORE_SAMPLES
 ```
 
-Approximate DiT forward count:
+Better-math defaults:
 
-$$
-\text{forwards} \approx
-\text{runs}\times\text{tokens}\times
-\left\lceil\frac{\text{subset}}{\text{batch}}\right\rceil\times
-\text{score samples}
-$$
+- fixed shared timestep/noise probe bank, so candidates are compared fairly
+- beam search, so a useful token can survive even if it is not the greedy winner at one position
+- MSE plus optional cosine direction loss over the SA3 velocity field
+- chunked GPU scoring, so you can raise search width without needing all candidates in VRAM at once
 
-The previous default was roughly \(4\times12\times1=48\) DiT forwards. The
-current medium setting is intentionally heavier and should use the L4 better.
+This is still prompt inversion through a frozen model, not a captioner. Good
+results may be strange strings if those strings steer SA3's native conditioner.
 """
     ),
     code(
@@ -3022,20 +3040,32 @@ BABBLE_MIN_CHARS = 3
 BABBLE_REJECT_STOPWORDS = True
 BABBLE_AUDIO_PRIOR = True
 
-# Search compute knobs.
-# TOKEN_SUBSET is the search width. CANDIDATE_BATCH_SIZE is the GPU batch/chunk size.
-BABBLE_TOKEN_SUBSET = 256
-BABBLE_CANDIDATE_BATCH_SIZE = 128
-BABBLE_TOKENS_GENERATED = 18
-BABBLE_RUNS = 6
+# Search strategy:
+#   "beam"   = best default; keeps multiple partial prompts alive.
+#   "greedy" = older faster method.
+BABBLE_SEARCH_STRATEGY = "beam"
 
-# Average the native SA3 flow loss over multiple shared noise/timestep probes.
-# This is slower but much less random than scoring each candidate under different noise.
-BABBLE_SCORE_SAMPLES = 2
+# Search compute knobs. For beam search:
+#   branch_factor is sampled per live beam at every token position.
+#   beam_width keeps this many partial prompts after each position.
+BABBLE_TOKEN_SUBSET = 256          # greedy width, or fallback beam branch factor
+BABBLE_BEAM_WIDTH = 4
+BABBLE_BRANCH_FACTOR = 256
+BABBLE_CANDIDATE_BATCH_SIZE = 128
+BABBLE_TOKENS_GENERATED = 16
+BABBLE_GREEDY_RUNS = 6
+
+# Native SA3 flow score.
+# If BABBLE_TIMESTEP_VALUES is non-empty, it overrides BABBLE_SCORE_SAMPLES.
+# The default fixed bank is slower but compares all candidates under the same
+# corruption levels, which is the cleaner prompt-inversion objective.
+BABBLE_TIMESTEP_VALUES = [0.12, 0.32, 0.55, 0.78]
+BABBLE_SCORE_SAMPLES = 4
 BABBLE_SHARED_NOISE = True
 BABBLE_T_MIN = 0.05
 BABBLE_T_MAX = 0.95
 BABBLE_SCORE_SEED = 123
+BABBLE_COSINE_WEIGHT = 0.25
 
 FALLBACK_BABBLE_VOCAB = [
     "shimmer", "velvet", "glass", "grain", "pressure", "hollow", "dense", "thin",
@@ -3067,23 +3097,42 @@ if RUN_MODE_2_AUDIO_TO_BABBLE_PROMPT:
         babble_vocab = FALLBACK_BABBLE_VOCAB
         print(f"Using {len(babble_vocab)} fallback hand-written candidates.")
 
-    search_width = min(BABBLE_TOKEN_SUBSET or len(babble_vocab), len(babble_vocab))
-    gpu_batch = BABBLE_CANDIDATE_BATCH_SIZE or search_width
-    approx_forward_chunks = (
-        BABBLE_RUNS
-        * BABBLE_TOKENS_GENERATED
-        * math.ceil(search_width / gpu_batch)
-        * BABBLE_SCORE_SAMPLES
-    )
-    approx_prompt_scores = BABBLE_RUNS * BABBLE_TOKENS_GENERATED * search_width * BABBLE_SCORE_SAMPLES
+    strategy = BABBLE_SEARCH_STRATEGY.lower()
+    effective_score_samples = len(BABBLE_TIMESTEP_VALUES) if BABBLE_TIMESTEP_VALUES else BABBLE_SCORE_SAMPLES
+    greedy_width = min(BABBLE_TOKEN_SUBSET or len(babble_vocab), len(babble_vocab))
+    branch_factor = min(BABBLE_BRANCH_FACTOR or greedy_width, len(babble_vocab))
+    gpu_batch = BABBLE_CANDIDATE_BATCH_SIZE or greedy_width
+    if strategy == "beam":
+        candidates_per_position = BABBLE_BEAM_WIDTH * branch_factor
+        approx_forward_chunks = (
+            BABBLE_TOKENS_GENERATED
+            * math.ceil(candidates_per_position / gpu_batch)
+            * effective_score_samples
+        )
+        approx_prompt_scores = BABBLE_TOKENS_GENERATED * candidates_per_position * effective_score_samples
+    else:
+        candidates_per_position = greedy_width
+        approx_forward_chunks = (
+            BABBLE_GREEDY_RUNS
+            * BABBLE_TOKENS_GENERATED
+            * math.ceil(greedy_width / gpu_batch)
+            * effective_score_samples
+        )
+        approx_prompt_scores = BABBLE_GREEDY_RUNS * BABBLE_TOKENS_GENERATED * greedy_width * effective_score_samples
     print(
         "Mode 2 budget:",
         {
-            "search_width": search_width,
+            "strategy": strategy,
+            "greedy_width": greedy_width,
+            "beam_width": BABBLE_BEAM_WIDTH if strategy == "beam" else None,
+            "branch_factor": branch_factor if strategy == "beam" else None,
+            "candidates_per_position": candidates_per_position,
             "gpu_batch": gpu_batch,
             "tokens_generated": BABBLE_TOKENS_GENERATED,
-            "runs": BABBLE_RUNS,
-            "score_samples": BABBLE_SCORE_SAMPLES,
+            "greedy_runs": BABBLE_GREEDY_RUNS if strategy == "greedy" else None,
+            "score_samples": effective_score_samples,
+            "timesteps": BABBLE_TIMESTEP_VALUES if BABBLE_TIMESTEP_VALUES else "random",
+            "cosine_weight": BABBLE_COSINE_WEIGHT,
             "approx_prompt_scores": approx_prompt_scores,
             "approx_dit_forwards": approx_forward_chunks,
         },
@@ -3107,33 +3156,56 @@ if RUN_MODE_2_AUDIO_TO_BABBLE_PROMPT:
             max_t=BABBLE_T_MAX,
             score_samples=BABBLE_SCORE_SAMPLES,
             shared_noise=BABBLE_SHARED_NOISE,
+            timestep_values=BABBLE_TIMESTEP_VALUES or None,
+            cosine_weight=BABBLE_COSINE_WEIGHT,
             velocity_convention=FLOW_TARGET_CONVENTION,
         )
         return [-loss for loss in losses]
 
-    result = greedy_token_prompt_search(
-        babble_vocab,
-        batch_scorer,
-        tokens_generated=BABBLE_TOKENS_GENERATED,
-        runs=BABBLE_RUNS,
-        token_subset=BABBLE_TOKEN_SUBSET,
-        candidate_batch_size=BABBLE_CANDIDATE_BATCH_SIZE,
-        seed=0,
-        higher_is_better=True,
-    )
+    if strategy == "beam":
+        result = beam_token_prompt_search(
+            babble_vocab,
+            batch_scorer,
+            tokens_generated=BABBLE_TOKENS_GENERATED,
+            beam_width=BABBLE_BEAM_WIDTH,
+            branch_factor=branch_factor,
+            candidate_batch_size=BABBLE_CANDIDATE_BATCH_SIZE,
+            seed=0,
+            higher_is_better=True,
+        )
+    elif strategy == "greedy":
+        result = greedy_token_prompt_search(
+            babble_vocab,
+            batch_scorer,
+            tokens_generated=BABBLE_TOKENS_GENERATED,
+            runs=BABBLE_GREEDY_RUNS,
+            token_subset=BABBLE_TOKEN_SUBSET,
+            candidate_batch_size=BABBLE_CANDIDATE_BATCH_SIZE,
+            seed=0,
+            higher_is_better=True,
+        )
+    else:
+        raise ValueError("BABBLE_SEARCH_STRATEGY must be 'beam' or 'greedy'")
+
     payload = {
         "prompt": result.prompt,
         "score": result.score,
         "tokens": result.tokens,
+        "strategy": strategy,
         "vocab_source": "sa3_t5gemma_tokenizer" if USE_SA3_TOKENIZER_VOCAB else "fallback_hand_vocab",
         "vocab_size": len(babble_vocab),
-        "search_width": search_width,
+        "greedy_width": greedy_width,
+        "beam_width": BABBLE_BEAM_WIDTH if strategy == "beam" else None,
+        "branch_factor": branch_factor if strategy == "beam" else None,
         "candidate_batch_size": BABBLE_CANDIDATE_BATCH_SIZE,
         "tokens_generated": BABBLE_TOKENS_GENERATED,
-        "runs": BABBLE_RUNS,
-        "score_samples": BABBLE_SCORE_SAMPLES,
+        "greedy_runs": BABBLE_GREEDY_RUNS if strategy == "greedy" else None,
+        "score_samples": effective_score_samples,
         "shared_noise": BABBLE_SHARED_NOISE,
-        "t_range": [BABBLE_T_MIN, BABBLE_T_MAX],
+        "timesteps": BABBLE_TIMESTEP_VALUES if BABBLE_TIMESTEP_VALUES else None,
+        "t_range": [BABBLE_T_MIN, BABBLE_T_MAX] if not BABBLE_TIMESTEP_VALUES else None,
+        "cosine_weight": BABBLE_COSINE_WEIGHT,
+        "final_beams": getattr(result, "beams", None),
         "history_tail": result.history[-20:],
     }
     HARD_PROMPT_JSON.write_text(json.dumps(payload, indent=2), encoding="utf-8")
