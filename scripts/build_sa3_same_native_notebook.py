@@ -1922,31 +1922,52 @@ LATENT_BLUR_DURATION = 9.0
 LATENT_BLUR_PROMPT = ""
 LATENT_BLUR_STEPS = 8
 LATENT_BLUR_CFG = 1.0
-LATENT_BLUR_POLISH_NOISE = 0.12
+LATENT_BLUR_POLISH_NOISE = 0.06
 LATENT_BLUR_BASE_SEED = 900
 
-LATENT_BLUR_RUN_DIRECT_DECODE = True
+# Main harshness knobs:
+# - temporal_radius: r=1 is 3 latent frames (~0.28s), r=2 is 5 frames (~0.46s),
+#   r=4 is 9 frames (~0.84s), r=8 is 17 frames (~1.58s).
+# - strength: 0.0 is no edit, 0.10-0.35 is gentle, 1.0 is full replacement by the blurred latent.
+# - LATENT_BLUR_POLISH_NOISE: 0.03-0.08 is light SA3 projection, 0.12+ starts behaving more like regeneration.
+LATENT_BLUR_RUN_DIRECT_DECODE = False
 LATENT_BLUR_RUN_SA3_POLISH = True
 LATENT_BLUR_SAVE_PT = True
 
+# Gentle defaults. The earlier full-strength temporal blurs are intentionally not the default
+# because SA3 polish often treats them as over-damaged latents.
 LATENT_BLUR_SPECS = [
-    {"name": "box_center_r2", "mode": "temporal", "temporal_kernel": "box", "temporal_radius": 2, "strength": 1.0},
-    {"name": "box_center_r4", "mode": "temporal", "temporal_kernel": "box", "temporal_radius": 4, "strength": 1.0},
-    {"name": "box_center_r8", "mode": "temporal", "temporal_kernel": "box", "temporal_radius": 8, "strength": 1.0},
-    {"name": "motion_past_r4", "mode": "temporal", "temporal_kernel": "box", "temporal_direction": "past", "temporal_radius": 4, "strength": 1.0},
-    {"name": "motion_future_r4", "mode": "temporal", "temporal_kernel": "box", "temporal_direction": "future", "temporal_radius": 4, "strength": 1.0},
-    {"name": "gaussian_r4", "mode": "temporal", "temporal_kernel": "gaussian", "temporal_radius": 4, "strength": 1.0},
-    {"name": "channel_r1", "mode": "channel", "channel_radius": 1, "strength": 1.0},
-    {"name": "channel_r4", "mode": "channel", "channel_radius": 4, "strength": 1.0},
-    {"name": "time_channel_soft", "mode": "temporal_channel", "temporal_kernel": "box", "temporal_radius": 3, "channel_radius": 2, "strength": 0.75},
+    {"name": "box_r1_s015", "mode": "temporal", "temporal_kernel": "box", "temporal_radius": 1, "strength": 0.15},
+    {"name": "box_r1_s030", "mode": "temporal", "temporal_kernel": "box", "temporal_radius": 1, "strength": 0.30},
+    {"name": "box_r2_s020", "mode": "temporal", "temporal_kernel": "box", "temporal_radius": 2, "strength": 0.20},
+    {"name": "box_r2_s040", "mode": "temporal", "temporal_kernel": "box", "temporal_radius": 2, "strength": 0.40},
+    {"name": "gaussian_r2_s020", "mode": "temporal", "temporal_kernel": "gaussian", "temporal_radius": 2, "strength": 0.20},
+    {"name": "gaussian_r4_s015", "mode": "temporal", "temporal_kernel": "gaussian", "temporal_radius": 4, "strength": 0.15},
+    {"name": "motion_past_r2_s020", "mode": "temporal", "temporal_kernel": "box", "temporal_direction": "past", "temporal_radius": 2, "strength": 0.20},
+    {"name": "motion_future_r2_s020", "mode": "temporal", "temporal_kernel": "box", "temporal_direction": "future", "temporal_radius": 2, "strength": 0.20},
+    {"name": "channel_r1_s020", "mode": "channel", "channel_radius": 1, "strength": 0.20},
+    {"name": "time_channel_t1_c1_s020", "mode": "temporal_channel", "temporal_kernel": "box", "temporal_radius": 1, "channel_radius": 1, "strength": 0.20},
     {"name": "low_rank_8", "mode": "low_rank", "rank": 8, "strength": 1.0},
     {"name": "low_rank_24", "mode": "low_rank", "rank": 24, "strength": 1.0},
-    {"name": "detail_gain_025", "mode": "detail_attenuate", "temporal_radius": 4, "detail_gain": 0.25, "strength": 1.0},
+    {"name": "detail_gain_050", "mode": "detail_attenuate", "temporal_radius": 4, "detail_gain": 0.50, "strength": 1.0},
     {"name": "sharpen_r2_a025", "mode": "sharpen", "temporal_kernel": "box", "temporal_radius": 2, "sharpen_amount": 0.25, "strength": 1.0},
     {"name": "sharpen_r4_a050", "mode": "sharpen", "temporal_kernel": "box", "temporal_radius": 4, "sharpen_amount": 0.50, "strength": 1.0},
-    {"name": "sharpen_r4_a100", "mode": "sharpen", "temporal_kernel": "box", "temporal_radius": 4, "sharpen_amount": 1.00, "strength": 1.0},
-    {"name": "channel_sharpen_r2_a050", "mode": "channel_sharpen", "channel_radius": 2, "sharpen_amount": 0.50, "strength": 1.0},
-    {"name": "mean_blend_025", "mode": "mean_blend", "strength": 0.25},
+    {"name": "mean_blend_010", "mode": "mean_blend", "strength": 0.10},
+]
+
+# Optional harsh probes. Use these deliberately, e.g.:
+# LATENT_BLUR_SPECS = LATENT_BLUR_HEAVY_SPECS
+# or:
+# LATENT_BLUR_SPECS = LATENT_BLUR_SPECS + LATENT_BLUR_HEAVY_SPECS[:3]
+LATENT_BLUR_HEAVY_SPECS = [
+    {"name": "heavy_box_r2_s100", "mode": "temporal", "temporal_kernel": "box", "temporal_radius": 2, "strength": 1.0},
+    {"name": "heavy_box_r4_s100", "mode": "temporal", "temporal_kernel": "box", "temporal_radius": 4, "strength": 1.0},
+    {"name": "heavy_box_r8_s100", "mode": "temporal", "temporal_kernel": "box", "temporal_radius": 8, "strength": 1.0},
+    {"name": "heavy_motion_past_r4_s100", "mode": "temporal", "temporal_kernel": "box", "temporal_direction": "past", "temporal_radius": 4, "strength": 1.0},
+    {"name": "heavy_motion_future_r4_s100", "mode": "temporal", "temporal_kernel": "box", "temporal_direction": "future", "temporal_radius": 4, "strength": 1.0},
+    {"name": "heavy_gaussian_r4_s100", "mode": "temporal", "temporal_kernel": "gaussian", "temporal_radius": 4, "strength": 1.0},
+    {"name": "heavy_channel_r4_s100", "mode": "channel", "channel_radius": 4, "strength": 1.0},
+    {"name": "heavy_time_channel_s075", "mode": "temporal_channel", "temporal_kernel": "box", "temporal_radius": 3, "channel_radius": 2, "strength": 0.75},
 ]
 
 
