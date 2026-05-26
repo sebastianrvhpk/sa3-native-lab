@@ -51,12 +51,19 @@ from .style import (
 )
 from .experiments.soft_prompt import SoftPromptState
 from .colab_audio_player import audio_player_html, display_audio_player
+from .tokenizer_vocab import (
+    TokenizerVocabularyConfig,
+    extract_prompt_tokenizer,
+    native_tokenizer_vocabulary,
+    preview_native_tokenizer_vocabulary,
+)
 
 __all__ = [
     "LatentItem",
     "LatentMemoryIndex",
     "SearchResult",
     "TransitionWeights",
+    "TokenizerVocabularyConfig",
     "LatentStyleDirection",
     "LatentStyleProfile",
     "AudioSetDirection",
@@ -77,6 +84,7 @@ __all__ = [
     "default_modifier_axes",
     "display_audio_player",
     "euclidean_distance",
+    "extract_prompt_tokenizer",
     "frame_mean_direction",
     "greedy_token_prompt_search",
     "fit_style_profile",
@@ -87,6 +95,8 @@ __all__ = [
     "load_style_profile",
     "load_summary_direction",
     "loop_cost",
+    "native_tokenizer_vocabulary",
+    "preview_native_tokenizer_vocabulary",
     "prompt_seed_from_audio_path",
     "ranked_bridges",
     "ranked_continuations",
