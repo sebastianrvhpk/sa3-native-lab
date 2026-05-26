@@ -11,12 +11,15 @@ class TokenizerVocabularyConfig:
 
     condition_key: str = "prompt"
     max_candidates: int = 2048
+    scan_limit: int | None = 65536
     min_chars: int = 2
     max_chars: int = 24
     require_word_start: bool = True
     ascii_only: bool = True
     lowercase: bool = True
     allow_punctuation: str = " -'/.&"
+    reject_stopwords: bool = True
+    rank_by_audio_prior: bool = True
 
 
 def extract_prompt_tokenizer(model_or_adapter: Any, *, condition_key: str = "prompt") -> Any:
@@ -49,12 +52,15 @@ def native_tokenizer_vocabulary(
     config: TokenizerVocabularyConfig | None = None,
     condition_key: str = "prompt",
     max_candidates: int | None = None,
+    scan_limit: int | None = None,
     min_chars: int | None = None,
     max_chars: int | None = None,
     require_word_start: bool | None = None,
     ascii_only: bool | None = None,
     lowercase: bool | None = None,
     allow_punctuation: str | None = None,
+    reject_stopwords: bool | None = None,
+    rank_by_audio_prior: bool | None = None,
 ) -> list[str]:
     """Build prompt-search candidates from SA3's native text tokenizer.
 
@@ -67,6 +73,8 @@ def native_tokenizer_vocabulary(
     cfg = config or TokenizerVocabularyConfig(condition_key=condition_key)
     if max_candidates is not None:
         cfg = _replace(cfg, max_candidates=max_candidates)
+    if scan_limit is not None:
+        cfg = _replace(cfg, scan_limit=scan_limit)
     if min_chars is not None:
         cfg = _replace(cfg, min_chars=min_chars)
     if max_chars is not None:
@@ -79,6 +87,10 @@ def native_tokenizer_vocabulary(
         cfg = _replace(cfg, lowercase=lowercase)
     if allow_punctuation is not None:
         cfg = _replace(cfg, allow_punctuation=allow_punctuation)
+    if reject_stopwords is not None:
+        cfg = _replace(cfg, reject_stopwords=reject_stopwords)
+    if rank_by_audio_prior is not None:
+        cfg = _replace(cfg, rank_by_audio_prior=rank_by_audio_prior)
 
     tokenizer = (
         model_or_tokenizer
@@ -89,9 +101,11 @@ def native_tokenizer_vocabulary(
     special_ids = set(getattr(tokenizer, "all_special_ids", []) or [])
     token_by_id = sorted(((int(token_id), token) for token, token_id in vocab.items()), key=lambda item: item[0])
 
-    candidates: list[str] = []
+    candidates: list[tuple[str, int]] = []
     seen: set[str] = set()
-    for token_id, token in token_by_id:
+    for scanned, (token_id, token) in enumerate(token_by_id):
+        if cfg.scan_limit is not None and scanned >= cfg.scan_limit:
+            break
         if token_id in special_ids:
             continue
         if cfg.require_word_start and not _looks_like_word_start(token):
@@ -104,11 +118,14 @@ def native_tokenizer_vocabulary(
         if key in seen:
             continue
         seen.add(key)
-        candidates.append(text)
-        if len(candidates) >= cfg.max_candidates:
-            break
+        candidates.append((text, token_id))
 
-    return candidates
+    if cfg.rank_by_audio_prior:
+        candidates.sort(key=lambda item: (-_audio_prior_score(item[0]), item[1], item[0]))
+    else:
+        candidates.sort(key=lambda item: item[1])
+
+    return [text for text, _token_id in candidates[: cfg.max_candidates]]
 
 
 def preview_native_tokenizer_vocabulary(vocabulary: list[str], *, columns: int = 8, rows: int = 8) -> str:
@@ -173,6 +190,8 @@ def _candidate_allowed(text: str, cfg: TokenizerVocabularyConfig) -> bool:
         return False
     if cfg.ascii_only and not text.isascii():
         return False
+    if cfg.reject_stopwords and text.casefold() in _STOPWORDS:
+        return False
     allowed_punctuation = re.escape(cfg.allow_punctuation)
     if re.search(rf"[^A-Za-z0-9{allowed_punctuation}]", text):
         return False
@@ -181,16 +200,181 @@ def _candidate_allowed(text: str, cfg: TokenizerVocabularyConfig) -> bool:
     return True
 
 
+def _audio_prior_score(text: str) -> int:
+    key = text.casefold()
+    score = 0
+    if key in _AUDIO_TERMS:
+        score += 100
+    if key in _STYLE_TERMS:
+        score += 70
+    for fragment in _AUDIO_FRAGMENTS:
+        if fragment in key:
+            score += 18
+    if " " in key or "-" in key:
+        score += 6
+    score += min(len(key), 12)
+    return score
+
+
 def _replace(config: TokenizerVocabularyConfig, **changes: Any) -> TokenizerVocabularyConfig:
     values = {
         "condition_key": config.condition_key,
         "max_candidates": config.max_candidates,
+        "scan_limit": config.scan_limit,
         "min_chars": config.min_chars,
         "max_chars": config.max_chars,
         "require_word_start": config.require_word_start,
         "ascii_only": config.ascii_only,
         "lowercase": config.lowercase,
         "allow_punctuation": config.allow_punctuation,
+        "reject_stopwords": config.reject_stopwords,
+        "rank_by_audio_prior": config.rank_by_audio_prior,
     }
     values.update(changes)
     return TokenizerVocabularyConfig(**values)
+
+
+_STOPWORDS = {
+    "a",
+    "an",
+    "and",
+    "are",
+    "as",
+    "at",
+    "be",
+    "but",
+    "by",
+    "de",
+    "for",
+    "from",
+    "ha",
+    "he",
+    "in",
+    "is",
+    "it",
+    "la",
+    "me",
+    "of",
+    "on",
+    "or",
+    "re",
+    "st",
+    "th",
+    "that",
+    "the",
+    "to",
+    "was",
+    "wi",
+    "with",
+    "you",
+}
+
+_AUDIO_TERMS = {
+    "acid",
+    "ambient",
+    "arp",
+    "attack",
+    "bass",
+    "beat",
+    "bleep",
+    "break",
+    "brightness",
+    "choir",
+    "chord",
+    "chorus",
+    "click",
+    "club",
+    "delay",
+    "distortion",
+    "drone",
+    "drum",
+    "echo",
+    "filter",
+    "fm",
+    "grain",
+    "groove",
+    "harmony",
+    "hat",
+    "house",
+    "kick",
+    "lead",
+    "loop",
+    "melody",
+    "noise",
+    "pad",
+    "percussion",
+    "phase",
+    "pluck",
+    "pulse",
+    "reverb",
+    "rhythm",
+    "sample",
+    "snare",
+    "sound",
+    "stereo",
+    "sub",
+    "sustain",
+    "synth",
+    "tape",
+    "techno",
+    "texture",
+    "tone",
+    "transient",
+    "vocal",
+}
+
+_STYLE_TERMS = {
+    "aggressive",
+    "bright",
+    "broken",
+    "calm",
+    "cold",
+    "dark",
+    "dense",
+    "distant",
+    "dry",
+    "euphoric",
+    "experimental",
+    "glassy",
+    "heavy",
+    "hollow",
+    "lush",
+    "melancholic",
+    "metallic",
+    "minimal",
+    "noisy",
+    "rough",
+    "shimmering",
+    "slow",
+    "smooth",
+    "sparse",
+    "tense",
+    "warm",
+    "wet",
+    "wide",
+}
+
+_AUDIO_FRAGMENTS = {
+    "audio",
+    "bass",
+    "beat",
+    "chord",
+    "drum",
+    "echo",
+    "harm",
+    "loop",
+    "melod",
+    "music",
+    "noise",
+    "perc",
+    "pitch",
+    "pulse",
+    "rhyth",
+    "sound",
+    "stereo",
+    "synth",
+    "tempo",
+    "textur",
+    "tone",
+    "vocal",
+}

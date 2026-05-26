@@ -13,13 +13,16 @@ class FakeTokenizer:
     def __init__(self):
         self._vocab = {
             "<pad>": 0,
-            "\u2581bright": 1,
-            "fragment": 2,
-            "\u2581dark": 3,
-            "\u2581!!!": 4,
-            "\u2581longwordthatiswaytoolongforthis": 5,
-            "\u2581wide-stereo": 6,
-            "\u2581s\u00ed": 7,
+            "\u2581the": 1,
+            "\u2581bright": 2,
+            "fragment": 3,
+            "\u2581dark": 4,
+            "\u2581!!!": 5,
+            "\u2581longwordthatiswaytoolongforthis": 6,
+            "\u2581wide-stereo": 7,
+            "\u2581s\u00ed": 8,
+            "\u2581bass": 9,
+            "\u2581loop": 10,
         }
 
     def get_vocab(self):
@@ -64,7 +67,7 @@ def test_native_tokenizer_vocabulary_filters_word_pieces():
         ascii_only=True,
     )
 
-    assert vocab == ["bright", "dark", "wide-stereo"]
+    assert vocab == ["bass", "loop", "bright", "dark", "wide-stereo"]
 
 
 def test_native_tokenizer_vocabulary_can_include_fragments():
@@ -76,6 +79,19 @@ def test_native_tokenizer_vocabulary_can_include_fragments():
     )
 
     assert "fragment" in vocab
+    assert "the" not in vocab
+
+
+def test_native_tokenizer_vocabulary_can_preserve_token_order():
+    vocab = native_tokenizer_vocabulary(
+        FakeTokenizer(),
+        max_candidates=10,
+        require_word_start=True,
+        ascii_only=True,
+        rank_by_audio_prior=False,
+    )
+
+    assert vocab[:3] == ["bright", "dark", "wide-stereo"]
 
 
 def test_preview_native_tokenizer_vocabulary_formats_rows():
