@@ -2190,6 +2190,12 @@ repeat it several times and listen to the seam
 ```
 
 This is not a perfect-loop guarantee. It is a cyclic augmentation experiment that gives SA3 a chance to repair the loop boundary as normal musical interior rather than as the edge of a file.
+
+Important distinction:
+
+- The single-pass probes below roll once, repair once, then unroll.
+- The iterative probes roll by a schedule such as `[0.5, 0.25, 0.75]`, repair, unroll, then repeat from the repaired audio/latents. This is closer to the old image-tiling trick where the optimizer keeps seeing a different origin.
+- This still is not "inside every diffusion step". Doing that would require sampler-level surgery: applying cyclic shifts, loop losses, or seam guidance inside the denoising/flow loop.
 """
     ),
     code(
@@ -2217,6 +2223,16 @@ LOOP_LATENT_POLISH_NOISE = 0.25
 LOOP_RUN_AUDIO_ROLL_INPAINT = True
 LOOP_INPAINT_WINDOW_SECONDS = 1.0
 
+# Iterative cyclic augmentation. These work on arbitrary audio clips, not only
+# pre-existing loops. They repeatedly move the temporal origin so several
+# would-be seams become ordinary interior material.
+LOOP_RUN_ITERATIVE_LATENT_ROLL_POLISH = False
+LOOP_RUN_ITERATIVE_AUDIO_ROLL_INPAINT = False
+LOOP_ITERATIONS = 3
+LOOP_ITERATIVE_SHIFT_FRACTIONS = [0.5, 0.25, 0.75]
+LOOP_ITERATIVE_STEPS = 12
+LOOP_ITERATIVE_LATENT_POLISH_NOISE = 0.14
+
 
 def safe_loop_name(value):
     return "".join(ch if ch.isalnum() or ch in "-_." else "_" for ch in str(value))[:96]
@@ -2238,6 +2254,12 @@ def metrics_payload(latents, *, k=8):
         "total": metrics.total,
         "window_frames": metrics.window_frames,
     }
+
+
+def cyclic_schedule_value(schedule, index):
+    if not schedule:
+        raise ValueError("shift schedule cannot be empty")
+    return float(schedule[index % len(schedule)])
 
 
 if RUN_MODE_0F_CYCLIC_LOOP:
@@ -2362,6 +2384,135 @@ if RUN_MODE_0F_CYCLIC_LOOP:
             )
 
         manifest.append(entry)
+
+    if LOOP_RUN_ITERATIVE_LATENT_ROLL_POLISH:
+        current_latents = source_latents
+        trace = []
+        for iteration in range(int(LOOP_ITERATIONS)):
+            shift_fraction = cyclic_schedule_value(LOOP_ITERATIVE_SHIFT_FRACTIONS, iteration)
+            shift_frames = frames_from_fraction(current_latents, shift_fraction)
+            rolled_latents = cyclic_roll_latents(current_latents, shift_frames)
+            polished_rolled = sa3_sample_from_init_latents(
+                sa3_model,
+                rolled_latents,
+                prompt=LOOP_PROMPT,
+                duration=LOOP_DURATION,
+                steps=LOOP_ITERATIVE_STEPS,
+                cfg_scale=LOOP_CFG,
+                init_noise_level=LOOP_ITERATIVE_LATENT_POLISH_NOISE,
+                seed=LOOP_BASE_SEED + 1000 + iteration,
+            )
+            current_latents = cyclic_roll_latents(polished_rolled, -shift_frames).detach()
+            iteration_metrics = metrics_payload(current_latents)
+            trace.append(
+                {
+                    "iteration": iteration,
+                    "shift_fraction": shift_fraction,
+                    "shift_frames": int(shift_frames),
+                    "seed": int(LOOP_BASE_SEED + 1000 + iteration),
+                    "metrics": iteration_metrics,
+                }
+            )
+            print("iterative latent roll", iteration, shift_fraction, iteration_metrics)
+
+        iterative_latent_path = LOOP_OUTPUT_DIR / "iterative_latent_roll_polish.wav"
+        decode_sa3_latents_to_file_cropped(
+            current_latents,
+            iterative_latent_path,
+            duration=LOOP_DURATION,
+        )
+        iterative_latent_preview_path = save_loop_preview(
+            iterative_latent_path,
+            LOOP_PREVIEW_REPEATS,
+            "preview",
+        )
+        manifest.append(
+            {
+                "method": "iterative_latent_roll_polish",
+                "iterations": int(LOOP_ITERATIONS),
+                "shift_schedule": [float(v) for v in LOOP_ITERATIVE_SHIFT_FRACTIONS],
+                "steps": int(LOOP_ITERATIVE_STEPS),
+                "polish_noise": float(LOOP_ITERATIVE_LATENT_POLISH_NOISE),
+                "trace": trace,
+                "outputs": {
+                    "audio": str(iterative_latent_path),
+                    "preview": str(iterative_latent_preview_path),
+                },
+            }
+        )
+        player_paths.extend([iterative_latent_path, iterative_latent_preview_path])
+        player_labels.extend(
+            [
+                "iterative latent roll polish",
+                f"iterative latent roll polish x{LOOP_PREVIEW_REPEATS}",
+            ]
+        )
+
+    if LOOP_RUN_ITERATIVE_AUDIO_ROLL_INPAINT:
+        current_audio = source_audio.cpu().float()
+        trace = []
+        for iteration in range(int(LOOP_ITERATIONS)):
+            shift_fraction = cyclic_schedule_value(LOOP_ITERATIVE_SHIFT_FRACTIONS, iteration)
+            shift_samples = samples_from_fraction(current_audio, shift_fraction)
+            start_sec, end_sec = seam_inpaint_bounds(
+                LOOP_DURATION,
+                shift_fraction,
+                LOOP_INPAINT_WINDOW_SECONDS,
+            )
+            rolled_audio = cyclic_roll_audio(current_audio, shift_samples).cpu().float()
+            with torch.inference_mode():
+                repaired_rolled = sa3_model.generate(
+                    prompt=LOOP_PROMPT,
+                    duration=LOOP_DURATION,
+                    steps=LOOP_ITERATIVE_STEPS,
+                    cfg_scale=LOOP_CFG,
+                    seed=LOOP_BASE_SEED + 2000 + iteration,
+                    inpaint_audio=(source_sr, rolled_audio),
+                    inpaint_mask_start_seconds=start_sec,
+                    inpaint_mask_end_seconds=end_sec,
+                    truncate_output_to_duration=True,
+                )
+            current_audio = cyclic_roll_audio(repaired_rolled[0], -shift_samples).cpu().float().clamp(-1, 1)
+            trace.append(
+                {
+                    "iteration": iteration,
+                    "shift_fraction": shift_fraction,
+                    "shift_samples": int(shift_samples),
+                    "seed": int(LOOP_BASE_SEED + 2000 + iteration),
+                    "inpaint_start_seconds": float(start_sec),
+                    "inpaint_end_seconds": float(end_sec),
+                }
+            )
+            print("iterative audio roll", iteration, shift_fraction, (start_sec, end_sec))
+
+        iterative_audio_path = LOOP_OUTPUT_DIR / "iterative_audio_roll_inpaint.wav"
+        torchaudio.save(str(iterative_audio_path), current_audio.cpu(), sa3.sample_rate)
+        iterative_audio_preview_path = save_loop_preview(
+            iterative_audio_path,
+            LOOP_PREVIEW_REPEATS,
+            "preview",
+        )
+        manifest.append(
+            {
+                "method": "iterative_audio_roll_inpaint",
+                "iterations": int(LOOP_ITERATIONS),
+                "shift_schedule": [float(v) for v in LOOP_ITERATIVE_SHIFT_FRACTIONS],
+                "steps": int(LOOP_ITERATIVE_STEPS),
+                "inpaint_window_seconds": float(LOOP_INPAINT_WINDOW_SECONDS),
+                "trace": trace,
+                "outputs": {
+                    "audio": str(iterative_audio_path),
+                    "preview": str(iterative_audio_preview_path),
+                },
+            }
+        )
+        player_paths.extend([iterative_audio_path, iterative_audio_preview_path])
+        player_labels.extend(
+            [
+                "iterative audio roll inpaint",
+                f"iterative audio roll inpaint x{LOOP_PREVIEW_REPEATS}",
+            ]
+        )
 
     manifest_path = LOOP_OUTPUT_DIR / "manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
