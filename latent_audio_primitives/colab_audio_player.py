@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+from datetime import datetime, timezone
 import html
 import json
 import mimetypes
@@ -16,9 +17,12 @@ def audio_player_html(
     paths: str | Path | Iterable[str | Path],
     *,
     labels: Iterable[str] | None = None,
+    metadata: Iterable[dict[str, Any]] | None = None,
     title: str = "Audio Player",
     peak_count: int = 900,
     max_embed_mb: float = 96.0,
+    annotation_callback: str | None = None,
+    existing_annotations: dict[str, Any] | None = None,
 ) -> str:
     """Return a self-contained Colab-friendly audio player.
 
@@ -33,11 +37,15 @@ def audio_player_html(
     label_list = list(labels) if labels is not None else [path.name for path in path_list]
     if len(label_list) != len(path_list):
         raise ValueError("labels length must match paths length")
+    metadata_list = list(metadata) if metadata is not None else [{} for _path in path_list]
+    if len(metadata_list) != len(path_list):
+        raise ValueError("metadata length must match paths length")
+    annotation_lookup = _annotation_lookup(existing_annotations or {})
 
     max_bytes = int(max_embed_mb * 1024 * 1024)
     tracks = []
     total_bytes = 0
-    for path, label in zip(path_list, label_list):
+    for path, label, track_metadata in zip(path_list, label_list, metadata_list):
         raw = path.read_bytes()
         total_bytes += len(raw)
         if total_bytes > max_bytes:
@@ -54,6 +62,8 @@ def audio_player_html(
                 "mime": mime,
                 "duration": _audio_duration_seconds(path),
                 "peaks": _waveform_peaks(path, peak_count=peak_count),
+                "metadata": track_metadata,
+                "annotation": annotation_lookup.get(str(path), {}),
             }
         )
 
@@ -62,6 +72,8 @@ def audio_player_html(
         {
             "title": title,
             "tracks": tracks,
+            "annotationCallback": annotation_callback,
+            "annotationsEnabled": bool(annotation_callback),
         },
         ensure_ascii=True,
     ).replace("</", "<\\/")
@@ -131,9 +143,33 @@ def audio_player_html(
   #{player_id} .lap-row-name {{ font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
   #{player_id} .lap-row-meta {{ color: var(--lap-muted); font-size: 11px; margin-top: 3px; font-variant-numeric: tabular-nums; }}
   #{player_id} .lap-help {{ color: var(--lap-muted); font-size: 11px; margin-top: 10px; line-height: 1.4; }}
+  #{player_id} .lap-annotations {{
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--lap-border);
+    display: grid;
+    grid-template-columns: 90px minmax(120px, 1fr) minmax(160px, 2fr);
+    gap: 8px;
+    align-items: start;
+  }}
+  #{player_id} .lap-annotations[hidden] {{ display: none; }}
+  #{player_id} .lap-annotations input, #{player_id} .lap-annotations textarea {{
+    width: 100%;
+    background: #10141b;
+    color: var(--lap-text);
+    border: 1px solid var(--lap-border);
+    border-radius: 5px;
+    padding: 6px;
+    font-size: 12px;
+    font-family: inherit;
+  }}
+  #{player_id} .lap-annotations textarea {{ min-height: 70px; resize: vertical; grid-column: 1 / -1; }}
+  #{player_id} .lap-annotation-status {{ color: var(--lap-muted); font-size: 11px; align-self: center; }}
   @media (max-width: 760px) {{
     #{player_id} .lap-shell {{ grid-template-columns: 1fr; }}
     #{player_id} .lap-side {{ border-left: 0; border-top: 1px solid var(--lap-border); max-height: 220px; }}
+    #{player_id} .lap-annotations {{ grid-template-columns: 1fr; }}
+    #{player_id} .lap-annotations textarea {{ grid-column: auto; }}
   }}
 </style>
 <script>
@@ -170,6 +206,14 @@ def audio_player_html(
           <label>In <input class="lap-in" type="number" min="0" step="0.01" value="0"></label>
           <label>Out <input class="lap-out" type="number" min="0" step="0.01" value="0"></label>
         </div>
+        <div class="lap-annotations" hidden>
+          <label>Rating <input class="lap-rating" type="number" min="-5" max="5" step="0.5" placeholder="0"></label>
+          <label>Tags <input class="lap-tags" type="text" placeholder="drums, bright, keeper"></label>
+          <label>Use/value <input class="lap-value" type="text" placeholder="loop, transition, texture"></label>
+          <textarea class="lap-description" placeholder="Describe what this variation changed, preserved, broke, or made useful."></textarea>
+          <button data-action="save-annotation" title="Save annotation to the Colab JSON store">Save note</button>
+          <span class="lap-annotation-status"></span>
+        </div>
         <div class="lap-help">Shortcuts while this player is focused/clicked: space play/pause, arrows seek, J/K previous/next.</div>
       </div>
       <div class="lap-side"></div>
@@ -189,8 +233,15 @@ def audio_player_html(
   const inInput = root.querySelector(".lap-in");
   const outInput = root.querySelector(".lap-out");
   const side = root.querySelector(".lap-side");
+  const annotations = root.querySelector(".lap-annotations");
+  const ratingInput = root.querySelector(".lap-rating");
+  const tagsInput = root.querySelector(".lap-tags");
+  const valueInput = root.querySelector(".lap-value");
+  const descriptionInput = root.querySelector(".lap-description");
+  const annotationStatus = root.querySelector(".lap-annotation-status");
 
   title.textContent = data.title;
+  annotations.hidden = !data.annotationsEnabled;
   side.innerHTML = data.tracks.map((track, i) => `
     <div class="lap-row" data-index="${{i}}">
       <div class="lap-row-name">${{escapeHtml(track.label)}}</div>
@@ -216,6 +267,7 @@ def audio_player_html(
     inInput.value = "0";
     outInput.value = track.duration ? track.duration.toFixed(2) : "0";
     root.querySelectorAll(".lap-row").forEach((row, i) => row.classList.toggle("lap-selected", i === index));
+    loadAnnotation(track.annotation || {{}});
     draw();
     updateReadout();
     if (autoplay) audio.play();
@@ -276,6 +328,49 @@ def audio_player_html(
     const duration = audio.duration || currentTrack().duration || 0;
     audio.currentTime = Math.max(0, Math.min(duration, audio.currentTime + seconds));
   }}
+  function tagsFromText(value) {{
+    return String(value || "").split(",").map((tag) => tag.trim()).filter(Boolean);
+  }}
+  function loadAnnotation(annotation) {{
+    if (!data.annotationsEnabled) return;
+    ratingInput.value = annotation.rating ?? "";
+    tagsInput.value = Array.isArray(annotation.tags) ? annotation.tags.join(", ") : (annotation.tags || "");
+    valueInput.value = annotation.value ?? "";
+    descriptionInput.value = annotation.description ?? "";
+    annotationStatus.textContent = annotation.updated_at ? `loaded ${{annotation.updated_at}}` : "";
+  }}
+  function currentAnnotationPayload() {{
+    const track = currentTrack();
+    const ratingRaw = ratingInput.value;
+    return {{
+      path: track.path,
+      label: track.label,
+      track_index: index,
+      player_title: data.title,
+      rating: ratingRaw === "" ? null : Number(ratingRaw),
+      tags: tagsFromText(tagsInput.value),
+      value: valueInput.value,
+      description: descriptionInput.value,
+      metadata: track.metadata || {{}},
+    }};
+  }}
+  async function saveAnnotation() {{
+    if (!data.annotationCallback || !(window.google && google.colab && google.colab.kernel)) {{
+      annotationStatus.textContent = "Colab callback unavailable";
+      return;
+    }}
+    const payload = currentAnnotationPayload();
+    annotationStatus.textContent = "saving...";
+    try {{
+      const result = await google.colab.kernel.invokeFunction(data.annotationCallback, [payload], {{}});
+      currentTrack().annotation = payload;
+      annotationStatus.textContent = result && result.data && result.data["application/json"]
+        ? "saved"
+        : "saved";
+    }} catch (error) {{
+      annotationStatus.textContent = `save failed: ${{error.message || error}}`;
+    }}
+  }}
 
   root.addEventListener("click", (event) => {{
     root.focus();
@@ -296,6 +391,7 @@ def audio_player_html(
     if (action === "mark-out") outInput.value = audio.currentTime.toFixed(2);
     if (action === "loop-region") {{ loopRegion = !loopRegion; if (loopRegion) audio.loop = false; }}
     if (action === "clear-region") {{ loopRegion = false; inInput.value = "0"; outInput.value = (audio.duration || currentTrack().duration || 0).toFixed(2); }}
+    if (action === "save-annotation") saveAnnotation();
     draw();
     updateReadout();
   }});
@@ -319,7 +415,7 @@ def audio_player_html(
   audio.addEventListener("pause", () => {{ if (rafId !== null) {{ cancelAnimationFrame(rafId); rafId = null; }} draw(); updateReadout(); }});
   audio.addEventListener("loadedmetadata", () => {{ outInput.value = (audio.duration || currentTrack().duration || 0).toFixed(2); updateReadout(); draw(); }});
   root.addEventListener("keydown", (event) => {{
-    if (event.target.tagName === "INPUT") return;
+    if (event.target.tagName === "INPUT" || event.target.tagName === "TEXTAREA") return;
     if (event.code === "Space") {{ event.preventDefault(); audio.paused ? audio.play() : audio.pause(); }}
     if (event.key === "ArrowLeft") seekBy(-2);
     if (event.key === "ArrowRight") seekBy(2);
@@ -337,9 +433,11 @@ def display_audio_player(
     paths: str | Path | Iterable[str | Path],
     *,
     labels: Iterable[str] | None = None,
+    metadata: Iterable[dict[str, Any]] | None = None,
     title: str = "Audio Player",
     peak_count: int = 900,
     max_embed_mb: float = 96.0,
+    annotation_path: str | Path | None = None,
 ) -> Any:
     """Display the custom player in a notebook and return the HTML object."""
 
@@ -347,17 +445,118 @@ def display_audio_player(
         from IPython.display import HTML, display
     except ImportError as exc:
         raise RuntimeError("IPython is required to display the Colab audio player.") from exc
+
+    callback_name = None
+    existing_annotations = None
+    if annotation_path is not None:
+        annotation_path = Path(annotation_path)
+        existing_annotations = load_audio_annotations(annotation_path)
+        try:
+            from google.colab import output  # type: ignore
+
+            callback_name = f"latent_audio_primitives.save_annotation_{uuid.uuid4().hex}"
+
+            def _save_annotation(payload):
+                return save_audio_annotation(annotation_path, payload)
+
+            output.register_callback(callback_name, _save_annotation)
+        except Exception:
+            callback_name = None
+
     html_obj = HTML(
         audio_player_html(
             paths,
             labels=labels,
+            metadata=metadata,
             title=title,
             peak_count=peak_count,
             max_embed_mb=max_embed_mb,
+            annotation_callback=callback_name,
+            existing_annotations=existing_annotations,
         )
     )
     display(html_obj)
     return html_obj
+
+
+def load_audio_annotations(path: str | Path) -> dict[str, Any]:
+    """Load a JSON annotation store produced by the Colab player."""
+
+    annotation_path = Path(path)
+    if not annotation_path.exists():
+        return {"annotation_version": 1, "items": []}
+    with annotation_path.open("r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+    if isinstance(payload, list):
+        return {"annotation_version": 1, "items": payload}
+    payload.setdefault("annotation_version", 1)
+    payload.setdefault("items", [])
+    return payload
+
+
+def save_audio_annotation(path: str | Path, annotation: dict[str, Any]) -> dict[str, Any]:
+    """Upsert one track annotation into a JSON store."""
+
+    annotation_path = Path(path)
+    store = load_audio_annotations(annotation_path)
+    items = list(store.get("items", []))
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    normalized = _normalize_annotation(annotation, updated_at=now)
+    key = normalized["path"]
+    replaced = False
+    for index, item in enumerate(items):
+        if str(item.get("path", "")) == key:
+            normalized["created_at"] = item.get("created_at", now)
+            items[index] = normalized
+            replaced = True
+            break
+    if not replaced:
+        normalized["created_at"] = now
+        items.append(normalized)
+
+    store["annotation_version"] = 1
+    store["items"] = items
+    annotation_path.parent.mkdir(parents=True, exist_ok=True)
+    with annotation_path.open("w", encoding="utf-8") as handle:
+        json.dump(store, handle, indent=2, ensure_ascii=True)
+    return {"ok": True, "path": str(annotation_path), "count": len(items), "item": normalized}
+
+
+def search_audio_annotations(
+    path: str | Path,
+    *,
+    query: str = "",
+    tags: Iterable[str] | None = None,
+    min_rating: float | None = None,
+    limit: int | None = None,
+) -> list[dict[str, Any]]:
+    """Search annotation text/tags and return matching tracks."""
+
+    store = load_audio_annotations(path)
+    query = query.strip().lower()
+    required_tags = {tag.strip().lower() for tag in (tags or []) if tag.strip()}
+    matches = []
+    for item in store.get("items", []):
+        item_tags = {str(tag).lower() for tag in item.get("tags", [])}
+        if required_tags and not required_tags.issubset(item_tags):
+            continue
+        rating = item.get("rating")
+        if min_rating is not None and (rating is None or float(rating) < min_rating):
+            continue
+        searchable = " ".join(
+            [
+                str(item.get("label", "")),
+                str(item.get("value", "")),
+                str(item.get("description", "")),
+                " ".join(str(tag) for tag in item.get("tags", [])),
+            ]
+        ).lower()
+        if query and query not in searchable:
+            continue
+        matches.append(item)
+
+    matches.sort(key=lambda item: (float(item.get("rating") or 0.0), item.get("updated_at", "")), reverse=True)
+    return matches[:limit] if limit is not None else matches
 
 
 def _as_paths(paths: str | Path | Iterable[str | Path]) -> list[Path]:
@@ -371,6 +570,66 @@ def _as_paths(paths: str | Path | Iterable[str | Path]) -> list[Path]:
         if not path.is_file():
             raise ValueError(f"not a file: {path}")
     return path_list
+
+
+def _annotation_lookup(store: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    items = store.get("items", []) if isinstance(store, dict) else []
+    lookup = {}
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        item_path = str(item.get("path", ""))
+        if item_path:
+            lookup[item_path] = item
+    return lookup
+
+
+def _normalize_annotation(annotation: dict[str, Any], *, updated_at: str) -> dict[str, Any]:
+    path = str(annotation.get("path", ""))
+    if not path:
+        raise ValueError("annotation must include a path")
+    return {
+        "path": path,
+        "label": str(annotation.get("label", "")),
+        "track_index": _optional_int(annotation.get("track_index")),
+        "player_title": str(annotation.get("player_title", "")),
+        "rating": _optional_float(annotation.get("rating")),
+        "tags": _normalize_tags(annotation.get("tags", [])),
+        "value": str(annotation.get("value", "")),
+        "description": str(annotation.get("description", "")),
+        "metadata": annotation.get("metadata", {}) if isinstance(annotation.get("metadata", {}), dict) else {},
+        "updated_at": updated_at,
+    }
+
+
+def _normalize_tags(tags: Any) -> list[str]:
+    if isinstance(tags, str):
+        raw_tags = tags.split(",")
+    elif isinstance(tags, Iterable):
+        raw_tags = tags
+    else:
+        raw_tags = []
+    normalized = []
+    seen = set()
+    for tag in raw_tags:
+        value = str(tag).strip()
+        key = value.lower()
+        if value and key not in seen:
+            normalized.append(value)
+            seen.add(key)
+    return normalized
+
+
+def _optional_float(value: Any) -> float | None:
+    if value in (None, ""):
+        return None
+    return float(value)
+
+
+def _optional_int(value: Any) -> int | None:
+    if value in (None, ""):
+        return None
+    return int(value)
 
 
 def _audio_duration_seconds(path: Path) -> float:

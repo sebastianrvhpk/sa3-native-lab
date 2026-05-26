@@ -50,7 +50,13 @@ from .style import (
     style_direction,
 )
 from .experiments.soft_prompt import SoftPromptState
-from .colab_audio_player import audio_player_html, display_audio_player
+from .colab_audio_player import (
+    audio_player_html,
+    display_audio_player,
+    load_audio_annotations,
+    save_audio_annotation,
+    search_audio_annotations,
+)
 from .tokenizer_vocab import (
     TokenizerVocabularyConfig,
     extract_prompt_tokenizer,
@@ -115,6 +121,7 @@ __all__ = [
     "greedy_token_prompt_search",
     "fit_style_profile",
     "latent_summary",
+    "load_audio_annotations",
     "load_item",
     "load_items",
     "load_style_direction",
@@ -134,8 +141,10 @@ __all__ = [
     "save_style_profile",
     "save_summary_direction",
     "save_audio_frame_direction",
+    "save_audio_annotation",
     "sa3_sample_from_init_latents",
     "sampler_noise_for_channels",
+    "search_audio_annotations",
     "select_latent_channels",
     "selective_renoise_sa3",
     "style_direction",

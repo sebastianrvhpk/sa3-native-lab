@@ -522,7 +522,7 @@ except ImportError:
     torchaudio = None
 
 from latent_audio_primitives import LatentMemoryIndex
-from latent_audio_primitives.colab_audio_player import display_audio_player
+from latent_audio_primitives.colab_audio_player import display_audio_player, search_audio_annotations
 from latent_audio_primitives.adapters.stable_audio3 import (
     SAMEAutoencoderAdapter,
     StableAudio3Adapter,
@@ -1019,13 +1019,24 @@ The audio is embedded into the notebook output as base64, so keep playlists shor
         r"""
 # @title Audio player helper
 
-def play_audio_files(paths, *, labels=None, title="Audio Player", peak_count=900, max_embed_mb=96.0):
+def play_audio_files(
+    paths,
+    *,
+    labels=None,
+    metadata=None,
+    title="Audio Player",
+    peak_count=900,
+    max_embed_mb=96.0,
+    annotation_path=None,
+):
     return display_audio_player(
         paths,
         labels=labels,
+        metadata=metadata,
         title=title,
         peak_count=peak_count,
         max_embed_mb=max_embed_mb,
+        annotation_path=annotation_path,
     )
 """
     ),
@@ -1252,11 +1263,22 @@ LATENT_PLAYGROUND_CFG = 1.0
 LATENT_PLAYGROUND_NOISE = 0.40
 LATENT_PLAYGROUND_BASE_SEED = 700
 
-# Direct decode is cheap and off-manifold: useful as a microscope for SAME channels.
-# SA3 sampler is slower and maps the masked perturbation back toward the model manifold.
-LATENT_PLAYGROUND_RUN_DIRECT_DECODE = True
+# Direct decode is cheap and off-manifold: useful as a microscope for SAME channels,
+# but it usually sounds like damaged latent audio. Keep it off for large listening sweeps.
+LATENT_PLAYGROUND_RUN_DIRECT_DECODE = False
 LATENT_PLAYGROUND_RUN_SA3_SAMPLER = True
 LATENT_PLAYGROUND_SAVE_PT = True
+LATENT_PLAYGROUND_ANNOTATION_PATH = LATENT_PLAYGROUND_OUTPUT_DIR / "annotations.json"
+
+# Deeper mapping sweeps. Keep these false for a first smoke run.
+LATENT_PLAYGROUND_ADD_BLOCK_SWEEP = False
+LATENT_PLAYGROUND_BLOCK_SIZE = 8
+LATENT_PLAYGROUND_BLOCK_STRIDE = 8
+LATENT_PLAYGROUND_MAX_BLOCKS = 32
+LATENT_PLAYGROUND_ADD_RANDOM_SWEEP = False
+LATENT_PLAYGROUND_RANDOM_FRACTIONS = [0.05, 0.10, 0.20]
+LATENT_PLAYGROUND_RANDOM_MASK_SEEDS = list(range(8))
+LATENT_PLAYGROUND_MAX_VARIANTS = 96
 
 LATENT_PLAYGROUND_SPECS = [
     {"name": "random_10_s0", "mode": "random_channels", "fraction": 0.10, "seed": 0},
@@ -1268,6 +1290,43 @@ LATENT_PLAYGROUND_SPECS = [
     {"name": "block_000_16", "mode": "channel_block", "block_size": 16, "start_channel": 0},
     {"name": "block_128_16", "mode": "channel_block", "block_size": 16, "start_channel": 128},
 ]
+
+
+def expand_latent_playground_specs(base_specs, channel_count):
+    specs = list(base_specs)
+    if LATENT_PLAYGROUND_ADD_BLOCK_SWEEP:
+        starts = range(0, channel_count, LATENT_PLAYGROUND_BLOCK_STRIDE)
+        for block_index, start in enumerate(starts):
+            if block_index >= LATENT_PLAYGROUND_MAX_BLOCKS:
+                break
+            specs.append(
+                {
+                    "name": f"block_{start:03d}_{LATENT_PLAYGROUND_BLOCK_SIZE}",
+                    "mode": "channel_block",
+                    "block_size": LATENT_PLAYGROUND_BLOCK_SIZE,
+                    "start_channel": start,
+                }
+            )
+    if LATENT_PLAYGROUND_ADD_RANDOM_SWEEP:
+        for fraction in LATENT_PLAYGROUND_RANDOM_FRACTIONS:
+            for seed in LATENT_PLAYGROUND_RANDOM_MASK_SEEDS:
+                percent = int(round(100 * fraction))
+                specs.append(
+                    {
+                        "name": f"random_{percent:02d}_s{seed}",
+                        "mode": "random_channels",
+                        "fraction": float(fraction),
+                        "seed": int(seed),
+                    }
+                )
+    deduped = []
+    seen = set()
+    for spec in specs:
+        name = spec["name"]
+        if name not in seen:
+            deduped.append(spec)
+            seen.add(name)
+    return deduped[:LATENT_PLAYGROUND_MAX_VARIANTS]
 
 
 def latent_mask_spec_from_dict(payload):
@@ -1307,13 +1366,21 @@ if RUN_MODE_0C_LATENT_SELECTIVE_RENOISE:
 
     player_paths = []
     player_labels = []
+    player_metadata = []
     manifest = []
     source_path = LATENT_PLAYGROUND_OUTPUT_DIR / "source_reference.wav"
     torchaudio.save(str(source_path), source_audio.cpu(), source_sr)
     player_paths.append(source_path)
     player_labels.append("source reference")
+    player_metadata.append({"kind": "source_reference", "path": str(source_path)})
 
-    for variant_index, spec_dict in enumerate(LATENT_PLAYGROUND_SPECS):
+    expanded_specs = expand_latent_playground_specs(
+        LATENT_PLAYGROUND_SPECS,
+        channel_count=int(source_latents.shape[1]),
+    )
+    print("variants:", len(expanded_specs))
+
+    for variant_index, spec_dict in enumerate(expanded_specs):
         spec = latent_mask_spec_from_dict(spec_dict)
         name = safe_audio_name(spec.name)
         seed = LATENT_PLAYGROUND_BASE_SEED + variant_index
@@ -1355,6 +1422,18 @@ if RUN_MODE_0C_LATENT_SELECTIVE_RENOISE:
             entry["outputs"]["direct_same_decode"] = str(direct_path)
             player_paths.append(direct_path)
             player_labels.append(f"direct {spec.name} ({len(channels)} ch)")
+            player_metadata.append(
+                {
+                    "kind": "direct_same_decode",
+                    "variant": spec.name,
+                    "mask_mode": spec.mode,
+                    "noise_level": LATENT_PLAYGROUND_NOISE,
+                    "selected_channel_count": len(channels),
+                    "selected_channels": channels,
+                    "sampler_seed": seed,
+                    "path": str(direct_path),
+                }
+            )
 
         if LATENT_PLAYGROUND_RUN_SA3_SAMPLER:
             result = selective_renoise_sa3(
@@ -1378,6 +1457,18 @@ if RUN_MODE_0C_LATENT_SELECTIVE_RENOISE:
             entry["outputs"]["sa3_sampled"] = str(sampled_path)
             player_paths.append(sampled_path)
             player_labels.append(f"SA3 {spec.name} ({len(channels)} ch)")
+            player_metadata.append(
+                {
+                    "kind": "sa3_sampled",
+                    "variant": spec.name,
+                    "mask_mode": spec.mode,
+                    "noise_level": LATENT_PLAYGROUND_NOISE,
+                    "selected_channel_count": len(channels),
+                    "selected_channels": channels,
+                    "sampler_seed": seed,
+                    "path": str(sampled_path),
+                }
+            )
             entry.update(result.metadata)
             if LATENT_PLAYGROUND_SAVE_PT:
                 pt_path = LATENT_PLAYGROUND_OUTPUT_DIR / f"{name}.pt"
@@ -1401,9 +1492,79 @@ if RUN_MODE_0C_LATENT_SELECTIVE_RENOISE:
     play_audio_files(
         player_paths,
         labels=player_labels,
+        metadata=player_metadata,
         title="Mode 0c latent-selective renoise playground",
         max_embed_mb=160.0,
+        annotation_path=LATENT_PLAYGROUND_ANNOTATION_PATH,
     )
+"""
+    ),
+    md(
+        r"""
+## Mode 0c Annotation Retrieval
+
+When the Mode 0c player is shown in Colab, each track has a small annotation panel:
+
+```text
+rating      numeric score, e.g. 0-5 or -5..5
+tags        comma-separated labels such as drums, smear, keeper, bad-transient
+use/value   a short role like loop, transition, texture, break
+description free listening notes
+```
+
+The player saves these into:
+
+```python
+OUTPUT_DIR / "mode_00c_latent_selective_renoise" / "annotations.json"
+```
+
+This turns listening into a retrieval layer over SA3 interventions: you can search notes/tags,
+re-open the best files, and inspect the metadata for the corresponding channel mask.
+"""
+    ),
+    code(
+        r"""
+# @title Mode 0c. Search annotated variations
+
+RUN_MODE_0C_SEARCH_ANNOTATIONS = False
+
+ANNOTATION_SEARCH_PATH = OUTPUT_DIR / "mode_00c_latent_selective_renoise" / "annotations.json"
+ANNOTATION_QUERY = ""
+ANNOTATION_TAGS = []  # Example: ["keeper", "drums"]
+ANNOTATION_MIN_RATING = None  # Example: 4.0
+ANNOTATION_LIMIT = 24
+
+if RUN_MODE_0C_SEARCH_ANNOTATIONS:
+    matches = search_audio_annotations(
+        ANNOTATION_SEARCH_PATH,
+        query=ANNOTATION_QUERY,
+        tags=ANNOTATION_TAGS,
+        min_rating=ANNOTATION_MIN_RATING,
+        limit=ANNOTATION_LIMIT,
+    )
+    print("matches:", len(matches))
+    for item in matches:
+        meta = item.get("metadata", {})
+        print(
+            item.get("rating"),
+            item.get("tags"),
+            item.get("label"),
+            "variant=", meta.get("variant"),
+            "kind=", meta.get("kind"),
+            "channels=", meta.get("selected_channels", [])[:12],
+        )
+    if matches:
+        play_audio_files(
+            [item["path"] for item in matches],
+            labels=[
+                f"{item.get('rating')} | {', '.join(item.get('tags', []))} | {item.get('label')}"
+                for item in matches
+            ],
+            metadata=[item.get("metadata", {}) for item in matches],
+            title="Mode 0c annotated retrieval",
+            max_embed_mb=160.0,
+            annotation_path=ANNOTATION_SEARCH_PATH,
+        )
 """
     ),
     md(
