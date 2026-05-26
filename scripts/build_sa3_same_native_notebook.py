@@ -1418,6 +1418,21 @@ $$
 z'_{c,t} = \sum_{\tau} K_\sigma(\tau) z_{c,t-\tau}
 $$
 
+Contiguous-frame box blur, closer to video blur:
+
+$$
+z'_{c,t} = \frac{1}{2r + 1}\sum_{k=-r}^{r} z_{c,t+k}
+$$
+
+One-sided motion blur:
+
+$$
+z'_{c,t} = \frac{1}{r + 1}\sum_{k=0}^{r} z_{c,t-k}
+$$
+
+or the same window looking forward in latent time. At SA3/SAME's approximate rate,
+\(r=4\) means a centered window of \(9\) latent frames, roughly \(0.84\) seconds.
+
 Channel blur:
 
 $$
@@ -1468,12 +1483,15 @@ LATENT_BLUR_RUN_SA3_POLISH = True
 LATENT_BLUR_SAVE_PT = True
 
 LATENT_BLUR_SPECS = [
-    {"name": "time_r2", "mode": "temporal", "temporal_radius": 2, "strength": 1.0},
-    {"name": "time_r4", "mode": "temporal", "temporal_radius": 4, "strength": 1.0},
-    {"name": "time_r8", "mode": "temporal", "temporal_radius": 8, "strength": 1.0},
+    {"name": "box_center_r2", "mode": "temporal", "temporal_kernel": "box", "temporal_radius": 2, "strength": 1.0},
+    {"name": "box_center_r4", "mode": "temporal", "temporal_kernel": "box", "temporal_radius": 4, "strength": 1.0},
+    {"name": "box_center_r8", "mode": "temporal", "temporal_kernel": "box", "temporal_radius": 8, "strength": 1.0},
+    {"name": "motion_past_r4", "mode": "temporal", "temporal_kernel": "box", "temporal_direction": "past", "temporal_radius": 4, "strength": 1.0},
+    {"name": "motion_future_r4", "mode": "temporal", "temporal_kernel": "box", "temporal_direction": "future", "temporal_radius": 4, "strength": 1.0},
+    {"name": "gaussian_r4", "mode": "temporal", "temporal_kernel": "gaussian", "temporal_radius": 4, "strength": 1.0},
     {"name": "channel_r1", "mode": "channel", "channel_radius": 1, "strength": 1.0},
     {"name": "channel_r4", "mode": "channel", "channel_radius": 4, "strength": 1.0},
-    {"name": "time_channel_soft", "mode": "temporal_channel", "temporal_radius": 3, "channel_radius": 2, "strength": 0.75},
+    {"name": "time_channel_soft", "mode": "temporal_channel", "temporal_kernel": "box", "temporal_radius": 3, "channel_radius": 2, "strength": 0.75},
     {"name": "low_rank_8", "mode": "low_rank", "rank": 8, "strength": 1.0},
     {"name": "low_rank_24", "mode": "low_rank", "rank": 24, "strength": 1.0},
     {"name": "detail_gain_025", "mode": "detail_attenuate", "temporal_radius": 4, "detail_gain": 0.25, "strength": 1.0},
@@ -1488,6 +1506,8 @@ def latent_blur_spec_from_dict(payload):
         strength=float(payload.get("strength", 1.0)),
         temporal_radius=int(payload.get("temporal_radius", 4)),
         temporal_sigma=payload.get("temporal_sigma"),
+        temporal_kernel=payload.get("temporal_kernel", "gaussian"),
+        temporal_direction=payload.get("temporal_direction", "centered"),
         channel_radius=int(payload.get("channel_radius", 2)),
         channel_sigma=payload.get("channel_sigma"),
         rank=int(payload.get("rank", 16)),
@@ -1532,6 +1552,8 @@ if RUN_MODE_0D_LATENT_BLUR:
             "mode": spec.mode,
             "strength": spec.strength,
             "temporal_radius": spec.temporal_radius,
+            "temporal_kernel": spec.temporal_kernel,
+            "temporal_direction": spec.temporal_direction,
             "channel_radius": spec.channel_radius,
             "rank": spec.rank,
             "detail_gain": spec.detail_gain,

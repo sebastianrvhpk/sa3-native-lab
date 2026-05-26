@@ -73,6 +73,7 @@ from .latent_blur import (
     detail_attenuate_latents,
     low_rank_latents,
     sa3_sample_from_init_latents,
+    temporal_box_blur_latents,
     temporal_blur_latents,
 )
 
@@ -139,6 +140,7 @@ __all__ = [
     "selective_renoise_sa3",
     "style_direction",
     "summary_direction",
+    "temporal_box_blur_latents",
     "temporal_blur_latents",
     "transition_cost",
 ]

@@ -13,6 +13,8 @@ class LatentBlurSpec:
     strength: float = 1.0
     temporal_radius: int = 4
     temporal_sigma: float | None = None
+    temporal_kernel: str = "gaussian"
+    temporal_direction: str = "centered"
     channel_radius: int = 2
     channel_sigma: float | None = None
     rank: int = 16
@@ -25,12 +27,24 @@ def apply_latent_blur(latents: Any, spec: LatentBlurSpec) -> Any:
     torch = _require_torch()
     x = _as_bct(latents, torch)
     mode = spec.mode.lower()
-    if mode in {"temporal", "time", "time_blur"}:
-        target = temporal_blur_latents(x, radius=spec.temporal_radius, sigma=spec.temporal_sigma)
+    if mode in {"temporal", "time", "time_blur", "frame_mix", "video_blur", "motion_blur"}:
+        target = temporal_blur_latents(
+            x,
+            radius=spec.temporal_radius,
+            sigma=spec.temporal_sigma,
+            kernel=spec.temporal_kernel,
+            direction=spec.temporal_direction,
+        )
     elif mode in {"channel", "channel_blur"}:
         target = channel_blur_latents(x, radius=spec.channel_radius, sigma=spec.channel_sigma)
     elif mode in {"temporal_channel", "time_channel", "both"}:
-        target = temporal_blur_latents(x, radius=spec.temporal_radius, sigma=spec.temporal_sigma)
+        target = temporal_blur_latents(
+            x,
+            radius=spec.temporal_radius,
+            sigma=spec.temporal_sigma,
+            kernel=spec.temporal_kernel,
+            direction=spec.temporal_direction,
+        )
         target = channel_blur_latents(target, radius=spec.channel_radius, sigma=spec.channel_sigma)
     elif mode in {"low_rank", "pca", "svd"}:
         target = low_rank_latents(x, rank=spec.rank)
@@ -49,16 +63,52 @@ def apply_latent_blur(latents: Any, spec: LatentBlurSpec) -> Any:
     return x + float(spec.strength) * (target - x)
 
 
-def temporal_blur_latents(latents: Any, *, radius: int = 4, sigma: float | None = None) -> Any:
-    """Gaussian blur along latent time only."""
+def temporal_box_blur_latents(
+    latents: Any,
+    *,
+    radius: int = 4,
+    direction: str = "centered",
+) -> Any:
+    """Mix contiguous latent frames with equal weights."""
+
+    return temporal_blur_latents(latents, radius=radius, kernel="box", direction=direction)
+
+
+def temporal_blur_latents(
+    latents: Any,
+    *,
+    radius: int = 4,
+    sigma: float | None = None,
+    kernel: str = "gaussian",
+    direction: str = "centered",
+) -> Any:
+    """Blur along latent time only.
+
+    ``kernel="box"`` is the literal contiguous-frame mix, analogous to a
+    video box blur:
+
+        z'[t] = mean(z[t-r : t+r+1])
+
+    ``direction="past"`` or ``direction="future"`` makes the blur one-sided,
+    which behaves more like simple motion blur.
+    """
 
     torch = _require_torch()
     x = _as_bct(latents, torch)
     if radius <= 0:
         return x.clone()
-    kernel = _gaussian_kernel(radius, sigma=sigma, device=x.device, dtype=x.dtype, torch=torch)
-    weight = kernel.view(1, 1, -1).repeat(x.shape[1], 1, 1)
-    padded = _pad_1d(x, radius, axis="time", torch=torch)
+    left, right = _temporal_padding(radius, direction)
+    weights = _temporal_kernel(
+        radius,
+        sigma=sigma,
+        kernel=kernel,
+        direction=direction,
+        device=x.device,
+        dtype=x.dtype,
+        torch=torch,
+    )
+    weight = weights.view(1, 1, -1).repeat(x.shape[1], 1, 1)
+    padded = _pad_1d(x, left, right, torch=torch)
     return torch.nn.functional.conv1d(padded, weight, groups=x.shape[1])
 
 
@@ -77,7 +127,7 @@ def channel_blur_latents(latents: Any, *, radius: int = 2, sigma: float | None =
     batch, channels, frames = x.shape
     kernel = _gaussian_kernel(radius, sigma=sigma, device=x.device, dtype=x.dtype, torch=torch)
     folded = x.permute(0, 2, 1).reshape(batch * frames, 1, channels)
-    padded = _pad_1d(folded, radius, axis="time", torch=torch)
+    padded = _pad_1d(folded, radius, radius, torch=torch)
     blurred = torch.nn.functional.conv1d(padded, kernel.view(1, 1, -1))
     return blurred.reshape(batch, frames, channels).permute(0, 2, 1)
 
@@ -206,11 +256,68 @@ def _gaussian_kernel(radius: int, *, sigma: float | None, device, dtype, torch):
     return kernel.to(dtype=dtype)
 
 
-def _pad_1d(x: Any, radius: int, *, axis: str, torch):
+def _temporal_kernel(
+    radius: int,
+    *,
+    sigma: float | None,
+    kernel: str,
+    direction: str,
+    device,
+    dtype,
+    torch,
+):
     if radius <= 0:
+        return torch.ones(1, device=device, dtype=dtype)
+
+    direction = _normalize_direction(direction)
+    if direction == "centered":
+        positions = torch.arange(-radius, radius + 1, device=device, dtype=torch.float32)
+    elif direction == "past":
+        positions = torch.arange(-radius, 1, device=device, dtype=torch.float32)
+    else:
+        positions = torch.arange(0, radius + 1, device=device, dtype=torch.float32)
+
+    kernel = kernel.lower()
+    if kernel in {"box", "mean", "average", "frame_mix", "video"}:
+        weights = torch.ones_like(positions)
+    elif kernel in {"triangle", "triangular", "linear"}:
+        weights = radius + 1 - positions.abs()
+        weights = weights.clamp_min(1.0)
+    elif kernel in {"gaussian", "gauss"}:
+        sigma = float(sigma) if sigma is not None else max(radius / 2.0, 1e-6)
+        weights = torch.exp(-(positions**2) / (2 * sigma**2))
+    else:
+        raise ValueError(f"unknown temporal blur kernel: {kernel}")
+
+    weights = weights / weights.sum().clamp_min(1e-12)
+    return weights.to(dtype=dtype)
+
+
+def _temporal_padding(radius: int, direction: str):
+    direction = _normalize_direction(direction)
+    if direction == "centered":
+        return radius, radius
+    if direction == "past":
+        return radius, 0
+    return 0, radius
+
+
+def _normalize_direction(direction: str):
+    direction = direction.lower()
+    if direction in {"center", "centered", "symmetric", "both"}:
+        return "centered"
+    if direction in {"past", "trailing", "backward", "left", "causal"}:
+        return "past"
+    if direction in {"future", "leading", "forward", "right", "anti_causal"}:
+        return "future"
+    raise ValueError(f"unknown temporal blur direction: {direction}")
+
+
+def _pad_1d(x: Any, left: int, right: int, *, torch):
+    if left <= 0 and right <= 0:
         return x
-    mode = "reflect" if x.shape[-1] > radius else "replicate"
-    return torch.nn.functional.pad(x, (radius, radius), mode=mode)
+    mode = "reflect" if x.shape[-1] > max(left, right) else "replicate"
+    return torch.nn.functional.pad(x, (left, right), mode=mode)
 
 
 def _as_bct(latents: Any, torch):
