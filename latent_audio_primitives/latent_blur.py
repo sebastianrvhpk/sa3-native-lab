@@ -19,6 +19,7 @@ class LatentBlurSpec:
     channel_sigma: float | None = None
     rank: int = 16
     detail_gain: float = 0.25
+    sharpen_amount: float = 0.5
 
 
 def apply_latent_blur(latents: Any, spec: LatentBlurSpec) -> Any:
@@ -54,6 +55,22 @@ def apply_latent_blur(latents: Any, spec: LatentBlurSpec) -> Any:
             radius=spec.temporal_radius,
             sigma=spec.temporal_sigma,
             detail_gain=spec.detail_gain,
+        )
+    elif mode in {"sharpen", "temporal_sharpen", "unsharp", "unsharp_mask", "high_boost"}:
+        target = sharpen_latents(
+            x,
+            radius=spec.temporal_radius,
+            sigma=spec.temporal_sigma,
+            amount=spec.sharpen_amount,
+            kernel=spec.temporal_kernel,
+            direction=spec.temporal_direction,
+        )
+    elif mode in {"channel_sharpen", "channel_unsharp"}:
+        target = channel_sharpen_latents(
+            x,
+            radius=spec.channel_radius,
+            sigma=spec.channel_sigma,
+            amount=spec.sharpen_amount,
         )
     elif mode in {"mean_blend", "time_mean", "static"}:
         target = x.mean(dim=-1, keepdim=True).expand_as(x)
@@ -163,6 +180,48 @@ def detail_attenuate_latents(
     x = _as_bct(latents, _require_torch())
     low = temporal_blur_latents(x, radius=radius, sigma=sigma)
     return low + float(detail_gain) * (x - low)
+
+
+def sharpen_latents(
+    latents: Any,
+    *,
+    radius: int = 4,
+    sigma: float | None = None,
+    amount: float = 0.5,
+    kernel: str = "gaussian",
+    direction: str = "centered",
+) -> Any:
+    """Temporal unsharp masking in SAME latent space.
+
+    This is the latent analogue of image/audio high-boost filtering:
+
+        z' = z + amount * (z - blur(z))
+
+    Positive ``amount`` amplifies temporal detail residuals. Small values are
+    safer; large values can push latents off the SAME/SA3 manifold.
+    """
+
+    x = _as_bct(latents, _require_torch())
+    low = temporal_blur_latents(x, radius=radius, sigma=sigma, kernel=kernel, direction=direction)
+    return x + float(amount) * (x - low)
+
+
+def channel_sharpen_latents(
+    latents: Any,
+    *,
+    radius: int = 2,
+    sigma: float | None = None,
+    amount: float = 0.5,
+) -> Any:
+    """Unsharp masking across latent channel index.
+
+    Channel order is learned and may not be semantically ordered, so this is a
+    probe rather than a guaranteed perceptual sharpen.
+    """
+
+    x = _as_bct(latents, _require_torch())
+    low = channel_blur_latents(x, radius=radius, sigma=sigma)
+    return x + float(amount) * (x - low)
 
 
 def sa3_sample_from_init_latents(

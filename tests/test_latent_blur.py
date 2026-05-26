@@ -4,8 +4,10 @@ from latent_audio_primitives.latent_blur import (
     LatentBlurSpec,
     apply_latent_blur,
     channel_blur_latents,
+    channel_sharpen_latents,
     detail_attenuate_latents,
     low_rank_latents,
+    sharpen_latents,
     temporal_box_blur_latents,
     temporal_blur_latents,
 )
@@ -72,6 +74,29 @@ def test_detail_attenuate_matches_blur_when_detail_gain_zero():
     torch.testing.assert_close(attenuated, blurred)
 
 
+def test_sharpen_latents_amplifies_temporal_detail_residual():
+    latents = torch.zeros(1, 1, 9)
+    latents[:, :, 4] = 1.0
+    blurred = temporal_blur_latents(latents, radius=2)
+
+    sharpened = sharpen_latents(latents, radius=2, amount=0.5)
+
+    assert tuple(sharpened.shape) == tuple(latents.shape)
+    torch.testing.assert_close(sharpened, latents + 0.5 * (latents - blurred))
+    assert sharpened[0, 0, 4] > latents[0, 0, 4]
+
+
+def test_channel_sharpen_latents_amplifies_channel_detail_residual():
+    latents = torch.zeros(1, 7, 3)
+    latents[:, 3, :] = 1.0
+    blurred = channel_blur_latents(latents, radius=1)
+
+    sharpened = channel_sharpen_latents(latents, radius=1, amount=0.25)
+
+    torch.testing.assert_close(sharpened, latents + 0.25 * (latents - blurred))
+    assert sharpened[0, 3, 0] > latents[0, 3, 0]
+
+
 def test_apply_latent_blur_strength_zero_returns_original():
     latents = torch.randn(1, 3, 12)
     spec = LatentBlurSpec(name="none", mode="temporal", temporal_radius=2, temporal_kernel="box", strength=0.0)
@@ -88,3 +113,13 @@ def test_apply_latent_blur_mean_blend():
     out = apply_latent_blur(latents, spec)
 
     torch.testing.assert_close(out, latents.mean(dim=-1, keepdim=True).expand_as(latents))
+
+
+def test_apply_latent_blur_sharpen_mode():
+    latents = torch.zeros(1, 1, 9)
+    latents[:, :, 4] = 1.0
+    spec = LatentBlurSpec(name="sharp", mode="sharpen", temporal_radius=2, sharpen_amount=0.5)
+
+    out = apply_latent_blur(latents, spec)
+
+    assert out[0, 0, 4] > latents[0, 0, 4]

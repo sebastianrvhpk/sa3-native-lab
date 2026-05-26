@@ -1891,12 +1891,21 @@ $$
 
 where \(\gamma < 1\) suppresses latent detail residuals.
 
+Latent sharpen / unsharp mask:
+
+$$
+z' = z + \beta (z - \operatorname{blur}(z))
+$$
+
+where \(\beta > 0\) amplifies detail residuals. This can emphasize transient-like or high-activity latent structure, but large values may push the latent off-manifold.
+
 Interpretation warnings:
 
 ```text
 direct SAME decode = microscope, may be off-manifold or artifacty
 SA3 polish        = blurred latent used as init_data with small noise, more manifold-like but less pure
 channel blur      = probes whether channel index has structure; it may not
+channel sharpen   = also a probe; channel adjacency is not guaranteed semantic
 low-rank blur     = probes global vs fine latent components
 ```
 """
@@ -1933,6 +1942,10 @@ LATENT_BLUR_SPECS = [
     {"name": "low_rank_8", "mode": "low_rank", "rank": 8, "strength": 1.0},
     {"name": "low_rank_24", "mode": "low_rank", "rank": 24, "strength": 1.0},
     {"name": "detail_gain_025", "mode": "detail_attenuate", "temporal_radius": 4, "detail_gain": 0.25, "strength": 1.0},
+    {"name": "sharpen_r2_a025", "mode": "sharpen", "temporal_kernel": "box", "temporal_radius": 2, "sharpen_amount": 0.25, "strength": 1.0},
+    {"name": "sharpen_r4_a050", "mode": "sharpen", "temporal_kernel": "box", "temporal_radius": 4, "sharpen_amount": 0.50, "strength": 1.0},
+    {"name": "sharpen_r4_a100", "mode": "sharpen", "temporal_kernel": "box", "temporal_radius": 4, "sharpen_amount": 1.00, "strength": 1.0},
+    {"name": "channel_sharpen_r2_a050", "mode": "channel_sharpen", "channel_radius": 2, "sharpen_amount": 0.50, "strength": 1.0},
     {"name": "mean_blend_025", "mode": "mean_blend", "strength": 0.25},
 ]
 
@@ -1950,6 +1963,7 @@ def latent_blur_spec_from_dict(payload):
         channel_sigma=payload.get("channel_sigma"),
         rank=int(payload.get("rank", 16)),
         detail_gain=float(payload.get("detail_gain", 0.25)),
+        sharpen_amount=float(payload.get("sharpen_amount", 0.5)),
     )
 
 
@@ -1995,6 +2009,7 @@ if RUN_MODE_0D_LATENT_BLUR:
             "channel_radius": spec.channel_radius,
             "rank": spec.rank,
             "detail_gain": spec.detail_gain,
+            "sharpen_amount": spec.sharpen_amount,
             "polish_noise": LATENT_BLUR_POLISH_NOISE,
             "seed": seed,
             "outputs": {},
