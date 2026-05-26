@@ -87,9 +87,9 @@ The current repo-specific math and implementation map is:
 
 That document covers the current Colab modes, including renoise, selective latent
 renoise, blur/sharpen/filtering, cross-audio grafting, cyclic sampler mixing,
-soft prompt inversion, Mode 2 beam prompt inversion, SAME statistical controls,
-residual steering, LatCH-style sidecars, LoRA boundaries, and Mode 15 geometry
-audits.
+neural latent DSP, soft prompt inversion, Mode 2 beam prompt inversion, SAME
+statistical controls, residual steering, LatCH-style sidecars, LoRA boundaries,
+and Mode 15 geometry audits.
 
 The seven-operator research layer is:
 
@@ -98,6 +98,14 @@ The seven-operator research layer is:
 It maps latent geometry, covariance transport, periodic operators, direct
 guidance, prompt inversion, residual feature discovery, and control
 observability to the current helper modules and Colab exposure.
+
+The neural-latent DSP notes are:
+
+`docs/research/neural-latent-dsp.md`
+
+They document Mode 0h: latent dynamics, soft clipping, latent-time FFT gain and
+phase operators, magnitude/phase grafting, PCA component gain, SA3 polish, and
+MIR descriptor audits.
 
 Older root-level research notes are historical context from before this repo was
 consolidated around the combined SA3 Native Lab implementation.

@@ -247,6 +247,7 @@ LMDM adaptation is conceptual unless SA3 attention/sampler code is modified and 
 | 0c. Latent-selective renoise | SAME channel subsets / masked init noise | latent traversal, representation probing, img2img-style variation |
 | 0e. Cross-audio graft | SAME source channels mixed with donor channels | latent arithmetic, channel transplant, representation probing |
 | 0d. Latent blur | SAME low-pass / low-rank / detail attenuation | representation smoothing, latent traversal, manifold projection |
+| 0h. Neural latent DSP | SAME dynamics / FFT phase+gain / PCA component gain | neural signal processing, MIR auditing, manifold projection |
 | 0f. Cyclic roll loop lab | time-rolled audio/SAME latents | tiling augmentation, circular optimization, SA3 inpainting |
 | 1. Audio -> soft prompt | SA3 conditioning tensor \(c\) | Flow matching, PEZ/soft prompts, DITTO-style inference optimization |
 | 2. Audio -> babble prompt | hard text/token sequence \(p\) | PEZ / hard prompt optimization |
@@ -568,6 +569,12 @@ from latent_audio_primitives.latent_blur import (
     apply_latent_blur,
     sa3_sample_from_init_latents,
 )
+from latent_audio_primitives.latent_dsp import (
+    LatentDSPSpec,
+    apply_latent_dsp,
+    latent_change_report,
+)
+from latent_audio_primitives.audio_descriptors import audio_descriptor_report, descriptor_delta
 from latent_audio_primitives.looping import (
     cyclic_roll_audio,
     cyclic_roll_latents,
@@ -804,6 +811,12 @@ def decode_sa3_latents_to_file_cropped(latents, path, *, duration=None):
         audio = audio[..., : int(round(duration * sa3.sample_rate))]
     torchaudio.save(str(path), audio[0], sa3.sample_rate)
     return path
+
+
+def decode_sa3_latents_to_file_with_descriptors(latents, path, *, duration=None):
+    path = decode_sa3_latents_to_file_cropped(latents, path, duration=duration)
+    audio, sample_rate = load_audio(path, stereo=True)
+    return path, audio_descriptor_report(audio, sample_rate)
 
 
 def encode_audio_file_to_item(path, item_id=None, prompt=None, duration=None):
@@ -2245,6 +2258,363 @@ if RUN_MODE_0D_LATENT_BLUR:
         labels=player_labels,
         title="Mode 0d latent blur playground",
         max_embed_mb=180.0,
+    )
+"""
+    ),
+    md(
+        r"""
+## Mode 0h. Neural Latent DSP Playground
+
+This mode treats SAME latents as a learned 256-channel, low-rate signal:
+
+```text
+z in R^{B x 256 x T}, latent_rate ~= 10.77 Hz
+```
+
+The operators are DSP-like, but not waveform DSP:
+
+```text
+D(O_z(E(x))) != O_x(x)
+```
+
+So each operation is a hypothesis about the neural compressed representation.
+The mode can direct-decode the edited latent as a microscope and/or use SA3 as
+a manifold reprojector:
+
+```text
+z_source -> O_z(z_source) -> SAME decode
+z_source -> O_z(z_source) -> SA3 init_data polish -> SAME decode
+```
+
+Included operators:
+
+```text
+latent gain/compression/expansion/soft clipping
+latent-time FFT EQ
+latent-time FFT phase shift/randomization
+donor magnitude / source phase grafts
+per-clip PCA component gain, like learned macro-EQ
+audio descriptor audit after decode
+```
+
+The MIR descriptors are audit signals, not final truth. Use them to ask whether
+an edit moved brightness, flux, loudness, stereo width, etc. in a repeatable way.
+"""
+    ),
+    code(
+        r"""
+# @title Mode 0h. Neural latent DSP playground
+
+RUN_MODE_0H_LATENT_DSP = False
+
+LATENT_DSP_AUDIO = INPUT_DIR / "known_9s.wav"
+LATENT_DSP_DONOR_AUDIO = INPUT_DIR / "donor_9s.wav"
+LATENT_DSP_OUTPUT_DIR = OUTPUT_DIR / "mode_00h_latent_dsp"
+LATENT_DSP_ANNOTATION_PATH = OUTPUT_DIR / "mode_00h_latent_dsp_annotations.jsonl"
+LATENT_DSP_DURATION = 9.0
+LATENT_DSP_PROMPT = ""
+LATENT_DSP_STEPS = 20
+LATENT_DSP_CFG = 1.0
+LATENT_DSP_POLISH_NOISE = 0.06
+LATENT_DSP_BASE_SEED = 1200
+LATENT_DSP_RUN_DIRECT_DECODE = False
+LATENT_DSP_RUN_SA3_POLISH = True
+LATENT_DSP_SAVE_PT = True
+LATENT_DSP_INCLUDE_DONOR_SPECS = False
+
+LATENT_DSP_SPECS = [
+    {
+        "name": "gain_expand_115",
+        "mode": "gain",
+        "gain": 1.15,
+        "center": "channel_mean",
+        "strength": 1.0,
+    },
+    {
+        "name": "compress_t080_r400",
+        "mode": "compress",
+        "threshold": 0.80,
+        "ratio": 4.0,
+        "center": "channel_mean",
+        "strength": 1.0,
+    },
+    {
+        "name": "expand_t130_r160",
+        "mode": "expand",
+        "threshold": 1.30,
+        "ratio": 1.60,
+        "center": "channel_mean",
+        "strength": 0.70,
+    },
+    {
+        "name": "softclip_drive160",
+        "mode": "softclip",
+        "drive": 1.60,
+        "ceiling": 1.75,
+        "center": "channel_mean",
+        "strength": 1.0,
+    },
+    {
+        "name": "fft_eq_slow_boost_fast_damp",
+        "mode": "fft_eq",
+        "fft_low_cutoff": 0.12,
+        "fft_high_cutoff": 0.62,
+        "fft_low_gain": 1.20,
+        "fft_mid_gain": 1.00,
+        "fft_high_gain": 0.70,
+        "strength": 0.75,
+    },
+    {
+        "name": "fft_eq_fast_push",
+        "mode": "fft_eq",
+        "fft_low_cutoff": 0.15,
+        "fft_high_cutoff": 0.70,
+        "fft_low_gain": 0.90,
+        "fft_mid_gain": 1.00,
+        "fft_high_gain": 1.30,
+        "strength": 0.45,
+    },
+    {
+        "name": "phase_shift_quarter",
+        "mode": "fft_phase_shift",
+        "phase_shift_fraction": 0.25,
+        "strength": 0.40,
+    },
+    {
+        "name": "phase_random_012",
+        "mode": "fft_phase_randomize",
+        "phase_random_amount": 0.12,
+        "seed": 123,
+        "strength": 1.0,
+    },
+    {
+        "name": "pca_macro_1_boost",
+        "mode": "pca_gain",
+        "pca_component_gains": [1.20, 1.00, 1.00, 1.00, 1.00, 1.00],
+        "strength": 0.70,
+    },
+    {
+        "name": "pca_macro_top_smooth",
+        "mode": "pca_gain",
+        "pca_component_gains": [0.85, 0.90, 0.95, 1.00, 1.00, 1.00],
+        "strength": 0.80,
+    },
+]
+
+LATENT_DSP_DONOR_SPECS = [
+    {
+        "name": "donor_magnitude_source_phase",
+        "mode": "fft_mag_phase_graft",
+        "magnitude_amount": 0.50,
+        "strength": 1.0,
+    },
+    {
+        "name": "source_magnitude_donor_phase",
+        "mode": "fft_phase_blend",
+        "phase_blend_amount": 0.35,
+        "strength": 1.0,
+    },
+]
+
+
+def latent_dsp_spec_from_dict(payload):
+    gains = payload.get("pca_component_gains")
+    return LatentDSPSpec(
+        name=payload["name"],
+        mode=payload.get("mode", "gain"),
+        strength=float(payload.get("strength", 1.0)),
+        gain=float(payload.get("gain", 1.0)),
+        center=payload.get("center", "channel_mean"),
+        threshold=float(payload.get("threshold", 1.0)),
+        ratio=float(payload.get("ratio", 4.0)),
+        makeup_gain=float(payload.get("makeup_gain", 1.0)),
+        drive=float(payload.get("drive", 1.0)),
+        ceiling=float(payload.get("ceiling", 2.0)),
+        fft_low_cutoff=float(payload.get("fft_low_cutoff", 0.15)),
+        fft_high_cutoff=float(payload.get("fft_high_cutoff", 0.65)),
+        fft_low_gain=float(payload.get("fft_low_gain", 1.0)),
+        fft_mid_gain=float(payload.get("fft_mid_gain", 1.0)),
+        fft_high_gain=float(payload.get("fft_high_gain", 1.0)),
+        phase_shift_fraction=float(payload.get("phase_shift_fraction", 0.0)),
+        phase_random_amount=float(payload.get("phase_random_amount", 1.0)),
+        phase_blend_amount=float(payload.get("phase_blend_amount", 1.0)),
+        magnitude_amount=float(payload.get("magnitude_amount", 1.0)),
+        pca_rank=payload.get("pca_rank"),
+        pca_component_gains=tuple(float(v) for v in gains) if gains is not None else None,
+        seed=int(payload.get("seed", 0)),
+    )
+
+
+def latent_dsp_mode_requires_donor(mode):
+    return mode.lower() in {
+        "fft_mag_phase_graft",
+        "mag_phase_graft",
+        "magnitude_from_donor",
+        "donor_magnitude",
+        "fft_phase_from_donor",
+        "donor_phase",
+        "fft_phase_blend",
+        "phase_blend",
+    }
+
+
+def tensor_periodicity_dict(latents, item_id):
+    item = sa3_tensor_to_item(latents, item_id=item_id)
+    report = periodicity_report(item)
+    return {
+        "best_lag": report.best_lag,
+        "best_score": report.best_score,
+        "boundary_l2": report.boundary_l2,
+        "velocity_l2": report.velocity_l2,
+        "spectral_centroid": report.spectral_centroid,
+    }
+
+
+if RUN_MODE_0H_LATENT_DSP:
+    require_models()
+    LATENT_DSP_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    source_audio, source_sr = load_audio(
+        LATENT_DSP_AUDIO,
+        duration=LATENT_DSP_DURATION,
+        stereo=True,
+    )
+    source_descriptors = audio_descriptor_report(source_audio, source_sr)
+    source_item = encode_audio_file_to_item(
+        LATENT_DSP_AUDIO,
+        item_id="latent_dsp_source",
+        duration=LATENT_DSP_DURATION,
+    )
+    source_latents = item_to_sa3_tensor(
+        source_item,
+        device=DEVICE,
+        dtype=next(sa3_model.model.model.parameters()).dtype,
+    )
+
+    donor_latents = None
+    if Path(LATENT_DSP_DONOR_AUDIO).exists():
+        donor_item = encode_audio_file_to_item(
+            LATENT_DSP_DONOR_AUDIO,
+            item_id="latent_dsp_donor",
+            duration=LATENT_DSP_DURATION,
+        )
+        donor_latents = item_to_sa3_tensor(
+            donor_item,
+            device=DEVICE,
+            dtype=next(sa3_model.model.model.parameters()).dtype,
+        )
+
+    specs = list(LATENT_DSP_SPECS)
+    if LATENT_DSP_INCLUDE_DONOR_SPECS:
+        specs.extend(LATENT_DSP_DONOR_SPECS)
+
+    player_paths = []
+    player_labels = []
+    manifest = []
+    source_path = LATENT_DSP_OUTPUT_DIR / "source_reference.wav"
+    torchaudio.save(str(source_path), source_audio.cpu(), source_sr)
+    player_paths.append(source_path)
+    player_labels.append("source reference")
+    source_periodicity = tensor_periodicity_dict(source_latents, "latent_dsp_source_periodicity")
+
+    for variant_index, spec_dict in enumerate(specs):
+        spec = latent_dsp_spec_from_dict(spec_dict)
+        if latent_dsp_mode_requires_donor(spec.mode) and donor_latents is None:
+            print("skipping donor mode without donor audio:", spec.name)
+            continue
+        name = safe_audio_name(spec.name)
+        seed = LATENT_DSP_BASE_SEED + variant_index
+        edited_latents = apply_latent_dsp(source_latents, spec, donor_latents=donor_latents)
+        latent_delta = latent_change_report(source_latents, edited_latents)
+        entry = {
+            "name": spec.name,
+            "mode": spec.mode,
+            "spec": dict(spec_dict),
+            "polish_noise": LATENT_DSP_POLISH_NOISE,
+            "polish_steps": LATENT_DSP_STEPS,
+            "seed": seed,
+            "latent_delta": latent_delta,
+            "source_periodicity": source_periodicity,
+            "edited_periodicity": tensor_periodicity_dict(edited_latents, f"{name}_edited_periodicity"),
+            "source_audio_descriptors": source_descriptors,
+            "outputs": {},
+        }
+
+        if LATENT_DSP_RUN_DIRECT_DECODE:
+            direct_path = LATENT_DSP_OUTPUT_DIR / f"direct_{name}.wav"
+            direct_path, direct_desc = decode_sa3_latents_to_file_with_descriptors(
+                edited_latents,
+                direct_path,
+                duration=LATENT_DSP_DURATION,
+            )
+            entry["outputs"]["direct_same_decode"] = str(direct_path)
+            entry["direct_audio_descriptors"] = direct_desc
+            entry["direct_descriptor_delta"] = descriptor_delta(source_descriptors, direct_desc)
+            player_paths.append(direct_path)
+            player_labels.append(f"direct {spec.name}")
+
+        if LATENT_DSP_RUN_SA3_POLISH:
+            polished_latents = sa3_sample_from_init_latents(
+                sa3_model,
+                edited_latents,
+                prompt=LATENT_DSP_PROMPT,
+                duration=LATENT_DSP_DURATION,
+                steps=LATENT_DSP_STEPS,
+                cfg_scale=LATENT_DSP_CFG,
+                init_noise_level=LATENT_DSP_POLISH_NOISE,
+                seed=seed,
+            )
+            polished_path = LATENT_DSP_OUTPUT_DIR / f"sa3_polish_{name}.wav"
+            polished_path, polished_desc = decode_sa3_latents_to_file_with_descriptors(
+                polished_latents,
+                polished_path,
+                duration=LATENT_DSP_DURATION,
+            )
+            entry["outputs"]["sa3_polished"] = str(polished_path)
+            entry["polished_latent_delta"] = latent_change_report(source_latents, polished_latents)
+            entry["polished_periodicity"] = tensor_periodicity_dict(polished_latents, f"{name}_polished_periodicity")
+            entry["polished_audio_descriptors"] = polished_desc
+            entry["polished_descriptor_delta"] = descriptor_delta(source_descriptors, polished_desc)
+            player_paths.append(polished_path)
+            player_labels.append(f"SA3 polish {spec.name}")
+
+            if LATENT_DSP_SAVE_PT:
+                pt_path = LATENT_DSP_OUTPUT_DIR / f"{name}.pt"
+                torch.save(
+                    {
+                        "source_latents": source_latents.detach().cpu(),
+                        "donor_latents": donor_latents.detach().cpu() if donor_latents is not None else None,
+                        "edited_latents": edited_latents.detach().cpu(),
+                        "polished_latents": polished_latents.detach().cpu(),
+                        "spec": spec_dict,
+                    },
+                    pt_path,
+                )
+                entry["outputs"]["pt"] = str(pt_path)
+        elif LATENT_DSP_SAVE_PT:
+            pt_path = LATENT_DSP_OUTPUT_DIR / f"{name}.pt"
+            torch.save(
+                {
+                    "source_latents": source_latents.detach().cpu(),
+                    "donor_latents": donor_latents.detach().cpu() if donor_latents is not None else None,
+                    "edited_latents": edited_latents.detach().cpu(),
+                    "spec": spec_dict,
+                },
+                pt_path,
+            )
+            entry["outputs"]["pt"] = str(pt_path)
+
+        manifest.append(entry)
+        print(spec.name, "mode:", spec.mode, "delta_rms:", round(latent_delta["delta_rms"], 5))
+
+    manifest_path = LATENT_DSP_OUTPUT_DIR / "manifest.json"
+    manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    print("saved manifest:", manifest_path)
+    play_audio_files(
+        player_paths,
+        labels=player_labels,
+        title="Mode 0h neural latent DSP playground",
+        max_embed_mb=180.0,
+        annotation_path=LATENT_DSP_ANNOTATION_PATH,
     )
 """
     ),
@@ -4462,6 +4832,7 @@ manifest = {
     "dataset_max_chunks_per_file": DATASET_MAX_CHUNKS_PER_FILE,
     "modes": {
         "0_renoise_variations": RUN_MODE_0_RENOISE_VARIATIONS,
+        "0h_neural_latent_dsp": RUN_MODE_0H_LATENT_DSP,
         "1_audio_to_soft_prompt": RUN_MODE_1_AUDIO_TO_SOFT_PROMPT,
         "1b_generate_with_soft_prompt": RUN_MODE_1B_GENERATE_WITH_SOFT_PROMPT,
         "2_audio_to_babble_prompt": RUN_MODE_2_AUDIO_TO_BABBLE_PROMPT,

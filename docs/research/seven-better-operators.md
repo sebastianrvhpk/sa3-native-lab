@@ -82,6 +82,7 @@ Implemented primitives:
 
 ```text
 latent_audio_primitives.periodic
+latent_audio_primitives.latent_dsp
 ```
 
 Autocorrelation:
@@ -105,6 +106,18 @@ L_loop = ||mean(z_start) - mean(z_end)||_2
 ```
 
 Why it matters: loopability and continuity should be measured through periodic structure, not only by listening to repeated waveform previews.
+
+The same latent-time frequency view now supports neural-latent DSP:
+
+```text
+Z_{c,k} = FFT_t(z_{c,t})
+Z'_{c,k} = G_k Z_{c,k}
+Z'_{c,k} = |Z_{c,k}| exp(i phi'_{c,k})
+```
+
+This gives FFT gain, phase shift, phase randomization, and donor
+magnitude/source phase grafting over SAME trajectories. It is a modulation
+operator over neural latents, not an audio EQ.
 
 ## 4. Direct Guidance During Sampling
 
@@ -246,6 +259,7 @@ This should be run before trusting a steering mode. If an edit has no measurable
 | Latent geometry | `geometry.py` | Mode 15 | no for saved latents, yes for fresh encoding | no |
 | Covariance transport | `geometry.py` | Mode 15 demo | no for saved latents, yes for fresh encode/decode | no |
 | Fourier/periodic latent probes | `periodic.py` | Mode 15 | no for saved latents | no |
+| Neural latent DSP | `latent_dsp.py`, `audio_descriptors.py` | Mode 0h | yes for decode/polish | no |
 | Direct gradient guidance | `guidance.py` | primitive only | yes for sampler integration | no base training |
 | Prompt inversion | `prompt_optimization.py` | Mode 2 | yes | no |
 | Residual feature discovery | `residual_features.py` | primitive only | yes for activation capture | no |

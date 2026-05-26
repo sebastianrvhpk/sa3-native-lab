@@ -329,6 +329,7 @@ larger BABBLE_LOGSNR_VALUES        -> better probe coverage, more compute
 | 0e | Cross-audio graft | SAME channel subset | no | `z'=z_a+alpha M*(z_b-z_a)` |
 | 0f | Cyclic roll loop lab | rolled audio/latents | no | repair after cyclic roll |
 | 0g | Cyclic roll inside denoising | SA3 sampler state | no | `x <- x + beta(0.5(x+R_s x)-x)` |
+| 0h | Neural latent DSP | SAME latent trajectories | no | dynamics, FFT phase/gain, PCA gain |
 | 1 | Audio -> soft prompt | conditioning tensor `c` | no base training | optimize `c` against `L_flow` |
 | 2 | Audio -> babble prompt | hard tokens `p` | no | beam search over `score(p)=-L_flow(p)` |
 | 3 | Audio -> readable prompt | constrained text | no | coordinate search over readable axes |
@@ -439,6 +440,101 @@ z' = z_a + alpha M (z_b - z_a)
 ```
 
 Research hypothesis: donor latent channels can transfer texture, density, or gesture families without full prompt conditioning.
+
+## Mode 0h: Neural Latent DSP
+
+Mode 0h treats SAME latents as a learned compressed signal:
+
+```text
+z in R^{B x C x T}
+C = 256
+T ~= seconds * 10.77
+```
+
+The key warning is:
+
+```text
+D(O_z(E(x))) != O_x(x)
+```
+
+so these operators are DSP-like probes over learned feature trajectories, not
+ordinary waveform processors.
+
+Latent gain:
+
+```text
+z' = c + g(z - c)
+```
+
+Latent compressor/expander:
+
+```text
+u = z - c
+s = std_t(u)
+m = |u|/(s+eps)
+
+m_compress =
+  m                           if m <= theta
+  theta + (m-theta)/ratio     if m > theta
+
+m_expand =
+  m                           if m <= theta
+  theta + (m-theta)*ratio     if m > theta
+
+z' = c + makeup * u * (m'/m)
+```
+
+Latent soft clipping:
+
+```text
+z' = c + makeup * s * ceiling * tanh(drive * u/(s*ceiling)) / tanh(drive)
+```
+
+Latent-time FFT EQ:
+
+```text
+Z_{c,k} = FFT_t(z_{c,t})
+Z'_{c,k} = G_k Z_{c,k}
+z' = IFFT_t(Z')
+```
+
+Latent-time phase shift:
+
+```text
+Z'_{c,k} = Z_{c,k} exp(-i 2 pi k tau/T)
+```
+
+Donor magnitude/source phase graft:
+
+```text
+Z' = [(1-alpha)|Z_source| + alpha|Z_donor|] exp(i angle(Z_source))
+```
+
+PCA component gain:
+
+```text
+X = z^T
+X - mu = U S V^T
+X' = U diag(g) S V^T + mu
+```
+
+Mode 0h can direct-decode edited latents:
+
+```text
+x_direct = D(z')
+```
+
+or polish them through SA3:
+
+```text
+z_polished = sample_theta(init_data=z', init_noise_level=sigma, prompt=p)
+x_polished = D(z_polished)
+```
+
+It records lightweight MIR descriptors after decode. These include RMS, spectral
+centroid, rolloff, flatness, flux, band-energy ratios, stereo width, and stereo
+correlation. The descriptors are audit signals for repeatability, not proof that
+a subjective control exists.
 
 ## Mode 0f: Cyclic Time-Roll Loop Lab
 
@@ -681,6 +777,9 @@ worth probing before building more invasive steering modes.
 - Does conditional-delta scoring improve prompt specificity enough to justify the extra forward pass?
 - Which SAME channels or channel groups repeatedly produce stable perceptual families under Mode 0c?
 - Which latent filters in Mode 0d are merely destructive, and which become musical after SA3 polish?
+- Which Mode 0h latent-DSP operators survive SA3 polish, and which are erased by the SA3 prior?
+- Do latent dynamics or soft clipping reduce artifacts after harsher latent edits?
+- Do latent FFT phase/magnitude grafts form reproducible variation families?
 - Does Mode 0g produce useful cyclic continuity, or mostly half-period collapse?
 - Which residual layers in SA3 carry stable mood, density, brightness, or section-role information?
 - Which Mode 15 geometry signals are stable across chunk length, musical style, and dataset size?
