@@ -6,6 +6,7 @@ This repository is a combined Colab/research workspace:
 - SAME/SA3 native latent-memory, steering, and prompt-inversion primitives in `latent_audio_primitives/`
 - Colab notebooks in `colab/`
 - research scripts in `scripts/`
+- current experimental math notes in `docs/research/`
 
 The goal is exploratory research over native SA3/SAME spaces, not a finished product.
 
@@ -77,3 +78,17 @@ The research layer focuses on:
 - audio-derived residual vectors
 - continuation/inpainting as composition
 - LatCH-style control heads
+
+## Research Docs
+
+The current repo-specific math and implementation map is:
+
+`docs/research/native-experimental-modes-math.md`
+
+That document covers the current Colab modes, including renoise, selective latent
+renoise, blur/sharpen/filtering, cross-audio grafting, cyclic sampler mixing,
+soft prompt inversion, Mode 2 beam prompt inversion, SAME statistical controls,
+residual steering, LatCH-style sidecars, and LoRA boundaries.
+
+Older root-level research notes are historical context from before this repo was
+consolidated around the combined SA3 Native Lab implementation.
