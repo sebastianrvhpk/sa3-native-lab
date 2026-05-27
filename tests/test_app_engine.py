@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import time
 from io import BytesIO
 from pathlib import Path
@@ -73,6 +74,31 @@ def test_artifact_search_filters_annotation_text_and_tags(tmp_path):
     assert [item.artifact_id for item in by_tag] == [first.artifact_id]
     assert [item.artifact_id for item in by_text_and_tag] == [first.artifact_id]
     assert missing == []
+
+
+def test_runtime_memory_query_returns_nearest_latent_artifacts(tmp_path):
+    store = ArtifactStore(tmp_path / "lab")
+    source = store.store_latent_array(np.full((6, 3), 0.0, dtype=np.float32), latent_rate=2.0, label="source")
+    near = store.store_latent_array(np.full((6, 3), 0.2, dtype=np.float32), latent_rate=2.0, label="near")
+    store.store_latent_array(np.full((6, 3), 4.0, dtype=np.float32), latent_rate=2.0, label="far")
+    runtime = RuntimeDispatcher(store, repo_root=tmp_path)
+    jobs = JobManager(store.jobs_dir)
+    recipe = Recipe(
+        operator=OperatorName.MEMORY_QUERY,
+        backend=BackendName.CPU,
+        inputs={"source": source.artifact_id},
+        params={"top_k": 1, "metric": "euclidean", "exclude_self": True},
+    )
+
+    record = jobs.submit(recipe, runtime.handler_for_recipe(recipe))
+    finished = _wait_for_job(jobs, record.job_id)
+    artifact = store.get_artifact(finished.artifact_ids[0])
+    payload = json.loads(artifact.path.read_text(encoding="utf-8"))
+
+    assert finished.status == JobStatus.SUCCEEDED
+    assert artifact.kind == "bundle"
+    assert payload["results"][0]["artifact_id"] == near.artifact_id
+    assert artifact.metadata["result_count"] == 1
 
 
 def test_audio_peaks_are_derived_from_audio_file(tmp_path):

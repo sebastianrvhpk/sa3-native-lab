@@ -54,6 +54,7 @@ type ExperimentMode =
   | "experiment.soft_prompt.optimize"
   | "experiment.soft_prompt.generate"
   | "dataset.pre_encode"
+  | "memory.query"
   | "training.lora";
 
 type RecipeValue = string | number | boolean;
@@ -85,6 +86,7 @@ interface ExperimentConfig {
   produces: readonly ArtifactRecord["kind"][];
   fields: readonly RecipeField[];
   selectedAudioFallback?: string;
+  selectedLatentFallback?: boolean;
 }
 
 interface FieldConfig {
@@ -528,6 +530,20 @@ const experimentCatalog: readonly ExperimentConfig[] = [
       { key: "model_half", label: "Model half", type: "checkbox", defaultValue: false, advanced: true },
       { key: "pad", label: "Pad", type: "checkbox", defaultValue: false, advanced: true },
       { key: "device", label: "Device", type: "text", advanced: true },
+    ],
+  },
+  {
+    value: "memory.query",
+    label: "Memory query",
+    family: "Dataset",
+    maturity: "lab",
+    backend: "cpu",
+    produces: ["bundle"],
+    selectedLatentFallback: true,
+    fields: [
+      { key: "top_k", label: "Top K", type: "number", defaultValue: 5, min: 1, step: 1 },
+      { key: "metric", label: "Metric", type: "select", defaultValue: "cosine", options: [{ value: "cosine", label: "cosine" }, { value: "euclidean", label: "euclidean" }] },
+      { key: "exclude_self", label: "Exclude selected", type: "checkbox", defaultValue: true },
     ],
   },
   {
@@ -2218,6 +2234,9 @@ function missingParamKeys(spec: OperatorSpec | undefined, controlledKeys: readon
 }
 
 function experimentReady(config: ExperimentConfig, form: Record<string, RecipeValue>, selectedArtifact: ArtifactRecord | null) {
+  if (config.selectedLatentFallback && selectedArtifact?.kind !== "latent") {
+    return false;
+  }
   if (config.selectedAudioFallback && selectedArtifact?.kind === "audio" && !stringValue(form[config.selectedAudioFallback])) {
     return true;
   }
@@ -2249,6 +2268,9 @@ function buildExperimentPayload({
   }
 
   if (config.selectedAudioFallback && !params[config.selectedAudioFallback] && selectedArtifact?.kind === "audio") {
+    inputs.source = selectedArtifact.artifact_id;
+  }
+  if (config.selectedLatentFallback && selectedArtifact?.kind === "latent") {
     inputs.source = selectedArtifact.artifact_id;
   }
 

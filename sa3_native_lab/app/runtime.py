@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import platform
 import re
@@ -11,9 +12,11 @@ from typing import Any
 
 import numpy as np
 
+from latent_audio_primitives.index import LatentMemoryIndex
 from latent_audio_primitives.latent_blur import LatentBlurSpec, apply_latent_blur
 from latent_audio_primitives.latent_dsp import LatentDSPSpec, apply_latent_dsp
 from latent_audio_primitives.looping import cyclic_mix_latents, cyclic_roll_latents
+from latent_audio_primitives.schema import LatentItem
 from latent_audio_primitives.selective_renoise import (
     LatentMaskSpec,
     graft_latent_channels,
@@ -23,6 +26,7 @@ from latent_audio_primitives.selective_renoise import (
 
 from .contracts import (
     ArtifactKind,
+    ArtifactRecord,
     BackendName,
     ModelStatus,
     OperatorName,
@@ -333,6 +337,15 @@ class RuntimeDispatcher:
                 status="script adapter",
             ),
             OperatorSpec(
+                name=OperatorName.MEMORY_QUERY,
+                maturity="lab",
+                backends=[BackendName.CPU],
+                inputs=["source"],
+                params={"top_k": "int", "metric": "cosine|euclidean", "exclude_self": "bool"},
+                produces=[ArtifactKind.BUNDLE],
+                status="implemented for local latent artifacts",
+            ),
+            OperatorSpec(
                 name=OperatorName.TRAIN_LORA,
                 maturity="danger",
                 backends=[BackendName.TORCH_MPS, BackendName.TORCH_CPU],
@@ -373,6 +386,8 @@ class RuntimeDispatcher:
             return lambda context: self._run_same_encode(recipe, context)
         if recipe.operator == OperatorName.LATENT_DECODE:
             return lambda context: self._run_same_decode(recipe, context)
+        if recipe.operator == OperatorName.MEMORY_QUERY:
+            return lambda context: self._run_memory_query(recipe, context)
         if recipe.operator in SCRIPT_EXPERIMENT_OPERATORS:
             return lambda context: self._run_script_experiment(recipe, context)
         raise ValueError(f"operator is not implemented yet: {recipe.operator}")
@@ -681,6 +696,76 @@ class RuntimeDispatcher:
             },
         )
         return JobResult(artifact_ids=[artifact.artifact_id])
+
+    def _run_memory_query(self, recipe: Recipe, context: JobContext) -> JobResult:
+        source_id = recipe.inputs.get("source")
+        if not source_id:
+            raise ValueError("memory query recipe requires inputs.source")
+        source = self.store.get_artifact(source_id)
+        if source.latent is None:
+            raise ValueError(f"source artifact {source_id} does not have latent metadata")
+
+        params = dict(recipe.params)
+        top_k = max(1, int(params.get("top_k", 5)))
+        metric = str(params.get("metric", "cosine"))
+        if metric not in {"cosine", "euclidean"}:
+            raise ValueError("memory query metric must be 'cosine' or 'euclidean'")
+        exclude_self = bool(params.get("exclude_self", True))
+
+        query_latent = self.store.load_latent_array(source_id)
+        candidates: list[LatentItem] = []
+        for record in self.store.list_artifacts(kind=ArtifactKind.LATENT):
+            if exclude_self and record.artifact_id == source_id:
+                continue
+            if record.latent is None or record.latent.shape[1] != query_latent.shape[1]:
+                continue
+            latent = self.store.load_latent_array(record.artifact_id)
+            candidates.append(_latent_record_to_item(record, latent))
+
+        context.set_progress(0.45, f"indexed {len(candidates)} latent memories")
+        results = []
+        if candidates:
+            index = LatentMemoryIndex(candidates)
+            for result in index.query(query_latent, top_k=top_k, metric=metric):
+                results.append(
+                    {
+                        "artifact_id": result.item_id,
+                        "score": result.score,
+                        "distance": result.distance,
+                        "components": result.components,
+                        "item": result.item.shallow_metadata(),
+                    }
+                )
+
+        output_id, output_path = self.store.reserve_artifact_path(filename="memory_query.json")
+        payload = {
+            "operator": _operator_value(recipe.operator),
+            "source_artifact_id": source_id,
+            "metric": metric,
+            "top_k": top_k,
+            "exclude_self": exclude_self,
+            "candidate_count": len(candidates),
+            "results": results,
+        }
+        output_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        context.set_progress(0.85, "saving memory query")
+        artifact = self.store.finalize_bundle_path(
+            artifact_id=output_id,
+            path=output_path,
+            recipe=recipe,
+            source_artifact_ids=[source_id],
+            label="memory query",
+            metadata={
+                "operator": _operator_value(recipe.operator),
+                "result_count": len(results),
+                "metric": metric,
+                "top_k": top_k,
+            },
+        )
+        return JobResult(
+            artifact_ids=[artifact.artifact_id],
+            metrics={"result_count": len(results), "candidate_count": len(candidates), "metric": metric},
+        )
 
     def _run_script_experiment(self, recipe: Recipe, context: JobContext) -> JobResult:
         output_id, marker_path = self.store.reserve_artifact_path(filename=f"{_operator_slug(recipe.operator)}.zip")
@@ -1018,6 +1103,38 @@ def _bct_to_time_major(tensor: Any) -> np.ndarray:
     if detached.ndim != 2:
         raise ValueError(f"operator produced invalid latent shape {tuple(detached.shape)}")
     return detached.numpy().T.astype(np.float32, copy=False)
+
+
+def _latent_record_to_item(record: ArtifactRecord, latent: np.ndarray) -> LatentItem:
+    if record.latent is None:
+        raise ValueError(f"artifact {record.artifact_id} does not have latent metadata")
+    return LatentItem(
+        item_id=record.artifact_id,
+        latent=latent,
+        latent_rate=record.latent.latent_rate,
+        sample_rate=record.latent.sample_rate,
+        prompt=record.prompt,
+        descriptors=_numeric_descriptors(record.metadata.get("descriptors")),
+        labels={"label": record.label, "tags": list(record.tags)},
+        metadata={
+            "artifact_id": record.artifact_id,
+            "path": str(record.path),
+            "recipe_id": record.recipe_id,
+            "session_id": record.session_id,
+        },
+    )
+
+
+def _numeric_descriptors(value: Any) -> dict[str, float]:
+    if not isinstance(value, dict):
+        return {}
+    descriptors: dict[str, float] = {}
+    for key, descriptor in value.items():
+        try:
+            descriptors[str(key)] = float(descriptor)
+        except (TypeError, ValueError):
+            continue
+    return descriptors
 
 
 def _dataclass_kwargs(cls: type, params: dict[str, Any]) -> dict[str, Any]:

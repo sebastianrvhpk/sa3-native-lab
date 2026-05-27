@@ -17,6 +17,8 @@ try {
   await page.getByRole("button", { name: "Inpaint" }).click();
   await expect(page.getByText("Inpaint start")).toBeVisible();
   await expect(page.getByText("Spec covered").first()).toBeVisible();
+  await page.locator(".experiment-band select").first().selectOption("memory.query");
+  await expect(page.getByText("Top K")).toBeVisible();
   await expect(page.getByRole("button", { name: /Play|Pause/ }).first()).toBeVisible();
   await expect(page.getByRole("slider", { name: "Audio position" }).first()).toBeVisible();
   await expect(page.getByRole("button", { name: "New" })).toBeVisible();
