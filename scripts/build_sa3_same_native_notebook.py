@@ -272,24 +272,6 @@ LMDM adaptation is conceptual unless SA3 attention/sampler code is modified and 
 # Push this combined repository to GitHub, then put that URL here.
 COMBINED_REPO_URL = "https://github.com/sebastianrvhpk/sa3-native-lab.git"
 
-# Defaults are ON for Stable Audio 3 Medium experiments.
-CLONE_COMBINED_REPO = True
-INSTALL_REPO = True
-INSTALL_TORCH_CU126 = True
-INSTALL_FLASH_ATTN = True
-USE_UV = True
-PIN_NUMPY = True
-REMOVE_TRANSFORMERS_OPTIONAL_SCIPY_SKLEARN = True
-REMOVE_TRANSFORMERS_OPTIONAL_TORCHVISION = True
-RESTART_RUNTIME_AFTER_FIRST_INSTALL = True
-FORCE_FULL_SETUP = False
-
-PROJECT_DIR = "/content/sa3-native-lab"
-SETUP_MARKER = "/content/.sa3_native_lab_setup_complete"
-FLASH_ATTN_WHEEL_URL = ""  # Optional direct wheel URL matching Python/Torch/CUDA.
-FLASH_ATTN_MAX_JOBS = "2"
-FLASH_ATTN_FROM_SOURCE = False
-
 import os
 import sys
 import subprocess
@@ -299,6 +281,42 @@ from pathlib import Path
 
 os.environ.setdefault("USE_TF", "0")
 os.environ.setdefault("USE_FLAX", "0")
+
+
+def env_flag(name, default=False):
+    value = os.environ.get(name)
+    if value is None:
+        return bool(default)
+    return value.strip().lower() not in {"0", "false", "no", "off", ""}
+
+
+IN_COLAB = Path("/content").exists() and "COLAB_RELEASE_TAG" in os.environ
+
+# Defaults are ON only inside Colab. Locally, this setup cell becomes a
+# verification/no-op cell so the rest of the notebook can be executed without
+# trying to install CUDA wheels, flash-attn, or restart the process.
+CLONE_COMBINED_REPO = env_flag("SA3_CLONE_COMBINED_REPO", IN_COLAB)
+INSTALL_REPO = env_flag("SA3_INSTALL_REPO", IN_COLAB)
+INSTALL_TORCH_CU126 = env_flag("SA3_INSTALL_TORCH_CU126", IN_COLAB)
+INSTALL_FLASH_ATTN = env_flag("SA3_INSTALL_FLASH_ATTN", IN_COLAB)
+USE_UV = env_flag("SA3_USE_UV", True)
+PIN_NUMPY = env_flag("SA3_PIN_NUMPY", IN_COLAB)
+REMOVE_TRANSFORMERS_OPTIONAL_SCIPY_SKLEARN = env_flag("SA3_REMOVE_SCIPY_SKLEARN", IN_COLAB)
+REMOVE_TRANSFORMERS_OPTIONAL_TORCHVISION = env_flag("SA3_REMOVE_TORCHVISION", IN_COLAB)
+RESTART_RUNTIME_AFTER_FIRST_INSTALL = env_flag("SA3_RESTART_AFTER_INSTALL", IN_COLAB)
+FORCE_FULL_SETUP = env_flag("SA3_FORCE_FULL_SETUP", False)
+
+PROJECT_DIR = os.environ.get(
+    "SA3_PROJECT_DIR",
+    "/content/sa3-native-lab" if IN_COLAB else str(Path.cwd()),
+)
+SETUP_MARKER = os.environ.get(
+    "SA3_SETUP_MARKER",
+    "/content/.sa3_native_lab_setup_complete" if IN_COLAB else str(Path(PROJECT_DIR) / ".sa3_native_lab_setup_complete"),
+)
+FLASH_ATTN_WHEEL_URL = os.environ.get("SA3_FLASH_ATTN_WHEEL_URL", "")  # Optional direct wheel URL matching Python/Torch/CUDA.
+FLASH_ATTN_MAX_JOBS = os.environ.get("SA3_FLASH_ATTN_MAX_JOBS", "2")
+FLASH_ATTN_FROM_SOURCE = env_flag("SA3_FLASH_ATTN_FROM_SOURCE", False)
 
 
 def run(cmd, cwd=None, env=None, check=True):
@@ -401,6 +419,16 @@ def ensure_project_dir():
 
 setup_marker = Path(SETUP_MARKER)
 setup_complete = setup_marker.exists() and not FORCE_FULL_SETUP
+setup_actions_enabled = any(
+    [
+        INSTALL_REPO,
+        INSTALL_TORCH_CU126,
+        INSTALL_FLASH_ATTN,
+        PIN_NUMPY,
+        REMOVE_TRANSFORMERS_OPTIONAL_SCIPY_SKLEARN,
+        REMOVE_TRANSFORMERS_OPTIONAL_TORCHVISION,
+    ]
+)
 
 if INSTALL_REPO:
     PROJECT_DIR = str(ensure_project_dir())
@@ -485,7 +513,7 @@ if not setup_complete and REMOVE_TRANSFORMERS_OPTIONAL_TORCHVISION:
     # can fail after pinning Torch to SA3's 2.7.1+cu126 requirement.
     run([sys.executable, "-m", "pip", "uninstall", "-y", "torchvision"], check=False)
 
-if not setup_complete:
+if not setup_complete and setup_actions_enabled:
     setup_marker.write_text("complete\n", encoding="utf-8")
     if RESTART_RUNTIME_AFTER_FIRST_INSTALL:
         print("\n=== first install complete ===")
@@ -497,10 +525,16 @@ if not setup_complete:
 if PROJECT_DIR not in sys.path:
     sys.path.insert(0, PROJECT_DIR)
 
+if not INSTALL_REPO and PROJECT_DIR not in sys.path and Path(PROJECT_DIR).exists():
+    sys.path.insert(0, PROJECT_DIR)
+
 print("\n=== setup verification ===")
 verify_import("torch")
 verify_import("torchaudio")
-verify_import("flash_attn")
+if INSTALL_FLASH_ATTN or module_available("flash_attn"):
+    verify_import("flash_attn")
+else:
+    print("flash_attn not installed; local/MPS path will use non-flash attention fallbacks.")
 verify_import("stable_audio_3")
 verify_import("latent_audio_primitives")
 print("Setup complete. Continue with the next cell.")
@@ -513,8 +547,10 @@ print("Setup complete. Continue with the next cell.")
 from pathlib import Path
 import json
 import math
+import os
 import random
 import shutil
+import sys
 from dataclasses import dataclass
 
 import numpy as np
@@ -608,8 +644,24 @@ from latent_audio_primitives.style import (
     load_style_direction,
 )
 
-DEVICE = "cuda" if torch is not None and torch.cuda.is_available() else "cpu"
-WORK_DIR = Path("/content/sa3_same_native_experiments")
+def env_flag(name, default=False):
+    value = os.environ.get(name)
+    if value is None:
+        return bool(default)
+    return value.strip().lower() not in {"0", "false", "no", "off", ""}
+
+
+if torch is None:
+    DEVICE = "cpu"
+elif torch.cuda.is_available():
+    DEVICE = "cuda"
+elif torch.backends.mps.is_available():
+    DEVICE = "mps"
+else:
+    DEVICE = "cpu"
+
+PROJECT_DIR = os.environ.get("SA3_PROJECT_DIR", globals().get("PROJECT_DIR", str(Path.cwd())))
+WORK_DIR = Path(os.environ.get("SA3_WORK_DIR", "/content/sa3_same_native_experiments" if Path("/content").exists() else "sa3_same_native_experiments"))
 INPUT_DIR = WORK_DIR / "inputs"
 OUTPUT_DIR = WORK_DIR / "outputs"
 MEMORY_DIR = WORK_DIR / "memory"
@@ -628,20 +680,26 @@ print("flow target convention:", FLOW_TARGET_CONVENTION)
         r"""
 # @title 2. Hugging Face login and model loading
 
-LOAD_MODELS = True
-HF_LOGIN = True
+LOAD_MODELS = env_flag("SA3_LOAD_MODELS", True)
+HF_LOGIN = env_flag("SA3_HF_LOGIN", True)
 
-SA3_MODEL_NAME = "medium"
-SAME_MODEL_NAME = "same-l"  # SA3 Medium uses SAME-Large style latents.
-MODEL_HALF = True
+SA3_MODEL_NAME = os.environ.get("SA3_MODEL_NAME", "medium")
+SAME_MODEL_NAME = os.environ.get("SA3_SAME_MODEL_NAME", "same-l")  # SA3 Medium uses SAME-Large style latents.
+MODEL_HALF = env_flag("SA3_MODEL_HALF", DEVICE == "cuda")
 
 sa3_model = None
 sa3 = None
 same = None
 
 if HF_LOGIN:
-    from huggingface_hub import login
-    login()
+    from huggingface_hub import get_token, login
+    hf_token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
+    if hf_token:
+        login(token=hf_token)
+    elif get_token():
+        print("Hugging Face token found in local cache.")
+    else:
+        login()
 
 if LOAD_MODELS:
     if torch is None:
@@ -698,10 +756,10 @@ def require_models():
         r"""
 # @title 2b. SA3 Medium smoke test
 
-RUN_SMOKE_TEST = True
+RUN_SMOKE_TEST = env_flag("SA3_RUN_SMOKE_TEST", True)
 SMOKE_PROMPT = "a sparse glassy ambient loop, slow evolving texture"
-SMOKE_DURATION = 4.0
-SMOKE_STEPS = 4
+SMOKE_DURATION = float(os.environ.get("SA3_SMOKE_DURATION", "4.0"))
+SMOKE_STEPS = int(os.environ.get("SA3_SMOKE_STEPS", "4"))
 SMOKE_SEED = 42
 
 if RUN_SMOKE_TEST:
@@ -1194,7 +1252,7 @@ DATASET_HOP_DURATION = 12.0  # use 6.0 for 50% overlap on 12s chunks
 DATASET_MAX_CHUNKS_PER_FILE = 4  # L4-safe default for optimization modes
 DATASET_DROP_LAST_CHUNK = False
 
-RUN_DATASET_CHUNK_PREVIEW = False
+RUN_DATASET_CHUNK_PREVIEW = env_flag("RUN_DATASET_CHUNK_PREVIEW", False)
 
 
 def dataset_effective_duration():
@@ -1253,7 +1311,7 @@ This is not text steering. It is local manifold resampling around an audio memor
         r"""
 # @title Mode 0. Renoise variations from an existing loop/audio
 
-RUN_MODE_0_RENOISE_VARIATIONS = False
+RUN_MODE_0_RENOISE_VARIATIONS = env_flag("RUN_MODE_0_RENOISE_VARIATIONS", False)
 
 VARIATION_AUDIO = INPUT_DIR / "loop.wav"
 VARIATION_OUTPUT_DIR = OUTPUT_DIR / "mode_00_renoise_variations"
@@ -1369,7 +1427,7 @@ Do high-variance and low-variance channels form different families?
         r"""
 # @title Mode 0c. Latent-selective renoise playground
 
-RUN_MODE_0C_LATENT_SELECTIVE_RENOISE = False
+RUN_MODE_0C_LATENT_SELECTIVE_RENOISE = env_flag("RUN_MODE_0C_LATENT_SELECTIVE_RENOISE", False)
 
 LATENT_PLAYGROUND_AUDIO = INPUT_DIR / "known_9s.wav"
 LATENT_PLAYGROUND_OUTPUT_DIR = OUTPUT_DIR / "mode_00c_latent_selective_renoise"
@@ -1643,7 +1701,7 @@ re-open the best files, and inspect the metadata for the corresponding channel m
         r"""
 # @title Mode 0c. Search annotated variations
 
-RUN_MODE_0C_SEARCH_ANNOTATIONS = False
+RUN_MODE_0C_SEARCH_ANNOTATIONS = env_flag("RUN_MODE_0C_SEARCH_ANNOTATIONS", False)
 
 ANNOTATION_SEARCH_PATH = OUTPUT_DIR / "mode_00c_latent_selective_renoise" / "annotations.json"
 ANNOTATION_QUERY = ""
@@ -1729,7 +1787,7 @@ This is closer to latent transplantation than variation. It is useful for asking
         r"""
 # @title Mode 0e. Cross-audio latent channel graft
 
-RUN_MODE_0E_CROSS_AUDIO_GRAFT = False
+RUN_MODE_0E_CROSS_AUDIO_GRAFT = env_flag("RUN_MODE_0E_CROSS_AUDIO_GRAFT", False)
 
 LATENT_GRAFT_SOURCE_AUDIO = INPUT_DIR / "known_9s.wav"
 LATENT_GRAFT_DONOR_AUDIO = INPUT_DIR / "donor_9s.wav"
@@ -2036,7 +2094,7 @@ FFT filter        = latent-time filter, not decoded-audio EQ
         r"""
 # @title Mode 0d. Latent blur playground
 
-RUN_MODE_0D_LATENT_BLUR = False
+RUN_MODE_0D_LATENT_BLUR = env_flag("RUN_MODE_0D_LATENT_BLUR", False)
 
 LATENT_BLUR_AUDIO = INPUT_DIR / "known_9s.wav"
 LATENT_BLUR_OUTPUT_DIR = OUTPUT_DIR / "mode_00d_latent_blur"
@@ -2305,7 +2363,7 @@ an edit moved brightness, flux, loudness, stereo width, etc. in a repeatable way
         r"""
 # @title Mode 0h. Neural latent DSP playground
 
-RUN_MODE_0H_LATENT_DSP = False
+RUN_MODE_0H_LATENT_DSP = env_flag("RUN_MODE_0H_LATENT_DSP", False)
 
 LATENT_DSP_AUDIO = INPUT_DIR / "known_9s.wav"
 LATENT_DSP_DONOR_AUDIO = INPUT_DIR / "donor_9s.wav"
@@ -2661,7 +2719,7 @@ Important distinction:
         r"""
 # @title Mode 0f. Cyclic time-roll loop lab
 
-RUN_MODE_0F_CYCLIC_LOOP = False
+RUN_MODE_0F_CYCLIC_LOOP = env_flag("RUN_MODE_0F_CYCLIC_LOOP", False)
 
 LOOP_AUDIO = INPUT_DIR / "known_9s.wav"
 LOOP_OUTPUT_DIR = OUTPUT_DIR / "mode_00f_cyclic_loop"
@@ -3042,7 +3100,7 @@ This is a sampler-level experiment, not a guaranteed loop constraint.
         r"""
 # @title Mode 0g. Cyclic roll inside each denoising step
 
-RUN_MODE_0G_CYCLIC_STEP_ROLL = False
+RUN_MODE_0G_CYCLIC_STEP_ROLL = env_flag("RUN_MODE_0G_CYCLIC_STEP_ROLL", False)
 
 CYCLIC_STEP_AUDIO = INPUT_DIR / "known_9s.wav"
 CYCLIC_STEP_OUTPUT_DIR = OUTPUT_DIR / "mode_00g_cyclic_step_roll"
@@ -3229,7 +3287,7 @@ FLOW_TARGET_CONVENTION = "data_minus_noise"
         r"""
 # @title Optional. Flow sign diagnostic
 
-RUN_FLOW_SIGN_DIAGNOSTIC = False
+RUN_FLOW_SIGN_DIAGNOSTIC = env_flag("RUN_FLOW_SIGN_DIAGNOSTIC", False)
 
 DIAGNOSTIC_AUDIO = INPUT_DIR / "target.wav"
 DIAGNOSTIC_DURATION = 8.0
@@ -3313,7 +3371,7 @@ Use Mode 1b to hear what the `.pt` does. Use Mode 2 or Mode 3 if you want an act
         r"""
 # @title Mode 1. Audio -> soft prompt
 
-RUN_MODE_1_AUDIO_TO_SOFT_PROMPT = False
+RUN_MODE_1_AUDIO_TO_SOFT_PROMPT = env_flag("RUN_MODE_1_AUDIO_TO_SOFT_PROMPT", False)
 
 TARGET_AUDIO = INPUT_DIR / "target.wav"
 SOFT_PROMPT_PATH = OUTPUT_DIR / "mode_01_target_soft_prompt.pt"
@@ -3366,7 +3424,7 @@ The output should be judged like an instrument preset, not like a readable promp
         r"""
 # @title Mode 1b. Generate audio from a saved soft prompt
 
-RUN_MODE_1B_GENERATE_WITH_SOFT_PROMPT = False
+RUN_MODE_1B_GENERATE_WITH_SOFT_PROMPT = env_flag("RUN_MODE_1B_GENERATE_WITH_SOFT_PROMPT", False)
 
 SOFT_PROMPT_GENERATION_DIR = OUTPUT_DIR / "mode_01b_soft_prompt_generations"
 SOFT_PROMPT_GENERATION_STEPS = 8
@@ -3459,7 +3517,7 @@ results may be strange strings if those strings steer SA3's native conditioner.
         r"""
 # @title Mode 2. Audio -> babble / hard prompt
 
-RUN_MODE_2_AUDIO_TO_BABBLE_PROMPT = False
+RUN_MODE_2_AUDIO_TO_BABBLE_PROMPT = env_flag("RUN_MODE_2_AUDIO_TO_BABBLE_PROMPT", False)
 
 USE_SA3_TOKENIZER_VOCAB = True
 BABBLE_TOKENIZER_VOCAB_LIMIT = 16384
@@ -3703,7 +3761,7 @@ soft prompt     = strongest, least readable
         r"""
 # @title Mode 3. Audio -> readable prompt
 
-RUN_MODE_3_AUDIO_TO_READABLE_PROMPT = False
+RUN_MODE_3_AUDIO_TO_READABLE_PROMPT = env_flag("RUN_MODE_3_AUDIO_TO_READABLE_PROMPT", False)
 
 READABLE_PROMPT_JSON = OUTPUT_DIR / "mode_03_readable_prompt.json"
 
@@ -3777,7 +3835,7 @@ This asks: what single conditioning key makes SA3 explain this folder?
         r"""
 # @title Mode 4. Dataset -> soft prompt
 
-RUN_MODE_4_DATASET_TO_SOFT_PROMPT = False
+RUN_MODE_4_DATASET_TO_SOFT_PROMPT = env_flag("RUN_MODE_4_DATASET_TO_SOFT_PROMPT", False)
 
 DATASET_SOFT_PROMPT_PATH = OUTPUT_DIR / "mode_04_dataset_soft_prompt.pt"
 
@@ -3846,7 +3904,7 @@ $$
         r"""
 # @title Mode 5. Dataset -> prompt family by SAME clustering
 
-RUN_MODE_5_DATASET_TO_PROMPT_FAMILY = False
+RUN_MODE_5_DATASET_TO_PROMPT_FAMILY = env_flag("RUN_MODE_5_DATASET_TO_PROMPT_FAMILY", False)
 
 PROMPT_FAMILY_DIR = OUTPUT_DIR / "mode_05_prompt_family"
 CLUSTERS = 3
@@ -3947,7 +4005,7 @@ $$
         r"""
 # @title Mode 6. SAME latent style profile
 
-RUN_MODE_6_STYLE_PROFILE = False
+RUN_MODE_6_STYLE_PROFILE = env_flag("RUN_MODE_6_STYLE_PROFILE", False)
 
 STYLE_PROFILE_PATH = OUTPUT_DIR / "mode_06_style_profile.npz"
 STYLE_PROFILE_ALPHA = 0.75
@@ -4012,7 +4070,7 @@ This requires a reference/baseline set if you want a true direction. With only p
         r"""
 # @title Mode 7. SAME latent direction from positive/reference folders
 
-RUN_MODE_7_SAME_DIRECTION = False
+RUN_MODE_7_SAME_DIRECTION = env_flag("RUN_MODE_7_SAME_DIRECTION", False)
 
 STYLE_DIRECTION_PATH = OUTPUT_DIR / "mode_07_style_direction.npz"
 STYLE_DIRECTION_ALPHA = 1.0
@@ -4090,7 +4148,7 @@ This is audioscope-style activation steering. It is inference-time and does not 
         r"""
 # @title Mode 8. SA3 residual steering from prompt pairs
 
-RUN_MODE_8_PROMPT_RESIDUAL_STEERING = False
+RUN_MODE_8_PROMPT_RESIDUAL_STEERING = env_flag("RUN_MODE_8_PROMPT_RESIDUAL_STEERING", False)
 
 PROMPT_VECTOR_DIR = VECTOR_DIR / "mode_08_prompt_residual_valence"
 PROMPT_VECTOR_AXIS = "valence"
@@ -4171,7 +4229,7 @@ $$
         r"""
 # @title Mode 9. SA3 residual steering from audio files
 
-RUN_MODE_9_AUDIO_RESIDUAL_STEERING = False
+RUN_MODE_9_AUDIO_RESIDUAL_STEERING = env_flag("RUN_MODE_9_AUDIO_RESIDUAL_STEERING", False)
 
 AUDIO_VECTOR_DIR = VECTOR_DIR / "mode_09_audio_residual"
 AUDIO_RESIDUAL_BASELINE = "prompt"  # "prompt" or "negative_audio"
@@ -4250,7 +4308,7 @@ This first-pass cell exposes a flow-state loss. A full differentiable sampler im
         r"""
 # @title Mode 10. Flow-state optimization scaffold
 
-RUN_MODE_10_FLOW_STATE_OPT = False
+RUN_MODE_10_FLOW_STATE_OPT = env_flag("RUN_MODE_10_FLOW_STATE_OPT", False)
 
 
 def optimize_single_flow_state(
@@ -4356,7 +4414,7 @@ replace a section while preserving boundaries
         r"""
 # @title Mode 11. Continuation / inpainting composition
 
-RUN_MODE_11_CONTINUATION = False
+RUN_MODE_11_CONTINUATION = env_flag("RUN_MODE_11_CONTINUATION", False)
 
 SOURCE_AUDIO = INPUT_DIR / "source.wav"
 CONTINUATION_PROMPT = "continue this texture into a coherent evolving loop"
@@ -4417,7 +4475,7 @@ $$
         r"""
 # @title Mode 12. Minimal LatCH-style control head on SAME summaries
 
-RUN_MODE_12_CONTROL_HEAD = False
+RUN_MODE_12_CONTROL_HEAD = env_flag("RUN_MODE_12_CONTROL_HEAD", False)
 
 CONTROL_NAME = "brightness"
 
@@ -4500,31 +4558,22 @@ Do not use it as the first answer for every control. Prompt inversion, SAME edit
         r"""
 # @title Mode 13. LoRA scaffold
 
-RUN_MODE_13_LORA_SCAFFOLD = False
+RUN_MODE_13_LORA_SCAFFOLD = env_flag("RUN_MODE_13_LORA_SCAFFOLD", False)
 
 LORA_DATASET_DIR = DATASET_DIR
 LORA_OUTPUT_DIR = OUTPUT_DIR / "mode_13_lora"
 
 if RUN_MODE_13_LORA_SCAFFOLD:
-    # This is a scaffold because the released SA3 LoRA script names/args should
-    # be verified against the exact repo commit installed in Colab.
-    # Inspect first:
-    #   !find /content/sa3-native-lab -iname "*lora*" -o -iname "*train*"
-    #
-    # Desired training state:
-    #   freeze base SA3/SAME weights
-    #   train only LoRA adapter parameters
-    #   log prompts, audio paths, duration, seed, loss curve
-    #
-    # Pseudocommand shape:
+    lora_model = os.environ.get("SA3_LORA_MODEL", "medium-base")
     command = [
-        "python",
+        sys.executable,
         str(Path(PROJECT_DIR) / "scripts" / "train_lora.py"),
-        "--model", SA3_MODEL_NAME,
-        "--data", str(LORA_DATASET_DIR),
-        "--output", str(LORA_OUTPUT_DIR),
+        "--model", lora_model,
+        "--data_dir", str(LORA_DATASET_DIR),
+        "--save_dir", str(LORA_OUTPUT_DIR),
+        "--device", DEVICE,
+        "--logger", "csv",
     ]
-    print("Verify official script path/args before running:")
     print(" ".join(command))
 """
     ),
@@ -4558,7 +4607,7 @@ This turns generated and encoded audio into reusable material.
         r"""
 # @title Mode 14. Latent memory instrument
 
-RUN_MODE_14_LATENT_MEMORY = False
+RUN_MODE_14_LATENT_MEMORY = env_flag("RUN_MODE_14_LATENT_MEMORY", False)
 
 MEMORY_TEST_PROMPTS = [
     "a sparse glassy ambient loop, slow evolving texture",
@@ -4612,7 +4661,7 @@ visible in SAME latents and whether simple operators behave coherently.
         r"""
 # @title Mode 15. SAME geometry and intervention audit
 
-RUN_MODE_15_GEOMETRY_AUDIT = False
+RUN_MODE_15_GEOMETRY_AUDIT = env_flag("RUN_MODE_15_GEOMETRY_AUDIT", False)
 
 GEOMETRY_AUDIT_OUTPUT = OUTPUT_DIR / "mode_15_same_geometry_audit.json"
 GEOMETRY_AUDIT_SOURCE = "dataset"  # "dataset" or "memory"
@@ -4628,11 +4677,10 @@ def load_geometry_audit_items():
         return load_items(MEMORY_DIR)
     if GEOMETRY_AUDIT_SOURCE == "dataset":
         require_models()
-        return encode_audio_directory(
+        return encode_audio_folder_to_items(
             DATASET_DIR,
             limit=DATASET_LIMIT,
             duration=DATASET_DURATION,
-            item_id_prefix="geometry_dataset",
             use_chunks=DATASET_USE_CHUNKS,
             chunk_duration=DATASET_CHUNK_DURATION,
             hop_duration=DATASET_HOP_DURATION,
@@ -4754,7 +4802,7 @@ Mode 14: memory
         r"""
 # @title Combined chain scaffold
 
-RUN_COMBINED_CHAIN = False
+RUN_COMBINED_CHAIN = env_flag("RUN_COMBINED_CHAIN", False)
 
 if RUN_COMBINED_CHAIN:
     require_models()
