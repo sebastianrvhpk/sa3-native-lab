@@ -58,6 +58,7 @@ torchaudio = [
 
 [project.scripts]
 stable-audio = "stable_audio_3.cli:main"
+sa3-lab = "sa3_native_lab.app.dev:main"
 sa3-lab-api = "sa3_native_lab.app.cli:main"
 
 [build-system]

@@ -103,6 +103,31 @@ uv sync --extra ui
 uv run python run_gradio.py --model medium --device mps --no-half
 ```
 
+### Local App Runner
+
+For the native app, install the API/dev extras and frontend dependencies once:
+
+```bash
+uv sync --extra app --extra dev
+npm install --prefix frontend
+```
+
+Then check readiness:
+
+```bash
+uv run sa3-lab doctor
+```
+
+Start the API daemon and Vite workbench together:
+
+```bash
+uv run sa3-lab dev
+```
+
+The runner prints backend readiness, artifact storage, and the local URLs. It
+reuses already-running services on `127.0.0.1:8733` and `127.0.0.1:5173`
+instead of starting duplicates.
+
 ### Local API Daemon
 
 The notebook experiments are being wrapped as a typed local app/runtime layer.
