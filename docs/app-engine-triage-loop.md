@@ -36,7 +36,7 @@ source audio / prompt
 | P1 | Native script-parameter UI | Recipe Studio schema in `frontend/` | Promote | frontend build |
 | P1 | Native latent-operator parameter UI | Operator Studio schema in `frontend/` | Promote | frontend build, live UI smoke |
 | P1 | Colab mode parity/status inventory | `/colab/modes` + Mode Atlas | Keep as triage map | API test, frontend build |
-| P2 | Memory atlas and retrieval | latent index modules | Defer | query/reuse tests |
+| P2 | Memory atlas and retrieval | `LatentMemoryIndex` + `memory.query` | Promote first slice | nearest-neighbor runtime test, frontend smoke |
 | P2 | Residual steering and prompt search | existing scripts/experiments | Defer | model-backed recipe tests |
 
 ## Acceptance Tests Per Pass
@@ -51,7 +51,7 @@ source audio / prompt
 ## Immediate Next Queue
 
 1. Add result-family view for sweeps and multi-output script jobs.
-2. Add memory indexing/query endpoints for latent artifact collections.
+2. Add memory result inspectors and preview/reuse flows for query bundles.
 3. Add prompt-search recipe adapters for Colab Modes 2/3/5.
 4. Add geometry/control-head recipe adapters for Colab Modes 12/15.
 5. Add parameter presets and recipe diffing for Operator Studio.

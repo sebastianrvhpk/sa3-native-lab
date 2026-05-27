@@ -33,8 +33,8 @@ migration into a stronger local research app.
    manual form entry.
 
 3. Artifact filtering and tagging.
-   Add filters for kind, model, prompt, operator, tag, date, status, and source
-   lineage. The artifact rail will not scale as the lab grows.
+   Labels, tags, notes, and archive search are now implemented. Next filters
+   should cover kind, model, operator, date, status, and source lineage.
 
 4. Better bundle readers.
    Vector/profile/soft-prompt bundles should expose their metadata, dimensions,
@@ -44,9 +44,9 @@ migration into a stronger local research app.
 ## P2: Research Cognition
 
 1. Memory browser and query surface.
-   Encoded SAME datasets should become searchable memory collections with
-   nearest-neighbor retrieval, preview audio, tags, and reuse as donors or style
-   references.
+   Local latent-artifact nearest-neighbor query now exists as `memory.query`.
+   The next step is a richer browser for encoded SAME datasets, preview audio,
+   tags, and reuse as donors or style references.
 
 2. Latent channel and time-region views.
    Graft/renoise masks would be more intuitive as channel/time selections,

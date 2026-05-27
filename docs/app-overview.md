@@ -53,7 +53,8 @@ selection, waveform inspection, audio playback, A/B comparison, MLX generation,
 SAME encode/decode, latent-operator runs, Recipe Studio, Mode Atlas, and job
 polling. The bench also has a Run Monitor that surfaces active jobs, percent
 progress, elapsed time, and the latest backend message near the controls that
-started the work.
+started the work. Selected artifacts can be labeled, tagged, and annotated from
+the specimen panel, and the archive can search those labels, notes, and tags.
 
 ### Operator Studio
 
@@ -72,7 +73,7 @@ selection appears only for graft or DSP modes that need a donor.
 
 Recipe Studio wraps the notebook/script experiments as background recipes. It
 covers style vectors, style profiles, residual vectors, alpha sweeps, soft
-prompts, dataset pre-encoding, and LoRA training.
+prompts, dataset pre-encoding, local latent-memory query, and LoRA training.
 
 ## Artifact Model
 
@@ -85,6 +86,7 @@ Artifacts are stored under `.sa3_lab/` by default. The app currently supports:
 
 Every run records a `Recipe` and `JobRecord` so results can be traced back to
 operator, backend, inputs, params, model, seed, logs, and source artifacts.
+Artifacts can also carry user labels, notes, and tags for archive search.
 
 ## Runtime Assumptions
 
@@ -103,12 +105,16 @@ Confirmed in the current codebase:
 - `/colab/modes` keeps the notebook migration visible.
 - Direct latent operators run as typed jobs over stored latent artifacts.
 - Script-backed Colab experiments are reachable from Recipe Studio.
+- Local latent-memory query is reachable as a CPU recipe over stored latent
+  artifacts.
+- Artifact annotation and archive search are implemented for labels, notes, and
+  tags.
 - The frontend builds and the Python test suite passes locally.
 
 Still partial:
 
 - Some Colab modes are mapped but not yet first-class native interactions.
 - Bundle artifacts need richer browsing instead of zip-only treatment.
-- Memory/query workflows exist as concepts and scripts, but not yet as a
-  polished instrument surface.
+- Memory-query results are real artifacts, but need a richer inspector and reuse
+  flow.
 - Multi-output sweeps need a dedicated result-family view.
