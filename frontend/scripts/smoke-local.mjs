@@ -1,6 +1,7 @@
 import { chromium, expect } from "@playwright/test";
 
 const baseUrl = process.env.SA3_FRONTEND_URL ?? "http://127.0.0.1:5173/";
+const expectedApiBase = process.env.SA3_EXPECT_API_BASE;
 
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1440, height: 960 } });
@@ -8,6 +9,9 @@ const page = await browser.newPage({ viewport: { width: 1440, height: 960 } });
 try {
   await page.goto(baseUrl, { waitUntil: "networkidle", timeout: 30000 });
   await expect(page.getByText("SA3 Native Lab", { exact: true })).toBeVisible();
+  if (expectedApiBase) {
+    await expect(page.getByRole("textbox", { name: "API" })).toHaveValue(expectedApiBase);
+  }
   await expect(page.locator(".surface-head .eyebrow", { hasText: "Listening Bench" })).toBeVisible();
   await expect(page.getByText("Spec covered").first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Save annotation" })).toBeVisible();

@@ -1,6 +1,7 @@
 import type { ArtifactKind, ArtifactRecord, AudioPeaksResponse, HealthResponse, JobRecord, NotebookMode, OperatorName, OperatorSpec, SessionRecord } from "./types";
 
-export const DEFAULT_API_BASE = import.meta.env.VITE_SA3_API_BASE ?? "http://127.0.0.1:8733";
+export const CONFIGURED_API_BASE = import.meta.env.VITE_SA3_API_BASE?.trim() || null;
+export const DEFAULT_API_BASE = CONFIGURED_API_BASE ?? "http://127.0.0.1:8733";
 
 export class ApiError extends Error {
   constructor(

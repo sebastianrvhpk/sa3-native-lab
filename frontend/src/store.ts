@@ -1,5 +1,7 @@
 import { create } from "zustand";
 
+import { CONFIGURED_API_BASE, DEFAULT_API_BASE } from "./api";
+
 type CompareSlot = "a" | "b";
 
 interface BenchState {
@@ -15,7 +17,7 @@ interface BenchState {
 }
 
 export const useBenchStore = create<BenchState>((set) => ({
-  apiBase: localStorage.getItem("sa3_api_base") ?? "http://127.0.0.1:8733",
+  apiBase: CONFIGURED_API_BASE ?? localStorage.getItem("sa3_api_base") ?? DEFAULT_API_BASE,
   selectedArtifactId: null,
   sessionId: localStorage.getItem("sa3_session_id"),
   sessionStartedAt: localStorage.getItem("sa3_session_started_at") ?? "1970-01-01T00:00:00.000Z",

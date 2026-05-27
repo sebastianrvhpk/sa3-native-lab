@@ -703,7 +703,8 @@ export function App() {
   }, [selectArtifact, selectedArtifactId, visibleArtifacts]);
 
   useEffect(() => {
-    if (sessionId || !allSessions.length) return;
+    if (!allSessions.length) return;
+    if (sessionId && allSessions.some((session) => session.session_id === sessionId)) return;
     const latestActive = allSessions.find((session) => session.status === "active") ?? allSessions[0];
     setSession(latestActive.session_id, latestActive.created_at);
   }, [sessionId, allSessions, setSession]);
