@@ -19,6 +19,8 @@ and the next risks for turning the Colab experiments into a proper app.
 - The frontend is no longer just a generic dashboard. It has a listening bench,
   Operator Studio, Recipe Studio, Mode Atlas, job rail, artifact rail, waveform
   peaks, playback, and A/B slots.
+- A first TypeScript tRPC control plane exists in `apps/control-plane`; it owns
+  app-shaped workbench reads while Python remains the model/runtime worker.
 - Medium/SAME-L is now the default path across app contracts, runtime fallbacks,
   frontend defaults, README commands, docs, and tests.
 
@@ -26,6 +28,9 @@ and the next risks for turning the Colab experiments into a proper app.
 
 - Frontend field schemas are still duplicated in TypeScript instead of coming
   from backend operator/experiment specs. This is the biggest drift risk.
+- The tRPC control plane is still only a read-side slice. Mutations, replay,
+  cancellation, and result-family semantics are still split across React and
+  Python endpoints.
 - `RuntimeDispatcher` owns many responsibilities: backend status, MLX
   generation, SAME encode/decode, latent operators, script adapters, subprocess
   wrapping, and output finalization. It works, but it will become harder to test
@@ -45,24 +50,28 @@ and the next risks for turning the Colab experiments into a proper app.
    Keep the canonical operator/experiment field definitions in Python, then
    generate or fetch frontend controls from those specs.
 
-2. Split runtime adapters.
+2. Promote app-level actions into tRPC.
+   Start with recipe replay, job-event/cancel/retry actions, archive mutations,
+   and result-family reads. Avoid one-to-one endpoint mirroring.
+
+3. Split runtime adapters.
    Move MLX, SAME, latent operators, and script recipes into modules such as
    `runtime_mlx.py`, `runtime_same.py`, `runtime_latent.py`, and
    `runtime_scripts.py`.
 
-3. Add payload-building tests for the frontend.
+4. Add payload-building tests for the frontend.
    Test default forms, donor modes, advanced params, number-list parsing, and
    Recipe Studio payloads.
 
-4. Add artifact inspectors.
+5. Add artifact inspectors.
    Give bundle types readers and UI panels instead of treating every bundle as
    a zip file.
 
-5. Add job control endpoints.
+6. Add job control endpoints.
    Start with cancel/retry. Later add priorities, worker pools, and resident
    model workers.
 
-6. Harden docs around machine profiles.
+7. Harden docs around machine profiles.
    Document what runs on M1/MPS/MLX, what is realistic on CPU, and what remains
    CUDA/Colab-oriented.
 
@@ -73,4 +82,5 @@ and the next risks for turning the Colab experiments into a proper app.
 - Added a default-model test for `medium`/`same-l`.
 - Ran the Python test suite.
 - Ran the frontend production build.
+- Ran the control-plane contract tests.
 - Checked whitespace with `git diff --check`.

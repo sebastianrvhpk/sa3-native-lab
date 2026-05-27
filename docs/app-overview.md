@@ -56,6 +56,12 @@ progress, elapsed time, and the latest backend message near the controls that
 started the work. Selected artifacts can be labeled, tagged, and annotated from
 the specimen panel, and the archive can search those labels, notes, and tags.
 
+Read-heavy workbench state can now be loaded through the TypeScript tRPC
+control plane. This is enabled by setting `VITE_SA3_CONTROL_PLANE_URL` or by
+running `uv run sa3-lab dev --with-control-plane`. The control plane currently
+shapes sessions, artifacts, jobs, health, operator specs, and mode atlas data;
+generation and model-running mutations still execute through the Python worker.
+
 ### Operator Studio
 
 Operator Studio exposes direct latent operators as native controls:
@@ -109,6 +115,8 @@ Confirmed in the current codebase:
   artifacts.
 - Artifact annotation and archive search are implemented for labels, notes, and
   tags.
+- A first tRPC control-plane slice is implemented and can drive frontend
+  workbench reads behind an explicit launch flag.
 - The frontend builds and the Python test suite passes locally.
 
 Still partial:
@@ -118,3 +126,5 @@ Still partial:
 - Memory-query results are real artifacts, but need a richer inspector and reuse
   flow.
 - Multi-output sweeps need a dedicated result-family view.
+- tRPC is not yet the owner of mutations, recipe replay, job events, or result
+  families.

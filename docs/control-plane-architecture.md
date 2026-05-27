@@ -35,6 +35,18 @@ Python runtime data and shapes it into the state the instrument actually needs:
 This is deliberately not a thin proxy. The procedure moves grouping and
 readiness logic out of React and into a testable app contract.
 
+The React frontend now has a feature-flagged tRPC client. When
+`VITE_SA3_CONTROL_PLANE_URL` is set, read-heavy workbench state comes from
+`workbench.load`; mutations and model execution still go directly to the Python
+worker for now. When the env var is absent, the frontend falls back to the
+existing direct Python read queries.
+
+The local runner can launch the full path:
+
+```bash
+uv run sa3-lab dev --with-control-plane
+```
+
 ## Current Routers
 
 | Router | Procedure | Purpose |
@@ -42,6 +54,9 @@ readiness logic out of React and into a testable app contract.
 | `workbench` | `load` | Build UI-ready workbench state from Python runtime records. |
 | `archive` | `search` | Search artifact annotations through the runtime worker. |
 | `archive` | `annotateAndSearch` | Update annotations, then return the refreshed matching archive slice. |
+
+The standalone server also exposes `GET /health` so the dev runner can wait for
+the control plane without reaching through tRPC internals.
 
 ## Deferred On Purpose
 
@@ -62,5 +77,15 @@ Future responsibilities:
 - Heavy model execution stays in Python.
 - UI-facing procedures should validate input with Zod.
 - Control-plane logic must have tests without requiring MLX/PyTorch models.
+- The frontend must keep a direct-Python fallback until the control-plane path
+  owns enough behavior to be the normal launch mode.
 - Direct endpoint mirroring is allowed only as a temporary adapter behind a
   richer app-level procedure.
+
+## Next Control-Plane Queue
+
+1. Move recipe replay and fork-with-params into a tRPC procedure.
+2. Add typed job-event reads for progress logs, retries, and cancellation.
+3. Add result-family procedures for sweeps and multi-output script jobs.
+4. Promote archive annotation/search mutations to the UI path.
+5. Evaluate Postgres only after these procedures stabilize.

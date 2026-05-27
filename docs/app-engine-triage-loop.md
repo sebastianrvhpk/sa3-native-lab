@@ -36,6 +36,7 @@ source audio / prompt
 | P1 | Native script-parameter UI | Recipe Studio schema in `frontend/` | Promote | frontend build |
 | P1 | Native latent-operator parameter UI | Operator Studio schema in `frontend/` | Promote | frontend build, live UI smoke |
 | P1 | Colab mode parity/status inventory | `/colab/modes` + Mode Atlas | Keep as triage map | API test, frontend build |
+| P1 | App-shaped tRPC workbench reads | `apps/control-plane` + feature-flagged frontend client | Promote carefully | control-plane tests, frontend build, `sa3-lab dev --with-control-plane` |
 | P2 | Memory atlas and retrieval | `LatentMemoryIndex` + `memory.query` | Promote first slice | nearest-neighbor runtime test, frontend smoke |
 | P2 | Residual steering and prompt search | existing scripts/experiments | Defer | model-backed recipe tests |
 
@@ -50,12 +51,15 @@ source audio / prompt
 
 ## Immediate Next Queue
 
-1. Add result-family view for sweeps and multi-output script jobs.
-2. Add memory result inspectors and preview/reuse flows for query bundles.
-3. Add prompt-search recipe adapters for Colab Modes 2/3/5.
-4. Add geometry/control-head recipe adapters for Colab Modes 12/15.
-5. Add parameter presets and recipe diffing for Operator Studio.
-6. Promote MLX generation from subprocess-only to a resident worker when repeated
+1. Add typed job-event/cancel/retry actions, preferably through the control
+   plane.
+2. Add recipe replay and fork-with-params from existing artifact recipes.
+3. Add result-family view for sweeps and multi-output script jobs.
+4. Add memory result inspectors and preview/reuse flows for query bundles.
+5. Add prompt-search recipe adapters for Colab Modes 2/3/5.
+6. Add geometry/control-head recipe adapters for Colab Modes 12/15.
+7. Add parameter presets and recipe diffing for Operator Studio.
+8. Promote MLX generation from subprocess-only to a resident worker when repeated
    generation needs lower overhead.
-7. Add deeper visual lineage for multi-step artifact families once recipe jobs
+9. Add deeper visual lineage for multi-step artifact families once recipe jobs
    are populated enough to make the routing real.

@@ -110,12 +110,14 @@ For the native app, install the API/dev extras and frontend dependencies once:
 ```bash
 uv sync --extra app --extra dev
 npm install --prefix frontend
+npm install --prefix apps/control-plane
 ```
 
 Then check readiness:
 
 ```bash
 uv run sa3-lab doctor
+uv run sa3-lab doctor --with-control-plane
 ```
 
 Start the API daemon and Vite workbench together:
@@ -124,9 +126,15 @@ Start the API daemon and Vite workbench together:
 uv run sa3-lab dev
 ```
 
+Start the modern tRPC control-plane path as well:
+
+```bash
+uv run sa3-lab dev --with-control-plane
+```
+
 The runner prints backend readiness, artifact storage, and the local URLs. It
-reuses already-running services on `127.0.0.1:8733` and `127.0.0.1:5173`
-instead of starting duplicates.
+reuses already-running services on `127.0.0.1:8733`, `127.0.0.1:8787`, and
+`127.0.0.1:5173` instead of starting duplicates.
 
 ### TypeScript Control Plane
 
@@ -139,6 +147,11 @@ npm install --prefix apps/control-plane
 npm run test --prefix apps/control-plane
 SA3_PYTHON_API_BASE=http://127.0.0.1:8733 npm run dev --prefix apps/control-plane
 ```
+
+The frontend uses the control plane when `VITE_SA3_CONTROL_PLANE_URL` is set.
+`uv run sa3-lab dev --with-control-plane` wires that env var automatically.
+Without that flag, the frontend keeps using the Python API read endpoints
+directly.
 
 See `docs/control-plane-architecture.md` for the staged tRPC/Postgres/pgvector
 plan.

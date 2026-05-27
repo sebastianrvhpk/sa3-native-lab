@@ -9,15 +9,19 @@ migration into a stronger local research app.
    Long-running scripts and LoRA jobs need safe interruption, resumable logs,
    and an obvious retry path from the UI.
 
-2. Add explicit environment readiness checks.
+2. Promote job events to a typed control-plane contract.
+   Progress is visible today, but cancellation, retry, stderr tails, and
+   resumable logs need one app-level procedure instead of scattered polling.
+
+3. Add explicit environment readiness checks.
    The API should report Hugging Face auth, Medium MLX weights, SAME-L weights,
    PyTorch MPS availability, and missing optional extras as actionable checks.
 
-3. Add recipe replay.
+4. Add recipe replay.
    Every artifact already records its recipe; the UI should expose "run again",
    "fork with changes", and "copy params from artifact".
 
-4. Improve error surfacing.
+5. Improve error surfacing.
    Job failures should show command, stderr tail, missing file paths, model
    auth hints, and suggested next action instead of only a failed status.
 
@@ -77,25 +81,30 @@ migration into a stronger local research app.
 
 ## Architecture Improvements
 
-1. Generate frontend schemas from backend operator specs.
+1. Move app-shaped reads and replay actions into tRPC.
+   `workbench.load` is the first slice. Next should be recipe replay,
+   result-family reads, archive mutations, and job-event actions. Keep the
+   Python worker as the model/runtime owner.
+
+2. Generate frontend schemas from backend operator specs.
    Operator/experiment field catalogs currently live in the frontend. A future
    typed schema endpoint would reduce drift between Python contracts and UI
    controls.
 
-2. Add Zod or equivalent frontend validation.
+3. Add Zod or equivalent frontend validation.
    The UI should validate fields before submit using the same bounds and
    required-ness as the backend.
 
-3. Add persistent worker processes.
+4. Add persistent worker processes.
    Repeated Medium generation would benefit from a resident MLX/PyTorch worker
    instead of launching every heavy job as a fresh subprocess.
 
-4. Split runtime adapters by capability.
+5. Split runtime adapters by capability.
    `RuntimeDispatcher` is becoming a hub for many concerns. Moving MLX, SAME,
    latent operators, and script recipes into separate adapter modules would make
    tests and future workers cleaner.
 
-5. Add typed artifact inspectors.
+6. Add typed artifact inspectors.
    Each artifact kind should have a dedicated inspector component and backend
    reader: audio, latent, vector bundle, profile, soft prompt, training output,
    and memory collection.
@@ -106,7 +115,9 @@ For each pass:
 
 - Run `uv run pytest`.
 - Run `npm run build --prefix frontend`.
+- Run `npm run test --prefix apps/control-plane`.
 - Run `git diff --check`.
-- Smoke the local app at `http://127.0.0.1:5173/`.
+- Smoke the local app at `http://127.0.0.1:5173/`, preferably with
+  `uv run sa3-lab dev --with-control-plane` when changing app-shaped reads.
 - Confirm every new visible control maps to a backend parameter, artifact, or
   documented future capability.
