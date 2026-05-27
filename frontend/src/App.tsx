@@ -32,6 +32,7 @@ import {
 
 import modelImage from "../../stable-audio-3.png";
 import { createApi, type ArtifactAnnotationPayload, type ExperimentPayload } from "./api";
+import { createControlPlaneClient, DEFAULT_CONTROL_PLANE_URL } from "./controlPlane";
 import { useBenchStore } from "./store";
 import type { ArtifactRecord, JobRecord, ModelStatus, NotebookMode, OperatorName, OperatorSpec, SessionRecord } from "./types";
 
@@ -599,13 +600,28 @@ export function App() {
   const queryClient = useQueryClient();
   const { apiBase, setApiBase, selectedArtifactId, selectArtifact, sessionId, sessionStartedAt, setSession, compare, setCompare } = useBenchStore();
   const api = useMemo(() => createApi(apiBase), [apiBase]);
+  const controlPlaneUrl = DEFAULT_CONTROL_PLANE_URL.trim();
+  const controlPlane = useMemo(() => (controlPlaneUrl ? createControlPlaneClient(controlPlaneUrl) : null), [controlPlaneUrl]);
+  const useControlPlane = Boolean(controlPlane);
 
-  const health = useQuery({ queryKey: ["health", apiBase], queryFn: api.health, refetchInterval: 3000 });
-  const operatorSpecs = useQuery({ queryKey: ["operator-specs", apiBase], queryFn: api.operatorSpecs, staleTime: 30000 });
-  const sessions = useQuery({ queryKey: ["sessions", apiBase], queryFn: api.sessions, refetchInterval: 3000 });
-  const modeAtlas = useQuery({ queryKey: ["colab-modes", apiBase], queryFn: api.colabModes, staleTime: Infinity });
-  const artifacts = useQuery({ queryKey: ["artifacts", apiBase], queryFn: () => api.artifacts(), refetchInterval: 1500 });
-  const jobs = useQuery({ queryKey: ["jobs", apiBase], queryFn: api.jobs, refetchInterval: 1000 });
+  const health = useQuery({ queryKey: ["health", apiBase], queryFn: api.health, refetchInterval: 3000, enabled: !useControlPlane });
+  const operatorSpecs = useQuery({ queryKey: ["operator-specs", apiBase], queryFn: api.operatorSpecs, staleTime: 30000, enabled: !useControlPlane });
+  const sessions = useQuery({ queryKey: ["sessions", apiBase], queryFn: api.sessions, refetchInterval: 3000, enabled: !useControlPlane });
+  const modeAtlas = useQuery({ queryKey: ["colab-modes", apiBase], queryFn: api.colabModes, staleTime: Infinity, enabled: !useControlPlane });
+  const artifacts = useQuery({ queryKey: ["artifacts", apiBase], queryFn: () => api.artifacts(), refetchInterval: 1500, enabled: !useControlPlane });
+  const jobs = useQuery({ queryKey: ["jobs", apiBase], queryFn: api.jobs, refetchInterval: 1000, enabled: !useControlPlane });
+  const workbench = useQuery({
+    queryKey: ["workbench", controlPlaneUrl, apiBase, sessionId, sessionStartedAt, selectedArtifactId],
+    queryFn: () =>
+      controlPlane!.workbench.load.query({
+        apiBase,
+        sessionId,
+        sessionStartedAt,
+        selectedArtifactId,
+      }),
+    enabled: useControlPlane,
+    refetchInterval: 1500,
+  });
 
   const [prompt, setPrompt] = useState("short soft percussive click");
   const [generationMode, setGenerationMode] = useState<GenerationMode>("generate.text_to_audio");
@@ -632,34 +648,39 @@ export function App() {
   const [experimentMode, setExperimentMode] = useState<ExperimentMode>("experiment.audio_style_vectors");
   const [experimentForm, setExperimentForm] = useState<Record<string, RecipeValue>>(() => defaultExperimentForm("experiment.audio_style_vectors"));
 
-  const allArtifacts = artifacts.data ?? [];
-  const activeSession = findActiveSession(sessions.data ?? [], sessionId);
-  const activeSessionId = activeSession?.session_id ?? sessionId;
-  const sessionArtifacts = activeSessionId
+  const workbenchState = workbench.data;
+  const allArtifacts = workbenchState?.artifacts ?? artifacts.data ?? [];
+  const allSessions = workbenchState?.sessions ?? sessions.data ?? [];
+  const activeSession = workbenchState?.activeSession ?? findActiveSession(allSessions, sessionId);
+  const activeSessionId = workbenchState?.activeSessionId ?? activeSession?.session_id ?? sessionId;
+  const sessionArtifacts = workbenchState?.sessionArtifacts ?? (activeSessionId
     ? allArtifacts.filter((item) => item.session_id === activeSessionId)
-    : allArtifacts.filter((item) => createdAfter(item.created_at, sessionStartedAt));
+    : allArtifacts.filter((item) => createdAfter(item.created_at, sessionStartedAt)));
   const visibleArtifacts = sessionArtifacts;
-  const selectedArtifact = allArtifacts.find((item) => item.artifact_id === selectedArtifactId) ?? visibleArtifacts[0] ?? null;
+  const selectedArtifact = allArtifacts.find((item) => item.artifact_id === selectedArtifactId) ?? workbenchState?.selectedArtifact ?? visibleArtifacts[0] ?? null;
   const audioArtifacts = allArtifacts.filter((item) => item.kind === "audio");
   const latentArtifacts = allArtifacts.filter((item) => item.kind === "latent");
   const bundleArtifacts = allArtifacts.filter((item) => item.kind === "bundle");
-  const allJobs = jobs.data ?? [];
-  const sessionJobs = activeSessionId
+  const allJobs = workbenchState?.jobs ?? jobs.data ?? [];
+  const sessionJobs = workbenchState?.sessionJobs ?? (activeSessionId
     ? allJobs.filter((item) => item.recipe.session_id === activeSessionId)
-    : allJobs.filter((item) => createdAfter(item.created_at, sessionStartedAt));
-  const archiveJobs = activeSessionId
+    : allJobs.filter((item) => createdAfter(item.created_at, sessionStartedAt)));
+  const archiveJobs = workbenchState?.archiveJobs ?? (activeSessionId
     ? allJobs.filter((item) => item.recipe.session_id !== activeSessionId)
-    : allJobs.filter((item) => !createdAfter(item.created_at, sessionStartedAt));
-  const archiveArtifacts = activeSessionId
+    : allJobs.filter((item) => !createdAfter(item.created_at, sessionStartedAt)));
+  const archiveArtifacts = workbenchState?.archiveArtifacts ?? (activeSessionId
     ? allArtifacts.filter((item) => item.session_id !== activeSessionId)
-    : allArtifacts.filter((item) => !createdAfter(item.created_at, sessionStartedAt));
-  const runningJobs = allJobs.filter(isJobActive);
-  const latestJobs = allJobs.slice(0, 8);
+    : allArtifacts.filter((item) => !createdAfter(item.created_at, sessionStartedAt)));
+  const runningJobs = workbenchState?.runningJobs ?? allJobs.filter(isJobActive);
+  const latestJobs = workbenchState?.latestJob ? [workbenchState.latestJob, ...allJobs.filter((job) => job.job_id !== workbenchState.latestJob?.job_id)].slice(0, 8) : allJobs.slice(0, 8);
   const compareA = allArtifacts.find((item) => item.artifact_id === compare.a) ?? null;
   const compareB = allArtifacts.find((item) => item.artifact_id === compare.b) ?? null;
   const activeExperiment = experimentCatalog.find((item) => item.value === experimentMode) ?? experimentCatalog[0];
   const activeOperatorConfig = operatorCatalog.find((item) => item.value === operator) ?? operatorCatalog[0];
-  const specMap = useMemo(() => new Map((operatorSpecs.data ?? []).map((spec) => [spec.name, spec])), [operatorSpecs.data]);
+  const operatorSpecRows = workbenchState?.operatorSpecs ?? operatorSpecs.data ?? [];
+  const modeAtlasRows = workbenchState?.modeAtlas ?? modeAtlas.data ?? [];
+  const healthData = workbenchState?.health ?? health.data;
+  const specMap = useMemo(() => new Map(operatorSpecRows.map((spec) => [spec.name, spec])), [operatorSpecRows]);
   const activeGenerateSpec = specMap.get(generationMode);
   const sameEncodeSpec = specMap.get("latent.encode");
   const sameDecodeSpec = specMap.get("latent.decode");
@@ -682,13 +703,14 @@ export function App() {
   }, [selectArtifact, selectedArtifactId, visibleArtifacts]);
 
   useEffect(() => {
-    if (sessionId || !sessions.data?.length) return;
-    const latestActive = sessions.data.find((session) => session.status === "active") ?? sessions.data[0];
+    if (sessionId || !allSessions.length) return;
+    const latestActive = allSessions.find((session) => session.status === "active") ?? allSessions[0];
     setSession(latestActive.session_id, latestActive.created_at);
-  }, [sessionId, sessions.data, setSession]);
+  }, [sessionId, allSessions, setSession]);
 
   const invalidate = async () => {
     await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["workbench"] }),
       queryClient.invalidateQueries({ queryKey: ["artifacts", apiBase] }),
       queryClient.invalidateQueries({ queryKey: ["jobs", apiBase] }),
       queryClient.invalidateQueries({ queryKey: ["health", apiBase] }),
@@ -848,14 +870,14 @@ export function App() {
           <img src={modelImage} alt="" />
           <div>
             <strong>SA3 Native Lab</strong>
-            <span>{health.data?.artifact_root ?? ".sa3_lab"}</span>
+            <span>{healthData?.artifact_root ?? ".sa3_lab"}</span>
           </div>
         </div>
         <div className="api-field">
           <label htmlFor="api-base">API</label>
           <input id="api-base" value={apiBase} onChange={(event) => setApiBase(event.target.value)} />
         </div>
-        <BackendPills backends={health.data?.backends ?? []} />
+        <BackendPills backends={healthData?.backends ?? []} />
       </header>
 
       <section className="bench-grid">
@@ -1138,7 +1160,7 @@ export function App() {
                 {experimentJob ? "Recipe running" : "Run recipe"}
               </button>
               <InlineJobStatus job={experimentJob} />
-              <ModeAtlas modes={modeAtlas.data ?? []} activeOperator={activeExperiment.value} />
+              <ModeAtlas modes={modeAtlasRows} activeOperator={activeExperiment.value} />
             </div>
           </div>
         </section>
