@@ -10,6 +10,12 @@ This repository is a combined Colab/research workspace:
 
 The goal is exploratory research over native SA3/SAME spaces, not a finished product.
 
+For the current app-level description and improvement queue, see:
+
+- `docs/app-overview.md`
+- `docs/codebase-review.md`
+- `docs/improvement-roadmap.md`
+
 ## Upstream
 
 The Stable Audio 3 source in this repository comes from:
@@ -39,6 +45,162 @@ COMBINED_REPO_URL = "https://github.com/sebastianrvhpk/sa3-native-lab.git"
 The notebook installs this single repo. No zip upload is needed.
 
 ## Local Install
+
+For a local Mac or workstation checkout, prefer a repo-local `uv` environment:
+
+```bash
+uv sync --extra dev
+uv run pytest
+```
+
+This works even when the shell has no bare `python` command. Use `uv run
+python ...`, `uv run stable-audio ...`, or activate `.venv/` if you want a
+traditional prompt.
+
+For the full local app/research surface, including the API, frontend-backed
+scripts, notebook tools, and LoRA scaffold, sync all local extras:
+
+```bash
+uv sync --extra app --extra ui --extra lora --extra notebook --extra dev
+```
+
+### Model Policy
+
+The active exploration target for this repo is SA3 Medium. Local app defaults
+therefore use `medium` for SA3 generation and `same-l` for SAME encode/decode,
+matching the medium checkpoint's SAME-L latent space. Smaller checkpoints remain
+available for explicit quick tests, but the app and docs assume Medium unless a
+command says otherwise.
+
+### Apple Silicon / M1
+
+For fast local generation on M1/M2/M3/M4, use the MLX implementation:
+
+```bash
+cd optimized/mlx
+./install.sh -y --download medium
+./sa3 --prompt "lofi house loop" --dit medium --decoder same-l --seconds 5 --out smoke.wav --play
+```
+
+The MLX path auto-downloads missing weights from Hugging Face on first use.
+You may need to accept the Stability AI license and log in with `hf auth login`
+or set `HF_TOKEN`.
+
+The PyTorch research layer also runs locally and auto-selects `cuda -> mps ->
+cpu` when a script exposes `--device`:
+
+```bash
+uv run stable-audio --model medium --device mps --no-half -p "short test tone" --duration 5 -o outputs/smoke.wav
+```
+
+On Apple Silicon, PyTorch SA3 Medium is mainly a compatibility path; the MLX
+CLI is the practical path for generation speed and memory.
+
+For the Gradio UI, install the UI extra and launch locally:
+
+```bash
+uv sync --extra ui
+uv run python run_gradio.py --model medium --device mps --no-half
+```
+
+### Local API Daemon
+
+The notebook experiments are being wrapped as a typed local app/runtime layer.
+Install the API extra and start the daemon:
+
+```bash
+uv sync --extra app
+uv run sa3-lab-api --host 127.0.0.1 --port 8733
+```
+
+The daemon persists local artifacts, recipes, and background jobs under
+`.sa3_lab/` by default. Override that location with:
+
+```bash
+uv run sa3-lab-api --artifact-root /path/to/sa3-lab-artifacts
+```
+
+Useful first endpoints:
+
+```bash
+curl http://127.0.0.1:8733/health
+curl http://127.0.0.1:8733/models/status
+curl http://127.0.0.1:8733/operators/specs
+```
+
+Text generation runs through the Apple Silicon MLX backend when
+`optimized/mlx/install.sh` has been completed:
+
+```bash
+curl -X POST http://127.0.0.1:8733/generate/text \
+  -H "Content-Type: application/json" \
+  -d '{"prompt":"lofi house loop","duration_seconds":5,"model":"medium","decoder":"same-l","steps":8}'
+```
+
+Latent `.npy` artifacts can be imported and transformed through typed operator
+jobs such as `latent.blur`, `latent.dsp`, `latent.graft`, `latent.renoise`, and
+`latent.cyclic_roll`. Every run stores a recipe, job record, source lineage, and
+output artifact instead of relying on notebook cell state.
+
+Colab-style experiment scripts are also available as background recipe jobs
+through `/experiments/run`. These bridge the notebook migration for style
+profiles, audio directions, residual vectors, alpha sweeps, soft prompts,
+dataset pre-encoding, and LoRA training. Script runs save audio artifacts when
+they produce listenable WAVs and zipped bundle artifacts for vector/profile
+outputs and training folders.
+
+Audio artifacts can also be encoded to SAME latents and decoded back through the
+Torch/MPS autoencoder path:
+
+```bash
+curl -X POST http://127.0.0.1:8733/latents/encode \
+  -H "Content-Type: application/json" \
+  -d '{"source_artifact_id":"art_...","model":"same-l","backend":"torch_mps"}'
+
+curl -X POST http://127.0.0.1:8733/latents/decode \
+  -H "Content-Type: application/json" \
+  -d '{"source_artifact_id":"art_...","model":"same-l","backend":"torch_mps"}'
+```
+
+### Listening Bench Frontend
+
+The first local app slice lives in `frontend/` and talks to the API daemon:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open the printed Vite URL, normally `http://127.0.0.1:5173`. The first bench
+supports audio import, MLX text generation, SAME encode/decode, latent operator
+jobs, Recipe Studio script experiments, Colab Mode Atlas parity/status, job
+polling, artifact selection, real waveform peaks, download, and A/B audio
+playback.
+
+### Notebook Parity Check
+
+The Colab notebook can be validated locally with all mode toggles off:
+
+```bash
+uv run python scripts/validate_colab_notebook.py
+```
+
+To run the model-loading and smoke cells, authenticate Hugging Face without
+putting the token in commands or files, then opt in:
+
+```bash
+export HF_TOKEN=...
+uv run python scripts/validate_colab_notebook.py --with-models --with-smoke
+```
+
+Notebook mode switches can also be enabled from the environment, for example:
+
+```bash
+RUN_MODE_15_GEOMETRY_AUDIT=1 uv run python scripts/validate_colab_notebook.py --with-models
+```
+
+### Colab / System Install
 
 ```bash
 uv pip install --system -e .
