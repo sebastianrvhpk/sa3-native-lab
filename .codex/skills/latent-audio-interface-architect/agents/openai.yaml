@@ -1,0 +1,4 @@
+interface:
+  display_name: "Latent Audio Interface Architect"
+  short_description: "Design interfaces for latent audio research"
+  default_prompt: "Use -audio-interface-architect to turn SA3/SAME latent math and experiments into an interface concept."
