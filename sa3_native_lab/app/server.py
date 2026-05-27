@@ -106,8 +106,13 @@ def create_app(
             raise HTTPException(status_code=404, detail=f"session not found: {session_id}") from exc
 
     @app.get("/artifacts", response_model=list[ArtifactRecord])
-    def list_artifacts(kind: ArtifactKind | None = None, session_id: str | None = None) -> list[ArtifactRecord]:
-        return store.list_artifacts(kind=kind, session_id=session_id)
+    def list_artifacts(
+        kind: ArtifactKind | None = None,
+        session_id: str | None = None,
+        q: str | None = None,
+        tags: str | None = None,
+    ) -> list[ArtifactRecord]:
+        return store.list_artifacts(kind=kind, session_id=session_id, query=q, tags=_split_query_tags(tags))
 
     @app.get("/artifacts/{artifact_id}", response_model=ArtifactRecord)
     def get_artifact(artifact_id: str) -> ArtifactRecord:
@@ -311,6 +316,13 @@ def create_app(
             await asyncio.sleep(0.5)
 
     return app
+
+
+def _split_query_tags(tags: str | None) -> list[str] | None:
+    if not tags:
+        return None
+    parsed = [tag.strip() for tag in tags.split(",") if tag.strip()]
+    return parsed or None
 
 
 def _submit_recipe(jobs: JobManager, runtime: RuntimeDispatcher, recipe: Recipe) -> JobRecord:

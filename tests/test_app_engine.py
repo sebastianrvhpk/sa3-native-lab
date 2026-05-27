@@ -54,6 +54,27 @@ def test_latent_artifact_roundtrip_and_annotation(tmp_path):
     assert annotated.metadata["score"] == 0.8
 
 
+def test_artifact_search_filters_annotation_text_and_tags(tmp_path):
+    store = ArtifactStore(tmp_path)
+    first = store.store_latent_array(np.ones((4, 3), dtype=np.float32), latent_rate=2.0)
+    second = store.store_latent_array(np.zeros((4, 3), dtype=np.float32), latent_rate=2.0)
+    store.annotate_artifact(
+        first.artifact_id,
+        ArtifactAnnotationRequest(label="keeper glass", notes="wide ringing texture", tags=["favorite", "loop"]),
+    )
+    store.annotate_artifact(second.artifact_id, ArtifactAnnotationRequest(label="discard", tags=["scratch"]))
+
+    by_text = store.list_artifacts(query="ringing")
+    by_tag = store.list_artifacts(tags=["favorite"])
+    by_text_and_tag = store.list_artifacts(query="glass", tags=["favorite", "loop"])
+    missing = store.list_artifacts(query="glass", tags=["scratch"])
+
+    assert [item.artifact_id for item in by_text] == [first.artifact_id]
+    assert [item.artifact_id for item in by_tag] == [first.artifact_id]
+    assert [item.artifact_id for item in by_text_and_tag] == [first.artifact_id]
+    assert missing == []
+
+
 def test_audio_peaks_are_derived_from_audio_file(tmp_path):
     store = ArtifactStore(tmp_path)
     audio_path = tmp_path / "shape.wav"
@@ -236,6 +257,14 @@ def test_fastapi_surface_imports_and_runs_latent_job(tmp_path):
     assert audio.status_code == 200
     assert audio.json()["session_id"] == session_id
     assert audio.json()["file"]["media_type"] == "audio/wav"
+    annotated = client.post(
+        f"/artifacts/{audio.json()['artifact_id']}/annotate",
+        json={"label": "keeper tone", "notes": "wide pulse", "tags": ["favorite", "loop"]},
+    )
+    assert annotated.status_code == 200
+    filtered = client.get("/artifacts?q=pulse&tags=favorite,loop")
+    assert filtered.status_code == 200
+    assert [item["artifact_id"] for item in filtered.json()] == [audio.json()["artifact_id"]]
     peaks = client.get(f"/artifacts/{audio.json()['artifact_id']}/peaks?bins=8")
     assert peaks.status_code == 200
     assert peaks.json()["bins"] == 8

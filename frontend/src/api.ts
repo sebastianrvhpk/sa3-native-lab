@@ -86,6 +86,13 @@ export interface ArtifactAnnotationPayload {
   metadata?: Record<string, unknown> | null;
 }
 
+export interface ArtifactListOptions {
+  kind?: ArtifactKind;
+  sessionId?: string | null;
+  query?: string | null;
+  tags?: string[] | null;
+}
+
 export function createApi(baseUrl: string) {
   const base = baseUrl.replace(/\/$/, "");
 
@@ -114,7 +121,19 @@ export function createApi(baseUrl: string) {
     updateSession: (sessionId: string, payload: Partial<Pick<SessionRecord, "name" | "status" | "notes">>) =>
       request<SessionRecord>(`/sessions/${encodeURIComponent(sessionId)}`, { ...jsonPost(payload), method: "PATCH" }),
     colabModes: () => request<NotebookMode[]>("/colab/modes"),
-    artifacts: (kind?: ArtifactKind) => request<ArtifactRecord[]>(kind ? `/artifacts?kind=${kind}` : "/artifacts"),
+    artifacts: (options: ArtifactKind | ArtifactListOptions = {}) => {
+      const params = new URLSearchParams();
+      if (typeof options === "string") {
+        params.set("kind", options);
+      } else {
+        if (options.kind) params.set("kind", options.kind);
+        if (options.sessionId) params.set("session_id", options.sessionId);
+        if (options.query?.trim()) params.set("q", options.query.trim());
+        if (options.tags?.length) params.set("tags", options.tags.join(","));
+      }
+      const query = params.toString();
+      return request<ArtifactRecord[]>(query ? `/artifacts?${query}` : "/artifacts");
+    },
     audioPeaks: (artifactId: string, bins = 96) =>
       request<AudioPeaksResponse>(`/artifacts/${encodeURIComponent(artifactId)}/peaks?bins=${bins}`),
     jobs: () => request<JobRecord[]>("/jobs"),

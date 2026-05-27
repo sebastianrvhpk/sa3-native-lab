@@ -373,11 +373,22 @@ class ArtifactStore:
             peaks=peaks,
         )
 
-    def list_artifacts(self, *, kind: ArtifactKind | None = None, session_id: str | None = None) -> list[ArtifactRecord]:
+    def list_artifacts(
+        self,
+        *,
+        kind: ArtifactKind | None = None,
+        session_id: str | None = None,
+        query: str | None = None,
+        tags: list[str] | None = None,
+    ) -> list[ArtifactRecord]:
         records = []
         for manifest in sorted(self.artifacts_dir.glob("*/artifact.json")):
             record = ArtifactRecord.model_validate(_read_json(manifest))
-            if (kind is None or record.kind == kind) and (session_id is None or record.session_id == session_id):
+            if (
+                (kind is None or record.kind == kind)
+                and (session_id is None or record.session_id == session_id)
+                and _artifact_matches_search(record, query=query, tags=tags)
+            ):
                 records.append(record)
         return records
 
@@ -402,6 +413,27 @@ def _safe_filename(filename: str) -> str:
     name = Path(filename).name
     safe = "".join(ch if ch.isalnum() or ch in "-_." else "_" for ch in name)
     return safe[:180] or "artifact.bin"
+
+
+def _artifact_matches_search(record: ArtifactRecord, *, query: str | None, tags: list[str] | None) -> bool:
+    query_text = (query or "").strip().lower()
+    requested_tags = [tag.strip().lower() for tag in tags or [] if tag.strip()]
+    record_tags = {tag.lower() for tag in record.tags}
+    if requested_tags and not all(tag in record_tags for tag in requested_tags):
+        return False
+    if not query_text:
+        return True
+
+    haystack = [
+        record.artifact_id,
+        record.kind.value,
+        record.label or "",
+        record.prompt or "",
+        record.notes or "",
+        record.file.filename if record.file else "",
+        *record.tags,
+    ]
+    return query_text in " ".join(haystack).lower()
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:

@@ -20,12 +20,14 @@ import {
   Plus,
   Repeat,
   Route,
+  Search,
   SlidersHorizontal,
   SkipBack,
   SkipForward,
   Upload,
   Wand2,
   Waves,
+  X,
 } from "lucide-react";
 
 import modelImage from "../../stable-audio-3.png";
@@ -1572,10 +1574,16 @@ function SessionTray({
   onSelect: (artifactId: string | null) => void;
   onStartSession: () => void;
 }) {
+  const [archiveQuery, setArchiveQuery] = useState("");
+  const [archiveTag, setArchiveTag] = useState("");
   const sessionArtifacts = sortNewest(artifacts).slice(0, 8);
   const sessionJobs = sortNewestJobs(jobs).slice(0, 4);
-  const archiveArtifacts = sortNewest(archivedArtifacts).slice(0, 10);
-  const archiveJobRows = sortNewestJobs(archivedJobs).slice(0, 10);
+  const activeArchiveTags = archiveTag ? [archiveTag] : [];
+  const archiveSearching = Boolean(archiveQuery.trim() || archiveTag);
+  const archiveTags = archiveTagOptions(archivedArtifacts);
+  const filteredArchiveArtifacts = archivedArtifacts.filter((artifact) => artifactMatchesSearch(artifact, archiveQuery, activeArchiveTags));
+  const archiveArtifactRows = sortNewest(filteredArchiveArtifacts).slice(0, 10);
+  const archiveJobRows = archiveSearching ? [] : sortNewestJobs(archivedJobs).slice(0, 10);
   const activeJobs = runningJobs.slice(0, 3);
 
   return (
@@ -1638,10 +1646,42 @@ function SessionTray({
         <summary>
           <Database size={15} />
           Archive
-          <span>{archivedArtifacts.length + archivedJobs.length}</span>
+          <span>{archiveSearching ? `${filteredArchiveArtifacts.length}/${archivedArtifacts.length}` : archivedArtifacts.length + archivedJobs.length}</span>
         </summary>
+        <div className="archive-search">
+          <label>
+            <Search size={14} />
+            <input
+              type="search"
+              aria-label="Search archive"
+              value={archiveQuery}
+              onChange={(event) => setArchiveQuery(event.target.value)}
+              placeholder="label, notes, tags"
+            />
+          </label>
+          {archiveTags.length ? (
+            <div className="archive-tags" aria-label="Archive tags">
+              {archiveTags.slice(0, 10).map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  aria-pressed={archiveTag === tag}
+                  className={archiveTag === tag ? "selected" : ""}
+                  onClick={() => setArchiveTag(archiveTag === tag ? "" : tag)}
+                >
+                  #{tag}
+                </button>
+              ))}
+            </div>
+          ) : null}
+          {archiveSearching ? (
+            <button type="button" className="archive-clear" aria-label="Clear archive search" onClick={() => { setArchiveQuery(""); setArchiveTag(""); }}>
+              <X size={14} />
+            </button>
+          ) : null}
+        </div>
         <div className="archive-list">
-          {archiveArtifacts.map((artifact) => (
+          {archiveArtifactRows.map((artifact) => (
             <SessionArtifactRow
               key={artifact.artifact_id}
               artifact={artifact}
@@ -1653,7 +1693,7 @@ function SessionTray({
           {archiveJobRows.map((job) => (
             <JobProgress key={job.job_id} job={job} compact />
           ))}
-          {!archiveArtifacts.length && !archiveJobRows.length ? <div className="quiet-panel compact">Archive empty</div> : null}
+          {!archiveArtifactRows.length && !archiveJobRows.length ? <div className="quiet-panel compact">{archiveSearching ? "No matching takes" : "Archive empty"}</div> : null}
         </div>
       </details>
     </div>
@@ -1677,6 +1717,13 @@ function SessionArtifactRow({
       <div>
         <strong>{artifactName(artifact)}</strong>
         <span>{artifactMeta(artifact)}</span>
+        {artifact.tags.length ? (
+          <span className="artifact-tags">
+            {artifact.tags.slice(0, 3).map((tag) => (
+              <i key={tag}>#{tag}</i>
+            ))}
+          </span>
+        ) : null}
       </div>
       {artifact.kind === "audio" ? <TinyWave artifact={artifact} apiBase={apiBase} /> : null}
     </button>
@@ -2326,6 +2373,33 @@ function parseTags(value: string) {
       seen.add(key);
       return true;
     });
+}
+
+function archiveTagOptions(artifacts: ArtifactRecord[]) {
+  return Array.from(new Set(artifacts.flatMap((artifact) => artifact.tags))).sort((a, b) => a.localeCompare(b));
+}
+
+function artifactMatchesSearch(artifact: ArtifactRecord, query: string, tags: string[]) {
+  const recordTags = new Set(artifact.tags.map((tag) => tag.toLowerCase()));
+  if (tags.some((tag) => !recordTags.has(tag.toLowerCase()))) return false;
+  const needle = query.trim().toLowerCase();
+  if (!needle) return true;
+  return artifactSearchText(artifact).includes(needle);
+}
+
+function artifactSearchText(artifact: ArtifactRecord) {
+  return [
+    artifact.artifact_id,
+    artifact.kind,
+    artifact.label,
+    artifact.prompt,
+    artifact.notes,
+    artifact.file?.filename,
+    ...artifact.tags,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
 }
 
 function artifactName(artifact: ArtifactRecord) {
