@@ -8,6 +8,7 @@ from sa3_native_lab.app.dev import (
     build_api_command,
     build_frontend_command,
     format_check,
+    huggingface_auth_check,
     is_port_open,
     resolve_repo_root,
 )
@@ -50,9 +51,20 @@ def test_dev_runner_builds_frontend_command(tmp_path):
 
 
 def test_dev_runner_formats_checks_with_details():
-    line = format_check(DevCheck("hf-token", "warn", "Hugging Face token is not set", "set HF_TOKEN"))
+    line = format_check(DevCheck("hf-auth", "warn", "Hugging Face token is not set", "set HF_TOKEN"))
 
-    assert line == "[warn] hf-token: Hugging Face token is not set (set HF_TOKEN)"
+    assert line == "[warn] hf-auth: Hugging Face token is not set (set HF_TOKEN)"
+
+
+def test_huggingface_auth_check_accepts_environment_token(monkeypatch):
+    monkeypatch.setenv("HF_TOKEN", "hf_test")
+    monkeypatch.delenv("HUGGING_FACE_HUB_TOKEN", raising=False)
+
+    check = huggingface_auth_check()
+
+    assert check.name == "hf-auth"
+    assert check.status == "ok"
+    assert "environment" in check.message
 
 
 def test_dev_runner_repo_root_defaults_to_project_root():

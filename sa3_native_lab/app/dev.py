@@ -178,15 +178,7 @@ def collect_checks(root: Path, *, host: str, api_port: int, frontend_port: int) 
             f"frontend port {host}:{frontend_port} is {'already in use' if is_port_open(host, frontend_port) else 'available'}",
         )
     )
-    token_present = bool(os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN"))
-    checks.append(
-        DevCheck(
-            "hf-token",
-            "ok" if token_present else "warn",
-            "Hugging Face token is configured" if token_present else "Hugging Face token is not set",
-            None if token_present else "set HF_TOKEN or run `hf auth login` before gated model downloads",
-        )
-    )
+    checks.append(huggingface_auth_check())
     return checks
 
 
@@ -249,6 +241,28 @@ def runtime_checks(root: Path) -> list[DevCheck]:
     except Exception as exc:  # pragma: no cover - defensive doctor path.
         checks.append(DevCheck("backends", "warn", "backend status check failed", str(exc)))
     return checks
+
+
+def huggingface_auth_check() -> DevCheck:
+    if os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN"):
+        return DevCheck("hf-auth", "ok", "Hugging Face token is configured from the environment")
+    try:
+        from huggingface_hub import get_token
+    except ImportError:
+        return DevCheck(
+            "hf-auth",
+            "warn",
+            "Hugging Face auth could not be checked",
+            "huggingface_hub is not importable",
+        )
+    if get_token():
+        return DevCheck("hf-auth", "ok", "Hugging Face token is available from the local auth cache")
+    return DevCheck(
+        "hf-auth",
+        "warn",
+        "Hugging Face token is not configured",
+        "run `hf auth login` or set HF_TOKEN before gated model downloads",
+    )
 
 
 def build_api_command(
