@@ -27,7 +27,10 @@ export const appRouter = t.router({
   workbench: t.router({
     load: t.procedure
       .input(workbenchLoadInputSchema.optional().default({}))
-      .query(({ ctx, input }) => loadWorkbenchState(createPythonClient(ctx), input)),
+      .query(({ ctx, input }) => {
+        const { apiBase: baseUrl = ctx.baseUrl, ...workbenchInput } = input;
+        return loadWorkbenchState(createPythonClient({ ...ctx, baseUrl }), workbenchInput);
+      }),
   }),
   archive: t.router({
     search: t.procedure.input(archiveSearchInputSchema).query(({ ctx, input }) =>

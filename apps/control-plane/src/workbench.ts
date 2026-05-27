@@ -11,6 +11,7 @@ import type {
 import type { PythonClient } from "./pythonClient.js";
 
 export const workbenchLoadInputSchema = z.object({
+  apiBase: z.string().url().optional(),
   sessionId: z.string().nullable().optional(),
   sessionStartedAt: z.string().datetime().nullable().optional(),
   selectedArtifactId: z.string().nullable().optional(),
