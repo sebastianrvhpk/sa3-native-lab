@@ -1,0 +1,2172 @@
+import { type CSSProperties, type MouseEvent, useEffect, useMemo, useRef, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  Activity,
+  AudioLines,
+  Box,
+  Braces,
+  Check,
+  CircleAlert,
+  CircleDot,
+  Database,
+  Download,
+  FileAudio,
+  FlaskConical,
+  Gauge,
+  GitFork,
+  LoaderCircle,
+  Pause,
+  Play,
+  Plus,
+  Repeat,
+  Route,
+  SlidersHorizontal,
+  SkipBack,
+  SkipForward,
+  Upload,
+  Wand2,
+  Waves,
+} from "lucide-react";
+
+import modelImage from "../../stable-audio-3.png";
+import { createApi, type ExperimentPayload } from "./api";
+import { useBenchStore } from "./store";
+import type { ArtifactRecord, JobRecord, ModelStatus, NotebookMode, OperatorName } from "./types";
+
+const audioModels = [
+  { value: "medium", label: "medium", decoder: "same-l" },
+  { value: "sm-music", label: "sm-music", decoder: "same-s" },
+  { value: "sm-sfx", label: "sm-sfx", decoder: "same-s" },
+] as const;
+
+type ExperimentMode =
+  | "experiment.audio_style_vectors"
+  | "experiment.positive_style_profile"
+  | "experiment.style_profile.build"
+  | "experiment.style_profile.generate"
+  | "experiment.style_direction.generate"
+  | "experiment.audio_direction.generate"
+  | "experiment.sa3_vectors.extract"
+  | "experiment.audio_residual_vectors.extract"
+  | "experiment.alpha_sweep"
+  | "experiment.soft_prompt.optimize"
+  | "experiment.soft_prompt.generate"
+  | "dataset.pre_encode"
+  | "training.lora";
+
+type RecipeValue = string | number | boolean;
+type RecipeFieldType = "text" | "number" | "range" | "select" | "checkbox" | "path" | "artifact-path";
+
+interface RecipeField {
+  key: string;
+  label: string;
+  type: RecipeFieldType;
+  defaultValue?: RecipeValue;
+  required?: boolean;
+  advanced?: boolean;
+  min?: number;
+  max?: number;
+  step?: number;
+  options?: readonly { value: string; label: string }[];
+  artifactKinds?: readonly ArtifactRecord["kind"][];
+  placeholder?: string;
+}
+
+interface ExperimentConfig {
+  value: ExperimentMode;
+  label: string;
+  family: "Style" | "Residual" | "Soft Prompt" | "Dataset" | "Training";
+  maturity: "lab" | "probe" | "danger";
+  backend: ExperimentPayload["backend"];
+  modelDefault?: string;
+  produces: readonly ArtifactRecord["kind"][];
+  fields: readonly RecipeField[];
+  selectedAudioFallback?: string;
+}
+
+interface FieldConfig {
+  fields: readonly RecipeField[];
+}
+
+type LatentOperatorMode =
+  | "latent.cyclic_roll"
+  | "latent.blur"
+  | "latent.dsp"
+  | "latent.graft"
+  | "latent.renoise";
+
+interface OperatorConfig extends FieldConfig {
+  value: LatentOperatorMode;
+  label: string;
+  family: "Loop" | "Blur" | "DSP" | "Graft" | "Renoise";
+  maturity: "lab" | "probe";
+  defaultBackend: "torch_cpu" | "torch_mps";
+  requiresDonor?: boolean;
+}
+
+const sameModelOptions = [
+  { value: "same-s", label: "same-s" },
+  { value: "same-l", label: "same-l" },
+] as const;
+
+const sa3ModelOptions = [
+  { value: "medium", label: "medium" },
+  { value: "small-music", label: "small-music" },
+  { value: "small-sfx", label: "small-sfx" },
+] as const;
+
+const backendOptions = [
+  { value: "torch_mps", label: "torch_mps" },
+  { value: "torch_cpu", label: "torch_cpu" },
+  { value: "cpu", label: "cpu" },
+] as const;
+
+const operatorBackendOptions = [
+  { value: "torch_mps", label: "torch_mps" },
+  { value: "torch_cpu", label: "torch_cpu" },
+] as const;
+
+const torchCpuOperatorOptions = [
+  { value: "torch_cpu", label: "torch_cpu" },
+] as const;
+
+const maskModeOptions = [
+  { value: "random_channels", label: "random channels" },
+  { value: "high_variance", label: "high variance" },
+  { value: "low_variance", label: "low variance" },
+  { value: "high_activity", label: "high activity" },
+  { value: "low_activity", label: "low activity" },
+  { value: "channel_block", label: "channel block" },
+  { value: "every_n", label: "comb / every n" },
+] as const;
+
+const latentBlurModeOptions = [
+  { value: "temporal", label: "temporal blur" },
+  { value: "channel", label: "channel blur" },
+  { value: "temporal_channel", label: "temporal + channel" },
+  { value: "low_rank", label: "low rank" },
+  { value: "detail_attenuate", label: "detail attenuate" },
+  { value: "sharpen", label: "temporal sharpen" },
+  { value: "channel_sharpen", label: "channel sharpen" },
+  { value: "fft_lowpass", label: "FFT lowpass" },
+  { value: "fft_highpass", label: "FFT highpass" },
+  { value: "fft_bandpass", label: "FFT bandpass" },
+  { value: "mean_blend", label: "mean blend" },
+] as const;
+
+const temporalKernelOptions = [
+  { value: "gaussian", label: "gaussian" },
+  { value: "box", label: "box" },
+] as const;
+
+const temporalDirectionOptions = [
+  { value: "centered", label: "centered" },
+  { value: "past", label: "past" },
+  { value: "future", label: "future" },
+] as const;
+
+const latentDspModeOptions = [
+  { value: "gain", label: "gain" },
+  { value: "compress", label: "compress" },
+  { value: "expand", label: "expand" },
+  { value: "softclip", label: "soft clip" },
+  { value: "fft_eq", label: "FFT EQ" },
+  { value: "fft_phase_shift", label: "phase shift" },
+  { value: "fft_phase_randomize", label: "phase randomize" },
+  { value: "fft_phase_blend", label: "donor phase blend" },
+  { value: "fft_mag_phase_graft", label: "donor magnitude graft" },
+  { value: "fft_phase_from_donor", label: "donor phase" },
+  { value: "pca_gain", label: "PCA component gain" },
+] as const;
+
+const dspCenterOptions = [
+  { value: "channel_mean", label: "channel mean" },
+  { value: "global_mean", label: "global mean" },
+  { value: "zero", label: "zero" },
+] as const;
+
+const operatorModes = [
+  { value: "latent.cyclic_roll", label: "cyclic roll" },
+  { value: "latent.blur", label: "latent blur" },
+  { value: "latent.dsp", label: "latent DSP" },
+  { value: "latent.graft", label: "latent graft" },
+  { value: "latent.renoise", label: "latent renoise" },
+] as const;
+
+const operatorCatalog: readonly OperatorConfig[] = [
+  {
+    value: "latent.cyclic_roll",
+    label: "Cyclic roll",
+    family: "Loop",
+    maturity: "lab",
+    defaultBackend: "torch_mps",
+    fields: [
+      { key: "shift_frames", label: "Shift frames", type: "number", defaultValue: 1, min: -4096, max: 4096, step: 1 },
+      { key: "strength", label: "Mix strength", type: "range", defaultValue: 1, min: 0, max: 1, step: 0.01 },
+      { key: "symmetric", label: "Symmetric mix", type: "checkbox", defaultValue: true },
+      { key: "backend", label: "Backend", type: "select", defaultValue: "torch_mps", options: operatorBackendOptions, advanced: true },
+      { key: "seed", label: "Seed", type: "number", defaultValue: 7, step: 1, advanced: true },
+    ],
+  },
+  {
+    value: "latent.blur",
+    label: "Latent blur",
+    family: "Blur",
+    maturity: "lab",
+    defaultBackend: "torch_mps",
+    fields: [
+      { key: "mode", label: "Mode", type: "select", defaultValue: "temporal", options: latentBlurModeOptions },
+      { key: "strength", label: "Strength", type: "range", defaultValue: 0.5, min: 0, max: 1.5, step: 0.01 },
+      { key: "temporal_radius", label: "Temporal radius", type: "number", defaultValue: 4, min: 0, step: 1 },
+      { key: "channel_radius", label: "Channel radius", type: "number", defaultValue: 2, min: 0, step: 1 },
+      { key: "temporal_sigma", label: "Temporal sigma", type: "number", min: 0, step: 0.05, advanced: true },
+      { key: "temporal_kernel", label: "Temporal kernel", type: "select", defaultValue: "gaussian", options: temporalKernelOptions, advanced: true },
+      { key: "temporal_direction", label: "Temporal direction", type: "select", defaultValue: "centered", options: temporalDirectionOptions, advanced: true },
+      { key: "channel_sigma", label: "Channel sigma", type: "number", min: 0, step: 0.05, advanced: true },
+      { key: "rank", label: "Low-rank keep", type: "number", defaultValue: 16, min: 1, step: 1, advanced: true },
+      { key: "detail_gain", label: "Detail gain", type: "range", defaultValue: 0.25, min: 0, max: 2, step: 0.01, advanced: true },
+      { key: "sharpen_amount", label: "Sharpen amount", type: "range", defaultValue: 0.5, min: 0, max: 2, step: 0.01, advanced: true },
+      { key: "filter_cutoff", label: "Filter cutoff", type: "range", defaultValue: 0.5, min: 0, max: 1, step: 0.01, advanced: true },
+      { key: "filter_low_cutoff", label: "Band low cutoff", type: "range", defaultValue: 0.1, min: 0, max: 1, step: 0.01, advanced: true },
+      { key: "filter_high_cutoff", label: "Band high cutoff", type: "range", defaultValue: 0.6, min: 0, max: 1, step: 0.01, advanced: true },
+      { key: "filter_low_gain", label: "Low gain", type: "range", defaultValue: 0, min: 0, max: 2, step: 0.01, advanced: true },
+      { key: "filter_mid_gain", label: "Mid gain", type: "range", defaultValue: 1, min: 0, max: 2, step: 0.01, advanced: true },
+      { key: "filter_high_gain", label: "High gain", type: "range", defaultValue: 0, min: 0, max: 2, step: 0.01, advanced: true },
+      { key: "backend", label: "Backend", type: "select", defaultValue: "torch_mps", options: operatorBackendOptions, advanced: true },
+      { key: "seed", label: "Seed", type: "number", defaultValue: 7, step: 1, advanced: true },
+    ],
+  },
+  {
+    value: "latent.dsp",
+    label: "Latent DSP",
+    family: "DSP",
+    maturity: "lab",
+    defaultBackend: "torch_mps",
+    fields: [
+      { key: "mode", label: "Mode", type: "select", defaultValue: "gain", options: latentDspModeOptions },
+      { key: "strength", label: "Blend strength", type: "range", defaultValue: 1, min: 0, max: 1.5, step: 0.01 },
+      { key: "gain", label: "Gain", type: "range", defaultValue: 1.2, min: 0, max: 3, step: 0.01 },
+      { key: "center", label: "Center", type: "select", defaultValue: "channel_mean", options: dspCenterOptions },
+      { key: "threshold", label: "Threshold", type: "range", defaultValue: 1, min: 0.01, max: 4, step: 0.01, advanced: true },
+      { key: "ratio", label: "Ratio", type: "range", defaultValue: 4, min: 0.1, max: 12, step: 0.1, advanced: true },
+      { key: "makeup_gain", label: "Makeup gain", type: "range", defaultValue: 1, min: 0, max: 3, step: 0.01, advanced: true },
+      { key: "drive", label: "Drive", type: "range", defaultValue: 1, min: 0.01, max: 6, step: 0.01, advanced: true },
+      { key: "ceiling", label: "Ceiling", type: "range", defaultValue: 2, min: 0.01, max: 8, step: 0.01, advanced: true },
+      { key: "fft_low_cutoff", label: "FFT low cutoff", type: "range", defaultValue: 0.15, min: 0, max: 1, step: 0.01, advanced: true },
+      { key: "fft_high_cutoff", label: "FFT high cutoff", type: "range", defaultValue: 0.65, min: 0, max: 1, step: 0.01, advanced: true },
+      { key: "fft_low_gain", label: "FFT low gain", type: "range", defaultValue: 1, min: 0, max: 3, step: 0.01, advanced: true },
+      { key: "fft_mid_gain", label: "FFT mid gain", type: "range", defaultValue: 1, min: 0, max: 3, step: 0.01, advanced: true },
+      { key: "fft_high_gain", label: "FFT high gain", type: "range", defaultValue: 1, min: 0, max: 3, step: 0.01, advanced: true },
+      { key: "phase_shift_fraction", label: "Phase shift", type: "range", defaultValue: 0, min: -1, max: 1, step: 0.01, advanced: true },
+      { key: "phase_random_amount", label: "Random phase", type: "range", defaultValue: 1, min: 0, max: 1, step: 0.01, advanced: true },
+      { key: "phase_blend_amount", label: "Donor phase blend", type: "range", defaultValue: 1, min: 0, max: 1, step: 0.01, advanced: true },
+      { key: "magnitude_amount", label: "Donor magnitude", type: "range", defaultValue: 1, min: 0, max: 1, step: 0.01, advanced: true },
+      { key: "pca_rank", label: "PCA rank", type: "number", min: 1, step: 1, advanced: true },
+      { key: "pca_component_gains", label: "PCA gains", type: "text", placeholder: "1,0.8,1.2", advanced: true },
+      { key: "seed", label: "Seed", type: "number", defaultValue: 7, step: 1, advanced: true },
+      { key: "backend", label: "Backend", type: "select", defaultValue: "torch_mps", options: operatorBackendOptions, advanced: true },
+    ],
+  },
+  {
+    value: "latent.graft",
+    label: "Latent graft",
+    family: "Graft",
+    maturity: "lab",
+    defaultBackend: "torch_mps",
+    requiresDonor: true,
+    fields: [
+      { key: "mode", label: "Mask mode", type: "select", defaultValue: "random_channels", options: maskModeOptions },
+      { key: "fraction", label: "Channel fraction", type: "range", defaultValue: 0.25, min: 0.01, max: 1, step: 0.01 },
+      { key: "amount", label: "Graft amount", type: "range", defaultValue: 1, min: 0, max: 1, step: 0.01 },
+      { key: "seed", label: "Mask seed", type: "number", defaultValue: 7, step: 1 },
+      { key: "channels", label: "Explicit channels", type: "text", placeholder: "0,3,12", advanced: true },
+      { key: "start_channel", label: "Block start", type: "number", min: 0, step: 1, advanced: true },
+      { key: "block_size", label: "Block size", type: "number", min: 1, step: 1, advanced: true },
+      { key: "backend", label: "Backend", type: "select", defaultValue: "torch_mps", options: operatorBackendOptions, advanced: true },
+    ],
+  },
+  {
+    value: "latent.renoise",
+    label: "Latent renoise",
+    family: "Renoise",
+    maturity: "lab",
+    defaultBackend: "torch_cpu",
+    fields: [
+      { key: "mode", label: "Mask mode", type: "select", defaultValue: "random_channels", options: maskModeOptions },
+      { key: "fraction", label: "Channel fraction", type: "range", defaultValue: 0.25, min: 0.01, max: 1, step: 0.01 },
+      { key: "sigma", label: "Noise sigma", type: "range", defaultValue: 0.4, min: 0, max: 1.5, step: 0.01 },
+      { key: "seed", label: "Noise seed", type: "number", defaultValue: 7, step: 1 },
+      { key: "channels", label: "Explicit channels", type: "text", placeholder: "0,3,12", advanced: true },
+      { key: "start_channel", label: "Block start", type: "number", min: 0, step: 1, advanced: true },
+      { key: "block_size", label: "Block size", type: "number", min: 1, step: 1, advanced: true },
+      { key: "backend", label: "Backend", type: "select", defaultValue: "torch_cpu", options: torchCpuOperatorOptions, advanced: true },
+    ],
+  },
+];
+
+const experimentCatalog: readonly ExperimentConfig[] = [
+  {
+    value: "experiment.audio_style_vectors",
+    label: "Audio style vectors",
+    family: "Style",
+    maturity: "lab",
+    backend: "torch_mps",
+    modelDefault: "same-l",
+    produces: ["bundle"],
+    fields: [
+      { key: "positive_path", label: "Positive folder", type: "path", required: true },
+      { key: "negative_path", label: "Negative folder", type: "path", required: true },
+      { key: "name", label: "Name", type: "text", defaultValue: "audio_direction" },
+      { key: "model", label: "SAME model", type: "select", defaultValue: "same-l", options: sameModelOptions },
+      { key: "backend", label: "Backend", type: "select", defaultValue: "torch_mps", options: backendOptions },
+      { key: "limit", label: "Limit", type: "number", defaultValue: 0, min: 0, step: 1, advanced: true },
+      { key: "chunked", label: "Chunked encode", type: "checkbox", defaultValue: false, advanced: true },
+      { key: "normalize_frame", label: "Normalize frame", type: "checkbox", defaultValue: false, advanced: true },
+      { key: "device", label: "Device", type: "text", advanced: true },
+    ],
+  },
+  {
+    value: "experiment.positive_style_profile",
+    label: "Positive style profile",
+    family: "Style",
+    maturity: "lab",
+    backend: "torch_mps",
+    modelDefault: "same-l",
+    produces: ["bundle"],
+    fields: [
+      { key: "input_path", label: "Audio folder", type: "path", required: true },
+      { key: "name", label: "Name", type: "text", defaultValue: "positive_style" },
+      { key: "model", label: "SAME model", type: "select", defaultValue: "same-l", options: sameModelOptions },
+      { key: "backend", label: "Backend", type: "select", defaultValue: "torch_mps", options: backendOptions },
+      { key: "limit", label: "Limit", type: "number", defaultValue: 0, min: 0, step: 1, advanced: true },
+      { key: "chunked", label: "Chunked encode", type: "checkbox", defaultValue: false, advanced: true },
+      { key: "device", label: "Device", type: "text", advanced: true },
+    ],
+  },
+  {
+    value: "experiment.style_profile.build",
+    label: "Build style profile",
+    family: "Style",
+    maturity: "lab",
+    backend: "cpu",
+    produces: ["bundle"],
+    fields: [
+      { key: "target_memory_path", label: "Target memory", type: "artifact-path", required: true, artifactKinds: ["bundle"] },
+      { key: "reference_memory_path", label: "Reference memory", type: "artifact-path", artifactKinds: ["bundle"] },
+      { key: "name", label: "Name", type: "text", defaultValue: "target_style" },
+      { key: "backend", label: "Backend", type: "select", defaultValue: "cpu", options: backendOptions, advanced: true },
+    ],
+  },
+  {
+    value: "experiment.style_profile.generate",
+    label: "Generate from profile",
+    family: "Style",
+    maturity: "lab",
+    backend: "torch_mps",
+    modelDefault: "medium",
+    produces: ["audio"],
+    fields: [
+      { key: "profile_path", label: "Profile .npz", type: "artifact-path", required: true, artifactKinds: ["bundle"] },
+      { key: "prompt", label: "Prompt", type: "text", defaultValue: "audio texture", required: true },
+      { key: "alpha", label: "Alpha", type: "number", defaultValue: 0.6, step: 0.05 },
+      { key: "model", label: "SA3 model", type: "select", defaultValue: "medium", options: sa3ModelOptions },
+      ...generationFields(),
+      { key: "match_std", label: "Match std", type: "checkbox", defaultValue: true, advanced: true },
+      { key: "save_original", label: "Save original", type: "checkbox", defaultValue: false, advanced: true },
+      ...torchAdvancedFields(),
+    ],
+  },
+  {
+    value: "experiment.style_direction.generate",
+    label: "Generate from style direction",
+    family: "Style",
+    maturity: "lab",
+    backend: "torch_mps",
+    modelDefault: "medium",
+    produces: ["audio"],
+    fields: [
+      { key: "direction_path", label: "Direction .npz", type: "artifact-path", required: true, artifactKinds: ["bundle"] },
+      { key: "prompt", label: "Prompt", type: "text", defaultValue: "audio texture", required: true },
+      { key: "alpha", label: "Alpha", type: "number", defaultValue: 0.6, step: 0.05 },
+      { key: "std_alpha", label: "Std alpha", type: "number", defaultValue: 0, step: 0.05 },
+      { key: "model", label: "SA3 model", type: "select", defaultValue: "medium", options: sa3ModelOptions },
+      ...generationFields(),
+      { key: "save_original", label: "Save original", type: "checkbox", defaultValue: false, advanced: true },
+      ...torchAdvancedFields(),
+    ],
+  },
+  {
+    value: "experiment.audio_direction.generate",
+    label: "Generate from audio direction",
+    family: "Style",
+    maturity: "lab",
+    backend: "torch_mps",
+    modelDefault: "medium",
+    produces: ["audio"],
+    fields: [
+      { key: "direction_path", label: "Frame direction .npz", type: "artifact-path", required: true, artifactKinds: ["bundle"] },
+      { key: "prompt", label: "Prompt", type: "text", defaultValue: "audio texture", required: true },
+      { key: "alpha", label: "Alpha", type: "number", defaultValue: 0.6, step: 0.05 },
+      { key: "model", label: "SA3 model", type: "select", defaultValue: "medium", options: sa3ModelOptions },
+      ...generationFields(),
+      { key: "save_original", label: "Save original", type: "checkbox", defaultValue: false, advanced: true },
+      ...torchAdvancedFields(),
+    ],
+  },
+  {
+    value: "experiment.sa3_vectors.extract",
+    label: "Prompt residual vectors",
+    family: "Residual",
+    maturity: "probe",
+    backend: "torch_mps",
+    modelDefault: "medium",
+    produces: ["bundle"],
+    fields: [
+      { key: "axis", label: "Axis", type: "text", defaultValue: "valence", required: true },
+      { key: "num_pairs", label: "Prompt pairs", type: "number", defaultValue: 2, min: 1, step: 1 },
+      { key: "model", label: "SA3 model", type: "select", defaultValue: "medium", options: sa3ModelOptions },
+      ...generationFields(),
+      { key: "layers", label: "Layers", type: "text", placeholder: "blank or 1,4,8", advanced: true },
+      ...torchAdvancedFields(),
+    ],
+  },
+  {
+    value: "experiment.audio_residual_vectors.extract",
+    label: "Audio residual vectors",
+    family: "Residual",
+    maturity: "probe",
+    backend: "torch_mps",
+    modelDefault: "medium",
+    produces: ["bundle"],
+    fields: [
+      { key: "positive_path", label: "Positive folder", type: "path", required: true },
+      { key: "negative_path", label: "Negative folder", type: "path" },
+      { key: "baseline", label: "Baseline", type: "select", defaultValue: "prompt", options: [{ value: "prompt", label: "prompt" }, { value: "negative_audio", label: "negative_audio" }] },
+      { key: "prompt", label: "Prompt", type: "text", defaultValue: "audio texture" },
+      { key: "model", label: "SA3 model", type: "select", defaultValue: "medium", options: sa3ModelOptions },
+      ...generationFields(),
+      { key: "init_noise_level", label: "Init noise", type: "number", defaultValue: 0.35, min: 0, step: 0.05, advanced: true },
+      { key: "layers", label: "Layers", type: "text", advanced: true },
+      { key: "limit", label: "Limit", type: "number", defaultValue: 0, min: 0, step: 1, advanced: true },
+      ...torchAdvancedFields(),
+    ],
+  },
+  {
+    value: "experiment.alpha_sweep",
+    label: "Alpha sweep",
+    family: "Residual",
+    maturity: "lab",
+    backend: "torch_mps",
+    modelDefault: "medium",
+    produces: ["audio", "bundle"],
+    fields: [
+      { key: "vectors_path", label: "Vectors", type: "artifact-path", required: true, artifactKinds: ["bundle"] },
+      { key: "prompt", label: "Prompt", type: "text", defaultValue: "audio texture", required: true },
+      { key: "alphas", label: "Alphas", type: "text", defaultValue: "-8,-4,0,4,8" },
+      { key: "model", label: "SA3 model", type: "select", defaultValue: "medium", options: sa3ModelOptions },
+      ...generationFields(),
+      { key: "layer", label: "Layer", type: "number", defaultValue: -1, step: 1, advanced: true },
+      ...torchAdvancedFields(),
+    ],
+  },
+  {
+    value: "experiment.soft_prompt.optimize",
+    label: "Optimize soft prompt",
+    family: "Soft Prompt",
+    maturity: "probe",
+    backend: "torch_mps",
+    modelDefault: "medium",
+    produces: ["bundle"],
+    selectedAudioFallback: "target_audio_path",
+    fields: [
+      { key: "target_audio_path", label: "Target audio", type: "artifact-path", artifactKinds: ["audio"] },
+      { key: "seed_prompt", label: "Seed prompt", type: "text", defaultValue: "audio texture" },
+      { key: "optimization_steps", label: "Opt steps", type: "number", defaultValue: 100, min: 1, step: 1 },
+      { key: "model", label: "SA3 model", type: "select", defaultValue: "medium", options: sa3ModelOptions },
+      { key: "duration_seconds", label: "Seconds", type: "number", defaultValue: 0, min: 0, step: 0.5, advanced: true },
+      { key: "lr", label: "LR", type: "number", defaultValue: 0.01, step: 0.001, advanced: true },
+      { key: "reg_weight", label: "Reg weight", type: "number", defaultValue: 0.0001, step: 0.0001, advanced: true },
+      { key: "seed", label: "Seed", type: "number", defaultValue: 0, step: 1, advanced: true },
+      { key: "train_keys", label: "Train keys", type: "text", defaultValue: "prompt", advanced: true },
+      { key: "velocity_convention", label: "Velocity", type: "select", defaultValue: "noise_minus_data", advanced: true, options: [{ value: "noise_minus_data", label: "noise_minus_data" }, { value: "data_minus_noise", label: "data_minus_noise" }] },
+      ...torchAdvancedFields(),
+    ],
+  },
+  {
+    value: "experiment.soft_prompt.generate",
+    label: "Generate soft prompt",
+    family: "Soft Prompt",
+    maturity: "lab",
+    backend: "torch_mps",
+    modelDefault: "medium",
+    produces: ["audio"],
+    fields: [
+      { key: "soft_prompt_path", label: "Soft prompt .pt", type: "artifact-path", required: true, artifactKinds: ["bundle"] },
+      { key: "model", label: "SA3 model", type: "select", defaultValue: "medium", options: sa3ModelOptions },
+      { key: "steps", label: "Steps", type: "number", defaultValue: 8, min: 1, step: 1 },
+      { key: "cfg_scale", label: "CFG", type: "number", defaultValue: 1, min: 0, step: 0.1 },
+      { key: "seed", label: "Seed", type: "number", defaultValue: 42, step: 1 },
+      ...torchAdvancedFields(),
+    ],
+  },
+  {
+    value: "dataset.pre_encode",
+    label: "Pre-encode dataset",
+    family: "Dataset",
+    maturity: "lab",
+    backend: "torch_mps",
+    modelDefault: "same-l",
+    produces: ["bundle"],
+    fields: [
+      { key: "data_dir", label: "Dataset folder", type: "path", required: true },
+      { key: "model", label: "SAME model", type: "select", defaultValue: "same-l", options: sameModelOptions },
+      { key: "batch_size", label: "Batch size", type: "number", defaultValue: 1, min: 1, step: 1 },
+      { key: "sample_size", label: "Sample size", type: "number", defaultValue: 12582912, min: 1, step: 1, advanced: true },
+      { key: "model_half", label: "Model half", type: "checkbox", defaultValue: false, advanced: true },
+      { key: "pad", label: "Pad", type: "checkbox", defaultValue: false, advanced: true },
+      { key: "device", label: "Device", type: "text", advanced: true },
+    ],
+  },
+  {
+    value: "training.lora",
+    label: "Train LoRA",
+    family: "Training",
+    maturity: "danger",
+    backend: "torch_mps",
+    modelDefault: "medium-base",
+    produces: ["bundle"],
+    fields: [
+      { key: "encoded_dir", label: "Encoded dataset", type: "artifact-path", artifactKinds: ["bundle"] },
+      { key: "data_dir", label: "Raw dataset", type: "path" },
+      { key: "model", label: "Base model", type: "select", defaultValue: "medium-base", options: [{ value: "medium-base", label: "medium-base" }] },
+      { key: "steps", label: "Steps", type: "number", defaultValue: 10000, min: 1, step: 100 },
+      { key: "rank", label: "Rank", type: "number", defaultValue: 16, min: 1, step: 1 },
+      { key: "adapter_type", label: "Adapter", type: "select", defaultValue: "dora-rows", advanced: true, options: ["lora", "dora", "dora-rows", "dora-cols", "bora", "lora-xs", "dora-rows-xs", "dora-cols-xs", "bora-xs"].map((value) => ({ value, label: value })) },
+      { key: "lora_alpha", label: "LoRA alpha", type: "number", step: 1, advanced: true },
+      { key: "dropout", label: "Dropout", type: "number", defaultValue: 0, min: 0, max: 1, step: 0.05, advanced: true },
+      { key: "include", label: "Include", type: "text", advanced: true },
+      { key: "exclude", label: "Exclude", type: "text", advanced: true },
+      { key: "svd_bases_path", label: "SVD bases", type: "artifact-path", artifactKinds: ["bundle"], advanced: true },
+      { key: "base_precision", label: "Base precision", type: "select", defaultValue: "bf16", advanced: true, options: ["bf16", "bfloat16", "fp16", "float16"].map((value) => ({ value, label: value })) },
+      { key: "lora_checkpoint", label: "Resume ckpt", type: "artifact-path", artifactKinds: ["bundle"], advanced: true },
+      { key: "lr", label: "LR", type: "number", defaultValue: 0.0001, step: 0.00001, advanced: true },
+      { key: "batch_size", label: "Batch size", type: "number", defaultValue: 1, min: 1, step: 1, advanced: true },
+      { key: "duration_seconds", label: "Seconds", type: "number", defaultValue: 380, min: 1, step: 1, advanced: true },
+      { key: "seed", label: "Seed", type: "number", defaultValue: 42, step: 1, advanced: true },
+      { key: "device", label: "Device", type: "text", advanced: true },
+      { key: "logger", label: "Logger", type: "select", defaultValue: "csv", advanced: true, options: ["wandb", "comet", "csv", "none"].map((value) => ({ value, label: value })) },
+      { key: "name", label: "Run name", type: "text", defaultValue: "lora-finetune", advanced: true },
+      { key: "checkpoint_every", label: "Ckpt every", type: "number", defaultValue: 500, min: 1, step: 1, advanced: true },
+      { key: "log_every", label: "Log every", type: "number", defaultValue: 100, min: 1, step: 1, advanced: true },
+      { key: "demo_every", label: "Demo every", type: "number", defaultValue: 500, min: 1, step: 1, advanced: true },
+      { key: "num_workers", label: "Workers", type: "number", defaultValue: 8, min: 0, step: 1, advanced: true },
+    ],
+  },
+];
+
+const experimentModes = experimentCatalog.map(({ value, label }) => ({ value, label }));
+
+export function App() {
+  const queryClient = useQueryClient();
+  const { apiBase, setApiBase, selectedArtifactId, selectArtifact, sessionStartedAt, startSession, compare, setCompare } = useBenchStore();
+  const api = useMemo(() => createApi(apiBase), [apiBase]);
+
+  const health = useQuery({ queryKey: ["health", apiBase], queryFn: api.health, refetchInterval: 3000 });
+  const modeAtlas = useQuery({ queryKey: ["colab-modes", apiBase], queryFn: api.colabModes, staleTime: Infinity });
+  const artifacts = useQuery({ queryKey: ["artifacts", apiBase], queryFn: () => api.artifacts(), refetchInterval: 1500 });
+  const jobs = useQuery({ queryKey: ["jobs", apiBase], queryFn: api.jobs, refetchInterval: 1000 });
+
+  const [prompt, setPrompt] = useState("short soft percussive click");
+  const [negativePrompt, setNegativePrompt] = useState("");
+  const [duration, setDuration] = useState(5);
+  const [steps, setSteps] = useState(8);
+  const [seed, setSeed] = useState(7);
+  const [cfgScale, setCfgScale] = useState(1);
+  const [apgScale, setApgScale] = useState(1);
+  const [audioModel, setAudioModel] = useState<(typeof audioModels)[number]["value"]>("medium");
+  const [audioDecoder, setAudioDecoder] = useState<"same-s" | "same-l">("same-l");
+  const [sameModel, setSameModel] = useState<"same-s" | "same-l">("same-l");
+  const [sameChunked, setSameChunked] = useState(false);
+  const [sameChunkSize, setSameChunkSize] = useState(128);
+  const [sameOverlap, setSameOverlap] = useState(32);
+  const [samePrompt, setSamePrompt] = useState("");
+  const [sameNotes, setSameNotes] = useState("");
+  const [operator, setOperator] = useState<LatentOperatorMode>("latent.cyclic_roll");
+  const [operatorForm, setOperatorForm] = useState<Record<string, RecipeValue>>(() => defaultOperatorForm("latent.cyclic_roll"));
+  const [donorArtifactId, setDonorArtifactId] = useState("");
+  const [experimentMode, setExperimentMode] = useState<ExperimentMode>("experiment.audio_style_vectors");
+  const [experimentForm, setExperimentForm] = useState<Record<string, RecipeValue>>(() => defaultExperimentForm("experiment.audio_style_vectors"));
+
+  const allArtifacts = artifacts.data ?? [];
+  const sessionArtifacts = allArtifacts.filter((item) => createdAfter(item.created_at, sessionStartedAt));
+  const visibleArtifacts = sessionArtifacts;
+  const selectedArtifact = allArtifacts.find((item) => item.artifact_id === selectedArtifactId) ?? visibleArtifacts[0] ?? null;
+  const audioArtifacts = allArtifacts.filter((item) => item.kind === "audio");
+  const latentArtifacts = allArtifacts.filter((item) => item.kind === "latent");
+  const bundleArtifacts = allArtifacts.filter((item) => item.kind === "bundle");
+  const allJobs = jobs.data ?? [];
+  const sessionJobs = allJobs.filter((item) => createdAfter(item.created_at, sessionStartedAt));
+  const archiveJobs = allJobs.filter((item) => !createdAfter(item.created_at, sessionStartedAt));
+  const archiveArtifacts = allArtifacts.filter((item) => !createdAfter(item.created_at, sessionStartedAt));
+  const runningJobs = allJobs.filter(isJobActive);
+  const latestJobs = allJobs.slice(0, 8);
+  const compareA = allArtifacts.find((item) => item.artifact_id === compare.a) ?? null;
+  const compareB = allArtifacts.find((item) => item.artifact_id === compare.b) ?? null;
+  const activeExperiment = experimentCatalog.find((item) => item.value === experimentMode) ?? experimentCatalog[0];
+  const activeOperatorConfig = operatorCatalog.find((item) => item.value === operator) ?? operatorCatalog[0];
+  const canRunOperator = operatorReady(activeOperatorConfig, operatorForm, selectedArtifact, donorArtifactId);
+  const generateJob = activeJobForOperator(runningJobs, "generate.text_to_audio");
+  const encodeJob = activeJobForOperator(runningJobs, "latent.encode");
+  const decodeJob = activeJobForOperator(runningJobs, "latent.decode");
+  const operatorJob = activeJobForOperator(runningJobs, operator);
+  const experimentJob = activeJobForOperator(runningJobs, activeExperiment.value);
+
+  useEffect(() => {
+    if (!selectedArtifactId && visibleArtifacts[0]) {
+      selectArtifact(visibleArtifacts[0].artifact_id);
+    }
+  }, [selectArtifact, selectedArtifactId, visibleArtifacts]);
+
+  const invalidate = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["artifacts", apiBase] }),
+      queryClient.invalidateQueries({ queryKey: ["jobs", apiBase] }),
+      queryClient.invalidateQueries({ queryKey: ["health", apiBase] }),
+    ]);
+  };
+
+  const importAudio = useMutation({
+    mutationFn: (file: File) => api.importAudio(file, file.name),
+    onSuccess: async (artifact) => {
+      selectArtifact(artifact.artifact_id);
+      await invalidate();
+    },
+  });
+
+  const generate = useMutation({
+    mutationFn: () => {
+      const selected = audioModels.find((item) => item.value === audioModel)!;
+      return api.generateText({
+        prompt,
+        negative_prompt: negativePrompt.trim() || null,
+        duration_seconds: duration,
+        steps,
+        seed,
+        cfg_scale: cfgScale,
+        apg_scale: apgScale,
+        model: selected.value,
+        decoder: audioDecoder,
+        backend: "mlx",
+      });
+    },
+    onSuccess: invalidate,
+  });
+
+  const encode = useMutation({
+    mutationFn: (artifact: ArtifactRecord) =>
+      api.encodeLatent({
+        source_artifact_id: artifact.artifact_id,
+        model: sameModel,
+        backend: "torch_mps",
+        chunked: sameChunked,
+        chunk_size: sameChunkSize,
+        overlap: sameOverlap,
+        prompt: samePrompt.trim() || null,
+        notes: sameNotes.trim() || null,
+      }),
+    onSuccess: invalidate,
+  });
+
+  const decode = useMutation({
+    mutationFn: (artifact: ArtifactRecord) =>
+      api.decodeLatent({
+        source_artifact_id: artifact.artifact_id,
+        model: sameModel,
+        backend: "torch_mps",
+        chunked: sameChunked,
+        chunk_size: sameChunkSize,
+        overlap: sameOverlap,
+        notes: sameNotes.trim() || null,
+      }),
+    onSuccess: invalidate,
+  });
+
+  const runOperator = useMutation({
+    mutationFn: (artifact: ArtifactRecord) =>
+      api.runOperator({
+        operator,
+        backend: operatorBackend(operatorForm, activeOperatorConfig.defaultBackend),
+        inputs: {
+          source: artifact.artifact_id,
+          ...(donorArtifactId && operatorUsesDonor(activeOperatorConfig, operatorForm) ? { donor: donorArtifactId } : {}),
+        },
+        params: buildOperatorParams(activeOperatorConfig, operatorForm),
+        seed: operatorSeed(operatorForm, seed),
+      }),
+    onSuccess: invalidate,
+  });
+
+  const runExperiment = useMutation({
+    mutationFn: () =>
+      api.runExperiment(
+        buildExperimentPayload({
+          config: activeExperiment,
+          form: experimentForm,
+          selectedArtifact,
+        }),
+      ),
+    onSuccess: invalidate,
+  });
+
+  const canRunExperiment = experimentReady(activeExperiment, experimentForm, selectedArtifact);
+
+  const setExperimentField = (key: string, value: RecipeValue) => {
+    setExperimentForm((current) => ({ ...current, [key]: value }));
+  };
+
+  const setOperatorField = (key: string, value: RecipeValue) => {
+    setOperatorForm((current) => ({ ...current, [key]: value }));
+  };
+
+  const selectOperatorMode = (mode: LatentOperatorMode) => {
+    setOperator(mode);
+    setOperatorForm(defaultOperatorForm(mode));
+    setDonorArtifactId("");
+  };
+
+  const selectExperimentMode = (mode: ExperimentMode) => {
+    setExperimentMode(mode);
+    setExperimentForm(defaultExperimentForm(mode));
+  };
+
+  return (
+    <main className="app-shell">
+      <header className="top-strip">
+        <div className="brand-mark">
+          <img src={modelImage} alt="" />
+          <div>
+            <strong>SA3 Native Lab</strong>
+            <span>{health.data?.artifact_root ?? ".sa3_lab"}</span>
+          </div>
+        </div>
+        <div className="api-field">
+          <label htmlFor="api-base">API</label>
+          <input id="api-base" value={apiBase} onChange={(event) => setApiBase(event.target.value)} />
+        </div>
+        <BackendPills backends={health.data?.backends ?? []} />
+      </header>
+
+      <section className="bench-grid">
+        <aside className="source-rail">
+          <div className="rail-head">
+            <div>
+              <span className="eyebrow">Source</span>
+              <strong>{visibleArtifacts.length} session artifacts</strong>
+            </div>
+            <label className="icon-button" title="Import audio">
+              <Upload size={18} />
+              <input
+                type="file"
+                accept="audio/*"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) importAudio.mutate(file);
+                  event.currentTarget.value = "";
+                }}
+              />
+            </label>
+          </div>
+          <ArtifactStack
+            artifacts={visibleArtifacts}
+            selectedId={selectedArtifact?.artifact_id ?? null}
+            onSelect={selectArtifact}
+            apiBase={apiBase}
+          />
+        </aside>
+
+        <section className="operator-surface">
+          <div className="surface-head">
+            <div>
+              <span className="eyebrow">Listening Bench</span>
+              <h1>{selectedArtifact ? artifactName(selectedArtifact) : "No artifact selected"}</h1>
+            </div>
+            {selectedArtifact ? <ArtifactBadge artifact={selectedArtifact} /> : null}
+          </div>
+
+          <Specimen artifact={selectedArtifact} artifacts={allArtifacts} apiBase={apiBase} onCompare={setCompare} />
+          <RunMonitor runningJobs={runningJobs} latestJob={latestJobs[0] ?? null} />
+
+          <div className="action-bands">
+            <div className="band">
+              <div className="band-title">
+                <Wand2 size={18} />
+                <span>Generate</span>
+              </div>
+              <label className="control-cell">
+                Prompt
+                <input value={prompt} onChange={(event) => setPrompt(event.target.value)} />
+              </label>
+              <label className="control-cell">
+                Negative prompt
+                <input value={negativePrompt} onChange={(event) => setNegativePrompt(event.target.value)} placeholder="optional" />
+              </label>
+              <div className="generation-grid">
+                <label className="control-cell">
+                  Model
+                  <select
+                    value={audioModel}
+                    onChange={(event) => {
+                      const value = event.target.value as typeof audioModel;
+                      setAudioModel(value);
+                      setAudioDecoder(audioModels.find((item) => item.value === value)?.decoder ?? "same-l");
+                    }}
+                  >
+                    {audioModels.map((item) => (
+                      <option key={item.value} value={item.value}>
+                        {item.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="control-cell">
+                  Decoder
+                  <select value={audioDecoder} onChange={(event) => setAudioDecoder(event.target.value as typeof audioDecoder)}>
+                    {sameModelOptions.map((item) => (
+                      <option key={item.value} value={item.value}>
+                        {item.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="control-cell">
+                  Seconds
+                  <input type="number" min={0.5} max={120} step={0.5} value={duration} onChange={(event) => setDuration(Number(event.target.value))} />
+                </label>
+                <label className="control-cell">
+                  Steps
+                  <input type="number" min={1} max={64} value={steps} onChange={(event) => setSteps(Number(event.target.value))} />
+                </label>
+                <label className="control-cell">
+                  Seed
+                  <input type="number" step={1} value={seed} onChange={(event) => setSeed(Number(event.target.value))} />
+                </label>
+                <label className="control-cell">
+                  CFG
+                  <input type="number" min={0} step={0.1} value={cfgScale} onChange={(event) => setCfgScale(Number(event.target.value))} />
+                </label>
+                <label className="control-cell">
+                  APG
+                  <input type="number" min={0} step={0.1} value={apgScale} onChange={(event) => setApgScale(Number(event.target.value))} />
+                </label>
+              </div>
+              <button className="primary-action" onClick={() => generate.mutate()} disabled={generate.isPending || Boolean(generateJob)}>
+                {generate.isPending || generateJob ? <LoaderCircle className="spin" size={18} /> : <Play size={18} />}
+                {generateJob ? "MLX running" : generate.isPending ? "Queueing" : "Run MLX"}
+              </button>
+              <InlineJobStatus job={generateJob} />
+            </div>
+
+            <div className="band">
+              <div className="band-title">
+                <AudioLines size={18} />
+                <span>SAME</span>
+              </div>
+              <div className="segmented">
+                <button className={sameModel === "same-s" ? "active" : ""} onClick={() => setSameModel("same-s")}>
+                  same-s
+                </button>
+                <button className={sameModel === "same-l" ? "active" : ""} onClick={() => setSameModel("same-l")}>
+                  same-l
+                </button>
+              </div>
+              <details className="recipe-advanced same-advanced" open>
+                <summary>
+                  <SlidersHorizontal size={15} />
+                  Parameters
+                </summary>
+                <div className="recipe-fields advanced same-fields">
+                  <label className="field-checkbox">
+                    <input type="checkbox" checked={sameChunked} onChange={(event) => setSameChunked(event.target.checked)} />
+                    <span>Chunked encode/decode</span>
+                  </label>
+                  <label className="control-cell">
+                    Chunk size
+                    <input type="number" min={1} step={1} value={sameChunkSize} onChange={(event) => setSameChunkSize(Number(event.target.value))} />
+                  </label>
+                  <label className="control-cell">
+                    Overlap
+                    <input type="number" min={0} step={1} value={sameOverlap} onChange={(event) => setSameOverlap(Number(event.target.value))} />
+                  </label>
+                  <label className="control-cell">
+                    Encode prompt
+                    <input value={samePrompt} onChange={(event) => setSamePrompt(event.target.value)} placeholder="optional" />
+                  </label>
+                  <label className="control-cell">
+                    Notes
+                    <input value={sameNotes} onChange={(event) => setSameNotes(event.target.value)} placeholder="optional" />
+                  </label>
+                </div>
+              </details>
+              <div className="two-actions">
+                <button disabled={!selectedArtifact || selectedArtifact.kind !== "audio" || encode.isPending || Boolean(encodeJob)} onClick={() => selectedArtifact && encode.mutate(selectedArtifact)}>
+                  {encode.isPending || encodeJob ? <LoaderCircle className="spin" size={17} /> : <Box size={17} />}
+                  {encodeJob ? "Encoding" : "Encode"}
+                </button>
+                <button disabled={!selectedArtifact || selectedArtifact.kind !== "latent" || decode.isPending || Boolean(decodeJob)} onClick={() => selectedArtifact && decode.mutate(selectedArtifact)}>
+                  {decode.isPending || decodeJob ? <LoaderCircle className="spin" size={17} /> : <Waves size={17} />}
+                  {decodeJob ? "Decoding" : "Decode"}
+                </button>
+              </div>
+              <InlineJobStatus job={encodeJob ?? decodeJob} />
+            </div>
+
+            <div className="band operator-band">
+              <div className="band-title">
+                <SlidersHorizontal size={18} />
+                <span>Operator Studio</span>
+              </div>
+              <div className="recipe-mode-grid operator-mode-grid">
+                <label>
+                  Transform
+                  <select value={operator} onChange={(event) => selectOperatorMode(event.target.value as LatentOperatorMode)}>
+                    {operatorModes.map((item) => (
+                      <option key={item.value} value={item.value}>
+                        {item.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <span className={`recipe-chip ${activeOperatorConfig.maturity}`}>{activeOperatorConfig.family}</span>
+                <span className={`recipe-chip ${activeOperatorConfig.maturity}`}>{activeOperatorConfig.maturity}</span>
+              </div>
+              {operatorUsesDonor(activeOperatorConfig, operatorForm) ? (
+                <label className="control-cell donor-cell">
+                  Donor latent
+                  <select value={donorArtifactId} onChange={(event) => setDonorArtifactId(event.target.value)}>
+                    <option value="">Select latent</option>
+                    {latentArtifacts
+                      .filter((artifact) => artifact.artifact_id !== selectedArtifact?.artifact_id)
+                      .map((artifact) => (
+                        <option key={artifact.artifact_id} value={artifact.artifact_id}>
+                          {artifactName(artifact)}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+              ) : null}
+              <RecipeFields
+                config={activeOperatorConfig}
+                form={operatorForm}
+                artifacts={allArtifacts}
+                selectedArtifact={selectedArtifact}
+                onChange={setOperatorField}
+              />
+              <button className="primary-action" disabled={!canRunOperator || runOperator.isPending || Boolean(operatorJob)} onClick={() => selectedArtifact && runOperator.mutate(selectedArtifact)}>
+                {runOperator.isPending || operatorJob ? <LoaderCircle className="spin" size={18} /> : <GitFork size={17} />}
+                {operatorJob ? "Fork running" : "Fork latent"}
+              </button>
+              <InlineJobStatus job={operatorJob} />
+            </div>
+
+            <div className="band experiment-band">
+              <div className="band-title">
+                <FlaskConical size={18} />
+                <span>Recipe Studio</span>
+              </div>
+              <div className="recipe-mode-grid">
+                <label>
+                  Mode
+                  <select value={experimentMode} onChange={(event) => selectExperimentMode(event.target.value as ExperimentMode)}>
+                    {experimentModes.map((item) => (
+                      <option key={item.value} value={item.value}>
+                        {item.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <span className={`recipe-chip ${activeExperiment.maturity}`}>{activeExperiment.family}</span>
+                <span className={`recipe-chip ${activeExperiment.maturity}`}>{activeExperiment.maturity}</span>
+              </div>
+              <RecipeFields
+                config={activeExperiment}
+                form={experimentForm}
+                artifacts={allArtifacts}
+                selectedArtifact={selectedArtifact}
+                onChange={setExperimentField}
+              />
+              <button className="primary-action" disabled={!canRunExperiment || runExperiment.isPending || Boolean(experimentJob)} onClick={() => runExperiment.mutate()}>
+                {runExperiment.isPending || experimentJob ? <LoaderCircle className="spin" size={18} /> : <Play size={18} />}
+                {experimentJob ? "Recipe running" : "Run recipe"}
+              </button>
+              <InlineJobStatus job={experimentJob} />
+              <ModeAtlas modes={modeAtlas.data ?? []} activeOperator={activeExperiment.value} />
+            </div>
+          </div>
+        </section>
+
+        <aside className="result-rail">
+          <div className="rail-head">
+            <div>
+              <span className="eyebrow">Result Family</span>
+              <strong>{runningJobs.length} running</strong>
+            </div>
+            <Activity size={19} />
+          </div>
+          <SessionTray
+            artifacts={sessionArtifacts}
+            archivedArtifacts={archiveArtifacts}
+            jobs={sessionJobs}
+            archivedJobs={archiveJobs}
+            runningJobs={runningJobs}
+            selectedId={selectedArtifact?.artifact_id ?? null}
+            apiBase={apiBase}
+            sessionStartedAt={sessionStartedAt}
+            onSelect={selectArtifact}
+            onStartSession={startSession}
+          />
+          <ComparePanel a={compareA} b={compareB} apiBase={apiBase} />
+          <div className="mini-counts">
+            <span><FileAudio size={15} /> {audioArtifacts.length}</span>
+            <span><Braces size={15} /> {latentArtifacts.length}</span>
+            <span><Box size={15} /> {bundleArtifacts.length}</span>
+          </div>
+        </aside>
+      </section>
+    </main>
+  );
+}
+
+function BackendPills({ backends }: { backends: ModelStatus[] }) {
+  return (
+    <div className="backend-pills">
+      {backends.map((backend) => (
+        <span key={backend.backend} className={backend.available ? "ready" : "offline"} title={backend.message ?? backend.backend}>
+          {backend.available ? <Check size={14} /> : <CircleAlert size={14} />}
+          {backend.backend}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function ArtifactStack({
+  artifacts,
+  selectedId,
+  onSelect,
+  apiBase,
+}: {
+  artifacts: ArtifactRecord[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+  apiBase: string;
+}) {
+  if (!artifacts.length) {
+    return (
+      <div className="empty-panel">
+        <Upload size={22} />
+        <strong>Import audio</strong>
+      </div>
+    );
+  }
+  return (
+    <div className="artifact-stack">
+      {artifacts.map((artifact) => (
+        <button
+          key={artifact.artifact_id}
+          className={`artifact-row ${selectedId === artifact.artifact_id ? "selected" : ""}`}
+          onClick={() => onSelect(artifact.artifact_id)}
+        >
+          <ArtifactIcon artifact={artifact} />
+          <div>
+            <strong>{artifactName(artifact)}</strong>
+            <span>{artifactMeta(artifact)}</span>
+          </div>
+          {artifact.kind === "audio" ? <TinyWave artifact={artifact} apiBase={apiBase} /> : null}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function Specimen({
+  artifact,
+  artifacts,
+  apiBase,
+  onCompare,
+}: {
+  artifact: ArtifactRecord | null;
+  artifacts: ArtifactRecord[];
+  apiBase: string;
+  onCompare: (slot: "a" | "b", artifactId: string | null) => void;
+}) {
+  if (!artifact) {
+    return (
+      <div className="specimen empty">
+        <CircleDot size={24} />
+      </div>
+    );
+  }
+  const fileUrl = `${apiBase}/artifacts/${artifact.artifact_id}/file`;
+  const sourceArtifacts = artifact.source_artifact_ids
+    .map((artifactId) => artifacts.find((item) => item.artifact_id === artifactId))
+    .filter((item): item is ArtifactRecord => Boolean(item));
+  return (
+    <div className="specimen">
+      <div className="wave-bus">
+        {artifact.kind === "audio" ? (
+          <AudioDeck artifact={artifact} apiBase={apiBase} />
+        ) : artifact.kind === "latent" ? (
+          <LatentField artifact={artifact} />
+        ) : (
+          <BundleField artifact={artifact} />
+        )}
+        <LineageThread artifact={artifact} sources={sourceArtifacts} />
+      </div>
+      <div className="specimen-info">
+        <dl>
+          <div>
+            <dt>ID</dt>
+            <dd>{artifact.artifact_id}</dd>
+          </div>
+          <div>
+            <dt>Lineage</dt>
+            <dd>{artifact.source_artifact_ids.length || 0}</dd>
+          </div>
+          <div>
+            <dt>Recipe</dt>
+            <dd>{artifact.recipe_id ?? "source"}</dd>
+          </div>
+          <div>
+            <dt>Shape</dt>
+            <dd>{artifactShape(artifact)}</dd>
+          </div>
+        </dl>
+        <div className="specimen-actions">
+          <button disabled={artifact.kind !== "audio"} onClick={() => onCompare("a", artifact.artifact_id)}>
+            A
+          </button>
+          <button disabled={artifact.kind !== "audio"} onClick={() => onCompare("b", artifact.artifact_id)}>
+            B
+          </button>
+          <a className="icon-link" href={fileUrl} download title="Download artifact">
+            <Download size={17} />
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AudioDeck({ artifact, apiBase, compact = false }: { artifact: ArtifactRecord; apiBase: string; compact?: boolean }) {
+  const api = useMemo(() => createApi(apiBase), [apiBase]);
+  const binCount = compact ? 36 : 128;
+  const peaks = useQuery({
+    queryKey: ["peaks", apiBase, artifact.artifact_id, binCount],
+    queryFn: () => api.audioPeaks(artifact.artifact_id, binCount),
+    enabled: artifact.kind === "audio",
+    staleTime: Infinity,
+  });
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [playing, setPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(artifact.audio?.duration_seconds ?? 0);
+  const [volume, setVolume] = useState(0.92);
+  const [loop, setLoop] = useState(false);
+  const fileUrl = `${apiBase}/artifacts/${artifact.artifact_id}/file`;
+  const displayDuration = duration || artifact.audio?.duration_seconds || 0;
+  const progress = displayDuration > 0 ? currentTime / displayDuration : 0;
+
+  useEffect(() => {
+    setPlaying(false);
+    setCurrentTime(0);
+    setDuration(artifact.audio?.duration_seconds ?? 0);
+  }, [artifact.artifact_id, artifact.audio?.duration_seconds]);
+
+  useEffect(() => {
+    if (audioRef.current) audioRef.current.volume = volume;
+  }, [volume]);
+
+  const seekTo = (fraction: number) => {
+    const audio = audioRef.current;
+    const targetDuration = duration || artifact.audio?.duration_seconds || audio?.duration || 0;
+    if (!audio || !targetDuration) return;
+    const nextTime = clamp(fraction, 0, 1) * targetDuration;
+    audio.currentTime = nextTime;
+    setCurrentTime(nextTime);
+  };
+
+  const seekBy = (seconds: number) => {
+    const targetDuration = duration || artifact.audio?.duration_seconds || audioRef.current?.duration || 0;
+    if (!targetDuration) return;
+    seekTo((currentTime + seconds) / targetDuration);
+  };
+
+  const togglePlay = async () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (playing) {
+      audio.pause();
+      return;
+    }
+    try {
+      await audio.play();
+    } catch {
+      setPlaying(false);
+    }
+  };
+
+  return (
+    <div className={`audio-deck ${compact ? "compact" : ""}`}>
+      <audio
+        ref={audioRef}
+        src={fileUrl}
+        preload="metadata"
+        loop={loop}
+        onLoadedMetadata={(event) => {
+          const loadedDuration = event.currentTarget.duration;
+          if (Number.isFinite(loadedDuration)) setDuration(loadedDuration);
+        }}
+        onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime)}
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+        onEnded={() => setPlaying(false)}
+      />
+      <div className="deck-head">
+        <button type="button" className="transport-wheel" onClick={togglePlay} title={playing ? "Pause" : "Play"}>
+          {playing ? <Pause size={compact ? 18 : 24} /> : <Play size={compact ? 18 : 24} />}
+        </button>
+        <div className="deck-readout">
+          <strong>{artifactName(artifact)}</strong>
+          <span>
+            {formatPlaybackTime(currentTime)} / {formatPlaybackTime(displayDuration)} · {artifact.audio?.sample_rate ?? 0} Hz
+          </span>
+        </div>
+        <button type="button" className={`deck-icon ${loop ? "active" : ""}`} onClick={() => setLoop((value) => !value)} title="Loop">
+          <Repeat size={compact ? 15 : 17} />
+        </button>
+      </div>
+      <PlayableWave
+        peaks={peaks.data?.peaks ?? placeholderPeaks(artifact.artifact_id, binCount)}
+        progress={progress}
+        loading={peaks.isLoading}
+        compact={compact}
+        onSeek={seekTo}
+      />
+      {!compact ? (
+        <div className="deck-controls">
+          <button type="button" className="deck-icon" onClick={() => seekBy(-2)} title="Back 2 seconds">
+            <SkipBack size={16} />
+          </button>
+          <button type="button" className="deck-icon" onClick={() => seekBy(2)} title="Forward 2 seconds">
+            <SkipForward size={16} />
+          </button>
+          <label className="deck-volume">
+            Volume
+            <input type="range" min={0} max={1} step={0.01} value={volume} onChange={(event) => setVolume(Number(event.target.value))} />
+          </label>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function PlayableWave({
+  peaks,
+  progress,
+  loading,
+  compact,
+  onSeek,
+}: {
+  peaks: number[];
+  progress: number;
+  loading?: boolean;
+  compact?: boolean;
+  onSeek: (fraction: number) => void;
+}) {
+  const maxPeak = Math.max(...peaks, 0.0001);
+  const progressPercent = clamp(progress, 0, 1) * 100;
+  const onPointerSeek = (event: MouseEvent<HTMLDivElement>) => {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    onSeek((event.clientX - bounds.left) / bounds.width);
+  };
+
+  return (
+    <div
+      className={`playable-wave ${compact ? "compact" : ""} ${loading ? "loading" : ""}`}
+      role="slider"
+      aria-label="Audio position"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(progressPercent)}
+      tabIndex={0}
+      onClick={onPointerSeek}
+      onKeyDown={(event) => {
+        if (event.key === "ArrowLeft") onSeek(progress - 0.04);
+        if (event.key === "ArrowRight") onSeek(progress + 0.04);
+        if (event.key === "Home") onSeek(0);
+        if (event.key === "End") onSeek(1);
+      }}
+      style={{ "--play-progress": `${progressPercent}%` } as CSSProperties}
+    >
+      {peaks.map((peak, index) => {
+        const played = peaks.length <= 1 ? false : index / (peaks.length - 1) <= progress;
+        return (
+          <span
+            key={index}
+            className={played ? "played" : ""}
+            style={{ height: `${Math.max(6, (Math.abs(peak) / maxPeak) * 100)}%` }}
+          />
+        );
+      })}
+      <i aria-hidden="true" />
+    </div>
+  );
+}
+
+function RunMonitor({ runningJobs, latestJob }: { runningJobs: JobRecord[]; latestJob: JobRecord | null }) {
+  const monitorJobs = runningJobs.length ? runningJobs.slice(0, 3) : latestJob ? [latestJob] : [];
+  if (!monitorJobs.length) {
+    return (
+      <div className="run-monitor idle">
+        <div>
+          <span className="eyebrow">Run Monitor</span>
+          <strong>Ready</strong>
+        </div>
+        <span className="monitor-state">idle</span>
+      </div>
+    );
+  }
+
+  const busy = runningJobs.length > 0;
+  return (
+    <div className={`run-monitor ${busy ? "busy" : "idle"}`}>
+      <div className="run-monitor-head">
+        <div>
+          <span className="eyebrow">Run Monitor</span>
+          <strong>{busy ? `${runningJobs.length} active job${runningJobs.length === 1 ? "" : "s"}` : "Last run"}</strong>
+        </div>
+        <span className="monitor-state">{busy ? "running" : latestJob?.status ?? "idle"}</span>
+      </div>
+      <div className="monitor-jobs">
+        {monitorJobs.map((job) => (
+          <JobProgress key={job.job_id} job={job} compact={monitorJobs.length > 1} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function InlineJobStatus({ job }: { job: JobRecord | null | undefined }) {
+  if (!job) return null;
+  return (
+    <div className="inline-job-status">
+      <JobProgress job={job} compact />
+    </div>
+  );
+}
+
+function SessionTray({
+  artifacts,
+  archivedArtifacts,
+  jobs,
+  archivedJobs,
+  runningJobs,
+  selectedId,
+  apiBase,
+  sessionStartedAt,
+  onSelect,
+  onStartSession,
+}: {
+  artifacts: ArtifactRecord[];
+  archivedArtifacts: ArtifactRecord[];
+  jobs: JobRecord[];
+  archivedJobs: JobRecord[];
+  runningJobs: JobRecord[];
+  selectedId: string | null;
+  apiBase: string;
+  sessionStartedAt: string;
+  onSelect: (artifactId: string | null) => void;
+  onStartSession: () => void;
+}) {
+  const sessionArtifacts = sortNewest(artifacts).slice(0, 8);
+  const sessionJobs = sortNewestJobs(jobs).slice(0, 4);
+  const archiveArtifacts = sortNewest(archivedArtifacts).slice(0, 10);
+  const archiveJobRows = sortNewestJobs(archivedJobs).slice(0, 10);
+  const activeJobs = runningJobs.slice(0, 3);
+
+  return (
+    <div className="session-tray">
+      <div className="session-head">
+        <div>
+          <span className="eyebrow">Session</span>
+          <strong>{formatSessionStamp(sessionStartedAt)}</strong>
+        </div>
+        <button type="button" className="session-new" onClick={onStartSession} title="New session">
+          <Plus size={16} />
+          New
+        </button>
+      </div>
+
+      {activeJobs.length ? (
+        <div className="session-block">
+          <span className="session-label">Running</span>
+          {activeJobs.map((job) => (
+            <JobProgress key={job.job_id} job={job} compact />
+          ))}
+        </div>
+      ) : null}
+
+      <div className="session-block">
+        <span className="session-label">Takes</span>
+        {sessionArtifacts.length ? (
+          <div className="session-artifacts">
+            {sessionArtifacts.map((artifact) => (
+              <SessionArtifactRow
+                key={artifact.artifact_id}
+                artifact={artifact}
+                selected={artifact.artifact_id === selectedId}
+                apiBase={apiBase}
+                onSelect={onSelect}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="quiet-panel compact">Fresh session</div>
+        )}
+      </div>
+
+      {sessionJobs.length ? (
+        <details className="archive-drawer">
+          <summary>
+            <Gauge size={15} />
+            Session jobs
+            <span>{jobs.length}</span>
+          </summary>
+          <div className="archive-list">
+            {sessionJobs.map((job) => (
+              <JobProgress key={job.job_id} job={job} compact />
+            ))}
+          </div>
+        </details>
+      ) : null}
+
+      <details className="archive-drawer">
+        <summary>
+          <Database size={15} />
+          Archive
+          <span>{archivedArtifacts.length + archivedJobs.length}</span>
+        </summary>
+        <div className="archive-list">
+          {archiveArtifacts.map((artifact) => (
+            <SessionArtifactRow
+              key={artifact.artifact_id}
+              artifact={artifact}
+              selected={artifact.artifact_id === selectedId}
+              apiBase={apiBase}
+              onSelect={onSelect}
+            />
+          ))}
+          {archiveJobRows.map((job) => (
+            <JobProgress key={job.job_id} job={job} compact />
+          ))}
+          {!archiveArtifacts.length && !archiveJobRows.length ? <div className="quiet-panel compact">Archive empty</div> : null}
+        </div>
+      </details>
+    </div>
+  );
+}
+
+function SessionArtifactRow({
+  artifact,
+  selected,
+  apiBase,
+  onSelect,
+}: {
+  artifact: ArtifactRecord;
+  selected: boolean;
+  apiBase: string;
+  onSelect: (artifactId: string | null) => void;
+}) {
+  return (
+    <button type="button" className={`session-artifact ${selected ? "selected" : ""}`} onClick={() => onSelect(artifact.artifact_id)}>
+      <ArtifactIcon artifact={artifact} />
+      <div>
+        <strong>{artifactName(artifact)}</strong>
+        <span>{artifactMeta(artifact)}</span>
+      </div>
+      {artifact.kind === "audio" ? <TinyWave artifact={artifact} apiBase={apiBase} /> : null}
+    </button>
+  );
+}
+
+function JobProgress({ job, compact = false }: { job: JobRecord; compact?: boolean }) {
+  return (
+    <div className={`job-progress ${job.status} ${compact ? "compact" : ""}`}>
+      <div className="job-progress-main">
+        <span>{isJobActive(job) ? <LoaderCircle className="spin" size={15} /> : <Gauge size={15} />}</span>
+        <strong>{shortOperatorName(job.recipe.operator)}</strong>
+        <em>{progressPercent(job)}%</em>
+      </div>
+      <ProgressTrack job={job} />
+      <div className="job-progress-meta">
+        <span>{job.message ?? job.status}</span>
+        <span>{formatJobElapsed(job)}</span>
+      </div>
+    </div>
+  );
+}
+
+function ProgressTrack({ job }: { job: JobRecord }) {
+  return (
+    <div className="progress-track" aria-label={`${shortOperatorName(job.recipe.operator)} ${progressPercent(job)} percent`}>
+      <span style={{ width: `${progressPercent(job)}%` }} />
+    </div>
+  );
+}
+
+function ComparePanel({ a, b, apiBase }: { a: ArtifactRecord | null; b: ArtifactRecord | null; apiBase: string }) {
+  return (
+    <div className="compare-panel">
+      <div className="band-title">
+        <FlaskConical size={18} />
+        <span>A/B</span>
+      </div>
+      <CompareSlot label="A" artifact={a} apiBase={apiBase} />
+      <CompareSlot label="B" artifact={b} apiBase={apiBase} />
+    </div>
+  );
+}
+
+function CompareSlot({ label, artifact, apiBase }: { label: string; artifact: ArtifactRecord | null; apiBase: string }) {
+  return (
+    <div className="compare-slot">
+      <strong>{label}</strong>
+      {artifact ? (
+        <div>
+          <span>{artifactName(artifact)}</span>
+          <AudioDeck artifact={artifact} apiBase={apiBase} compact />
+        </div>
+      ) : (
+        <span className="muted">empty</span>
+      )}
+    </div>
+  );
+}
+
+function ModeAtlas({ modes, activeOperator }: { modes: NotebookMode[]; activeOperator: OperatorName }) {
+  if (!modes.length) {
+    return null;
+  }
+  return (
+    <div className="mode-atlas">
+      <div className="mode-atlas-head">
+        <span>
+          <Database size={16} />
+          Colab Mode Atlas
+        </span>
+        <strong>{modes.length}</strong>
+      </div>
+      <div className="mode-atlas-list">
+        {modes.map((mode) => {
+          const active = mode.operators.includes(activeOperator);
+          return (
+            <article key={mode.mode_id} className={`mode-card ${active ? "active" : ""}`}>
+              <div>
+                <strong>
+                  {mode.mode_id}. {mode.title}
+                </strong>
+                <span>{mode.native_surface}</span>
+              </div>
+              <span className={`mode-status ${statusClass(mode.status)}`}>{mode.status}</span>
+            </article>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function ArtifactBadge({ artifact }: { artifact: ArtifactRecord }) {
+  return (
+    <span className={`artifact-badge ${artifact.kind}`}>
+      <ArtifactIcon artifact={artifact} />
+      {artifact.kind}
+    </span>
+  );
+}
+
+function ArtifactIcon({ artifact }: { artifact: ArtifactRecord }) {
+  if (artifact.kind === "audio") return <FileAudio size={18} />;
+  if (artifact.kind === "latent") return <Braces size={18} />;
+  if (artifact.kind === "bundle") return <Box size={18} />;
+  return <CircleDot size={18} />;
+}
+
+function TinyWave({ artifact, apiBase }: { artifact: ArtifactRecord; apiBase: string }) {
+  const api = useMemo(() => createApi(apiBase), [apiBase]);
+  const peaks = useQuery({
+    queryKey: ["peaks", apiBase, artifact.artifact_id, 18],
+    queryFn: () => api.audioPeaks(artifact.artifact_id, 18),
+    enabled: artifact.kind === "audio",
+    staleTime: Infinity,
+  });
+
+  return (
+    <WaveBars
+      className="tiny-wave"
+      peaks={peaks.data?.peaks ?? placeholderPeaks(artifact.artifact_id, 18)}
+      loading={peaks.isLoading}
+    />
+  );
+}
+
+function LargeWave({ artifact, apiBase }: { artifact: ArtifactRecord; apiBase: string }) {
+  const api = useMemo(() => createApi(apiBase), [apiBase]);
+  const peaks = useQuery({
+    queryKey: ["peaks", apiBase, artifact.artifact_id, 112],
+    queryFn: () => api.audioPeaks(artifact.artifact_id, 112),
+    enabled: artifact.kind === "audio",
+    staleTime: Infinity,
+  });
+
+  return (
+    <div className="large-wave-wrap">
+      <WaveBars
+        className="large-wave"
+        peaks={peaks.data?.peaks ?? placeholderPeaks(artifact.artifact_id, 112)}
+        loading={peaks.isLoading}
+      />
+      <div className="wave-readout">
+        <span>{formatDuration(artifact.audio?.duration_seconds ?? 0)}</span>
+        <span>{artifact.audio?.sample_rate ?? 0} Hz</span>
+      </div>
+    </div>
+  );
+}
+
+function WaveBars({ className, peaks, loading }: { className: string; peaks: number[]; loading?: boolean }) {
+  const maxPeak = Math.max(...peaks, 0.0001);
+  return (
+    <div className={`${className} ${loading ? "loading" : ""}`} aria-hidden="true">
+      {peaks.map((peak, index) => (
+        <span key={index} style={{ height: `${Math.max(5, (Math.abs(peak) / maxPeak) * 100)}%` }} />
+      ))}
+    </div>
+  );
+}
+
+function LatentField({ artifact }: { artifact: ArtifactRecord }) {
+  const shape = artifact.latent?.shape ?? [1, 1];
+  const rows = Math.min(6, Math.max(2, shape[1]));
+  const columns = Math.min(18, Math.max(6, shape[0]));
+  return (
+    <div className="latent-field" aria-label={`Latent tensor ${shape.join(" by ")}`}>
+      {Array.from({ length: rows * columns }, (_, index) => (
+        <span key={index} style={{ animationDelay: `${(index % columns) * 28}ms` }} />
+      ))}
+      <div className="latent-readout">
+        <span>{shape.join(" x ")}</span>
+        <span>{artifact.latent?.latent_rate.toFixed(2) ?? "0"} Hz latent</span>
+      </div>
+    </div>
+  );
+}
+
+function BundleField({ artifact }: { artifact: ArtifactRecord }) {
+  const fileName = artifact.file?.filename ?? artifactName(artifact);
+  const cells = artifact.recipe_id ? 36 : 18;
+  return (
+    <div className="bundle-field" aria-label={`Experiment bundle ${fileName}`}>
+      {Array.from({ length: cells }, (_, index) => (
+        <span key={index} />
+      ))}
+      <div className="bundle-readout">
+        <strong>{fileName}</strong>
+        <span>{artifact.file ? formatBytes(artifact.file.byte_size) : "bundle"}</span>
+      </div>
+    </div>
+  );
+}
+
+function LineageThread({ artifact, sources }: { artifact: ArtifactRecord; sources: ArtifactRecord[] }) {
+  const sourceLabels = sources.length ? sources.slice(0, 3).map(artifactName) : ["origin"];
+  return (
+    <div className="lineage-thread" aria-label="Artifact lineage">
+      <div className="thread-sources">
+        {sourceLabels.map((label, index) => (
+          <span key={`${label}-${index}`} className="thread-node source" title={label}>
+            {label}
+          </span>
+        ))}
+      </div>
+      <span className="thread-route" />
+      <span className={`thread-node current ${artifact.kind}`}>{artifact.kind}</span>
+    </div>
+  );
+}
+
+function placeholderPeaks(seed: string, count: number) {
+  let value = 0;
+  for (const char of seed) value = (value * 31 + char.charCodeAt(0)) >>> 0;
+  return Array.from({ length: count }, (_, index) => {
+    value = (value * 1664525 + 1013904223 + index) >>> 0;
+    return 0.18 + (value % 72) / 100;
+  });
+}
+
+function RecipeFields({
+  config,
+  form,
+  artifacts,
+  selectedArtifact,
+  onChange,
+}: {
+  config: FieldConfig;
+  form: Record<string, RecipeValue>;
+  artifacts: ArtifactRecord[];
+  selectedArtifact: ArtifactRecord | null;
+  onChange: (key: string, value: RecipeValue) => void;
+}) {
+  const coreFields = config.fields.filter((field) => !field.advanced);
+  const advancedFields = config.fields.filter((field) => field.advanced);
+  return (
+    <div className="recipe-fields">
+      {coreFields.map((field) => (
+        <RecipeFieldControl
+          key={field.key}
+          field={field}
+          value={form[field.key]}
+          artifacts={artifacts}
+          selectedArtifact={selectedArtifact}
+          onChange={(value) => onChange(field.key, value)}
+        />
+      ))}
+      {advancedFields.length ? (
+        <details className="recipe-advanced">
+          <summary>
+            <SlidersHorizontal size={15} />
+            Parameters
+          </summary>
+          <div className="recipe-fields advanced">
+            {advancedFields.map((field) => (
+              <RecipeFieldControl
+                key={field.key}
+                field={field}
+                value={form[field.key]}
+                artifacts={artifacts}
+                selectedArtifact={selectedArtifact}
+                onChange={(value) => onChange(field.key, value)}
+              />
+            ))}
+          </div>
+        </details>
+      ) : null}
+    </div>
+  );
+}
+
+function RecipeFieldControl({
+  field,
+  value,
+  artifacts,
+  selectedArtifact,
+  onChange,
+}: {
+  field: RecipeField;
+  value: RecipeValue | undefined;
+  artifacts: ArtifactRecord[];
+  selectedArtifact: ArtifactRecord | null;
+  onChange: (value: RecipeValue) => void;
+}) {
+  if (field.type === "checkbox") {
+    return (
+      <label className="field-checkbox">
+        <input type="checkbox" checked={Boolean(value)} onChange={(event) => onChange(event.target.checked)} />
+        <span>{field.label}</span>
+      </label>
+    );
+  }
+
+  if (field.type === "select") {
+    return (
+      <label className="control-cell">
+        {field.label}
+        <select value={String(value ?? "")} onChange={(event) => onChange(event.target.value)}>
+          {field.options?.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
+    );
+  }
+
+  if (field.type === "number") {
+    return (
+      <label className="control-cell">
+        {field.label}
+        <input
+          type="number"
+          min={field.min}
+          max={field.max}
+          step={field.step ?? "any"}
+          value={value === undefined ? "" : String(value)}
+          onChange={(event) => onChange(event.target.value === "" ? "" : Number(event.target.value))}
+        />
+      </label>
+    );
+  }
+
+  if (field.type === "range") {
+    const numericValue = typeof value === "number" && Number.isFinite(value) ? value : Number(field.defaultValue ?? field.min ?? 0);
+    return (
+      <label className="control-cell range-field">
+        <span>
+          {field.label}
+          <strong>{formatControlNumber(numericValue)}</strong>
+        </span>
+        <div className="range-pair">
+          <input
+            type="range"
+            min={field.min}
+            max={field.max}
+            step={field.step ?? 0.01}
+            value={numericValue}
+            onChange={(event) => onChange(Number(event.target.value))}
+          />
+          <input
+            type="number"
+            min={field.min}
+            max={field.max}
+            step={field.step ?? "any"}
+            value={numericValue}
+            onChange={(event) => onChange(event.target.value === "" ? "" : Number(event.target.value))}
+          />
+        </div>
+      </label>
+    );
+  }
+
+  if (field.type === "artifact-path") {
+    const candidates = artifacts.filter((artifact) => !field.artifactKinds?.length || field.artifactKinds.includes(artifact.kind));
+    const selectedCandidate =
+      selectedArtifact && (!field.artifactKinds?.length || field.artifactKinds.includes(selectedArtifact.kind)) ? selectedArtifact : null;
+    return (
+      <label className="control-cell path-field">
+        {field.label}
+        <input
+          value={String(value ?? "")}
+          placeholder={field.placeholder}
+          onChange={(event) => onChange(event.target.value)}
+        />
+        <div className="path-actions">
+          <select value="" onChange={(event) => event.target.value && onChange(event.target.value)}>
+            <option value="">Artifacts</option>
+            {candidates.map((artifact) => (
+              <option key={artifact.artifact_id} value={artifactPathForField(artifact, field.key)}>
+                {artifactName(artifact)}
+              </option>
+            ))}
+          </select>
+          <button type="button" disabled={!selectedCandidate} onClick={() => selectedCandidate && onChange(artifactPathForField(selectedCandidate, field.key))}>
+            <Route size={15} />
+            Selected
+          </button>
+        </div>
+      </label>
+    );
+  }
+
+  return (
+    <label className="control-cell">
+      {field.label}
+      <input
+        value={String(value ?? "")}
+        placeholder={field.placeholder}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </label>
+  );
+}
+
+function defaultExperimentForm(mode: ExperimentMode): Record<string, RecipeValue> {
+  const config = experimentCatalog.find((item) => item.value === mode) ?? experimentCatalog[0];
+  const form = defaultFieldForm(config);
+  if (!form.backend) form.backend = config.backend;
+  if (config.modelDefault && !form.model) form.model = config.modelDefault;
+  return form;
+}
+
+function defaultOperatorForm(mode: LatentOperatorMode): Record<string, RecipeValue> {
+  const config = operatorCatalog.find((item) => item.value === mode) ?? operatorCatalog[0];
+  const form = defaultFieldForm(config);
+  if (!form.backend) form.backend = config.defaultBackend;
+  return form;
+}
+
+function defaultFieldForm(config: FieldConfig): Record<string, RecipeValue> {
+  const form: Record<string, RecipeValue> = {};
+  for (const field of config.fields) {
+    if (field.defaultValue !== undefined) {
+      form[field.key] = field.defaultValue;
+    } else if (field.type === "checkbox") {
+      form[field.key] = false;
+    } else if (field.type === "select") {
+      form[field.key] = field.options?.[0]?.value ?? "";
+    } else {
+      form[field.key] = "";
+    }
+  }
+  return form;
+}
+
+function experimentReady(config: ExperimentConfig, form: Record<string, RecipeValue>, selectedArtifact: ArtifactRecord | null) {
+  if (config.selectedAudioFallback && selectedArtifact?.kind === "audio" && !stringValue(form[config.selectedAudioFallback])) {
+    return true;
+  }
+  return config.fields.every((field) => !field.required || Boolean(stringValue(form[field.key])));
+}
+
+function buildExperimentPayload({
+  config,
+  form,
+  selectedArtifact,
+}: {
+  config: ExperimentConfig;
+  form: Record<string, RecipeValue>;
+  selectedArtifact: ArtifactRecord | null;
+}): ExperimentPayload {
+  const params: Record<string, unknown> = {};
+  const inputs: Record<string, string> = {};
+
+  for (const field of config.fields) {
+    if (field.key === "backend" || field.key === "model" || field.key === "seed") continue;
+    const value = form[field.key];
+    if (field.type === "checkbox") {
+      params[field.key] = Boolean(value);
+    } else if (value !== undefined && stringValue(value) !== "") {
+      params[field.key] = value;
+    }
+  }
+
+  if (config.selectedAudioFallback && !params[config.selectedAudioFallback] && selectedArtifact?.kind === "audio") {
+    inputs.source = selectedArtifact.artifact_id;
+  }
+
+  const backend = (stringValue(form.backend) || config.backend) as ExperimentPayload["backend"];
+  const seedValue = form.seed;
+  const seed = typeof seedValue === "number" && Number.isFinite(seedValue) ? seedValue : undefined;
+  const model = stringValue(form.model) || config.modelDefault || null;
+
+  return {
+    operator: config.value,
+    backend,
+    inputs,
+    model,
+    seed,
+    params,
+  };
+}
+
+function operatorReady(
+  config: OperatorConfig,
+  form: Record<string, RecipeValue>,
+  selectedArtifact: ArtifactRecord | null,
+  donorArtifactId: string,
+) {
+  if (selectedArtifact?.kind !== "latent") return false;
+  if (operatorUsesDonor(config, form) && !donorArtifactId) return false;
+  return config.fields.every((field) => !field.required || Boolean(stringValue(form[field.key])));
+}
+
+function buildOperatorParams(config: OperatorConfig, form: Record<string, RecipeValue>) {
+  const params: Record<string, unknown> = {};
+  for (const field of config.fields) {
+    if (field.key === "backend") continue;
+    const value = form[field.key];
+    if (field.type === "checkbox") {
+      params[field.key] = Boolean(value);
+      continue;
+    }
+    if (value === undefined || stringValue(value) === "") continue;
+    if (field.key === "channels") {
+      params[field.key] = parseNumberList(value).map((item) => Math.trunc(item));
+    } else if (field.key === "pca_component_gains") {
+      params[field.key] = parseNumberList(value);
+    } else {
+      params[field.key] = value;
+    }
+  }
+  return params;
+}
+
+function operatorBackend(form: Record<string, RecipeValue>, fallback: OperatorConfig["defaultBackend"]) {
+  const value = stringValue(form.backend);
+  return value === "torch_cpu" || value === "torch_mps" ? value : fallback;
+}
+
+function operatorSeed(form: Record<string, RecipeValue>, fallback: number) {
+  const value = form.seed;
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  const parsed = Number(stringValue(value));
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function operatorUsesDonor(config: OperatorConfig, form: Record<string, RecipeValue>) {
+  if (config.requiresDonor) return true;
+  if (config.value !== "latent.dsp") return false;
+  const mode = stringValue(form.mode);
+  return mode === "fft_phase_blend" || mode === "fft_mag_phase_graft" || mode === "fft_phase_from_donor";
+}
+
+function generationFields(): RecipeField[] {
+  return [
+    { key: "duration_seconds", label: "Seconds", type: "number", defaultValue: 8, min: 0.5, step: 0.5 },
+    { key: "steps", label: "Steps", type: "number", defaultValue: 8, min: 1, step: 1 },
+    { key: "cfg_scale", label: "CFG", type: "number", defaultValue: 1, min: 0, step: 0.1 },
+    { key: "seed", label: "Seed", type: "number", defaultValue: 42, step: 1, advanced: true },
+  ];
+}
+
+function torchAdvancedFields(): RecipeField[] {
+  return [
+    { key: "backend", label: "Backend", type: "select", defaultValue: "torch_mps", options: backendOptions, advanced: true },
+    { key: "device", label: "Device", type: "text", advanced: true },
+    { key: "no_half", label: "No half", type: "checkbox", defaultValue: false, advanced: true },
+  ];
+}
+
+function artifactPathForField(artifact: ArtifactRecord, fieldKey: string) {
+  const rawScriptOutput = artifact.metadata?.script_output_path;
+  const scriptOutput = typeof rawScriptOutput === "string" ? rawScriptOutput : "";
+  const source = scriptOutput || artifact.path;
+  if (!scriptOutput) return source;
+  if (fieldKey === "profile_path") return `${source}/profile.npz`;
+  if (fieldKey === "direction_path") {
+    return artifact.metadata.operator === "experiment.audio_style_vectors" ? `${source}/frame_direction.npz` : `${source}/direction.npz`;
+  }
+  if (fieldKey === "target_memory_path" || fieldKey === "reference_memory_path") return `${source}/memory`;
+  return source;
+}
+
+function stringValue(value: RecipeValue | undefined) {
+  if (value === undefined || value === null) return "";
+  return String(value).trim();
+}
+
+function artifactName(artifact: ArtifactRecord) {
+  return artifact.label || artifact.prompt || artifact.file?.filename || artifact.artifact_id;
+}
+
+function artifactMeta(artifact: ArtifactRecord) {
+  if (artifact.kind === "audio" && artifact.audio) {
+    return `${formatDuration(artifact.audio.duration_seconds)} · ${artifact.audio.sample_rate} Hz`;
+  }
+  if (artifact.kind === "latent" && artifact.latent) {
+    return `${artifact.latent.shape.join(" x ")} · ${artifact.latent.latent_rate.toFixed(2)} Hz`;
+  }
+  if (artifact.kind === "bundle" && artifact.file) {
+    return `${formatBytes(artifact.file.byte_size)} bundle`;
+  }
+  return artifact.kind;
+}
+
+function artifactShape(artifact: ArtifactRecord) {
+  if (artifact.kind === "latent") return artifact.latent?.shape.join(" x ") ?? "latent";
+  if (artifact.kind === "audio") return `${artifact.audio?.channels ?? 0} ch`;
+  if (artifact.kind === "bundle") return artifact.file ? formatBytes(artifact.file.byte_size) : "bundle";
+  return artifact.kind;
+}
+
+function formatDuration(seconds: number) {
+  if (!Number.isFinite(seconds)) return "0s";
+  if (seconds < 60) return `${seconds.toFixed(seconds < 10 ? 1 : 0)}s`;
+  const minutes = Math.floor(seconds / 60);
+  const rest = Math.round(seconds % 60).toString().padStart(2, "0");
+  return `${minutes}:${rest}`;
+}
+
+function formatPlaybackTime(seconds: number) {
+  if (!Number.isFinite(seconds) || seconds <= 0) return "0:00";
+  const minutes = Math.floor(seconds / 60);
+  const rest = Math.floor(seconds % 60).toString().padStart(2, "0");
+  return `${minutes}:${rest}`;
+}
+
+function formatSessionStamp(value: string) {
+  const started = Date.parse(value);
+  if (!Number.isFinite(started) || started <= 0) return "All work";
+  const date = new Date(started);
+  return `Since ${date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+}
+
+function formatBytes(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function createdAfter(createdAt: string, startedAt: string) {
+  const created = Date.parse(createdAt);
+  const started = Date.parse(startedAt);
+  if (!Number.isFinite(created) || !Number.isFinite(started)) return true;
+  return created >= started;
+}
+
+function sortNewest(artifacts: ArtifactRecord[]) {
+  return [...artifacts].sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
+}
+
+function sortNewestJobs(jobs: JobRecord[]) {
+  return [...jobs].sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function isJobActive(job: JobRecord) {
+  return job.status === "queued" || job.status === "running";
+}
+
+function activeJobForOperator(jobs: JobRecord[], operator: OperatorName) {
+  return jobs.find((job) => job.recipe.operator === operator) ?? null;
+}
+
+function progressPercent(job: JobRecord) {
+  return Math.max(0, Math.min(100, Math.round((job.progress ?? 0) * 100)));
+}
+
+function shortOperatorName(operator: OperatorName) {
+  return operator.replace(/^experiment\./, "").replace(/^generate\./, "").replace(/^latent\./, "").replaceAll("_", " ");
+}
+
+function formatJobElapsed(job: JobRecord) {
+  const start = Date.parse(job.started_at ?? job.created_at);
+  const end = job.finished_at ? Date.parse(job.finished_at) : Date.now();
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return job.status;
+  const seconds = Math.max(0, Math.round((end - start) / 1000));
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  return `${minutes}m ${String(seconds % 60).padStart(2, "0")}s`;
+}
+
+function parseNumberList(value: RecipeValue) {
+  return stringValue(value)
+    .split(/[,\s]+/)
+    .map((item) => Number(item))
+    .filter((item) => Number.isFinite(item));
+}
+
+function formatControlNumber(value: number) {
+  if (Math.abs(value) >= 100) return value.toFixed(0);
+  if (Math.abs(value) >= 10) return value.toFixed(1);
+  return value.toFixed(2).replace(/\.?0+$/, "");
+}
+
+function statusClass(status: string) {
+  if (status.includes("native")) return "native";
+  if (status.includes("partial") || status.includes("chainable")) return "partial";
+  return "scaffold";
+}
