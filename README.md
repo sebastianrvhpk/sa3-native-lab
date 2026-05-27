@@ -128,6 +128,21 @@ The runner prints backend readiness, artifact storage, and the local URLs. It
 reuses already-running services on `127.0.0.1:8733` and `127.0.0.1:5173`
 instead of starting duplicates.
 
+### TypeScript Control Plane
+
+`apps/control-plane` is the first tRPC slice. It does not replace the Python
+runtime; it shapes Python runtime records into app-native procedures such as
+`workbench.load`.
+
+```bash
+npm install --prefix apps/control-plane
+npm run test --prefix apps/control-plane
+SA3_PYTHON_API_BASE=http://127.0.0.1:8733 npm run dev --prefix apps/control-plane
+```
+
+See `docs/control-plane-architecture.md` for the staged tRPC/Postgres/pgvector
+plan.
+
 ### Local API Daemon
 
 The notebook experiments are being wrapped as a typed local app/runtime layer.
