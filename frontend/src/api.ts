@@ -79,6 +79,13 @@ export interface ExperimentPayload {
   session_id?: string | null;
 }
 
+export interface ArtifactAnnotationPayload {
+  label?: string | null;
+  notes?: string | null;
+  tags?: string[] | null;
+  metadata?: Record<string, unknown> | null;
+}
+
 export function createApi(baseUrl: string) {
   const base = baseUrl.replace(/\/$/, "");
 
@@ -119,6 +126,8 @@ export function createApi(baseUrl: string) {
       if (sessionId) data.append("session_id", sessionId);
       return request<ArtifactRecord>("/audio/import", { method: "POST", body: data });
     },
+    annotateArtifact: (artifactId: string, payload: ArtifactAnnotationPayload) =>
+      request<ArtifactRecord>(`/artifacts/${encodeURIComponent(artifactId)}/annotate`, jsonPost(payload)),
     generateText: (payload: GenerateTextPayload) =>
       request<JobRecord>("/generate/text", jsonPost(payload)),
     generateAudioToAudio: (payload: AudioToAudioPayload) =>

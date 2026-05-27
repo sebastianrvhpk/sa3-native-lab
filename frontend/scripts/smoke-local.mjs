@@ -10,6 +10,7 @@ try {
   await expect(page.getByText("SA3 Native Lab", { exact: true })).toBeVisible();
   await expect(page.locator(".surface-head .eyebrow", { hasText: "Listening Bench" })).toBeVisible();
   await expect(page.getByText("Spec covered").first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Save annotation" })).toBeVisible();
   await page.getByRole("button", { name: "A2A" }).click();
   await expect(page.getByText("Init noise")).toBeVisible();
   await expect(page.getByText("Spec covered").first()).toBeVisible();

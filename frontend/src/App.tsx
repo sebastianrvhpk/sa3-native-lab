@@ -29,7 +29,7 @@ import {
 } from "lucide-react";
 
 import modelImage from "../../stable-audio-3.png";
-import { createApi, type ExperimentPayload } from "./api";
+import { createApi, type ArtifactAnnotationPayload, type ExperimentPayload } from "./api";
 import { useBenchStore } from "./store";
 import type { ArtifactRecord, JobRecord, ModelStatus, NotebookMode, OperatorName, OperatorSpec, SessionRecord } from "./types";
 
@@ -694,6 +694,15 @@ export function App() {
     },
   });
 
+  const annotateArtifact = useMutation({
+    mutationFn: ({ artifactId, payload }: { artifactId: string; payload: ArtifactAnnotationPayload }) =>
+      api.annotateArtifact(artifactId, payload),
+    onSuccess: async (artifact) => {
+      selectArtifact(artifact.artifact_id);
+      await invalidate();
+    },
+  });
+
   const generate = useMutation({
     mutationFn: () => {
       const selected = audioModels.find((item) => item.value === audioModel)!;
@@ -868,7 +877,14 @@ export function App() {
             {selectedArtifact ? <ArtifactBadge artifact={selectedArtifact} /> : null}
           </div>
 
-          <Specimen artifact={selectedArtifact} artifacts={allArtifacts} apiBase={apiBase} onCompare={setCompare} />
+          <Specimen
+            artifact={selectedArtifact}
+            artifacts={allArtifacts}
+            apiBase={apiBase}
+            annotating={annotateArtifact.isPending}
+            onAnnotate={(artifactId, payload) => annotateArtifact.mutate({ artifactId, payload })}
+            onCompare={setCompare}
+          />
           <RunMonitor runningJobs={runningJobs} latestJob={latestJobs[0] ?? null} />
 
           <div className="action-bands">
@@ -1199,11 +1215,15 @@ function Specimen({
   artifact,
   artifacts,
   apiBase,
+  annotating,
+  onAnnotate,
   onCompare,
 }: {
   artifact: ArtifactRecord | null;
   artifacts: ArtifactRecord[];
   apiBase: string;
+  annotating: boolean;
+  onAnnotate: (artifactId: string, payload: ArtifactAnnotationPayload) => void;
   onCompare: (slot: "a" | "b", artifactId: string | null) => void;
 }) {
   if (!artifact) {
@@ -1259,7 +1279,60 @@ function Specimen({
             <Download size={17} />
           </a>
         </div>
+        <ArtifactAnnotationPanel artifact={artifact} saving={annotating} onSave={onAnnotate} />
       </div>
+    </div>
+  );
+}
+
+function ArtifactAnnotationPanel({
+  artifact,
+  saving,
+  onSave,
+}: {
+  artifact: ArtifactRecord;
+  saving: boolean;
+  onSave: (artifactId: string, payload: ArtifactAnnotationPayload) => void;
+}) {
+  const [label, setLabel] = useState(artifact.label ?? "");
+  const [tags, setTags] = useState(artifact.tags.join(", "));
+  const [notes, setNotes] = useState(artifact.notes ?? "");
+
+  useEffect(() => {
+    setLabel(artifact.label ?? "");
+    setTags(artifact.tags.join(", "));
+    setNotes(artifact.notes ?? "");
+  }, [artifact.artifact_id, artifact.label, artifact.notes, artifact.tags]);
+
+  return (
+    <div className="annotation-panel">
+      <label>
+        Label
+        <input value={label} onChange={(event) => setLabel(event.target.value)} placeholder="keeper, brittle, needs graft..." />
+      </label>
+      <label>
+        Tags
+        <input value={tags} onChange={(event) => setTags(event.target.value)} placeholder="favorite, loop, noisy" />
+      </label>
+      <label>
+        Notes
+        <textarea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="What should future-you remember?" />
+      </label>
+      <button
+        type="button"
+        className="annotation-save"
+        disabled={saving}
+        onClick={() =>
+          onSave(artifact.artifact_id, {
+            label: label.trim() || null,
+            notes: notes.trim() || null,
+            tags: parseTags(tags),
+          })
+        }
+      >
+        {saving ? <LoaderCircle className="spin" size={15} /> : <Check size={15} />}
+        Save annotation
+      </button>
     </div>
   );
 }
@@ -2239,6 +2312,20 @@ function artifactPathForField(artifact: ArtifactRecord, fieldKey: string) {
 function stringValue(value: RecipeValue | undefined) {
   if (value === undefined || value === null) return "";
   return String(value).trim();
+}
+
+function parseTags(value: string) {
+  const seen = new Set<string>();
+  return value
+    .split(/[,\n]/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .filter((item) => {
+      const key = item.toLocaleLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 }
 
 function artifactName(artifact: ArtifactRecord) {
