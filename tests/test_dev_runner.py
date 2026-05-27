@@ -6,7 +6,10 @@ from pathlib import Path
 from sa3_native_lab.app.dev import (
     DevCheck,
     build_api_command,
+    build_control_plane_command,
+    build_control_plane_env,
     build_frontend_command,
+    build_frontend_env,
     format_check,
     huggingface_auth_check,
     is_port_open,
@@ -48,6 +51,33 @@ def test_dev_runner_builds_frontend_command(tmp_path):
         "--port",
         "5174",
     ]
+
+
+def test_dev_runner_builds_control_plane_command(tmp_path):
+    command = build_control_plane_command(tmp_path / "apps" / "control-plane")
+
+    assert command == ["npm", "run", "dev", "--prefix", str(tmp_path / "apps" / "control-plane")]
+
+
+def test_dev_runner_builds_frontend_env_with_optional_control_plane():
+    env = build_frontend_env(
+        {"VITE_SA3_CONTROL_PLANE_URL": "http://stale.local/trpc"},
+        api_url="http://127.0.0.1:8733",
+    )
+
+    assert env["VITE_SA3_API_BASE"] == "http://127.0.0.1:8733"
+    assert "VITE_SA3_CONTROL_PLANE_URL" not in env
+
+    env = build_frontend_env({}, api_url="http://127.0.0.1:8733", control_plane_url="http://127.0.0.1:8787")
+
+    assert env["VITE_SA3_CONTROL_PLANE_URL"] == "http://127.0.0.1:8787"
+
+
+def test_dev_runner_builds_control_plane_env():
+    env = build_control_plane_env({}, api_url="http://127.0.0.1:8733", control_plane_port=8788)
+
+    assert env["SA3_PYTHON_API_BASE"] == "http://127.0.0.1:8733"
+    assert env["SA3_CONTROL_PLANE_PORT"] == "8788"
 
 
 def test_dev_runner_formats_checks_with_details():

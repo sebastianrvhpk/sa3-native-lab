@@ -15,6 +15,11 @@ const server = createHTTPServer({
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, trpc-accept");
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    if (_req.url === "/health") {
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify({ ok: true, pythonBaseUrl }));
+      return;
+    }
     if (_req.method === "OPTIONS") {
       res.statusCode = 204;
       res.end();
