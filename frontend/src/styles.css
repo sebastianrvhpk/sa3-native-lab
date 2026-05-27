@@ -926,6 +926,55 @@ audio {
   background: linear-gradient(135deg, rgb(243 168 60 / 0.26), rgb(234 74 162 / 0.16));
 }
 
+.spec-coverage {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 2px 8px;
+  align-items: center;
+  padding: 7px 9px;
+  border: 1px solid rgb(45 51 52 / 0.26);
+  border-radius: 7px;
+  background:
+    linear-gradient(120deg, rgb(85 198 199 / 0.18), rgb(234 74 162 / 0.14)),
+    rgb(255 255 255 / 0.42);
+  font-size: 0.72rem;
+}
+
+.spec-coverage span {
+  font-weight: 750;
+}
+
+.spec-coverage small {
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spec-coverage em {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  color: #7d2617;
+  font-style: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spec-coverage.covered {
+  border-color: rgb(25 130 92 / 0.36);
+}
+
+.spec-coverage.partial {
+  border-color: rgb(206 126 34 / 0.52);
+  background:
+    linear-gradient(120deg, rgb(243 168 60 / 0.24), rgb(234 74 162 / 0.14)),
+    rgb(255 255 255 / 0.46);
+}
+
+.spec-coverage.waiting {
+  border-style: dashed;
+}
+
 .recipe-fields {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));

@@ -1,4 +1,4 @@
-import type { ArtifactKind, ArtifactRecord, AudioPeaksResponse, HealthResponse, JobRecord, NotebookMode, OperatorName } from "./types";
+import type { ArtifactKind, ArtifactRecord, AudioPeaksResponse, HealthResponse, JobRecord, NotebookMode, OperatorName, OperatorSpec } from "./types";
 
 export const DEFAULT_API_BASE = import.meta.env.VITE_SA3_API_BASE ?? "http://127.0.0.1:8733";
 
@@ -85,6 +85,7 @@ export function createApi(baseUrl: string) {
     base,
     artifactFileUrl: (artifactId: string) => `${base}/artifacts/${artifactId}/file`,
     health: () => request<HealthResponse>("/health"),
+    operatorSpecs: () => request<OperatorSpec[]>("/operators/specs"),
     colabModes: () => request<NotebookMode[]>("/colab/modes"),
     artifacts: (kind?: ArtifactKind) => request<ArtifactRecord[]>(kind ? `/artifacts?kind=${kind}` : "/artifacts"),
     audioPeaks: (artifactId: string, bins = 96) =>

@@ -31,7 +31,7 @@ import {
 import modelImage from "../../stable-audio-3.png";
 import { createApi, type ExperimentPayload } from "./api";
 import { useBenchStore } from "./store";
-import type { ArtifactRecord, JobRecord, ModelStatus, NotebookMode, OperatorName } from "./types";
+import type { ArtifactRecord, JobRecord, ModelStatus, NotebookMode, OperatorName, OperatorSpec } from "./types";
 
 const audioModels = [
   { value: "medium", label: "medium", decoder: "same-l" },
@@ -565,6 +565,9 @@ const experimentCatalog: readonly ExperimentConfig[] = [
 ];
 
 const experimentModes = experimentCatalog.map(({ value, label }) => ({ value, label }));
+const generateControlKeys = ["prompt", "negative_prompt", "duration_seconds", "steps", "seed", "cfg_scale", "apg_scale", "model", "decoder"];
+const sameEncodeControlKeys = ["model", "chunked", "chunk_size", "overlap", "prompt", "notes"];
+const sameDecodeControlKeys = ["model", "chunked", "chunk_size", "overlap", "notes"];
 
 export function App() {
   const queryClient = useQueryClient();
@@ -572,6 +575,7 @@ export function App() {
   const api = useMemo(() => createApi(apiBase), [apiBase]);
 
   const health = useQuery({ queryKey: ["health", apiBase], queryFn: api.health, refetchInterval: 3000 });
+  const operatorSpecs = useQuery({ queryKey: ["operator-specs", apiBase], queryFn: api.operatorSpecs, staleTime: 30000 });
   const modeAtlas = useQuery({ queryKey: ["colab-modes", apiBase], queryFn: api.colabModes, staleTime: Infinity });
   const artifacts = useQuery({ queryKey: ["artifacts", apiBase], queryFn: () => api.artifacts(), refetchInterval: 1500 });
   const jobs = useQuery({ queryKey: ["jobs", apiBase], queryFn: api.jobs, refetchInterval: 1000 });
@@ -614,6 +618,12 @@ export function App() {
   const compareB = allArtifacts.find((item) => item.artifact_id === compare.b) ?? null;
   const activeExperiment = experimentCatalog.find((item) => item.value === experimentMode) ?? experimentCatalog[0];
   const activeOperatorConfig = operatorCatalog.find((item) => item.value === operator) ?? operatorCatalog[0];
+  const specMap = useMemo(() => new Map((operatorSpecs.data ?? []).map((spec) => [spec.name, spec])), [operatorSpecs.data]);
+  const textGenerateSpec = specMap.get("generate.text_to_audio");
+  const sameEncodeSpec = specMap.get("latent.encode");
+  const sameDecodeSpec = specMap.get("latent.decode");
+  const activeOperatorSpec = specMap.get(operator);
+  const activeExperimentSpec = specMap.get(activeExperiment.value);
   const canRunOperator = operatorReady(activeOperatorConfig, operatorForm, selectedArtifact, donorArtifactId);
   const generateJob = activeJobForOperator(runningJobs, "generate.text_to_audio");
   const encodeJob = activeJobForOperator(runningJobs, "latent.encode");
@@ -802,6 +812,7 @@ export function App() {
                 <Wand2 size={18} />
                 <span>Generate</span>
               </div>
+              <SpecCoverage spec={textGenerateSpec} controlledKeys={generateControlKeys} />
               <label className="control-cell">
                 Prompt
                 <input value={prompt} onChange={(event) => setPrompt(event.target.value)} />
@@ -871,6 +882,7 @@ export function App() {
                 <AudioLines size={18} />
                 <span>SAME</span>
               </div>
+              <SpecCoveragePair specs={[sameEncodeSpec, sameDecodeSpec]} controlledKeys={[sameEncodeControlKeys, sameDecodeControlKeys]} />
               <div className="segmented">
                 <button className={sameModel === "same-s" ? "active" : ""} onClick={() => setSameModel("same-s")}>
                   same-s
@@ -939,6 +951,7 @@ export function App() {
                 <span className={`recipe-chip ${activeOperatorConfig.maturity}`}>{activeOperatorConfig.family}</span>
                 <span className={`recipe-chip ${activeOperatorConfig.maturity}`}>{activeOperatorConfig.maturity}</span>
               </div>
+              <SpecCoverage spec={activeOperatorSpec} controlledKeys={fieldKeys(activeOperatorConfig)} />
               {operatorUsesDonor(activeOperatorConfig, operatorForm) ? (
                 <label className="control-cell donor-cell">
                   Donor latent
@@ -987,6 +1000,7 @@ export function App() {
                 <span className={`recipe-chip ${activeExperiment.maturity}`}>{activeExperiment.family}</span>
                 <span className={`recipe-chip ${activeExperiment.maturity}`}>{activeExperiment.maturity}</span>
               </div>
+              <SpecCoverage spec={activeExperimentSpec} controlledKeys={fieldKeys(activeExperiment)} />
               <RecipeFields
                 config={activeExperiment}
                 form={experimentForm}
@@ -1765,6 +1779,41 @@ function RecipeFields({
   );
 }
 
+function SpecCoverage({ spec, controlledKeys }: { spec: OperatorSpec | undefined; controlledKeys: readonly string[] }) {
+  const params = specParamKeys(spec);
+  const missing = missingParamKeys(spec, controlledKeys);
+  const status = !spec ? "waiting" : missing.length ? "partial" : "covered";
+  return (
+    <div className={`spec-coverage ${status}`}>
+      <span>{!spec ? "Spec pending" : missing.length ? `${missing.length} missing params` : "Spec covered"}</span>
+      <small>
+        {spec ? `${params.length} params · ${spec.backends.join(", ")} · ${spec.status}` : "waiting for /operators/specs"}
+      </small>
+      {missing.length ? <em title={missing.join(", ")}>{missing.slice(0, 4).join(", ")}</em> : null}
+    </div>
+  );
+}
+
+function SpecCoveragePair({
+  specs,
+  controlledKeys,
+}: {
+  specs: readonly (OperatorSpec | undefined)[];
+  controlledKeys: readonly (readonly string[])[];
+}) {
+  const mergedMissing = specs.flatMap((spec, index) => missingParamKeys(spec, controlledKeys[index] ?? []));
+  const readySpecs = specs.filter(Boolean) as OperatorSpec[];
+  const status = readySpecs.length !== specs.length ? "waiting" : mergedMissing.length ? "partial" : "covered";
+  const paramCount = readySpecs.reduce((count, spec) => count + specParamKeys(spec).length, 0);
+  return (
+    <div className={`spec-coverage ${status}`}>
+      <span>{readySpecs.length !== specs.length ? "Spec pending" : mergedMissing.length ? `${mergedMissing.length} missing params` : "Spec covered"}</span>
+      <small>{readySpecs.length ? `${paramCount} params · encode/decode` : "waiting for /operators/specs"}</small>
+      {mergedMissing.length ? <em title={mergedMissing.join(", ")}>{mergedMissing.slice(0, 4).join(", ")}</em> : null}
+    </div>
+  );
+}
+
 function RecipeFieldControl({
   field,
   value,
@@ -1919,6 +1968,19 @@ function defaultFieldForm(config: FieldConfig): Record<string, RecipeValue> {
     }
   }
   return form;
+}
+
+function fieldKeys(config: FieldConfig): string[] {
+  return config.fields.map((field) => field.key).filter((key) => key !== "backend");
+}
+
+function specParamKeys(spec: OperatorSpec | undefined): string[] {
+  return Object.keys(spec?.params ?? {});
+}
+
+function missingParamKeys(spec: OperatorSpec | undefined, controlledKeys: readonly string[]): string[] {
+  const controlled = new Set(controlledKeys);
+  return specParamKeys(spec).filter((key) => !controlled.has(key));
 }
 
 function experimentReady(config: ExperimentConfig, form: Record<string, RecipeValue>, selectedArtifact: ArtifactRecord | null) {

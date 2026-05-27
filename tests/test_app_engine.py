@@ -83,6 +83,21 @@ def test_app_defaults_target_medium_model_family():
     assert decode_request.overlap == 32
 
 
+def test_operator_specs_cover_typed_request_params(tmp_path):
+    store = ArtifactStore(tmp_path / "lab")
+    specs = {spec.name: spec for spec in RuntimeDispatcher(store, repo_root=tmp_path).operator_specs()}
+
+    text_fields = set(TextGenerateRequest.model_fields) - {"backend"}
+    encode_fields = set(LatentEncodeRequest.model_fields) - {"source_artifact_id", "backend"}
+    decode_fields = set(LatentDecodeRequest.model_fields) - {"source_artifact_id", "backend"}
+
+    assert text_fields <= set(specs[OperatorName.TEXT_TO_AUDIO].params)
+    assert encode_fields <= set(specs[OperatorName.LATENT_ENCODE].params)
+    assert decode_fields <= set(specs[OperatorName.LATENT_DECODE].params)
+    assert specs[OperatorName.TEXT_TO_AUDIO].backends == [BackendName.MLX]
+    assert OperatorName.EXPERIMENT_ALPHA_SWEEP in specs
+
+
 def test_bundle_artifact_zips_directory_outputs(tmp_path):
     store = ArtifactStore(tmp_path)
     output_dir = tmp_path / "vectors"

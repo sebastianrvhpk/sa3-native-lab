@@ -112,6 +112,16 @@ export interface ModelStatus {
   details: Record<string, unknown>;
 }
 
+export interface OperatorSpec {
+  name: OperatorName;
+  maturity: string;
+  backends: BackendName[];
+  inputs: string[];
+  params: Record<string, unknown>;
+  produces: ArtifactKind[];
+  status: string;
+}
+
 export interface HealthResponse {
   app: string;
   version: string;
