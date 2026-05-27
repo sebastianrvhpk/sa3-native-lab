@@ -26,6 +26,9 @@ from .contracts import (
     OperatorName,
     OperatorRunRequest,
     Recipe,
+    SessionCreateRequest,
+    SessionRecord,
+    SessionUpdateRequest,
     TextGenerateRequest,
 )
 from .colab_modes import list_colab_modes
@@ -80,9 +83,31 @@ def create_app(
     def colab_modes() -> list[NotebookMode]:
         return list_colab_modes()
 
+    @app.get("/sessions", response_model=list[SessionRecord])
+    def list_sessions() -> list[SessionRecord]:
+        return store.list_sessions()
+
+    @app.post("/sessions", response_model=SessionRecord)
+    def create_session(request: SessionCreateRequest) -> SessionRecord:
+        return store.create_session(request)
+
+    @app.get("/sessions/{session_id}", response_model=SessionRecord)
+    def get_session(session_id: str) -> SessionRecord:
+        try:
+            return store.get_session(session_id)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=f"session not found: {session_id}") from exc
+
+    @app.patch("/sessions/{session_id}", response_model=SessionRecord)
+    def update_session(session_id: str, request: SessionUpdateRequest) -> SessionRecord:
+        try:
+            return store.update_session(session_id, request)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=f"session not found: {session_id}") from exc
+
     @app.get("/artifacts", response_model=list[ArtifactRecord])
-    def list_artifacts(kind: ArtifactKind | None = None) -> list[ArtifactRecord]:
-        return store.list_artifacts(kind=kind)
+    def list_artifacts(kind: ArtifactKind | None = None, session_id: str | None = None) -> list[ArtifactRecord]:
+        return store.list_artifacts(kind=kind, session_id=session_id)
 
     @app.get("/artifacts/{artifact_id}", response_model=ArtifactRecord)
     def get_artifact(artifact_id: str) -> ArtifactRecord:
@@ -131,6 +156,7 @@ def create_app(
         file: UploadFile = File(...),
         prompt: str | None = Form(None),
         label: str | None = Form(None),
+        session_id: str | None = Form(None),
     ) -> ArtifactRecord:
         return store.import_audio_stream(
             file.file,
@@ -138,6 +164,7 @@ def create_app(
             media_type=file.content_type,
             prompt=prompt,
             label=label,
+            session_id=session_id,
         )
 
     @app.post("/latents/import", response_model=ArtifactRecord)
@@ -148,6 +175,7 @@ def create_app(
         sample_rate: int | None = Form(None),
         prompt: str | None = Form(None),
         label: str | None = Form(None),
+        session_id: str | None = Form(None),
     ) -> ArtifactRecord:
         return store.import_latent_stream(
             file.file,
@@ -157,6 +185,7 @@ def create_app(
             sample_rate=sample_rate,
             prompt=prompt,
             label=label,
+            session_id=session_id,
         )
 
     @app.post("/latents/encode", response_model=JobRecord)
@@ -165,9 +194,10 @@ def create_app(
             operator=OperatorName.LATENT_ENCODE,
             backend=request.backend,
             inputs={"source": request.source_artifact_id},
-            params=request.model_dump(mode="json", exclude={"source_artifact_id"}),
+            params=request.model_dump(mode="json", exclude={"source_artifact_id", "session_id"}),
             model=request.model,
             notes=request.notes,
+            session_id=request.session_id,
         )
         return _submit_recipe(jobs, runtime, recipe)
 
@@ -177,9 +207,10 @@ def create_app(
             operator=OperatorName.LATENT_DECODE,
             backend=request.backend,
             inputs={"source": request.source_artifact_id},
-            params=request.model_dump(mode="json", exclude={"source_artifact_id"}),
+            params=request.model_dump(mode="json", exclude={"source_artifact_id", "session_id"}),
             model=request.model,
             notes=request.notes,
+            session_id=request.session_id,
         )
         return _submit_recipe(jobs, runtime, recipe)
 
@@ -188,9 +219,10 @@ def create_app(
         recipe = Recipe(
             operator=OperatorName.TEXT_TO_AUDIO,
             backend=request.backend,
-            params=request.model_dump(mode="json"),
+            params=request.model_dump(mode="json", exclude={"session_id"}),
             model=request.model,
             seed=request.seed,
+            session_id=request.session_id,
         )
         return _submit_recipe(jobs, runtime, recipe)
 
@@ -200,9 +232,10 @@ def create_app(
             operator=OperatorName.AUDIO_TO_AUDIO,
             backend=request.backend,
             inputs={"source": request.source_artifact_id},
-            params=request.model_dump(mode="json", exclude={"source_artifact_id"}),
+            params=request.model_dump(mode="json", exclude={"source_artifact_id", "session_id"}),
             model=request.model,
             seed=request.seed,
+            session_id=request.session_id,
         )
         return _submit_recipe(jobs, runtime, recipe)
 
@@ -212,9 +245,10 @@ def create_app(
             operator=OperatorName.INPAINT,
             backend=request.backend,
             inputs={"source": request.source_artifact_id},
-            params=request.model_dump(mode="json", exclude={"source_artifact_id"}),
+            params=request.model_dump(mode="json", exclude={"source_artifact_id", "session_id"}),
             model=request.model,
             seed=request.seed,
+            session_id=request.session_id,
         )
         return _submit_recipe(jobs, runtime, recipe)
 
@@ -227,6 +261,7 @@ def create_app(
             params=request.params,
             seed=request.seed,
             notes=request.notes,
+            session_id=request.session_id,
         )
         return _submit_recipe(jobs, runtime, recipe)
 
@@ -240,6 +275,7 @@ def create_app(
             model=request.model,
             seed=request.seed,
             notes=request.notes,
+            session_id=request.session_id,
         )
         return _submit_recipe(jobs, runtime, recipe)
 

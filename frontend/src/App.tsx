@@ -31,7 +31,7 @@ import {
 import modelImage from "../../stable-audio-3.png";
 import { createApi, type ExperimentPayload } from "./api";
 import { useBenchStore } from "./store";
-import type { ArtifactRecord, JobRecord, ModelStatus, NotebookMode, OperatorName, OperatorSpec } from "./types";
+import type { ArtifactRecord, JobRecord, ModelStatus, NotebookMode, OperatorName, OperatorSpec, SessionRecord } from "./types";
 
 const audioModels = [
   { value: "medium", label: "medium", decoder: "same-l" },
@@ -571,11 +571,12 @@ const sameDecodeControlKeys = ["model", "chunked", "chunk_size", "overlap", "not
 
 export function App() {
   const queryClient = useQueryClient();
-  const { apiBase, setApiBase, selectedArtifactId, selectArtifact, sessionStartedAt, startSession, compare, setCompare } = useBenchStore();
+  const { apiBase, setApiBase, selectedArtifactId, selectArtifact, sessionId, sessionStartedAt, setSession, compare, setCompare } = useBenchStore();
   const api = useMemo(() => createApi(apiBase), [apiBase]);
 
   const health = useQuery({ queryKey: ["health", apiBase], queryFn: api.health, refetchInterval: 3000 });
   const operatorSpecs = useQuery({ queryKey: ["operator-specs", apiBase], queryFn: api.operatorSpecs, staleTime: 30000 });
+  const sessions = useQuery({ queryKey: ["sessions", apiBase], queryFn: api.sessions, refetchInterval: 3000 });
   const modeAtlas = useQuery({ queryKey: ["colab-modes", apiBase], queryFn: api.colabModes, staleTime: Infinity });
   const artifacts = useQuery({ queryKey: ["artifacts", apiBase], queryFn: () => api.artifacts(), refetchInterval: 1500 });
   const jobs = useQuery({ queryKey: ["jobs", apiBase], queryFn: api.jobs, refetchInterval: 1000 });
@@ -602,16 +603,26 @@ export function App() {
   const [experimentForm, setExperimentForm] = useState<Record<string, RecipeValue>>(() => defaultExperimentForm("experiment.audio_style_vectors"));
 
   const allArtifacts = artifacts.data ?? [];
-  const sessionArtifacts = allArtifacts.filter((item) => createdAfter(item.created_at, sessionStartedAt));
+  const activeSession = findActiveSession(sessions.data ?? [], sessionId);
+  const activeSessionId = activeSession?.session_id ?? sessionId;
+  const sessionArtifacts = activeSessionId
+    ? allArtifacts.filter((item) => item.session_id === activeSessionId)
+    : allArtifacts.filter((item) => createdAfter(item.created_at, sessionStartedAt));
   const visibleArtifacts = sessionArtifacts;
   const selectedArtifact = allArtifacts.find((item) => item.artifact_id === selectedArtifactId) ?? visibleArtifacts[0] ?? null;
   const audioArtifacts = allArtifacts.filter((item) => item.kind === "audio");
   const latentArtifacts = allArtifacts.filter((item) => item.kind === "latent");
   const bundleArtifacts = allArtifacts.filter((item) => item.kind === "bundle");
   const allJobs = jobs.data ?? [];
-  const sessionJobs = allJobs.filter((item) => createdAfter(item.created_at, sessionStartedAt));
-  const archiveJobs = allJobs.filter((item) => !createdAfter(item.created_at, sessionStartedAt));
-  const archiveArtifacts = allArtifacts.filter((item) => !createdAfter(item.created_at, sessionStartedAt));
+  const sessionJobs = activeSessionId
+    ? allJobs.filter((item) => item.recipe.session_id === activeSessionId)
+    : allJobs.filter((item) => createdAfter(item.created_at, sessionStartedAt));
+  const archiveJobs = activeSessionId
+    ? allJobs.filter((item) => item.recipe.session_id !== activeSessionId)
+    : allJobs.filter((item) => !createdAfter(item.created_at, sessionStartedAt));
+  const archiveArtifacts = activeSessionId
+    ? allArtifacts.filter((item) => item.session_id !== activeSessionId)
+    : allArtifacts.filter((item) => !createdAfter(item.created_at, sessionStartedAt));
   const runningJobs = allJobs.filter(isJobActive);
   const latestJobs = allJobs.slice(0, 8);
   const compareA = allArtifacts.find((item) => item.artifact_id === compare.a) ?? null;
@@ -637,18 +648,33 @@ export function App() {
     }
   }, [selectArtifact, selectedArtifactId, visibleArtifacts]);
 
+  useEffect(() => {
+    if (sessionId || !sessions.data?.length) return;
+    const latestActive = sessions.data.find((session) => session.status === "active") ?? sessions.data[0];
+    setSession(latestActive.session_id, latestActive.created_at);
+  }, [sessionId, sessions.data, setSession]);
+
   const invalidate = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["artifacts", apiBase] }),
       queryClient.invalidateQueries({ queryKey: ["jobs", apiBase] }),
       queryClient.invalidateQueries({ queryKey: ["health", apiBase] }),
+      queryClient.invalidateQueries({ queryKey: ["sessions", apiBase] }),
     ]);
   };
 
   const importAudio = useMutation({
-    mutationFn: (file: File) => api.importAudio(file, file.name),
+    mutationFn: (file: File) => api.importAudio(file, file.name, activeSessionId),
     onSuccess: async (artifact) => {
       selectArtifact(artifact.artifact_id);
+      await invalidate();
+    },
+  });
+
+  const createSession = useMutation({
+    mutationFn: () => api.createSession({ name: `Session ${new Date().toLocaleString()}` }),
+    onSuccess: async (session) => {
+      setSession(session.session_id, session.created_at);
       await invalidate();
     },
   });
@@ -667,6 +693,7 @@ export function App() {
         model: selected.value,
         decoder: audioDecoder,
         backend: "mlx",
+        session_id: activeSessionId,
       });
     },
     onSuccess: invalidate,
@@ -683,6 +710,7 @@ export function App() {
         overlap: sameOverlap,
         prompt: samePrompt.trim() || null,
         notes: sameNotes.trim() || null,
+        session_id: activeSessionId,
       }),
     onSuccess: invalidate,
   });
@@ -697,6 +725,7 @@ export function App() {
         chunk_size: sameChunkSize,
         overlap: sameOverlap,
         notes: sameNotes.trim() || null,
+        session_id: activeSessionId,
       }),
     onSuccess: invalidate,
   });
@@ -712,6 +741,7 @@ export function App() {
         },
         params: buildOperatorParams(activeOperatorConfig, operatorForm),
         seed: operatorSeed(operatorForm, seed),
+        session_id: activeSessionId,
       }),
     onSuccess: invalidate,
   });
@@ -723,6 +753,7 @@ export function App() {
           config: activeExperiment,
           form: experimentForm,
           selectedArtifact,
+          sessionId: activeSessionId,
         }),
       ),
     onSuccess: invalidate,
@@ -1034,9 +1065,11 @@ export function App() {
             runningJobs={runningJobs}
             selectedId={selectedArtifact?.artifact_id ?? null}
             apiBase={apiBase}
-            sessionStartedAt={sessionStartedAt}
+            session={activeSession}
+            sessionStartedAt={activeSession?.created_at ?? sessionStartedAt}
+            creatingSession={createSession.isPending}
             onSelect={selectArtifact}
-            onStartSession={startSession}
+            onStartSession={() => createSession.mutate()}
           />
           <ComparePanel a={compareA} b={compareB} apiBase={apiBase} />
           <div className="mini-counts">
@@ -1387,7 +1420,9 @@ function SessionTray({
   runningJobs,
   selectedId,
   apiBase,
+  session,
   sessionStartedAt,
+  creatingSession,
   onSelect,
   onStartSession,
 }: {
@@ -1398,7 +1433,9 @@ function SessionTray({
   runningJobs: JobRecord[];
   selectedId: string | null;
   apiBase: string;
+  session: SessionRecord | null;
   sessionStartedAt: string;
+  creatingSession: boolean;
   onSelect: (artifactId: string | null) => void;
   onStartSession: () => void;
 }) {
@@ -1413,11 +1450,11 @@ function SessionTray({
       <div className="session-head">
         <div>
           <span className="eyebrow">Session</span>
-          <strong>{formatSessionStamp(sessionStartedAt)}</strong>
+          <strong>{session?.name ?? formatSessionStamp(sessionStartedAt)}</strong>
         </div>
-        <button type="button" className="session-new" onClick={onStartSession} title="New session">
-          <Plus size={16} />
-          New
+        <button type="button" className="session-new" onClick={onStartSession} title="New session" disabled={creatingSession}>
+          {creatingSession ? <LoaderCircle className="spin" size={16} /> : <Plus size={16} />}
+          {creatingSession ? "Creating" : "New"}
         </button>
       </div>
 
@@ -1994,10 +2031,12 @@ function buildExperimentPayload({
   config,
   form,
   selectedArtifact,
+  sessionId,
 }: {
   config: ExperimentConfig;
   form: Record<string, RecipeValue>;
   selectedArtifact: ArtifactRecord | null;
+  sessionId?: string | null;
 }): ExperimentPayload {
   const params: Record<string, unknown> = {};
   const inputs: Record<string, string> = {};
@@ -2027,8 +2066,16 @@ function buildExperimentPayload({
     inputs,
     model,
     seed,
+    session_id: sessionId,
     params,
   };
+}
+
+function findActiveSession(sessions: SessionRecord[], sessionId: string | null): SessionRecord | null {
+  if (sessionId) {
+    return sessions.find((session) => session.session_id === sessionId) ?? null;
+  }
+  return sessions.find((session) => session.status === "active") ?? null;
 }
 
 function operatorReady(

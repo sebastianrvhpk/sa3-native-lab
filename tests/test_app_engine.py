@@ -19,6 +19,9 @@ from sa3_native_lab.app.contracts import (  # noqa: E402
     LatentEncodeRequest,
     OperatorName,
     Recipe,
+    SessionCreateRequest,
+    SessionStatus,
+    SessionUpdateRequest,
     TextGenerateRequest,
 )
 from sa3_native_lab.app.jobs import JobManager, JobResult  # noqa: E402
@@ -87,15 +90,28 @@ def test_operator_specs_cover_typed_request_params(tmp_path):
     store = ArtifactStore(tmp_path / "lab")
     specs = {spec.name: spec for spec in RuntimeDispatcher(store, repo_root=tmp_path).operator_specs()}
 
-    text_fields = set(TextGenerateRequest.model_fields) - {"backend"}
-    encode_fields = set(LatentEncodeRequest.model_fields) - {"source_artifact_id", "backend"}
-    decode_fields = set(LatentDecodeRequest.model_fields) - {"source_artifact_id", "backend"}
+    text_fields = set(TextGenerateRequest.model_fields) - {"backend", "session_id"}
+    encode_fields = set(LatentEncodeRequest.model_fields) - {"source_artifact_id", "backend", "session_id"}
+    decode_fields = set(LatentDecodeRequest.model_fields) - {"source_artifact_id", "backend", "session_id"}
 
     assert text_fields <= set(specs[OperatorName.TEXT_TO_AUDIO].params)
     assert encode_fields <= set(specs[OperatorName.LATENT_ENCODE].params)
     assert decode_fields <= set(specs[OperatorName.LATENT_DECODE].params)
     assert specs[OperatorName.TEXT_TO_AUDIO].backends == [BackendName.MLX]
     assert OperatorName.EXPERIMENT_ALPHA_SWEEP in specs
+
+
+def test_sessions_persist_and_attach_artifacts(tmp_path):
+    store = ArtifactStore(tmp_path)
+    session = store.create_session(SessionCreateRequest(name="sketch one"))
+    record = store.store_latent_array(np.ones((3, 2), dtype=np.float32), latent_rate=1.0, session_id=session.session_id)
+    archived = store.update_session(session.session_id, SessionUpdateRequest(status=SessionStatus.ARCHIVED))
+
+    assert store.get_session(session.session_id).name == "sketch one"
+    assert archived.status == SessionStatus.ARCHIVED
+    assert archived.archived_at is not None
+    assert store.get_artifact(record.artifact_id).session_id == session.session_id
+    assert store.list_artifacts(session_id=session.session_id)[0].artifact_id == record.artifact_id
 
 
 def test_bundle_artifact_zips_directory_outputs(tmp_path):
@@ -176,6 +192,11 @@ def test_fastapi_surface_imports_and_runs_latent_job(tmp_path):
     app = create_app(artifact_root=tmp_path / "lab", repo_root=tmp_path)
     client = TestClient(app)
 
+    session = client.post("/sessions", json={"name": "api sketch"})
+    assert session.status_code == 200
+    session_id = session.json()["session_id"]
+    assert client.get("/sessions").json()[0]["session_id"] == session_id
+
     health = client.get("/health")
     assert health.status_code == 200
     assert any(item["backend"] == "mlx" for item in health.json()["backends"])
@@ -186,8 +207,10 @@ def test_fastapi_surface_imports_and_runs_latent_job(tmp_path):
     audio = client.post(
         "/audio/import",
         files={"file": ("tone.wav", audio_bytes, "application/octet-stream")},
+        data={"session_id": session_id},
     )
     assert audio.status_code == 200
+    assert audio.json()["session_id"] == session_id
     assert audio.json()["file"]["media_type"] == "audio/wav"
     peaks = client.get(f"/artifacts/{audio.json()['artifact_id']}/peaks?bins=8")
     assert peaks.status_code == 200
@@ -212,11 +235,13 @@ def test_fastapi_surface_imports_and_runs_latent_job(tmp_path):
             "backend": "torch_cpu",
             "inputs": {"source": artifact_id},
             "params": {"shift_frames": 1},
+            "session_id": session_id,
         },
     )
     assert job.status_code == 200
     finished = _wait_for_api_job(client, job.json()["job_id"])
     assert finished["status"] == "succeeded"
+    assert finished["recipe"]["session_id"] == session_id
     assert len(finished["artifact_ids"]) == 1
     recipe = client.get(f"/recipes/{finished['recipe']['recipe_id']}")
     assert recipe.status_code == 200

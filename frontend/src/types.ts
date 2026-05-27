@@ -72,6 +72,7 @@ export interface ArtifactRecord {
   notes?: string | null;
   tags: string[];
   metadata: Record<string, unknown>;
+  session_id?: string | null;
   created_at: string;
 }
 
@@ -84,8 +85,20 @@ export interface Recipe {
   model?: string | null;
   seed?: number | null;
   notes?: string | null;
+  session_id?: string | null;
   created_at: string;
   version: number;
+}
+
+export interface SessionRecord {
+  session_id: string;
+  name: string;
+  status: "active" | "archived";
+  notes?: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+  archived_at?: string | null;
 }
 
 export interface JobRecord {

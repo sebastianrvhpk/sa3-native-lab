@@ -1,4 +1,4 @@
-import type { ArtifactKind, ArtifactRecord, AudioPeaksResponse, HealthResponse, JobRecord, NotebookMode, OperatorName, OperatorSpec } from "./types";
+import type { ArtifactKind, ArtifactRecord, AudioPeaksResponse, HealthResponse, JobRecord, NotebookMode, OperatorName, OperatorSpec, SessionRecord } from "./types";
 
 export const DEFAULT_API_BASE = import.meta.env.VITE_SA3_API_BASE ?? "http://127.0.0.1:8733";
 
@@ -23,6 +23,7 @@ export interface GenerateTextPayload {
   model: "sm-music" | "sm-sfx" | "medium";
   decoder: "same-s" | "same-l";
   backend: "mlx";
+  session_id?: string | null;
 }
 
 export interface LatentEncodePayload {
@@ -34,6 +35,7 @@ export interface LatentEncodePayload {
   overlap?: number;
   prompt?: string | null;
   notes?: string | null;
+  session_id?: string | null;
 }
 
 export interface LatentDecodePayload {
@@ -44,6 +46,7 @@ export interface LatentDecodePayload {
   chunk_size?: number;
   overlap?: number;
   notes?: string | null;
+  session_id?: string | null;
 }
 
 export interface OperatorPayload {
@@ -52,6 +55,7 @@ export interface OperatorPayload {
   inputs: Record<string, string>;
   params: Record<string, unknown>;
   seed?: number | null;
+  session_id?: string | null;
 }
 
 export interface ExperimentPayload {
@@ -62,6 +66,7 @@ export interface ExperimentPayload {
   model?: string | null;
   seed?: number | null;
   notes?: string | null;
+  session_id?: string | null;
 }
 
 export function createApi(baseUrl: string) {
@@ -86,16 +91,22 @@ export function createApi(baseUrl: string) {
     artifactFileUrl: (artifactId: string) => `${base}/artifacts/${artifactId}/file`,
     health: () => request<HealthResponse>("/health"),
     operatorSpecs: () => request<OperatorSpec[]>("/operators/specs"),
+    sessions: () => request<SessionRecord[]>("/sessions"),
+    createSession: (payload: { name?: string | null; notes?: string | null } = {}) =>
+      request<SessionRecord>("/sessions", jsonPost(payload)),
+    updateSession: (sessionId: string, payload: Partial<Pick<SessionRecord, "name" | "status" | "notes">>) =>
+      request<SessionRecord>(`/sessions/${encodeURIComponent(sessionId)}`, { ...jsonPost(payload), method: "PATCH" }),
     colabModes: () => request<NotebookMode[]>("/colab/modes"),
     artifacts: (kind?: ArtifactKind) => request<ArtifactRecord[]>(kind ? `/artifacts?kind=${kind}` : "/artifacts"),
     audioPeaks: (artifactId: string, bins = 96) =>
       request<AudioPeaksResponse>(`/artifacts/${encodeURIComponent(artifactId)}/peaks?bins=${bins}`),
     jobs: () => request<JobRecord[]>("/jobs"),
     job: (jobId: string) => request<JobRecord>(`/jobs/${jobId}`),
-    importAudio: async (file: File, label?: string) => {
+    importAudio: async (file: File, label?: string, sessionId?: string | null) => {
       const data = new FormData();
       data.append("file", file);
       if (label) data.append("label", label);
+      if (sessionId) data.append("session_id", sessionId);
       return request<ArtifactRecord>("/audio/import", { method: "POST", body: data });
     },
     generateText: (payload: GenerateTextPayload) =>

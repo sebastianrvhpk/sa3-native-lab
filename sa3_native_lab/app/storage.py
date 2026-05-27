@@ -18,8 +18,12 @@ from .contracts import (
     FileInfo,
     LatentMetadata,
     Recipe,
+    SessionCreateRequest,
+    SessionRecord,
+    SessionStatus,
+    SessionUpdateRequest,
 )
-from .ids import new_id
+from .ids import new_id, utc_now
 
 
 class ArtifactStore:
@@ -29,9 +33,11 @@ class ArtifactStore:
         self.artifacts_dir = self.root / "artifacts"
         self.jobs_dir = self.root / "jobs"
         self.recipes_dir = self.root / "recipes"
+        self.sessions_dir = self.root / "sessions"
         self.artifacts_dir.mkdir(parents=True, exist_ok=True)
         self.jobs_dir.mkdir(parents=True, exist_ok=True)
         self.recipes_dir.mkdir(parents=True, exist_ok=True)
+        self.sessions_dir.mkdir(parents=True, exist_ok=True)
 
     def artifact_dir(self, artifact_id: str) -> Path:
         return self.artifacts_dir / artifact_id
@@ -51,6 +57,7 @@ class ArtifactStore:
         prompt: str | None = None,
         label: str | None = None,
         metadata: dict[str, Any] | None = None,
+        session_id: str | None = None,
     ) -> ArtifactRecord:
         artifact_id, path = self.reserve_artifact_path(filename=filename)
         with path.open("wb") as output:
@@ -62,6 +69,7 @@ class ArtifactStore:
             prompt=prompt,
             label=label,
             metadata=metadata,
+            session_id=session_id,
         )
 
     def import_audio_file(
@@ -72,6 +80,7 @@ class ArtifactStore:
         prompt: str | None = None,
         label: str | None = None,
         metadata: dict[str, Any] | None = None,
+        session_id: str | None = None,
     ) -> ArtifactRecord:
         source = Path(source_path)
         artifact_id, path = self.reserve_artifact_path(filename=source.name)
@@ -83,6 +92,7 @@ class ArtifactStore:
             prompt=prompt,
             label=label,
             metadata=metadata,
+            session_id=session_id,
         )
 
     def finalize_audio_file(
@@ -96,7 +106,9 @@ class ArtifactStore:
         prompt: str | None = None,
         label: str | None = None,
         metadata: dict[str, Any] | None = None,
+        session_id: str | None = None,
     ) -> ArtifactRecord:
+        resolved_session_id = session_id or (recipe.session_id if recipe else None)
         path = Path(path)
         audio = _audio_metadata(path)
         record = ArtifactRecord(
@@ -110,6 +122,7 @@ class ArtifactStore:
             prompt=prompt,
             label=label,
             metadata=metadata or {},
+            session_id=resolved_session_id,
         )
         self.write_artifact(record)
         if recipe is not None:
@@ -126,7 +139,9 @@ class ArtifactStore:
         label: str | None = None,
         prompt: str | None = None,
         metadata: dict[str, Any] | None = None,
+        session_id: str | None = None,
     ) -> ArtifactRecord:
+        resolved_session_id = session_id or (recipe.session_id if recipe else None)
         source = Path(path)
         if not source.exists():
             raise FileNotFoundError(source)
@@ -153,6 +168,7 @@ class ArtifactStore:
             prompt=prompt,
             label=label,
             metadata=bundle_metadata,
+            session_id=resolved_session_id,
         )
         self.write_artifact(record)
         if recipe is not None:
@@ -170,6 +186,7 @@ class ArtifactStore:
         prompt: str | None = None,
         label: str | None = None,
         metadata: dict[str, Any] | None = None,
+        session_id: str | None = None,
     ) -> ArtifactRecord:
         artifact_id, upload_path = self.reserve_artifact_path(filename=filename)
         with upload_path.open("wb") as output:
@@ -185,6 +202,7 @@ class ArtifactStore:
             prompt=prompt,
             label=label,
             metadata=metadata,
+            session_id=session_id,
         )
 
     def store_latent_array(
@@ -201,7 +219,9 @@ class ArtifactStore:
         prompt: str | None = None,
         label: str | None = None,
         metadata: dict[str, Any] | None = None,
+        session_id: str | None = None,
     ) -> ArtifactRecord:
+        resolved_session_id = session_id or (recipe.session_id if recipe else None)
         latent = np.asarray(array, dtype=np.float32)
         if latent.ndim != 2:
             raise ValueError(f"latent must be 2D, got shape {latent.shape}")
@@ -234,6 +254,7 @@ class ArtifactStore:
             prompt=prompt,
             label=label,
             metadata=metadata or {},
+            session_id=resolved_session_id,
         )
         self.write_artifact(record)
         if recipe is not None:
@@ -265,6 +286,58 @@ class ArtifactStore:
         for path in sorted(self.recipes_dir.glob("*.json")):
             recipes.append(Recipe.model_validate(_read_json(path)))
         return sorted(recipes, key=lambda item: item.created_at, reverse=True)
+
+    def create_session(self, request: SessionCreateRequest | None = None) -> SessionRecord:
+        request = request or SessionCreateRequest()
+        now = utc_now()
+        record = SessionRecord(
+            name=request.name or f"Session {now.strftime('%Y-%m-%d %H:%M')}",
+            notes=request.notes,
+            metadata=request.metadata,
+            created_at=now,
+            updated_at=now,
+        )
+        self.write_session(record)
+        return record
+
+    def write_session(self, record: SessionRecord) -> None:
+        _write_json(self.sessions_dir / f"{record.session_id}.json", record.model_dump(mode="json"))
+
+    def get_session(self, session_id: str) -> SessionRecord:
+        path = self.sessions_dir / f"{session_id}.json"
+        if not path.exists():
+            raise KeyError(session_id)
+        return SessionRecord.model_validate(_read_json(path))
+
+    def list_sessions(self) -> list[SessionRecord]:
+        records = []
+        for path in sorted(self.sessions_dir.glob("*.json")):
+            records.append(SessionRecord.model_validate(_read_json(path)))
+        return sorted(records, key=lambda item: item.created_at, reverse=True)
+
+    def update_session(self, session_id: str, request: SessionUpdateRequest) -> SessionRecord:
+        record = self.get_session(session_id)
+        status = request.status if request.status is not None else record.status
+        archived_at = record.archived_at
+        if status == SessionStatus.ARCHIVED and record.status != SessionStatus.ARCHIVED:
+            archived_at = utc_now()
+        elif status == SessionStatus.ACTIVE:
+            archived_at = None
+        metadata = dict(record.metadata)
+        if request.metadata is not None:
+            metadata.update(request.metadata)
+        updated = record.model_copy(
+            update={
+                "name": request.name if request.name is not None else record.name,
+                "status": status,
+                "notes": request.notes if request.notes is not None else record.notes,
+                "metadata": metadata,
+                "updated_at": utc_now(),
+                "archived_at": archived_at,
+            }
+        )
+        self.write_session(updated)
+        return updated
 
     def get_artifact(self, artifact_id: str) -> ArtifactRecord:
         path = self.artifact_dir(artifact_id) / "artifact.json"
@@ -300,11 +373,11 @@ class ArtifactStore:
             peaks=peaks,
         )
 
-    def list_artifacts(self, *, kind: ArtifactKind | None = None) -> list[ArtifactRecord]:
+    def list_artifacts(self, *, kind: ArtifactKind | None = None, session_id: str | None = None) -> list[ArtifactRecord]:
         records = []
         for manifest in sorted(self.artifacts_dir.glob("*/artifact.json")):
             record = ArtifactRecord.model_validate(_read_json(manifest))
-            if kind is None or record.kind == kind:
+            if (kind is None or record.kind == kind) and (session_id is None or record.session_id == session_id):
                 records.append(record)
         return records
 

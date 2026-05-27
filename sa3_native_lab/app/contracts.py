@@ -118,6 +118,7 @@ class ArtifactRecord(ContractModel):
     notes: str | None = None
     tags: list[str] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
+    session_id: str | None = None
     created_at: datetime = Field(default_factory=utc_now)
 
 
@@ -130,8 +131,38 @@ class Recipe(ContractModel):
     model: str | None = None
     seed: int | None = None
     notes: str | None = None
+    session_id: str | None = None
     created_at: datetime = Field(default_factory=utc_now)
     version: int = 1
+
+
+class SessionStatus(str, Enum):
+    ACTIVE = "active"
+    ARCHIVED = "archived"
+
+
+class SessionRecord(ContractModel):
+    session_id: str = Field(default_factory=lambda: new_id("sess"))
+    name: str
+    status: SessionStatus = SessionStatus.ACTIVE
+    notes: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    created_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now)
+    archived_at: datetime | None = None
+
+
+class SessionCreateRequest(ContractModel):
+    name: str | None = None
+    notes: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class SessionUpdateRequest(ContractModel):
+    name: str | None = None
+    status: SessionStatus | None = None
+    notes: str | None = None
+    metadata: dict[str, Any] | None = None
 
 
 class JobRecord(ContractModel):
@@ -207,6 +238,7 @@ class TextGenerateRequest(ContractModel):
     model: str = "medium"
     decoder: str | None = None
     backend: BackendName = BackendName.MLX
+    session_id: str | None = None
 
 
 class AudioToAudioRequest(TextGenerateRequest):
@@ -236,6 +268,7 @@ class LatentEncodeRequest(ContractModel):
     overlap: int = Field(default=32, ge=0)
     prompt: str | None = None
     notes: str | None = None
+    session_id: str | None = None
 
 
 class LatentDecodeRequest(ContractModel):
@@ -246,6 +279,7 @@ class LatentDecodeRequest(ContractModel):
     chunk_size: int = Field(default=128, ge=1)
     overlap: int = Field(default=32, ge=0)
     notes: str | None = None
+    session_id: str | None = None
 
 
 class OperatorRunRequest(ContractModel):
@@ -255,6 +289,7 @@ class OperatorRunRequest(ContractModel):
     backend: BackendName = BackendName.TORCH_CPU
     seed: int | None = None
     notes: str | None = None
+    session_id: str | None = None
 
 
 class ExperimentRunRequest(ContractModel):
@@ -265,6 +300,7 @@ class ExperimentRunRequest(ContractModel):
     model: str | None = None
     seed: int | None = None
     notes: str | None = None
+    session_id: str | None = None
 
 
 class ArtifactAnnotationRequest(ContractModel):
