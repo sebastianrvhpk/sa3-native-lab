@@ -5,6 +5,7 @@ from pathlib import Path
 
 from latent_audio_primitives.experiments.activation_vectors import SA3ActivationVectorExtractor
 from latent_audio_primitives.experiments.prompt_pairs import DEFAULT_PROMPT_PAIRS
+from _runtime import add_torch_runtime_args, model_half_from_args
 
 
 def main() -> None:
@@ -18,11 +19,12 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--layers", default="", help="Comma-separated layer indices, blank for all layers")
     parser.add_argument("--output", default="outputs/vectors/valence")
+    add_torch_runtime_args(parser)
     args = parser.parse_args()
 
     from stable_audio_3 import StableAudioModel
 
-    model = StableAudioModel.from_pretrained(args.model, device="cuda", model_half=True)
+    model = StableAudioModel.from_pretrained(args.model, device=args.device, model_half=model_half_from_args(args))
     pairs = [pair for pair in DEFAULT_PROMPT_PAIRS if args.axis == "all" or pair.axis == args.axis]
     layers = [int(value) for value in args.layers.split(",") if value.strip()] or None
 

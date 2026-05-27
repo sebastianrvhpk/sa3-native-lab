@@ -30,17 +30,13 @@ class StableAudioModel:
     @staticmethod
     def from_pretrained(model_name, device=None, model_half=True):
         # Load the model and any necessary components here
-        if device is None and torch.cuda.is_available():
-            device = "cuda"
-        elif device is None and torch.backends.mps.is_available():
-            device = "mps"
-        elif device is None:
-            device = "cpu"
+        device = _resolve_device(device)
 
-        if not torch.cuda.is_available():
+        if not str(device).startswith("cuda"):
             if model_name in ("medium", "medium-base"):
                 print(
-                    f"Warning: You are loading the {model_name} model without a GPU. This model is not designed to run on cpu"
+                    f"Warning: You are loading the {model_name} model on {device}. "
+                    "For Apple Silicon generation, the optimized/mlx path is usually faster."
                 )
             model_half = False
 
@@ -465,15 +461,9 @@ class AutoencoderModel:
 
     @staticmethod
     def from_pretrained(model_name, device=None):
-        if device is None:
-            if torch.cuda.is_available():
-                device = "cuda"
-            elif torch.backends.mps.is_available():
-                device = "mps"
-            else:
-                device = "cpu"
+        device = _resolve_device(device)
 
-        if not torch.cuda.is_available():
+        if str(device) == "cpu":
             if model_name == "same-l":
                 print(
                     f"Warning: You are loading the {model_name} model without a GPU. This model is not designed to run on cpu"
@@ -552,3 +542,13 @@ class AutoencoderModel:
             chunk_size=chunk_size,
             overlap=overlap,
         )
+
+
+def _resolve_device(device=None) -> str:
+    if device is not None:
+        return str(device)
+    if torch.cuda.is_available():
+        return "cuda"
+    if torch.backends.mps.is_available():
+        return "mps"
+    return "cpu"

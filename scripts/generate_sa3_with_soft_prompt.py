@@ -4,6 +4,7 @@ import argparse
 from pathlib import Path
 
 from latent_audio_primitives.experiments.soft_prompt import SoftPromptState, generate_with_soft_prompt
+from _runtime import add_torch_runtime_args, model_half_from_args
 
 
 def main() -> None:
@@ -14,12 +15,13 @@ def main() -> None:
     parser.add_argument("--steps", type=int, default=8)
     parser.add_argument("--cfg-scale", type=float, default=1.0)
     parser.add_argument("--seed", type=int, default=42)
+    add_torch_runtime_args(parser)
     args = parser.parse_args()
 
     import torchaudio
     from stable_audio_3 import StableAudioModel
 
-    model = StableAudioModel.from_pretrained(args.model, device="cuda", model_half=True)
+    model = StableAudioModel.from_pretrained(args.model, device=args.device, model_half=model_half_from_args(args))
     state = SoftPromptState.load(args.soft_prompt)
     audio = generate_with_soft_prompt(
         model,

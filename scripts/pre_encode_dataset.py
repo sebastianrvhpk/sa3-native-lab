@@ -33,6 +33,7 @@ from stable_audio_3.data.dataset import (
     SampleDataset,
     collation_fn,
 )
+from _runtime import resolve_torch_device
 
 
 def caption_metadata_fn(info, _audio):
@@ -43,7 +44,7 @@ def caption_metadata_fn(info, _audio):
 
 
 def main(args):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = resolve_torch_device(args.device)
 
     ae = AutoencoderModel.from_pretrained(args.model, device=str(device))
     if args.model_half:
@@ -151,6 +152,11 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--model_half", action="store_true", help="Run autoencoder in fp16"
+    )
+    parser.add_argument(
+        "--device",
+        default=None,
+        help="Torch device: cuda, mps, or cpu. Defaults to cuda -> mps -> cpu.",
     )
     parser.add_argument(
         "--pad", action="store_true", help="Pad audio samples to --sample_size"

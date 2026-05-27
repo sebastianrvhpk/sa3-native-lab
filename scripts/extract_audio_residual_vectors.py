@@ -4,6 +4,7 @@ import argparse
 from pathlib import Path
 
 from latent_audio_primitives.experiments.audio_residual_vectors import SA3AudioResidualVectorExtractor
+from _runtime import add_torch_runtime_args, model_half_from_args
 
 
 AUDIO_EXTS = {".wav", ".flac", ".mp3", ".ogg", ".m4a", ".aiff", ".aif"}
@@ -24,6 +25,7 @@ def main() -> None:
     parser.add_argument("--init-noise-level", type=float, default=0.35)
     parser.add_argument("--layers", default="", help="Comma-separated layer indices, blank for all layers")
     parser.add_argument("--limit", type=int, default=0)
+    add_torch_runtime_args(parser)
     args = parser.parse_args()
 
     from stable_audio_3 import StableAudioModel
@@ -36,7 +38,7 @@ def main() -> None:
         raise SystemExit(f"no negative audio files found in {args.negative}")
 
     layers = [int(value) for value in args.layers.split(",") if value.strip()] or None
-    model = StableAudioModel.from_pretrained(args.model, device="cuda", model_half=True)
+    model = StableAudioModel.from_pretrained(args.model, device=args.device, model_half=model_half_from_args(args))
     extractor = SA3AudioResidualVectorExtractor(model, layer_indices=layers, cpu_offload=True)
     result = extractor.extract(
         positive_paths,

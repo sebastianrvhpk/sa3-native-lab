@@ -6,6 +6,7 @@ from pathlib import Path
 from latent_audio_primitives.adapters.audioscope_sa3 import SteeringVectors
 from latent_audio_primitives.adapters.stable_audio3 import StableAudio3Adapter
 from latent_audio_primitives.experiments.sa3_sweeps import alpha_sweep
+from _runtime import add_torch_runtime_args, model_half_from_args
 
 
 def main() -> None:
@@ -20,11 +21,12 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=123)
     parser.add_argument("--layer", type=int, default=-1)
     parser.add_argument("--output", default="outputs/sweeps")
+    add_torch_runtime_args(parser)
     args = parser.parse_args()
 
     from stable_audio_3 import StableAudioModel
 
-    model = StableAudioModel.from_pretrained(args.model, device="cuda", model_half=True)
+    model = StableAudioModel.from_pretrained(args.model, device=args.device, model_half=model_half_from_args(args))
     sa3 = StableAudio3Adapter(model=model, model_name=args.model)
     vectors = SteeringVectors.load(args.vectors)
     alphas = [float(value.strip()) for value in args.alphas.split(",") if value.strip()]

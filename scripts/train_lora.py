@@ -55,9 +55,10 @@ from stable_audio_3.training.diffusion import (
     DiffusionCondTrainingWrapper,
     DiffusionCondInpaintDemoCallback,
 )
+from _runtime import resolve_torch_device, stable_audio_training_dtype
 
 
-def load_model(model_name: str, device: torch.device):
+def load_model(model_name: str, device: torch.device, dtype: torch.dtype):
     if model_name not in base_models:
         raise ValueError(
             f"LoRA training requires a base model. Got '{model_name}', valid: {list(base_models)}"
@@ -68,7 +69,7 @@ def load_model(model_name: str, device: torch.device):
         model_config = json.load(f)
     model = create_diffusion_cond_from_config(model_config)
     copy_state_dict(model, load_file(local_ckpt))
-    model.to(device=device, dtype=torch.bfloat16).eval().requires_grad_(False)
+    model.to(device=device, dtype=dtype).eval().requires_grad_(False)
     if model.pretransform is not None:
         model.pretransform.enable_grad = False
     return model, model_config
@@ -94,9 +95,8 @@ def train(args):
 
     pl.seed_everything(seed, workers=True)
 
-    model, model_config = load_model(
-        args.model, torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    )
+    device = resolve_torch_device(args.device)
+    model, model_config = load_model(args.model, device, stable_audio_training_dtype(device))
 
     sample_rate = model.sample_rate
     ds_ratio = model.pretransform.downsampling_ratio
@@ -374,6 +374,11 @@ def main():
         help="Maximum clip duration in seconds (default 380)",
     )
     p.add_argument("--seed", type=int, default=42)
+    p.add_argument(
+        "--device",
+        default=None,
+        help="Torch device: cuda, mps, or cpu. Defaults to cuda -> mps -> cpu.",
+    )
     p.add_argument("--logger", choices=["wandb", "comet", "csv", "none"], default="csv")
     p.add_argument("--name", type=str, default="lora-finetune")
     p.add_argument("--save_dir", type=str, default="./lora_checkpoints")

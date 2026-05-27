@@ -7,6 +7,7 @@ import numpy as np
 
 from latent_audio_primitives.adapters.stable_audio3 import StableAudio3Adapter
 from latent_audio_primitives.style import apply_style_direction, load_style_direction
+from _runtime import add_torch_runtime_args, model_half_from_args
 
 
 def main() -> None:
@@ -22,13 +23,14 @@ def main() -> None:
     parser.add_argument("--alpha", type=float, default=0.6)
     parser.add_argument("--std-alpha", type=float, default=0.0)
     parser.add_argument("--save-original", action="store_true")
+    add_torch_runtime_args(parser)
     args = parser.parse_args()
 
     import torch
     import torchaudio
     from stable_audio_3 import StableAudioModel
 
-    model = StableAudioModel.from_pretrained(args.model, device="cuda", model_half=True)
+    model = StableAudioModel.from_pretrained(args.model, device=args.device, model_half=model_half_from_args(args))
     sa3 = StableAudio3Adapter(model=model, model_name=args.model)
     direction = load_style_direction(args.direction)
 

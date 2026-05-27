@@ -2,11 +2,18 @@ from pytorch_lightning.loggers import WandbLogger, CometLogger
 from ..interface.aeiou import pca_point_cloud
 
 import math
-import wandb
 import torch
 import torch.nn.functional as F
 import os
 import typing as tp
+
+
+def _require_wandb():
+    try:
+        import wandb
+    except ImportError as exc:
+        raise ImportError("wandb is required when using the WandbLogger.") from exc
+    return wandb
 
 def get_rank():
     """Get rank of current process."""
@@ -123,12 +130,14 @@ def log_metric(logger, key, value, step=None):
 
 def log_audio(logger, key, audio_path, sample_rate, caption=None, step=None):
     if isinstance(logger, WandbLogger):
+        wandb = _require_wandb()
         logger.experiment.log({key: wandb.Audio(audio_path, sample_rate=sample_rate, caption=caption)})
     elif isinstance(logger, CometLogger):
         logger.experiment.log_audio(audio_path, file_name=key, sample_rate=sample_rate, step=step)
 
 def log_image(logger, key, img_data, step=None):
     if isinstance(logger, WandbLogger):
+        wandb = _require_wandb()
         logger.experiment.log({key: wandb.Image(img_data)})
     elif isinstance(logger, CometLogger):
         logger.experiment.log_image(img_data, name=key, step=step)

@@ -1,7 +1,3 @@
-import torch
-from stable_audio_3.interface.diffusion_cond import create_diffusion_cond_ui
-from stable_audio_3 import StableAudioModel
-from stable_audio_3.verbose import set_verbose
 import sys
 
 # Silence Python warnings (FutureWarning, DeprecationWarning, etc.) unless --verbose.
@@ -15,14 +11,20 @@ if "--verbose" not in sys.argv:
 
     _warnings.filterwarnings("ignore")
 
+import torch
+from stable_audio_3 import StableAudioModel
+from stable_audio_3.verbose import set_verbose
+
 
 def main(args):
     set_verbose(getattr(args, "verbose", False))
     torch.manual_seed(42)
     model_half = args.model_half
-    model = StableAudioModel.from_pretrained(args.model, model_half=model_half)
+    model = StableAudioModel.from_pretrained(args.model, device=args.device, model_half=model_half)
     if args.lora_ckpt_path:
         model.load_lora(args.lora_ckpt_path)
+    from stable_audio_3.interface.diffusion_cond import create_diffusion_cond_ui
+
     interface = create_diffusion_cond_ui(
         model,
         gradio_title=args.title if args.title is not None else "Stable Audio 3",
@@ -30,7 +32,7 @@ def main(args):
     )
     interface.queue()
     interface.launch(
-        share=True,
+        share=args.share,
         js=getattr(interface, "_sao_js", None),
         theme=getattr(interface, "_sao_theme", None),
     )
@@ -42,6 +44,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run gradio interface")
     parser.add_argument(
         "--model", type=str, help="Name of pretrained model", required=True
+    )
+    parser.add_argument(
+        "--device",
+        type=str,
+        default=None,
+        help="Torch device: cuda, mps, or cpu. Defaults to cuda -> mps -> cpu.",
     )
     parser.add_argument(
         "--model-config", type=str, help="Path to model config", required=False
@@ -59,10 +67,18 @@ if __name__ == "__main__":
     parser.add_argument("--password", type=str, help="Gradio password", required=False)
     parser.add_argument(
         "--model-half",
+        dest="model_half",
         action="store_true",
-        help="Whether to use half precision",
+        help="Use half precision where supported",
         required=False,
         default=True,
+    )
+    parser.add_argument(
+        "--no-half",
+        dest="model_half",
+        action="store_false",
+        help="Disable half precision",
+        required=False,
     )
     parser.add_argument(
         "--title", type=str, help="Display Title top of Gradio", required=False
@@ -85,6 +101,12 @@ if __name__ == "__main__":
         action="store_true",
         default=False,
         help="Print detailed load/generation progress",
+    )
+    parser.add_argument(
+        "--share",
+        action="store_true",
+        default=False,
+        help="Create a public Gradio share link.",
     )
     args = parser.parse_args()
     main(args)
