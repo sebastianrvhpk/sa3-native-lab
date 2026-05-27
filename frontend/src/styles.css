@@ -1312,6 +1312,43 @@ audio {
   background: rgb(255 255 255 / 0.42);
 }
 
+.job-log-drawer {
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  padding: 8px;
+  background:
+    linear-gradient(135deg, rgb(45 51 52 / 0.04), rgb(255 255 255 / 0.38)),
+    rgb(255 255 255 / 0.34);
+}
+
+.job-log-drawer summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.job-log-drawer strong {
+  margin-top: 8px;
+  display: block;
+  color: #7d2617;
+}
+
+.job-log-drawer pre {
+  max-height: 180px;
+  margin: 8px 0 0;
+  overflow: auto;
+  border-radius: 6px;
+  padding: 8px;
+  background: rgb(22 26 32 / 0.88);
+  color: rgb(241 246 230);
+  font-size: 0.72rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
 .inline-job-status {
   border: 1px solid var(--line-soft);
   border-radius: 8px;

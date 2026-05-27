@@ -1611,6 +1611,7 @@ function SessionArtifactRow({
 }
 
 function JobProgress({ job, compact = false }: { job: JobRecord; compact?: boolean }) {
+  const logLines = job.logs.slice(-12);
   return (
     <div className={`job-progress ${job.status} ${compact ? "compact" : ""}`}>
       <div className="job-progress-main">
@@ -1623,6 +1624,16 @@ function JobProgress({ job, compact = false }: { job: JobRecord; compact?: boole
         <span>{job.message ?? job.status}</span>
         <span>{formatJobElapsed(job)}</span>
       </div>
+      {!compact && (job.error || logLines.length) ? (
+        <details className="job-log-drawer">
+          <summary>
+            <CircleAlert size={14} />
+            {job.error ? "Error details" : `${logLines.length} log lines`}
+          </summary>
+          {job.error ? <strong>{job.error}</strong> : null}
+          {logLines.length ? <pre>{logLines.join("\n")}</pre> : null}
+        </details>
+      ) : null}
     </div>
   );
 }

@@ -154,6 +154,24 @@ def test_job_manager_persists_success(tmp_path):
     assert (tmp_path / f"{record.job_id}.json").exists()
 
 
+def test_job_manager_caps_logs_to_recent_lines(tmp_path):
+    manager = JobManager(tmp_path)
+    recipe = Recipe(
+        operator=OperatorName.LATENT_CYCLIC_ROLL,
+        backend=BackendName.TORCH_CPU,
+        params={"shift_frames": 1},
+    )
+    record = manager.submit(recipe, lambda context: JobResult())
+    for index in range(250):
+        manager.append_log(record.job_id, f"line {index}")
+
+    updated = manager.get(record.job_id)
+
+    assert len(updated.logs) == 200
+    assert updated.logs[0] == "line 50"
+    assert updated.logs[-1] == "line 249"
+
+
 def test_runtime_applies_latent_operator(tmp_path):
     store = ArtifactStore(tmp_path / "lab")
     source = store.store_latent_array(np.random.default_rng(0).normal(size=(8, 4)), latent_rate=4.0)
