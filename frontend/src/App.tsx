@@ -56,6 +56,7 @@ type ExperimentMode =
 
 type RecipeValue = string | number | boolean;
 type RecipeFieldType = "text" | "number" | "range" | "select" | "checkbox" | "path" | "artifact-path";
+type GenerationMode = "generate.text_to_audio" | "generate.audio_to_audio" | "generate.inpaint";
 
 interface RecipeField {
   key: string;
@@ -565,7 +566,14 @@ const experimentCatalog: readonly ExperimentConfig[] = [
 ];
 
 const experimentModes = experimentCatalog.map(({ value, label }) => ({ value, label }));
+const generationModes = [
+  { value: "generate.text_to_audio", label: "Text" },
+  { value: "generate.audio_to_audio", label: "A2A" },
+  { value: "generate.inpaint", label: "Inpaint" },
+] as const;
 const generateControlKeys = ["prompt", "negative_prompt", "duration_seconds", "steps", "seed", "cfg_scale", "apg_scale", "model", "decoder"];
+const audioToAudioControlKeys = [...generateControlKeys, "init_noise_level"];
+const inpaintControlKeys = [...audioToAudioControlKeys, "inpaint_start_seconds", "inpaint_end_seconds"];
 const sameEncodeControlKeys = ["model", "chunked", "chunk_size", "overlap", "prompt", "notes"];
 const sameDecodeControlKeys = ["model", "chunked", "chunk_size", "overlap", "notes"];
 
@@ -582,12 +590,16 @@ export function App() {
   const jobs = useQuery({ queryKey: ["jobs", apiBase], queryFn: api.jobs, refetchInterval: 1000 });
 
   const [prompt, setPrompt] = useState("short soft percussive click");
+  const [generationMode, setGenerationMode] = useState<GenerationMode>("generate.text_to_audio");
   const [negativePrompt, setNegativePrompt] = useState("");
   const [duration, setDuration] = useState(5);
   const [steps, setSteps] = useState(8);
   const [seed, setSeed] = useState(7);
   const [cfgScale, setCfgScale] = useState(1);
   const [apgScale, setApgScale] = useState(1);
+  const [initNoiseLevel, setInitNoiseLevel] = useState(0.7);
+  const [inpaintStart, setInpaintStart] = useState(0);
+  const [inpaintEnd, setInpaintEnd] = useState(2);
   const [audioModel, setAudioModel] = useState<(typeof audioModels)[number]["value"]>("medium");
   const [audioDecoder, setAudioDecoder] = useState<"same-s" | "same-l">("same-l");
   const [sameModel, setSameModel] = useState<"same-s" | "same-l">("same-l");
@@ -630,13 +642,16 @@ export function App() {
   const activeExperiment = experimentCatalog.find((item) => item.value === experimentMode) ?? experimentCatalog[0];
   const activeOperatorConfig = operatorCatalog.find((item) => item.value === operator) ?? operatorCatalog[0];
   const specMap = useMemo(() => new Map((operatorSpecs.data ?? []).map((spec) => [spec.name, spec])), [operatorSpecs.data]);
-  const textGenerateSpec = specMap.get("generate.text_to_audio");
+  const activeGenerateSpec = specMap.get(generationMode);
   const sameEncodeSpec = specMap.get("latent.encode");
   const sameDecodeSpec = specMap.get("latent.decode");
   const activeOperatorSpec = specMap.get(operator);
   const activeExperimentSpec = specMap.get(activeExperiment.value);
+  const generationNeedsSource = generationMode !== "generate.text_to_audio";
+  const generationSource = selectedArtifact?.kind === "audio" ? selectedArtifact : null;
+  const canGenerate = !generationNeedsSource || Boolean(generationSource);
   const canRunOperator = operatorReady(activeOperatorConfig, operatorForm, selectedArtifact, donorArtifactId);
-  const generateJob = activeJobForOperator(runningJobs, "generate.text_to_audio");
+  const generateJob = activeJobForOperator(runningJobs, generationMode);
   const encodeJob = activeJobForOperator(runningJobs, "latent.encode");
   const decodeJob = activeJobForOperator(runningJobs, "latent.decode");
   const operatorJob = activeJobForOperator(runningJobs, operator);
@@ -682,7 +697,7 @@ export function App() {
   const generate = useMutation({
     mutationFn: () => {
       const selected = audioModels.find((item) => item.value === audioModel)!;
-      return api.generateText({
+      const basePayload = {
         prompt,
         negative_prompt: negativePrompt.trim() || null,
         duration_seconds: duration,
@@ -694,7 +709,26 @@ export function App() {
         decoder: audioDecoder,
         backend: "mlx",
         session_id: activeSessionId,
-      });
+      } as const;
+      if (generationMode === "generate.audio_to_audio") {
+        if (!generationSource) throw new Error("Audio-to-audio requires a selected audio artifact.");
+        return api.generateAudioToAudio({
+          ...basePayload,
+          source_artifact_id: generationSource.artifact_id,
+          init_noise_level: initNoiseLevel,
+        });
+      }
+      if (generationMode === "generate.inpaint") {
+        if (!generationSource) throw new Error("Inpaint requires a selected audio artifact.");
+        return api.generateInpaint({
+          ...basePayload,
+          source_artifact_id: generationSource.artifact_id,
+          init_noise_level: initNoiseLevel,
+          inpaint_start_seconds: inpaintStart,
+          inpaint_end_seconds: inpaintEnd,
+        });
+      }
+      return api.generateText(basePayload);
     },
     onSuccess: invalidate,
   });
@@ -843,7 +877,14 @@ export function App() {
                 <Wand2 size={18} />
                 <span>Generate</span>
               </div>
-              <SpecCoverage spec={textGenerateSpec} controlledKeys={generateControlKeys} />
+              <SpecCoverage spec={activeGenerateSpec} controlledKeys={generationControlKeys(generationMode)} />
+              <div className="segmented">
+                {generationModes.map((mode) => (
+                  <button key={mode.value} className={generationMode === mode.value ? "active" : ""} onClick={() => setGenerationMode(mode.value)}>
+                    {mode.label}
+                  </button>
+                ))}
+              </div>
               <label className="control-cell">
                 Prompt
                 <input value={prompt} onChange={(event) => setPrompt(event.target.value)} />
@@ -900,8 +941,27 @@ export function App() {
                   APG
                   <input type="number" min={0} step={0.1} value={apgScale} onChange={(event) => setApgScale(Number(event.target.value))} />
                 </label>
+                {generationNeedsSource ? (
+                  <label className="control-cell">
+                    Init noise
+                    <input type="number" min={0} max={1} step={0.05} value={initNoiseLevel} onChange={(event) => setInitNoiseLevel(Number(event.target.value))} />
+                  </label>
+                ) : null}
+                {generationMode === "generate.inpaint" ? (
+                  <>
+                    <label className="control-cell">
+                      Inpaint start
+                      <input type="number" min={0} step={0.1} value={inpaintStart} onChange={(event) => setInpaintStart(Number(event.target.value))} />
+                    </label>
+                    <label className="control-cell">
+                      Inpaint end
+                      <input type="number" min={0.1} step={0.1} value={inpaintEnd} onChange={(event) => setInpaintEnd(Number(event.target.value))} />
+                    </label>
+                  </>
+                ) : null}
               </div>
-              <button className="primary-action" onClick={() => generate.mutate()} disabled={generate.isPending || Boolean(generateJob)}>
+              {generationNeedsSource && !generationSource ? <div className="quiet-panel compact">Select an audio artifact to use this mode.</div> : null}
+              <button className="primary-action" onClick={() => generate.mutate()} disabled={!canGenerate || generate.isPending || Boolean(generateJob)}>
                 {generate.isPending || generateJob ? <LoaderCircle className="spin" size={18} /> : <Play size={18} />}
                 {generateJob ? "MLX running" : generate.isPending ? "Queueing" : "Run MLX"}
               </button>
@@ -2009,6 +2069,12 @@ function defaultFieldForm(config: FieldConfig): Record<string, RecipeValue> {
 
 function fieldKeys(config: FieldConfig): string[] {
   return config.fields.map((field) => field.key).filter((key) => key !== "backend");
+}
+
+function generationControlKeys(mode: GenerationMode): readonly string[] {
+  if (mode === "generate.inpaint") return inpaintControlKeys;
+  if (mode === "generate.audio_to_audio") return audioToAudioControlKeys;
+  return generateControlKeys;
 }
 
 function specParamKeys(spec: OperatorSpec | undefined): string[] {

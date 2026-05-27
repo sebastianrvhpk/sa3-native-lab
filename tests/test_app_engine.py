@@ -13,7 +13,9 @@ pytest.importorskip("pydantic")
 
 from sa3_native_lab.app.contracts import (  # noqa: E402
     ArtifactAnnotationRequest,
+    AudioToAudioRequest,
     BackendName,
+    InpaintRequest,
     JobStatus,
     LatentDecodeRequest,
     LatentEncodeRequest,
@@ -91,10 +93,14 @@ def test_operator_specs_cover_typed_request_params(tmp_path):
     specs = {spec.name: spec for spec in RuntimeDispatcher(store, repo_root=tmp_path).operator_specs()}
 
     text_fields = set(TextGenerateRequest.model_fields) - {"backend", "session_id"}
+    audio_to_audio_fields = set(AudioToAudioRequest.model_fields) - {"source_artifact_id", "backend", "session_id"}
+    inpaint_fields = set(InpaintRequest.model_fields) - {"source_artifact_id", "backend", "session_id"}
     encode_fields = set(LatentEncodeRequest.model_fields) - {"source_artifact_id", "backend", "session_id"}
     decode_fields = set(LatentDecodeRequest.model_fields) - {"source_artifact_id", "backend", "session_id"}
 
     assert text_fields <= set(specs[OperatorName.TEXT_TO_AUDIO].params)
+    assert audio_to_audio_fields <= set(specs[OperatorName.AUDIO_TO_AUDIO].params)
+    assert inpaint_fields <= set(specs[OperatorName.INPAINT].params)
     assert encode_fields <= set(specs[OperatorName.LATENT_ENCODE].params)
     assert decode_fields <= set(specs[OperatorName.LATENT_DECODE].params)
     assert specs[OperatorName.TEXT_TO_AUDIO].backends == [BackendName.MLX]

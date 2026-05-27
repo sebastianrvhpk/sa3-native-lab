@@ -26,6 +26,16 @@ export interface GenerateTextPayload {
   session_id?: string | null;
 }
 
+export interface AudioToAudioPayload extends GenerateTextPayload {
+  source_artifact_id: string;
+  init_noise_level: number;
+}
+
+export interface InpaintPayload extends AudioToAudioPayload {
+  inpaint_start_seconds: number;
+  inpaint_end_seconds: number;
+}
+
 export interface LatentEncodePayload {
   source_artifact_id: string;
   model: "same-s" | "same-l";
@@ -111,6 +121,10 @@ export function createApi(baseUrl: string) {
     },
     generateText: (payload: GenerateTextPayload) =>
       request<JobRecord>("/generate/text", jsonPost(payload)),
+    generateAudioToAudio: (payload: AudioToAudioPayload) =>
+      request<JobRecord>("/generate/audio-to-audio", jsonPost(payload)),
+    generateInpaint: (payload: InpaintPayload) =>
+      request<JobRecord>("/generate/inpaint", jsonPost(payload)),
     encodeLatent: (payload: LatentEncodePayload) =>
       request<JobRecord>("/latents/encode", jsonPost(payload)),
     decodeLatent: (payload: LatentDecodePayload) =>

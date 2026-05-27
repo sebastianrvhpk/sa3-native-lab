@@ -10,6 +10,12 @@ try {
   await expect(page.getByText("SA3 Native Lab", { exact: true })).toBeVisible();
   await expect(page.locator(".surface-head .eyebrow", { hasText: "Listening Bench" })).toBeVisible();
   await expect(page.getByText("Spec covered").first()).toBeVisible();
+  await page.getByRole("button", { name: "A2A" }).click();
+  await expect(page.getByText("Init noise")).toBeVisible();
+  await expect(page.getByText("Spec covered").first()).toBeVisible();
+  await page.getByRole("button", { name: "Inpaint" }).click();
+  await expect(page.getByText("Inpaint start")).toBeVisible();
+  await expect(page.getByText("Spec covered").first()).toBeVisible();
   await expect(page.getByRole("button", { name: /Play|Pause/ }).first()).toBeVisible();
   await expect(page.getByRole("slider", { name: "Audio position" }).first()).toBeVisible();
   await expect(page.getByRole("button", { name: "New" })).toBeVisible();
