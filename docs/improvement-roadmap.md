@@ -9,8 +9,9 @@ For the broader stack direction and promotion triggers, see
 ## P0: Trust And Runability
 
 1. Harden live job-event transport.
-   Typed Python WebSocket events now update the UI. The next trust step is
-   reconnect/resume semantics, stderr tails, and a tRPC subscription bridge.
+   Typed job events now reach the UI through a tRPC/SSE control-plane bridge
+   when the control plane is enabled. The next trust step is reconnect/resume
+   history, stderr tails, and clearer event-source diagnostics.
 
 2. Improve error surfacing.
    Job failures should show command, stderr tail, missing file paths, model
@@ -43,8 +44,9 @@ For the broader stack direction and promotion triggers, see
    should cover kind, model, operator, date, status, and source lineage.
 
 4. Better bundle readers.
-   Bundle file inventory and JSON previews now exist. Vector/profile/soft-prompt
-   bundles should also expose dimensions, plots, generated audio children, and
+   Bundle file inventory, JSON previews, memory-result reuse, and first-pass
+   typed readers now exist. Next, vector/profile/soft-prompt/sweep bundles
+   should expose parsed dimensions, plots, generated audio children, and richer
    reuse actions without making the user inspect zip contents.
 
 ## P2: Research Cognition
@@ -86,9 +88,9 @@ For the broader stack direction and promotion triggers, see
 
 1. Move more app-shaped actions into tRPC.
    `workbench.load`, job lifecycle, recipe replay/fork, artifact inspection, and
-   family reads now exist. Next should be a job-event subscription bridge and
-   archive mutations as the normal UI path. Keep the Python worker as the
-   model/runtime owner.
+   family reads now exist, and `jobs.events` bridges live snapshots over
+   tRPC/SSE. Next should be event history/reconnect and archive mutations as
+   the normal UI path. Keep the Python worker as the model/runtime owner.
 
 2. Generate frontend schemas from backend operator specs.
    Operator/experiment field catalogs currently live in the frontend. A future
@@ -113,10 +115,11 @@ For the broader stack direction and promotion triggers, see
    reader: audio, latent, vector bundle, profile, soft prompt, training output,
    and memory collection.
 
-7. Extract app surfaces from `App.tsx`.
-   The bench now has enough real pieces that `Specimen`, `FamilyDetailPanel`,
-   `ForkRecipePanel`, bundle preview, session tray, and audio deck should move
-   into focused modules before adding Storybook or MSW scenarios.
+7. Continue extracting app surfaces from `App.tsx`.
+   Audio playback, artifact display, job progress, result families, recipe
+   forks, and bundle inspection are split out. Next extraction targets are
+   `Specimen`, `SessionTray`, operator bands, and Recipe Studio before adding
+   Storybook or MSW scenarios.
 
 ## Verification Plan
 

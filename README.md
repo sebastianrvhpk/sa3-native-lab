@@ -142,7 +142,8 @@ reuses already-running services on `127.0.0.1:8733`, `127.0.0.1:8787`, and
 `apps/control-plane` is the tRPC app-contract layer. It does not replace the
 Python runtime; it shapes Python runtime records into app-native procedures such
 as `workbench.load`, `system.readiness`, `jobs.cancel`, `jobs.retry`,
-`recipes.replay`, `recipes.fork`, `artifacts.inspect`, and `families.load`.
+`jobs.events`, `recipes.replay`, `recipes.fork`, `artifacts.inspect`, and
+`families.load`.
 
 ```bash
 npm install --prefix apps/control-plane
@@ -232,7 +233,7 @@ supports audio import, MLX text generation, SAME encode/decode, latent operator
 jobs, Recipe Studio script experiments, Colab Mode Atlas parity/status, job
 polling plus live job snapshots, cancellation/retry, recipe replay/fork editing,
 recipe diff/reset controls, result-family grouping with detail playback,
-memory-query result reuse, bundle previews, readiness checks, artifact
+memory-query result reuse, typed bundle inspectors, readiness checks, artifact
 selection, real waveform peaks, download, and A/B audio playback.
 
 ### Notebook Parity Check

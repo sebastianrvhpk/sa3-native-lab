@@ -41,9 +41,12 @@ The React frontend now has a feature-flagged tRPC client. When
 `workbench.load`. System readiness, job lifecycle, recipe replay/fork, artifact
 inspection, and family reads are also exposed as app-shaped tRPC procedures.
 Model execution and artifact file IO still belong to the Python worker. Live
-job snapshots currently use the Python WebSocket endpoint directly. When the env
-var is absent, the frontend falls back to the existing direct Python read
-queries and Python mutations.
+job snapshots now use a `jobs.events` tRPC/SSE subscription when the control
+plane is enabled. That bridge currently polls Python job snapshots, which keeps
+the React contract stable while leaving room to swap the internal source to the
+Python WebSocket stream later. When the env var is absent, the frontend falls
+back to the existing direct Python read queries, Python mutations, and Python
+job WebSockets.
 
 On the UI side, result families are now treated as app objects: the right rail
 can inspect a family, play its audio artifacts, assign A/B comparison slots,
@@ -62,7 +65,7 @@ uv run sa3-lab dev --with-control-plane
 | --- | --- | --- |
 | `system` | `readiness` | Report app/runtime readiness checks from the Python worker. |
 | `workbench` | `load` | Build UI-ready workbench state from Python runtime records. |
-| `jobs` | `list`, `get`, `cancel`, `retry` | App-level lifecycle actions over Python background jobs. |
+| `jobs` | `list`, `get`, `events`, `cancel`, `retry` | App-level lifecycle actions and live snapshots over Python background jobs. |
 | `recipes` | `replay`, `fork` | Re-run or branch a persisted recipe without rebuilding payloads in React. |
 | `artifacts` | `inspect` | Fetch artifact, recipe, sources, children, bundle file inventory, and safe previews. |
 | `families` | `load` | Return grouped recipe result families for the active workbench scope. |
@@ -98,7 +101,7 @@ Future responsibilities:
 
 ## Next Control-Plane Queue
 
-1. Add a tRPC subscription bridge for job-event snapshots and reconnect.
+1. Add event history/reconnect semantics and stderr tails to `jobs.events`.
 2. Promote archive annotation/search mutations to the normal UI path.
 3. Add bounded fork forms derived from operator specs.
 4. Promote family detail and memory-result actions into tRPC procedures where

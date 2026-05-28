@@ -71,8 +71,9 @@ control plane. This is enabled by setting `VITE_SA3_CONTROL_PLANE_URL` or by
 running `uv run sa3-lab dev --with-control-plane`. The control plane currently
 shapes sessions, artifacts, jobs, result families, health, readiness, operator
 specs, and mode atlas data. It also exposes job lifecycle, recipe replay/fork,
-artifact inspection, family loading, and archive procedures while the Python
-worker keeps owning model execution and artifact file IO.
+artifact inspection, family loading, archive procedures, and a tRPC/SSE job
+event bridge while the Python worker keeps owning model execution and artifact
+file IO.
 
 ### Operator Studio
 
@@ -137,23 +138,28 @@ Confirmed in the current codebase:
 - Artifact annotation and archive search are implemented for labels, notes, and
   tags.
 - tRPC workbench, readiness, job lifecycle, recipe replay/fork, artifact
-  inspection, and result-family procedures are implemented behind the
-  control-plane launch flag.
+  inspection, result-family procedures, and job-event subscriptions are
+  implemented behind the control-plane launch flag.
 - The frontend has live job-event snapshots, a readiness panel, a recipe fork
   editor with diffs and resets, result-family detail playback, memory-result
-  reuse actions, and bundle previews.
+  reuse actions, typed bundle inspectors, and bundle previews.
+- Core app surfaces are now split into focused modules for audio playback,
+  artifact display, job progress, result families, recipe forks, and bundle
+  inspection.
 - The frontend builds and the Python test suite passes locally.
 
 Still partial:
 
 - Some Colab modes are mapped but not yet first-class native interactions.
 - Type-specific readers for profiles, vectors, soft prompts, training outputs,
-  and memory collections are still shallow.
+  sweeps, and memory collections have a first UI pass, but still need deeper
+  parsed metadata from the backend.
 - Memory-query bundles expose preview rows and donor/A-B reuse actions, but
   still need richer dataset browsing, preview audio for non-local children, and
   style-reference promotion.
 - Multi-output sweeps have family grouping, metrics, direct playback, A/B
   assignment, and recipe fork deltas, but still need sweep-specific metric
   tables and promotion semantics.
-- Live job events currently come from the Python WebSocket path; tRPC does not
-  yet own subscription transport.
+- Live job events now reach React through the control plane when that path is
+  enabled; the bridge currently polls Python job snapshots and can later switch
+  its internal source to Python WebSocket without changing the UI contract.
