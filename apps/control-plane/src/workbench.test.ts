@@ -202,6 +202,7 @@ test("tRPC artifact inspection and family loading expose app-shaped records", as
         children: [],
         bundle_files: [{ path: "metrics.json", byte_size: 16, compressed_size: 12 }],
         bundle_preview: { result_count: 3 },
+        bundle_summary: { kind: "sweep", file_count: 1 },
       },
     };
     if (!(path in payloads)) {

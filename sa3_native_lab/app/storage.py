@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import os
 import shutil
@@ -149,6 +150,8 @@ class ArtifactStore:
         if not source.exists():
             raise FileNotFoundError(source)
         bundle_metadata = dict(metadata or {})
+        if recipe is not None:
+            bundle_metadata.setdefault("operator", recipe.operator.value)
         if source.is_dir():
             bundle_path = self.artifact_dir(artifact_id) / f"{_safe_filename(source.name)}.zip"
             if bundle_path.exists():
@@ -368,13 +371,15 @@ class ArtifactStore:
             if record.artifact_id in item.source_artifact_ids
         ]
         children = sorted(children, key=lambda item: item.created_at, reverse=True)
+        bundle_files = _bundle_file_entries(record.path) if record.kind == ArtifactKind.BUNDLE else []
         return ArtifactInspection(
             artifact=record,
             recipe=recipe,
             sources=sources,
             children=children,
-            bundle_files=_bundle_file_entries(record.path) if record.kind == ArtifactKind.BUNDLE else [],
+            bundle_files=bundle_files,
             bundle_preview=_bundle_preview(record) if record.kind == ArtifactKind.BUNDLE else {},
+            bundle_summary=_bundle_summary(record, bundle_files) if record.kind == ArtifactKind.BUNDLE else {},
         )
 
     def audio_peaks(self, artifact_id: str, *, bins: int = 96) -> AudioPeaksResponse:
@@ -517,7 +522,263 @@ def _bundle_preview(record: ArtifactRecord) -> dict[str, Any]:
             if isinstance(results, list):
                 preview["result_count"] = len(results)
                 preview["results"] = results[:5]
+    for path, payload in _iter_bundle_json_payloads(record.path, max_bytes=1024 * 1024):
+        if not isinstance(payload, (dict, list)):
+            continue
+        preview.setdefault("json_files", [])
+        if isinstance(preview["json_files"], list):
+            preview["json_files"].append(path)
+        if path.endswith("memory_query.json") and isinstance(payload, dict):
+            for key in ("candidate_count", "metric", "top_k", "source_artifact_id"):
+                if key in payload:
+                    preview[key] = payload[key]
+            results = payload.get("results")
+            if isinstance(results, list):
+                preview["result_count"] = len(results)
+                preview["results"] = results[:5]
+        if path.endswith("sweep.json") and isinstance(payload, list):
+            preview["result_count"] = len(payload)
+            preview["alphas"] = [item.get("alpha") for item in payload[:12] if isinstance(item, dict) and "alpha" in item]
     return {key: value for key, value in preview.items() if value is not None}
+
+
+def _bundle_summary(record: ArtifactRecord, files: list[BundleFileEntry]) -> dict[str, Any]:
+    file_names = [entry.path.lower() for entry in files]
+    audio_count = sum(1 for name in file_names if Path(name).suffix in {".wav", ".flac", ".mp3", ".ogg", ".m4a", ".aiff", ".aif"})
+    latent_count = sum(1 for name in file_names if Path(name).suffix == ".npy")
+    npz_count = sum(1 for name in file_names if Path(name).suffix == ".npz")
+    json_payloads = list(_iter_bundle_json_payloads(record.path, max_bytes=1024 * 1024))
+    npz_summaries = list(_iter_bundle_npz_summaries(record.path, max_bytes=64 * 1024 * 1024))
+    summary: dict[str, Any] = {
+        "kind": _classify_bundle_kind(record, file_names, json_payloads, npz_summaries),
+        "operator": record.metadata.get("operator"),
+        "file_count": len(files),
+        "total_bytes": sum(entry.byte_size for entry in files),
+        "audio_count": audio_count,
+        "latent_count": latent_count,
+        "npz_count": npz_count,
+    }
+
+    json_summaries = [_json_payload_summary(path, payload) for path, payload in json_payloads]
+    if json_summaries:
+        summary["json_files"] = json_summaries
+    if npz_summaries:
+        summary["npz_files"] = npz_summaries
+
+    sweep = _sweep_summary(json_payloads)
+    if sweep:
+        summary["sweep"] = sweep
+    memory = _memory_summary(json_payloads)
+    if memory:
+        summary["memory"] = memory
+    vector_summary = _vector_summary(json_payloads, npz_summaries)
+    if vector_summary:
+        summary["vectors"] = vector_summary
+    profile_summary = _profile_summary(npz_summaries)
+    if profile_summary:
+        summary["profile"] = profile_summary
+    if any(name.endswith(".pt") or "soft_prompt" in name for name in file_names):
+        summary["soft_prompt"] = {
+            "tensor_files": [entry.path for entry in files if entry.path.lower().endswith(".pt") or "soft_prompt" in entry.path.lower()][:8],
+        }
+    if any("checkpoint" in name or "adapter" in name or "lora" in name for name in file_names):
+        summary["training"] = {
+            "checkpoint_files": [entry.path for entry in files if any(token in entry.path.lower() for token in ("checkpoint", "adapter", "lora"))][:8],
+        }
+    return {key: value for key, value in summary.items() if value not in (None, [], {})}
+
+
+def _iter_bundle_json_payloads(path: Path, *, max_bytes: int) -> list[tuple[str, Any]]:
+    payloads = []
+    for name, raw in _iter_bundle_file_bytes(path, suffixes={".json"}, max_bytes=max_bytes):
+        try:
+            payloads.append((name, json.loads(raw.decode("utf-8"))))
+        except Exception:
+            continue
+    return payloads
+
+
+def _iter_bundle_npz_summaries(path: Path, *, max_bytes: int) -> list[dict[str, Any]]:
+    summaries = []
+    for name, raw in _iter_bundle_file_bytes(path, suffixes={".npz"}, max_bytes=max_bytes):
+        try:
+            with np.load(io.BytesIO(raw), allow_pickle=False) as data:
+                arrays = {}
+                scalars: dict[str, Any] = {}
+                for key in data.files:
+                    value = data[key]
+                    scalar = _np_scalar(value)
+                    if scalar is None:
+                        arrays[key] = list(value.shape)
+                    else:
+                        scalars[key] = scalar
+                summaries.append(
+                    {
+                        "path": name,
+                        "keys": list(data.files)[:24],
+                        "arrays": arrays,
+                        "scalars": scalars,
+                    }
+                )
+        except Exception:
+            continue
+    return summaries
+
+
+def _iter_bundle_file_bytes(path: Path, *, suffixes: set[str], max_bytes: int) -> list[tuple[str, bytes]]:
+    if not path.exists():
+        return []
+    if path.is_dir():
+        payloads = []
+        for child in sorted(item for item in path.rglob("*") if item.is_file() and item.suffix.lower() in suffixes):
+            if child.stat().st_size <= max_bytes:
+                payloads.append((str(child.relative_to(path)), child.read_bytes()))
+        return payloads
+    if zipfile.is_zipfile(path):
+        payloads = []
+        with zipfile.ZipFile(path) as archive:
+            for item in archive.infolist():
+                if item.is_dir() or Path(item.filename).suffix.lower() not in suffixes or item.file_size > max_bytes:
+                    continue
+                with archive.open(item) as handle:
+                    payloads.append((item.filename, handle.read()))
+        return payloads
+    if path.is_file() and path.suffix.lower() in suffixes and path.stat().st_size <= max_bytes:
+        return [(path.name, path.read_bytes())]
+    return []
+
+
+def _classify_bundle_kind(
+    record: ArtifactRecord,
+    file_names: list[str],
+    json_payloads: list[tuple[str, Any]],
+    npz_summaries: list[dict[str, Any]],
+) -> str:
+    operator = str(record.metadata.get("operator") or "")
+    if operator == "memory.query" or any(isinstance(payload, dict) and "results" in payload for _, payload in json_payloads):
+        return "memory"
+    if "alpha_sweep" in operator or any(name.endswith("sweep.json") for name, _ in json_payloads):
+        return "sweep"
+    npz_kinds = {_string_value(summary.get("scalars", {}).get("kind")) for summary in npz_summaries}
+    if "LatentStyleProfile" in npz_kinds or any("profile.npz" in name for name in file_names):
+        return "profile"
+    if "LatentStyleDirection" in npz_kinds or "AudioSetDirection" in npz_kinds or "vectors" in operator:
+        return "vectors"
+    if any("soft_prompt" in name for name in file_names):
+        return "soft-prompt"
+    if any("lora" in name or "checkpoint" in name for name in file_names):
+        return "training"
+    return "generic"
+
+
+def _json_payload_summary(path: str, payload: Any) -> dict[str, Any]:
+    if isinstance(payload, dict):
+        return {
+            "path": path,
+            "type": "object",
+            "keys": list(payload)[:12],
+            "count": len(payload),
+        }
+    if isinstance(payload, list):
+        return {
+            "path": path,
+            "type": "list",
+            "count": len(payload),
+            "keys": list(payload[0])[:12] if payload and isinstance(payload[0], dict) else [],
+        }
+    return {"path": path, "type": type(payload).__name__}
+
+
+def _sweep_summary(json_payloads: list[tuple[str, Any]]) -> dict[str, Any] | None:
+    for path, payload in json_payloads:
+        if not path.endswith("sweep.json") or not isinstance(payload, list):
+            continue
+        outputs = [item for item in payload if isinstance(item, dict)]
+        alphas = [float(item["alpha"]) for item in outputs if isinstance(item.get("alpha"), (int, float))]
+        return {
+            "count": len(outputs),
+            "alphas": alphas,
+            "alpha_min": min(alphas) if alphas else None,
+            "alpha_max": max(alphas) if alphas else None,
+            "outputs": [
+                {
+                    "alpha": item.get("alpha"),
+                    "item_id": item.get("item_id"),
+                    "audio_path": item.get("audio_path"),
+                    "latent_path": item.get("latent_path"),
+                }
+                for item in outputs[:12]
+            ],
+        }
+    return None
+
+
+def _memory_summary(json_payloads: list[tuple[str, Any]]) -> dict[str, Any] | None:
+    for _path, payload in json_payloads:
+        if not isinstance(payload, dict) or "results" not in payload:
+            continue
+        results = payload.get("results")
+        return {
+            "source_artifact_id": payload.get("source_artifact_id"),
+            "metric": payload.get("metric"),
+            "top_k": payload.get("top_k"),
+            "candidate_count": payload.get("candidate_count"),
+            "result_count": len(results) if isinstance(results, list) else None,
+            "results": results[:8] if isinstance(results, list) else [],
+        }
+    return None
+
+
+def _vector_summary(json_payloads: list[tuple[str, Any]], npz_summaries: list[dict[str, Any]]) -> dict[str, Any] | None:
+    for _path, payload in json_payloads:
+        if not isinstance(payload, dict):
+            continue
+        vectors = payload.get("vectors")
+        if isinstance(vectors, dict):
+            return {
+                "layers": vectors.get("layers"),
+                "best_layer": vectors.get("best_layer"),
+                "probe_accuracy": vectors.get("probe_accuracy"),
+                "example_count": len(payload.get("examples", [])) if isinstance(payload.get("examples"), list) else None,
+            }
+    vector_npz = [
+        summary
+        for summary in npz_summaries
+        if _string_value(summary.get("scalars", {}).get("kind")) in {"LatentStyleDirection", "AudioSetDirection"}
+    ]
+    if vector_npz:
+        return {"npz_files": vector_npz}
+    return None
+
+
+def _profile_summary(npz_summaries: list[dict[str, Any]]) -> dict[str, Any] | None:
+    profiles = [
+        {
+            "path": summary.get("path"),
+            "name": summary.get("scalars", {}).get("name"),
+            "dim": summary.get("scalars", {}).get("dim"),
+            "item_count": summary.get("scalars", {}).get("item_count"),
+            "arrays": summary.get("arrays", {}),
+        }
+        for summary in npz_summaries
+        if _string_value(summary.get("scalars", {}).get("kind")) == "LatentStyleProfile"
+    ]
+    return {"profiles": profiles} if profiles else None
+
+
+def _np_scalar(value: np.ndarray) -> str | int | float | bool | None:
+    if value.shape != ():
+        return None
+    item = value.item()
+    if isinstance(item, bytes):
+        return item.decode("utf-8", errors="replace")
+    if isinstance(item, (str, int, float, bool)):
+        return item
+    return str(item)
+
+
+def _string_value(value: Any) -> str:
+    return value if isinstance(value, str) else ""
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:

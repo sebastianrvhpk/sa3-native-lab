@@ -94,6 +94,7 @@ export interface ArtifactInspection {
   children: ArtifactRecord[];
   bundle_files: BundleFileEntry[];
   bundle_preview: Record<string, unknown>;
+  bundle_summary: Record<string, unknown>;
 }
 
 export interface SessionRecord {

@@ -103,6 +103,9 @@ def test_runtime_memory_query_returns_nearest_latent_artifacts(tmp_path):
     inspection = store.inspect_artifact(artifact.artifact_id)
     assert inspection.bundle_preview["result_count"] == 1
     assert inspection.bundle_preview["results"][0]["artifact_id"] == near.artifact_id
+    assert inspection.bundle_summary["kind"] == "memory"
+    assert inspection.bundle_summary["memory"]["result_count"] == 1
+    assert inspection.bundle_summary["memory"]["results"][0]["artifact_id"] == near.artifact_id
 
 
 def test_audio_peaks_are_derived_from_audio_file(tmp_path):
@@ -176,6 +179,11 @@ def test_bundle_artifact_zips_directory_outputs(tmp_path):
     output_dir = tmp_path / "vectors"
     output_dir.mkdir()
     (output_dir / "summary.txt").write_text("best_layer=2\n", encoding="utf-8")
+    (output_dir / "metadata.json").write_text(
+        json.dumps({"vectors": {"layers": [2, 4], "best_layer": 2, "probe_accuracy": 0.75}, "examples": [{"label": 1}]}),
+        encoding="utf-8",
+    )
+    np.savez(output_dir / "direction.npz", kind="LatentStyleDirection", name="bright", dim=64, mean_delta=np.zeros(64, dtype=np.float32))
     recipe = Recipe(operator=OperatorName.EXPERIMENT_SA3_VECTORS_EXTRACT, backend=BackendName.TORCH_CPU)
 
     record = store.finalize_bundle_path(artifact_id="art_bundle", path=output_dir, recipe=recipe)
@@ -189,8 +197,11 @@ def test_bundle_artifact_zips_directory_outputs(tmp_path):
     inspection = store.inspect_artifact(record.artifact_id)
     assert inspection.recipe is not None
     assert inspection.recipe.recipe_id == recipe.recipe_id
-    assert [item.path for item in inspection.bundle_files] == ["summary.txt"]
-    assert inspection.bundle_files[0].byte_size == len("best_layer=2\n")
+    assert [item.path for item in inspection.bundle_files] == ["direction.npz", "metadata.json", "summary.txt"]
+    assert inspection.bundle_summary["kind"] == "vectors"
+    assert inspection.bundle_summary["vectors"]["best_layer"] == 2
+    assert inspection.bundle_summary["vectors"]["example_count"] == 1
+    assert inspection.bundle_summary["npz_files"][0]["scalars"]["kind"] == "LatentStyleDirection"
 
 
 def test_job_manager_persists_success(tmp_path):
@@ -425,6 +436,8 @@ def test_fastapi_inspects_bundle_artifact(tmp_path):
     assert payload["recipe"]["operator"] == "experiment.alpha_sweep"
     assert payload["bundle_files"][0]["path"] == "metrics.json"
     assert "bundle_preview" in payload
+    assert payload["bundle_summary"]["kind"] == "sweep"
+    assert payload["bundle_summary"]["json_files"][0]["path"] == "metrics.json"
 
 
 def test_runtime_same_encode_decode_with_fake_adapter(tmp_path):

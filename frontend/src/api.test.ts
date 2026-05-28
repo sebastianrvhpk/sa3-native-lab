@@ -31,6 +31,7 @@ const server = setupServer(
       children: [],
       bundle_files: [{ path: "metrics.json", byte_size: 16, compressed_size: 12 }],
       bundle_preview: { result_count: 2 },
+      bundle_summary: { kind: "sweep", file_count: 1 },
     }),
   ),
   http.get("http://api.test/readiness", () =>
