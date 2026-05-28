@@ -66,10 +66,11 @@ For the broader stack direction and promotion triggers, see
    folders, prompt-search candidates, and LoRA checkpoints into Recipe Studio,
    and discovered image plots plus embedded audio files render through the
    bundle-file endpoint. Embedded bundle audio can now be promoted into normal
-   audio artifacts. Prompt-search bundles now show scorer metadata and compact
-   candidate families. Next, vector/profile/soft-prompt/sweep/geometry/prompt
-   search bundles should expose richer domain-specific controls without making
-   the user inspect zip contents.
+   audio artifacts. Prompt-search bundles now show scorer metadata, compact
+   candidate families, inline generated takes, and A/B assignment for candidate
+   audio. Next, vector/profile/soft-prompt/sweep/geometry/prompt search bundles
+   should expose richer domain-specific controls without making the user
+   inspect zip contents.
 
 ## P2: Research Cognition
 
@@ -91,10 +92,12 @@ For the broader stack direction and promotion triggers, see
    Prompt search now exists as `experiment.prompt_search` with beam, greedy, and
    coordinate modes, `lexical_probe` fallback, and optional `sa3_flow_probe`
    scoring over Medium flow losses. A tiny authenticated Medium/MPS smoke run
-   succeeded locally on short target audio. The next research step is pairing
-   prompt candidates with generated-audio grids, descriptor deltas, and
-   layer/alpha comparisons. CLAP or hybrid scoring belongs after that comparison
-   workflow exists.
+   succeeded locally on short target audio. Prompt candidates can now launch
+   MLX text-to-audio jobs with lineage back to the search bundle; generated
+   takes are grouped under the prompt-search family and can be played or sent to
+   A/B beside the candidate. The next research step is saved listening
+   decisions, descriptor deltas, and layer/alpha comparisons. CLAP or hybrid
+   scoring belongs after that comparison workflow has real usage.
 
 5. Geometry and control probes.
    `experiment.geometry_audit` now produces a local latent geometry report

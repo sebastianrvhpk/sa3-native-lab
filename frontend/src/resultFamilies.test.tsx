@@ -3,11 +3,31 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import { FamilyDetailPanel } from "./resultFamilies";
+import { FamilyDetailPanel, ResultFamilyPanel } from "./resultFamilies";
 import type { ResultFamily } from "./controlPlane";
 import type { ArtifactRecord, Recipe } from "./types";
 
 describe("FamilyDetailPanel", () => {
+  it("labels grouped prompt candidate generations as takes", () => {
+    const family = promptCandidateFamily();
+
+    render(
+      <ResultFamilyPanel
+        families={[family]}
+        artifacts={[]}
+        selectedId={null}
+        inspectedFamilyId={family.familyId}
+        onSelect={vi.fn()}
+        onInspectFamily={vi.fn()}
+        onReplayRecipe={vi.fn()}
+        onForkRecipe={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Prompt candidates")).toBeInTheDocument();
+    expect(screen.getByText("2 takes · 2 generations")).toBeInTheDocument();
+  });
+
   it("surfaces alpha sweep variants with A/B promotion actions", async () => {
     const user = userEvent.setup();
     const onCompare = vi.fn();
@@ -100,6 +120,37 @@ function sweepFamily(
     metrics: {},
     createdAt: recipe.created_at,
     updatedAt: overrides.updatedAt ?? "2026-05-27T15:02:00.000Z",
+  };
+}
+
+function promptCandidateFamily(): ResultFamily {
+  const recipe: Recipe = {
+    recipe_id: "recipe_candidate_latest",
+    operator: "generate.text_to_audio",
+    backend: "mlx",
+    inputs: { source: "art_prompt_bundle" },
+    params: { metadata: { generation_origin: "prompt_search_candidate" } },
+    model: "medium",
+    seed: 7,
+    notes: null,
+    session_id: "sess_1",
+    created_at: "2026-05-27T15:00:00.000Z",
+    version: 1,
+  };
+  return {
+    familyId: "prompt-candidates:art_prompt_bundle",
+    recipeId: recipe.recipe_id,
+    recipe,
+    operator: recipe.operator,
+    sessionId: "sess_1",
+    status: "succeeded",
+    jobIds: ["job_a", "job_b"],
+    artifactIds: ["art_a", "art_b"],
+    artifactKinds: ["audio"],
+    latestArtifactId: "art_b",
+    metrics: {},
+    createdAt: recipe.created_at,
+    updatedAt: "2026-05-27T15:02:00.000Z",
   };
 }
 

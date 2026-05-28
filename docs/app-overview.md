@@ -138,12 +138,18 @@ Embedded bundle audio can also be promoted into a normal audio artifact, which
 gives it peaks, playback, lineage, recipe provenance, annotations, and reuse in
 the rest of the app. Reusable bundle types expose native Recipe Studio actions
 such as use as profile, sweep vectors, use direction, use prompt in sweep, use
-soft prompt, use memory, and use checkpoint. Jobs and artifacts with the same
-recipe are grouped as result families in the right rail with run metrics when
-the job reports them. Memory query bundle previews expose ranked hits that can
-be selected, placed in A/B when audio, or reused as latent donors when the hit
-is a latent artifact. Alpha sweep families can also compare sibling sweep runs
-that share a vector bundle or prompt.
+soft prompt, use memory, and use checkpoint. Prompt-search bundles expose
+candidate prompts as a small listening bench: a candidate can be used as the
+main generation prompt, sent to an alpha sweep, or rendered as MLX audio with
+lineage back to the bundle. Generated candidate takes appear inline beside the
+prompt, can be played immediately, and can be assigned to A/B comparison slots.
+Jobs and artifacts with the same recipe are grouped as result families in the
+right rail with run metrics when the job reports them; prompt-candidate
+generations are grouped under their search bundle instead of scattering as
+unrelated text-to-audio rows. Memory query bundle previews expose ranked hits
+that can be selected, placed in A/B when audio, or reused as latent donors when
+the hit is a latent artifact. Alpha sweep families can also compare sibling
+sweep runs that share a vector bundle or prompt.
 
 ## Runtime Assumptions
 
@@ -172,7 +178,9 @@ Confirmed in the current codebase:
 - Local prompt search is reachable as a recipe over a selected or explicit
   target audio artifact. It supports `lexical_probe` for cheap deterministic
   wiring and `sa3_flow_probe` for an optional Medium-backed flow-loss objective.
-  CLAP remains queued behind the same explicit scorer field.
+  Prompt-search candidates can be rendered as generated audio takes with
+  lineage, inline playback, and A/B assignment. CLAP remains queued behind the
+  same explicit scorer field.
 - Artifact annotation and archive search are implemented for labels, notes, and
   tags.
 - tRPC workbench, readiness, job lifecycle, recipe replay/fork, artifact

@@ -48,6 +48,7 @@ source audio / prompt
 | P1 | Bundle inspection and result families | `/artifacts/{id}/inspect` + `families.load` + result rail/detail panel | Promote | API tests, control-plane tests, frontend tests |
 | P1 | Typed bundle readers | backend `bundle_summary` parser + `BundleField` readers for memory/profile/vector/sweep/soft-prompt/training outputs, metrics, plot discovery, inline plot rendering, and recipe-input reuse | Promote | API tests, frontend tests/build |
 | P1 | Alpha-sweep family promotion | `FamilyDetailPanel` alpha variant band with explicit A/B promotion, sortable metric table, best-candidate marking, and sibling sweep comparison | Promote | frontend tests/build |
+| P1 | Prompt-candidate generation bench | Prompt-search bundle reader + text generation lineage metadata + grouped prompt-candidate result families | Promote | frontend tests/build, control-plane family test |
 | P1 | Session cleanup | archive-and-new session action plus searchable archive drawer | Promote | API/client tests, frontend build |
 | P1 | Kind-specific artifact vitals | specimen inspector rows for audio, latent, and bundle artifacts | Promote first slice | frontend build |
 | P2 | Memory atlas and retrieval | `LatentMemoryIndex` + `memory.query` + memory-hit reuse actions | Promote first slice | nearest-neighbor runtime test, frontend smoke |
@@ -67,13 +68,14 @@ source audio / prompt
 
 ## Immediate Next Queue
 
-1. Add generated-audio comparison for prompt-search candidates, including
-   source/candidate A/B assignment, prompt adoption, and explicit promotion.
+1. Add saved A/B decisions and promotion notes for prompt-candidate takes so
+   listenable candidates can become annotated keepers instead of transient
+   comparison slots.
 2. Add richer domain-specific inspectors for style profiles, vectors, prompt
    search, soft prompts, memory collections, sweeps, geometry audits, and
    training outputs.
-3. Add CLAP or hybrid scorer only after the SA3 flow probe has a useful
-   generated-audio comparison workflow.
+3. Add CLAP or hybrid scorer only after the SA3 flow prompt-candidate bench has
+   enough generated/listened examples to justify another scoring objective.
 4. Add control-head recipe adapters for Mode 12 and labelled-probe extensions
    for Mode 15.
 5. Continue shrinking frontend field drift until backend `ui_fields` can drive

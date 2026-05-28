@@ -42,11 +42,8 @@ export function ResultFamilyPanel({
           <article key={family.familyId} className={`family-row ${selected ? "selected" : ""} ${inspected ? "inspected" : ""}`}>
             <button type="button" onClick={() => { onInspectFamily(family.familyId); onSelect(latest?.artifact_id ?? null); }}>
               <div>
-                <strong>{shortOperatorName(family.operator)}</strong>
-                <span>
-                  {family.artifactIds.length} artifact{family.artifactIds.length === 1 ? "" : "s"} · {family.jobIds.length} run
-                  {family.jobIds.length === 1 ? "" : "s"}
-                </span>
+                <strong>{familyTitle(family)}</strong>
+                <span>{familyMeta(family)}</span>
               </div>
               <span className={`family-status ${family.status}`}>{family.status}</span>
             </button>
@@ -124,7 +121,7 @@ export function FamilyDetailPanel({
       <div className="family-detail-head">
         <div>
           <span className="eyebrow">Family Detail</span>
-          <strong>{shortOperatorName(family.operator)}</strong>
+          <strong>{familyTitle(family)}</strong>
         </div>
         <span className={`family-status ${family.status}`}>{family.status}</span>
       </div>
@@ -207,6 +204,21 @@ export function FamilyDetailPanel({
       ) : null}
     </section>
   );
+}
+
+function familyTitle(family: ResultFamily) {
+  if (family.familyId.startsWith("prompt-candidates:")) return "Prompt candidates";
+  return shortOperatorName(family.operator);
+}
+
+function familyMeta(family: ResultFamily) {
+  const artifactWord = family.familyId.startsWith("prompt-candidates:")
+    ? `take${family.artifactIds.length === 1 ? "" : "s"}`
+    : `artifact${family.artifactIds.length === 1 ? "" : "s"}`;
+  const runWord = family.familyId.startsWith("prompt-candidates:")
+    ? `generation${family.jobIds.length === 1 ? "" : "s"}`
+    : `run${family.jobIds.length === 1 ? "" : "s"}`;
+  return `${family.artifactIds.length} ${artifactWord} · ${family.jobIds.length} ${runWord}`;
 }
 
 function SweepSiblingComparison({
