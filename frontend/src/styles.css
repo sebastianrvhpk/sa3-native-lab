@@ -1517,19 +1517,12 @@ label {
 .lineage-thread {
   width: 100%;
   min-height: 42px;
-  display: grid;
-  grid-template-columns: minmax(0, max-content) minmax(32px, 1fr) max-content;
+  display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   align-items: center;
   color: var(--muted);
   font-size: 0.76rem;
-}
-
-.thread-sources {
-  display: flex;
-  max-width: min(280px, 38vw);
-  gap: 6px;
-  min-width: 0;
 }
 
 .thread-node {
@@ -1542,13 +1535,36 @@ label {
   border: 1px solid var(--line);
   border-radius: 999px;
   background: rgb(255 255 255 / 0.58);
+  color: inherit;
+  font: inherit;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+button.thread-node {
+  cursor: pointer;
+}
+
+button.thread-node:hover {
+  border-color: rgb(69 185 126 / 0.62);
+  transform: translateY(-1px);
+}
+
+.thread-node.origin {
+  color: var(--quiet);
+}
+
 .thread-node.source {
   color: #41665c;
+}
+
+.thread-node.recipe {
+  color: #6b4d99;
+}
+
+.thread-node.job {
+  color: #a05a1d;
 }
 
 .thread-node.current.audio {
@@ -1559,9 +1575,20 @@ label {
   color: #8b4bbd;
 }
 
+.thread-node.family {
+  color: #21746b;
+}
+
+.thread-node.compare {
+  color: #b13784;
+  border-color: rgb(177 55 132 / 0.35);
+}
+
 .thread-route {
   height: 1px;
-  min-width: 28px;
+  flex: 1 1 24px;
+  min-width: 18px;
+  max-width: 72px;
   background: linear-gradient(90deg, rgb(45 51 52 / 0.16), var(--line), rgb(45 51 52 / 0.16));
   position: relative;
 }

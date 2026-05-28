@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Activity,
@@ -57,6 +57,7 @@ import { createControlPlaneClient, DEFAULT_CONTROL_PLANE_URL, type ResultFamily,
 import { ForkRecipePanel } from "./forkRecipePanel";
 import { JobProgress, type JobActionHandlers } from "./jobProgress";
 import { isJobActive, landingArtifactId, shortOperatorName } from "./jobUtils";
+import { artifactLineageModel, type CompareSlots } from "./lineageModel";
 import { ListeningDecisionBadge } from "./listeningDecision";
 import {
   createOperatorPreset,
@@ -1374,6 +1375,9 @@ export function App() {
           <Specimen
             artifact={selectedArtifact}
             artifacts={allArtifacts}
+            jobs={allJobs}
+            families={resultFamilies}
+            compare={compare}
             apiBase={apiBase}
             annotating={annotateArtifact.isPending}
             onAnnotate={(artifactId, payload) => annotateArtifact.mutate({ artifactId, payload })}
@@ -1855,6 +1859,9 @@ function ArtifactStack({
 function Specimen({
   artifact,
   artifacts,
+  jobs,
+  families,
+  compare,
   apiBase,
   annotating,
   onAnnotate,
@@ -1869,6 +1876,9 @@ function Specimen({
 }: {
   artifact: ArtifactRecord | null;
   artifacts: ArtifactRecord[];
+  jobs: JobRecord[];
+  families: ResultFamily[];
+  compare: CompareSlots;
   apiBase: string;
   annotating: boolean;
   onAnnotate: (artifactId: string, payload: ArtifactAnnotationPayload) => void;
@@ -1914,7 +1924,14 @@ function Specimen({
             getArtifactPath={getArtifactPath}
           />
         )}
-        <LineageThread artifact={artifact} sources={sourceArtifacts} />
+        <LineageThread
+          artifact={artifact}
+          sources={sourceArtifacts}
+          jobs={jobs}
+          families={families}
+          compare={compare}
+          onSelectArtifact={onSelectArtifact}
+        />
       </div>
       <div className="specimen-info">
         <dl>
@@ -2541,19 +2558,38 @@ function LatentField({ artifact }: { artifact: ArtifactRecord }) {
   );
 }
 
-function LineageThread({ artifact, sources }: { artifact: ArtifactRecord; sources: ArtifactRecord[] }) {
-  const sourceLabels = sources.length ? sources.slice(0, 3).map(artifactName) : ["origin"];
+function LineageThread({
+  artifact,
+  sources,
+  jobs,
+  families,
+  compare,
+  onSelectArtifact,
+}: {
+  artifact: ArtifactRecord;
+  sources: ArtifactRecord[];
+  jobs: JobRecord[];
+  families: ResultFamily[];
+  compare: CompareSlots;
+  onSelectArtifact: (artifactId: string | null) => void;
+}) {
+  const nodes = artifactLineageModel({ artifact, sources, jobs, families, compare });
   return (
     <div className="lineage-thread" aria-label="Artifact lineage">
-      <div className="thread-sources">
-        {sourceLabels.map((label, index) => (
-          <span key={`${label}-${index}`} className="thread-node source" title={label}>
-            {label}
-          </span>
-        ))}
-      </div>
-      <span className="thread-route" />
-      <span className={`thread-node current ${artifact.kind}`}>{artifact.kind}</span>
+      {nodes.map((node, index) => (
+        <Fragment key={node.id}>
+          {index ? <span className="thread-route" /> : null}
+          {node.artifactId ? (
+            <button type="button" className={`thread-node ${node.kind} ${node.kind === "current" ? artifact.kind : ""}`} title={node.title} onClick={() => onSelectArtifact(node.artifactId ?? null)}>
+              {node.label}
+            </button>
+          ) : (
+            <span className={`thread-node ${node.kind}`} title={node.title}>
+              {node.label}
+            </span>
+          )}
+        </Fragment>
+      ))}
     </div>
   );
 }
