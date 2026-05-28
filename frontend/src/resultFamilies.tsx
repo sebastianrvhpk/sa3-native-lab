@@ -111,6 +111,7 @@ export function FamilyDetailPanel({
   const familyJobs = sortNewestJobs(family.jobIds.map((jobId) => jobs.find((job) => job.job_id === jobId)).filter((job): job is JobRecord => Boolean(job)));
   const sourceIds = Object.values(family.recipe.inputs).filter((value): value is string => typeof value === "string" && value.length > 0);
   const sourceArtifacts = sourceIds.map((artifactId) => artifactMap.get(artifactId)).filter((artifact): artifact is ArtifactRecord => Boolean(artifact));
+  const sweepEntries = buildSweepEntries(family, familyArtifacts);
 
   return (
     <section className="family-detail">
@@ -147,6 +148,9 @@ export function FamilyDetailPanel({
           Fork
         </button>
       </div>
+      {sweepEntries.length ? (
+        <SweepFamilyBand entries={sweepEntries} onSelect={onSelect} onCompare={onCompare} onForkRecipe={() => onForkRecipe(family.recipe)} />
+      ) : null}
       <div className="family-artifacts">
         {familyArtifacts.length ? (
           familyArtifacts.map((artifact) => (
@@ -191,6 +195,48 @@ export function FamilyDetailPanel({
   );
 }
 
+function SweepFamilyBand({
+  entries,
+  onSelect,
+  onCompare,
+  onForkRecipe,
+}: {
+  entries: SweepEntry[];
+  onSelect: (artifactId: string | null) => void;
+  onCompare: (slot: "a" | "b", artifactId: string | null) => void;
+  onForkRecipe: () => void;
+}) {
+  return (
+    <div className="sweep-family-band" aria-label="Alpha sweep variants">
+      <div className="sweep-family-head">
+        <span>Alpha Sweep</span>
+        <strong>{entries.length} variants</strong>
+      </div>
+      <div className="sweep-family-grid">
+        {entries.map((entry) => (
+          <article key={entry.artifact.artifact_id}>
+            <button type="button" className="sweep-main" onClick={() => onSelect(entry.artifact.artifact_id)} title={artifactName(entry.artifact)}>
+              <span>{entry.label}</span>
+              <small>{artifactMeta(entry.artifact)}</small>
+            </button>
+            <div className="sweep-actions">
+              <button type="button" onClick={() => onCompare("a", entry.artifact.artifact_id)} title="Promote this sweep variant to A">
+                A
+              </button>
+              <button type="button" onClick={() => onCompare("b", entry.artifact.artifact_id)} title="Promote this sweep variant to B">
+                B
+              </button>
+              <button type="button" onClick={onForkRecipe} title="Fork the sweep recipe">
+                <GitFork size={13} />
+              </button>
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function MetricChips({ metrics }: { metrics: Record<string, unknown> }) {
   const rows = ["result_count", "candidate_count", "metric", "return_code"]
     .map((key) => [key, metrics[key]] as const)
@@ -209,4 +255,64 @@ function MetricChips({ metrics }: { metrics: Record<string, unknown> }) {
 
 function prettyParamName(name: string) {
   return name.replaceAll("_", " ");
+}
+
+interface SweepEntry {
+  artifact: ArtifactRecord;
+  alpha: number | null;
+  label: string;
+}
+
+function buildSweepEntries(family: ResultFamily, artifacts: ArtifactRecord[]): SweepEntry[] {
+  if (family.operator !== "experiment.alpha_sweep") return [];
+  const recipeAlphas = parseAlphaList(family.recipe.params.alphas);
+  return artifacts
+    .filter((artifact) => artifact.kind === "audio")
+    .map((artifact, index) => {
+      const alpha = artifactAlpha(artifact) ?? recipeAlphas[index] ?? null;
+      return {
+        artifact,
+        alpha,
+        label: alpha === null ? sweepLabel(artifact, index) : `alpha ${formatAlpha(alpha)}`,
+      };
+    })
+    .sort((left, right) => {
+      if (left.alpha === null && right.alpha === null) return left.artifact.created_at.localeCompare(right.artifact.created_at);
+      if (left.alpha === null) return 1;
+      if (right.alpha === null) return -1;
+      return left.alpha - right.alpha;
+    });
+}
+
+function parseAlphaList(value: unknown): number[] {
+  if (Array.isArray(value)) return value.map((item) => Number(item)).filter((item) => Number.isFinite(item));
+  if (typeof value !== "string") return [];
+  return value
+    .split(/[,\s]+/)
+    .map((item) => Number(item))
+    .filter((item) => Number.isFinite(item));
+}
+
+function artifactAlpha(artifact: ArtifactRecord): number | null {
+  const metadataAlpha = artifact.metadata.alpha;
+  if (typeof metadataAlpha === "number" && Number.isFinite(metadataAlpha)) return metadataAlpha;
+  const text = [artifact.label, artifact.path, artifact.file?.filename].filter(Boolean).join(" ");
+  const plain = text.match(/alpha[_\s-]*([+-]?\d+(?:\.\d+)?)/i);
+  if (plain) return Number(plain[1]);
+  const token = text.match(/alpha_(pos|neg)(\d+)p(\d+)/i);
+  if (!token) return null;
+  const sign = token[1]?.toLowerCase() === "neg" ? -1 : 1;
+  const whole = Number(token[2] ?? 0);
+  const decimal = Number(`0.${token[3] ?? 0}`);
+  const value = sign * (whole + decimal);
+  return Number.isFinite(value) ? value : null;
+}
+
+function sweepLabel(artifact: ArtifactRecord, index: number) {
+  return artifact.label || artifact.file?.filename?.replace(/\.[^.]+$/, "") || `variant ${index + 1}`;
+}
+
+function formatAlpha(value: number) {
+  const prefix = value > 0 ? "+" : "";
+  return `${prefix}${value.toFixed(2).replace(/\.?0+$/, "")}`;
 }

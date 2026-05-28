@@ -2159,6 +2159,95 @@ audio {
   gap: 8px;
 }
 
+.sweep-family-band {
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  padding: 9px;
+  display: grid;
+  gap: 8px;
+  background:
+    linear-gradient(135deg, rgb(243 168 60 / 0.16), rgb(85 198 199 / 0.12), rgb(143 91 210 / 0.1)),
+    rgb(255 255 255 / 0.45);
+}
+
+.sweep-family-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.sweep-family-head strong {
+  color: var(--ink);
+  font-size: 0.74rem;
+}
+
+.sweep-family-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 7px;
+}
+
+.sweep-family-grid article {
+  border: 1px solid var(--line-soft);
+  border-radius: 7px;
+  background: rgb(255 255 255 / 0.48);
+  overflow: hidden;
+}
+
+.sweep-main {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--line-soft);
+  border-radius: 0;
+  display: grid;
+  gap: 2px;
+  padding: 7px;
+  text-align: left;
+  background: transparent;
+  color: var(--ink);
+}
+
+.sweep-main span,
+.sweep-main small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sweep-main span {
+  font-weight: 700;
+  font-size: 0.75rem;
+}
+
+.sweep-main small {
+  color: var(--muted);
+  font-size: 0.66rem;
+}
+
+.sweep-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.sweep-actions button {
+  min-height: 28px;
+  border: 0;
+  border-right: 1px solid var(--line-soft);
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sweep-actions button:last-child {
+  border-right: 0;
+}
+
 .family-artifact {
   border: 1px solid var(--line-soft);
   border-radius: 8px;
