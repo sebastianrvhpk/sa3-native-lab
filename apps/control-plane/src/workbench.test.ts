@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import type { ArtifactRecord, HealthResponse, JobRecord, NotebookMode, OperatorSpec, SessionRecord } from "./contracts.js";
+import { pollJobEvents } from "./jobEvents.js";
 import { appRouter } from "./router.js";
 import { shapeWorkbenchState, type WorkbenchSnapshot } from "./workbench.js";
 
@@ -99,6 +100,26 @@ test("tRPC jobs and recipes procedures call Python lifecycle endpoints", async (
     ["POST", "/recipes/recipe_1/fork"],
   ]);
   assert.deepEqual(calls[3]?.body, { params: { shift_frames: 2 } });
+});
+
+test("pollJobEvents emits changed snapshots until terminal state", async () => {
+  let calls = 0;
+  const client = {
+    job: async (jobId: string) => {
+      calls += 1;
+      if (calls === 1) return { ...jobRecord(jobId, "running", "sess_active", now), progress: 0.25 };
+      return { ...jobRecord(jobId, "succeeded", "sess_active", now), progress: 1 };
+    },
+  };
+
+  const events = [];
+  for await (const event of pollJobEvents(client, { jobId: "job_running", intervalMs: 1 })) {
+    events.push(event);
+  }
+
+  assert.deepEqual(events.map((event) => event.type), ["snapshot", "snapshot"]);
+  assert.deepEqual(events.map((event) => event.type === "snapshot" ? event.job.status : "error"), ["running", "succeeded"]);
+  assert.deepEqual(events.map((event) => event.sequence), [1, 2]);
 });
 
 test("tRPC system readiness calls Python readiness endpoint", async () => {

@@ -51,7 +51,6 @@ import { useBenchStore } from "./store";
 import type {
   ArtifactRecord,
   HealthResponse,
-  JobEvent,
   JobRecord,
   ModelStatus,
   NotebookMode,
@@ -747,6 +746,29 @@ export function App() {
 
   useEffect(() => {
     if (!runningJobIds) return;
+    if (controlPlane) {
+      const subscriptions = runningJobIds.split("|").map((jobId) =>
+        controlPlane.jobs.events.subscribe(
+          { jobId },
+          {
+            onData: (event) => {
+              const job = jobFromJobEvent(event);
+              if (!job) return;
+              setLiveJobsById((current) => ({ ...current, [job.job_id]: job }));
+              if (!isJobActive(job)) {
+                void invalidate();
+              }
+            },
+            onError: () => {
+              void invalidate();
+            },
+          },
+        ),
+      );
+      return () => {
+        subscriptions.forEach((subscription) => subscription.unsubscribe());
+      };
+    }
     const sockets = runningJobIds.split("|").map((jobId) => {
       const socket = new WebSocket(api.jobEventsUrl(jobId));
       socket.onmessage = (event) => {
@@ -762,7 +784,7 @@ export function App() {
     return () => {
       sockets.forEach((socket) => socket.close());
     };
-  }, [api, runningJobIds]);
+  }, [api, controlPlane, runningJobIds]);
 
   const importAudio = useMutation({
     mutationFn: (file: File) => api.importAudio(file, file.name, activeSessionId),
@@ -3107,14 +3129,20 @@ function mergeJobRecords(baseJobs: JobRecord[], overlayJobs: JobRecord[]) {
 
 function parseJobEvent(raw: string): JobRecord | null {
   try {
-    const payload = JSON.parse(raw) as JobEvent | JobRecord;
-    if ("type" in payload) {
-      return payload.type === "snapshot" ? payload.job : null;
-    }
-    return "job_id" in payload ? payload : null;
+    const payload = JSON.parse(raw) as unknown;
+    return jobFromJobEvent(payload);
   } catch {
     return null;
   }
+}
+
+function jobFromJobEvent(payload: unknown): JobRecord | null {
+  if (!payload || typeof payload !== "object") return null;
+  const event = "data" in payload && payload.data && typeof payload.data === "object" ? payload.data : payload;
+  if ("type" in event) {
+    return event.type === "snapshot" && "job" in event ? (event.job as JobRecord) : null;
+  }
+  return "job_id" in event ? (event as JobRecord) : null;
 }
 
 function buildResultFamilies(artifacts: ArtifactRecord[], jobs: JobRecord[]): ResultFamily[] {

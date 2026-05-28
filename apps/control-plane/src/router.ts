@@ -1,6 +1,7 @@
-import { initTRPC } from "@trpc/server";
+import { initTRPC, tracked } from "@trpc/server";
 import { z } from "zod";
 
+import { pollJobEvents } from "./jobEvents.js";
 import type { ArtifactAnnotationPayload } from "./pythonClient.js";
 import { createPythonClient, type PythonClientOptions } from "./pythonClient.js";
 import { loadWorkbenchState, workbenchLoadInputSchema } from "./workbench.js";
@@ -17,6 +18,11 @@ const archiveSearchInputSchema = z.object({
 
 const jobIdInputSchema = z.object({
   jobId: z.string().min(1),
+});
+
+const jobEventsInputSchema = jobIdInputSchema.extend({
+  intervalMs: z.number().int().min(250).max(5000).optional().default(1000),
+  lastEventId: z.string().nullish(),
 });
 
 const recipeIdInputSchema = z.object({
@@ -60,6 +66,16 @@ export const appRouter = t.router({
   jobs: t.router({
     list: t.procedure.query(({ ctx }) => createPythonClient(ctx).jobs()),
     get: t.procedure.input(jobIdInputSchema).query(({ ctx, input }) => createPythonClient(ctx).job(input.jobId)),
+    events: t.procedure.input(jobEventsInputSchema).subscription(async function* ({ ctx, input, signal }) {
+      const client = createPythonClient(ctx);
+      for await (const event of pollJobEvents(client, {
+        jobId: input.jobId,
+        intervalMs: input.intervalMs,
+        signal,
+      })) {
+        yield tracked(`${input.jobId}:${event.sequence}`, event);
+      }
+    }),
     cancel: t.procedure.input(jobIdInputSchema).mutation(({ ctx, input }) => createPythonClient(ctx).cancelJob(input.jobId)),
     retry: t.procedure.input(jobIdInputSchema).mutation(({ ctx, input }) => createPythonClient(ctx).retryJob(input.jobId)),
   }),
