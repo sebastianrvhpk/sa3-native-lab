@@ -102,6 +102,7 @@ export interface ArtifactInspection {
   sources: ArtifactRecord[];
   children: ArtifactRecord[];
   bundle_files: BundleFileEntry[];
+  bundle_preview: Record<string, unknown>;
 }
 
 export interface SessionRecord {

@@ -153,6 +153,7 @@ class ArtifactInspection(ContractModel):
     sources: list[ArtifactRecord] = Field(default_factory=list)
     children: list[ArtifactRecord] = Field(default_factory=list)
     bundle_files: list[BundleFileEntry] = Field(default_factory=list)
+    bundle_preview: dict[str, Any] = Field(default_factory=dict)
 
 
 class SessionStatus(str, Enum):

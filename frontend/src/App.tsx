@@ -1910,6 +1910,22 @@ function ForkParamControl({
   );
 }
 
+function MetricChips({ metrics }: { metrics: Record<string, unknown> }) {
+  const rows = ["result_count", "candidate_count", "metric", "return_code"]
+    .map((key) => [key, metrics[key]] as const)
+    .filter(([, value]) => value !== undefined && value !== null);
+  if (!rows.length) return null;
+  return (
+    <div className="metric-chips">
+      {rows.slice(0, 4).map(([key, value]) => (
+        <i key={key}>
+          {prettyParamName(key)}: {String(value)}
+        </i>
+      ))}
+    </div>
+  );
+}
+
 function ResultFamilyPanel({
   families,
   artifacts,
@@ -1957,6 +1973,7 @@ function ResultFamilyPanel({
                 <i>empty</i>
               )}
             </div>
+            <MetricChips metrics={family.metrics} />
             <button type="button" className="family-replay" onClick={() => onReplayRecipe(family.recipeId)} title="Replay family recipe">
               <Repeat size={14} />
               Replay
@@ -2399,7 +2416,62 @@ function BundleField({ artifact, apiBase }: { artifact: ArtifactRecord; apiBase:
             ))}
           </div>
         ) : null}
+        {inspection.data ? (
+          <BundlePreview
+            preview={inspection.data.bundle_preview}
+            sourceCount={inspection.data.sources.length}
+            childCount={inspection.data.children.length}
+          />
+        ) : null}
       </div>
+    </div>
+  );
+}
+
+function BundlePreview({
+  preview,
+  sourceCount,
+  childCount,
+}: {
+  preview: Record<string, unknown>;
+  sourceCount: number;
+  childCount: number;
+}) {
+  const rows = [
+    ["operator", preview.operator],
+    ["results", preview.result_count],
+    ["metric", preview.metric],
+    ["candidates", preview.candidate_count],
+    ["top k", preview.top_k],
+    ["sources", sourceCount],
+    ["children", childCount],
+  ].filter(([, value]) => value !== undefined && value !== null && value !== "");
+  const results = Array.isArray(preview.results) ? preview.results.slice(0, 3) : [];
+  if (!rows.length && !results.length) return null;
+  return (
+    <div className="bundle-preview">
+      {rows.length ? (
+        <div className="metric-chips">
+          {rows.slice(0, 6).map(([key, value]) => (
+            <i key={String(key)}>
+              {String(key)}: {String(value)}
+            </i>
+          ))}
+        </div>
+      ) : null}
+      {results.length ? (
+        <div className="bundle-result-list">
+          {results.map((result, index) => {
+            const item = result && typeof result === "object" ? (result as Record<string, unknown>) : {};
+            return (
+              <i key={`${String(item.artifact_id ?? index)}-${index}`}>
+                {String(item.artifact_id ?? `result ${index + 1}`)}
+                <small>{formatBundleScore(item)}</small>
+              </i>
+            );
+          })}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -2625,6 +2697,14 @@ function formatBytes(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function formatBundleScore(item: Record<string, unknown>) {
+  const score = typeof item.score === "number" ? item.score : null;
+  const distance = typeof item.distance === "number" ? item.distance : null;
+  if (score !== null) return `score ${score.toFixed(3)}`;
+  if (distance !== null) return `distance ${distance.toFixed(3)}`;
+  return "";
+}
+
 function createdAfter(createdAt: string, startedAt: string) {
   const created = Date.parse(createdAt);
   const started = Date.parse(startedAt);
@@ -2724,6 +2804,7 @@ function buildResultFamilies(artifacts: ArtifactRecord[], jobs: JobRecord[]): Re
         ...family.jobs.map((job) => job.finished_at ?? job.started_at ?? job.created_at),
         ...family.artifacts.map((artifact) => artifact.created_at),
       ];
+      const sortedJobs = sortNewestJobs(family.jobs);
       return {
         familyId: recipeId,
         recipeId,
@@ -2734,6 +2815,7 @@ function buildResultFamilies(artifacts: ArtifactRecord[], jobs: JobRecord[]): Re
         jobIds: family.jobs.map((job) => job.job_id),
         artifactIds,
         artifactKinds: unique(family.artifacts.map((artifact) => artifact.kind)),
+        metrics: sortedJobs[0]?.metrics ?? {},
         latestArtifactId: sortedArtifacts[0]?.artifact_id ?? artifactIds[0] ?? null,
         createdAt: oldestTimestamp(timestamps) ?? family.recipe.created_at,
         updatedAt: newestTimestamp(timestamps) ?? family.recipe.created_at,

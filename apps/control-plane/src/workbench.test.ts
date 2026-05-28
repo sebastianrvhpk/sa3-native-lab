@@ -132,6 +132,7 @@ test("tRPC artifact inspection and family loading expose app-shaped records", as
   const job = {
     ...jobRecord("job_done", "succeeded", session.session_id, "2026-05-27T14:11:00.000Z"),
     artifact_ids: [artifact.artifact_id],
+    metrics: { result_count: 3 },
   };
   const fakeFetch: typeof fetch = async (url) => {
     const path = new URL(String(url)).pathname;
@@ -148,6 +149,7 @@ test("tRPC artifact inspection and family loading expose app-shaped records", as
         sources: [],
         children: [],
         bundle_files: [{ path: "metrics.json", byte_size: 16, compressed_size: 12 }],
+        bundle_preview: { result_count: 3 },
       },
     };
     if (!(path in payloads)) {
@@ -162,8 +164,10 @@ test("tRPC artifact inspection and family loading expose app-shaped records", as
   const families = await caller.families.load({ sessionId: session.session_id });
 
   assert.equal(inspection.bundle_files[0]?.path, "metrics.json");
+  assert.equal(inspection.bundle_preview.result_count, 3);
   assert.equal(families.sessionResultFamilies[0]?.latestArtifactId, artifact.artifact_id);
   assert.equal(families.sessionResultFamilies[0]?.artifactKinds[0], "bundle");
+  assert.equal(families.sessionResultFamilies[0]?.metrics.result_count, 3);
 });
 
 function snapshot(overrides: Partial<WorkbenchSnapshot> = {}): WorkbenchSnapshot {

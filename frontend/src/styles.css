@@ -459,7 +459,8 @@ label {
   gap: 5px;
 }
 
-.bundle-file-list i {
+.bundle-file-list i,
+.bundle-result-list i {
   display: grid;
   grid-template-columns: minmax(0, 1fr) max-content;
   gap: 8px;
@@ -469,10 +470,24 @@ label {
 }
 
 .bundle-file-list i,
-.bundle-file-list small {
+.bundle-file-list small,
+.bundle-result-list i,
+.bundle-result-list small {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.bundle-preview {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 6px;
+  padding-top: 2px;
+}
+
+.bundle-result-list {
+  display: grid;
+  gap: 5px;
 }
 
 .lineage-thread {
@@ -1810,7 +1825,8 @@ audio {
   gap: 5px;
 }
 
-.family-kinds i {
+.family-kinds i,
+.metric-chips i {
   border: 1px solid var(--line-soft);
   border-radius: 999px;
   padding: 3px 7px;
@@ -1818,6 +1834,12 @@ audio {
   background: rgb(255 255 255 / 0.48);
   font-style: normal;
   font-size: 0.68rem;
+}
+
+.metric-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
 }
 
 .family-kinds .audio {

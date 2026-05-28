@@ -69,6 +69,7 @@ export interface ResultFamily {
   jobIds: string[];
   artifactIds: string[];
   artifactKinds: ArtifactKind[];
+  metrics: Record<string, unknown>;
   latestArtifactId: string | null;
   createdAt: string;
   updatedAt: string;
@@ -202,6 +203,7 @@ export function buildResultFamilies(artifacts: ArtifactRecord[], jobs: JobRecord
         ...family.artifacts.map((artifact) => artifact.created_at),
       ];
       const sortedArtifacts = sortNewestBy(family.artifacts, (artifact) => artifact.created_at);
+      const sortedJobs = sortNewestBy(family.jobs, (job) => job.finished_at ?? job.started_at ?? job.created_at);
       return {
         familyId: recipeId,
         recipeId,
@@ -212,6 +214,7 @@ export function buildResultFamilies(artifacts: ArtifactRecord[], jobs: JobRecord
         jobIds: family.jobs.map((job) => job.job_id),
         artifactIds,
         artifactKinds,
+        metrics: sortedJobs[0]?.metrics ?? {},
         latestArtifactId: sortedArtifacts[0]?.artifact_id ?? artifactIds[0] ?? null,
         createdAt: oldestTimestamp(timestamps) ?? family.recipe.created_at,
         updatedAt: newestTimestamp(timestamps) ?? family.recipe.created_at,

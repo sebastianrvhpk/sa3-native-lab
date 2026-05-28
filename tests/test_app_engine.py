@@ -100,6 +100,9 @@ def test_runtime_memory_query_returns_nearest_latent_artifacts(tmp_path):
     assert artifact.kind == "bundle"
     assert payload["results"][0]["artifact_id"] == near.artifact_id
     assert artifact.metadata["result_count"] == 1
+    inspection = store.inspect_artifact(artifact.artifact_id)
+    assert inspection.bundle_preview["result_count"] == 1
+    assert inspection.bundle_preview["results"][0]["artifact_id"] == near.artifact_id
 
 
 def test_audio_peaks_are_derived_from_audio_file(tmp_path):
@@ -421,6 +424,7 @@ def test_fastapi_inspects_bundle_artifact(tmp_path):
     assert payload["artifact"]["artifact_id"] == record.artifact_id
     assert payload["recipe"]["operator"] == "experiment.alpha_sweep"
     assert payload["bundle_files"][0]["path"] == "metrics.json"
+    assert "bundle_preview" in payload
 
 
 def test_runtime_same_encode_decode_with_fake_adapter(tmp_path):

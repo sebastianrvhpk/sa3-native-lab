@@ -30,6 +30,7 @@ const server = setupServer(
       sources: [],
       children: [],
       bundle_files: [{ path: "metrics.json", byte_size: 16, compressed_size: 12 }],
+      bundle_preview: { result_count: 2 },
     }),
   ),
   http.get("http://api.test/readiness", () =>
@@ -81,6 +82,7 @@ describe("createApi", () => {
     await expect(createApi("http://api.test").inspectArtifact("art_bundle")).resolves.toMatchObject({
       artifact: { artifact_id: "art_bundle" },
       bundle_files: [{ path: "metrics.json", byte_size: 16 }],
+      bundle_preview: { result_count: 2 },
     });
   });
 

@@ -374,6 +374,7 @@ class ArtifactStore:
             sources=sources,
             children=children,
             bundle_files=_bundle_file_entries(record.path) if record.kind == ArtifactKind.BUNDLE else [],
+            bundle_preview=_bundle_preview(record) if record.kind == ArtifactKind.BUNDLE else {},
         )
 
     def audio_peaks(self, artifact_id: str, *, bins: int = 96) -> AudioPeaksResponse:
@@ -492,6 +493,31 @@ def _bundle_file_entries(path: Path) -> list[BundleFileEntry]:
                 if not item.is_dir()
             ]
     return [BundleFileEntry(path=path.name, byte_size=path.stat().st_size)]
+
+
+def _bundle_preview(record: ArtifactRecord) -> dict[str, Any]:
+    preview: dict[str, Any] = {
+        "operator": record.metadata.get("operator"),
+        "result_count": record.metadata.get("result_count"),
+        "metric": record.metadata.get("metric"),
+        "top_k": record.metadata.get("top_k"),
+    }
+    path = record.path
+    if path.exists() and path.is_file() and path.suffix.lower() == ".json" and path.stat().st_size <= 1024 * 1024:
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            payload = None
+        if isinstance(payload, dict):
+            preview["keys"] = list(payload)[:12]
+            for key in ("candidate_count", "metric", "top_k", "source_artifact_id"):
+                if key in payload:
+                    preview[key] = payload[key]
+            results = payload.get("results")
+            if isinstance(results, list):
+                preview["result_count"] = len(results)
+                preview["results"] = results[:5]
+    return {key: value for key, value in preview.items() if value is not None}
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
