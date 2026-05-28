@@ -1,5 +1,6 @@
 import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { CirclePlus } from "lucide-react";
 
 import { createApi } from "./api";
 import { artifactMeta, artifactName, formatBytes } from "./artifactUtils";
@@ -25,11 +26,27 @@ export function BundleField({
   getArtifactPath: (artifact: ArtifactRecord, fieldKey: string) => string;
 }) {
   const api = useMemo(() => createApi(apiBase), [apiBase]);
+  const queryClient = useQueryClient();
   const inspection = useQuery({
     queryKey: ["artifact-inspection", apiBase, artifact.artifact_id],
     queryFn: () => api.inspectArtifact(artifact.artifact_id),
     enabled: artifact.kind === "bundle",
     staleTime: 30000,
+  });
+  const promoteBundleAudio = useMutation({
+    mutationFn: (entry: BundleAudioEntry) =>
+      api.promoteBundleAudio(artifact.artifact_id, {
+        path: entry.path,
+        label: bundleAudioLabel(entry.path),
+        prompt: artifact.prompt ?? null,
+        session_id: artifact.session_id ?? null,
+      }),
+    onSuccess: (promoted) => {
+      void queryClient.invalidateQueries({ queryKey: ["artifacts"] });
+      void queryClient.invalidateQueries({ queryKey: ["artifact-inspection", apiBase, artifact.artifact_id] });
+      void queryClient.invalidateQueries({ queryKey: ["workbench"] });
+      onSelectArtifact(promoted.artifact_id);
+    },
   });
   const fileName = artifact.file?.filename ?? artifactName(artifact);
   const cells = artifact.recipe_id ? 36 : 18;
@@ -45,7 +62,15 @@ export function BundleField({
         <span>
           {inspection.isLoading ? "Inspecting..." : bundleFiles.length ? `${bundleFiles.length} files · ${formatBytes(totalBytes)}` : artifact.file ? formatBytes(artifact.file.byte_size) : "bundle"}
         </span>
-        {inspection.data ? <BundleReaderPanel inspection={inspection.data} apiBase={apiBase} /> : null}
+        {inspection.data ? (
+          <BundleReaderPanel
+            inspection={inspection.data}
+            apiBase={apiBase}
+            onPromoteBundleAudio={(entry) => promoteBundleAudio.mutate(entry)}
+            promotingAudioPath={promoteBundleAudio.isPending ? promoteBundleAudio.variables?.path ?? null : null}
+            promoteAudioError={promoteBundleAudio.isError ? errorMessage(promoteBundleAudio.error) : null}
+          />
+        ) : null}
         {inspection.data ? (
           <BundleReuseActions
             inspection={inspection.data}
@@ -139,7 +164,19 @@ function BundleReuseActions({
   );
 }
 
-function BundleReaderPanel({ inspection, apiBase }: { inspection: ArtifactInspection; apiBase: string }) {
+function BundleReaderPanel({
+  inspection,
+  apiBase,
+  onPromoteBundleAudio,
+  promotingAudioPath,
+  promoteAudioError,
+}: {
+  inspection: ArtifactInspection;
+  apiBase: string;
+  onPromoteBundleAudio: (entry: BundleAudioEntry) => void;
+  promotingAudioPath: string | null;
+  promoteAudioError: string | null;
+}) {
   const descriptor = summarizeBundle(inspection.bundle_summary, inspection.bundle_preview, inspection.bundle_files);
   const rows = descriptor.rows.filter(([, value]) => value !== undefined && value !== null && value !== "");
   const plotFiles = descriptor.plotFiles ?? [];
@@ -166,7 +203,14 @@ function BundleReaderPanel({ inspection, apiBase }: { inspection: ArtifactInspec
       ) : null}
       {plotFiles.length ? <PlotPreviewShell files={plotFiles} artifactId={inspection.artifact.artifact_id} getFileUrl={api.bundleFileUrl} /> : null}
       {domainSections.length ? <BundleDomainCards sections={domainSections} /> : null}
-      <BundleAudioChildren artifactId={inspection.artifact.artifact_id} entries={inspection.bundle_audio_files} getFileUrl={api.bundleFileUrl} />
+      <BundleAudioChildren
+        artifactId={inspection.artifact.artifact_id}
+        entries={inspection.bundle_audio_files}
+        getFileUrl={api.bundleFileUrl}
+        onPromote={onPromoteBundleAudio}
+        promotingPath={promotingAudioPath}
+        promoteError={promoteAudioError}
+      />
     </div>
   );
 }
@@ -363,17 +407,25 @@ function BundleAudioChildren({
   artifactId,
   entries,
   getFileUrl,
+  onPromote,
+  promotingPath,
+  promoteError,
 }: {
   artifactId: string;
   entries: BundleAudioEntry[];
   getFileUrl: (artifactId: string, path: string) => string;
+  onPromote: (entry: BundleAudioEntry) => void;
+  promotingPath: string | null;
+  promoteError: string | null;
 }) {
   if (!entries.length) return null;
   return (
     <div className="bundle-audio-children" aria-label="Bundle audio children">
       <strong>Audio in bundle</strong>
+      {promoteError ? <p role="alert">{promoteError}</p> : null}
       {entries.slice(0, 5).map((entry) => {
         const url = getFileUrl(artifactId, entry.path);
+        const isPromoting = promotingPath === entry.path;
         return (
           <article key={entry.path}>
             <div>
@@ -381,14 +433,30 @@ function BundleAudioChildren({
               <small>{bundleAudioMeta(entry)}</small>
             </div>
             <audio controls preload="none" src={url} />
-            <a href={url} target="_blank" rel="noreferrer" download>
-              Open
-            </a>
+            <div className="bundle-audio-actions">
+              <a href={url} target="_blank" rel="noreferrer" download>
+                Open
+              </a>
+              <button type="button" onClick={() => onPromote(entry)} disabled={isPromoting} title="Promote to audio artifact">
+                <CirclePlus aria-hidden="true" size={13} />
+                {isPromoting ? "Promoting" : "Promote"}
+              </button>
+            </div>
           </article>
         );
       })}
     </div>
   );
+}
+
+function bundleAudioLabel(path: string): string {
+  const parts = path.split("/").filter(Boolean);
+  const name = parts[parts.length - 1] ?? path;
+  return name.replace(/\.[^.]+$/, "") || "bundle audio";
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "Could not promote bundle audio";
 }
 
 function bundleKindLabel(kind: string) {

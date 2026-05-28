@@ -99,6 +99,13 @@ export interface ArtifactAnnotationPayload {
   metadata?: Record<string, unknown> | null;
 }
 
+export interface BundleAudioPromotionPayload {
+  path: string;
+  label?: string | null;
+  prompt?: string | null;
+  session_id?: string | null;
+}
+
 export interface RecipeForkPayload {
   inputs?: Record<string, string> | null;
   params?: Record<string, unknown> | null;
@@ -165,6 +172,8 @@ export function createApi(baseUrl: string) {
       request<AudioPeaksResponse>(`/artifacts/${encodeURIComponent(artifactId)}/peaks?bins=${bins}`),
     inspectArtifact: (artifactId: string) =>
       request<ArtifactInspection>(`/artifacts/${encodeURIComponent(artifactId)}/inspect`),
+    promoteBundleAudio: (artifactId: string, payload: BundleAudioPromotionPayload) =>
+      request<ArtifactRecord>(`/artifacts/${encodeURIComponent(artifactId)}/bundle-audio/promote`, jsonPost(payload)),
     jobs: () => request<JobRecord[]>("/jobs"),
     job: (jobId: string) => request<JobRecord>(`/jobs/${encodeURIComponent(jobId)}`),
     cancelJob: (jobId: string) => request<JobRecord>(`/jobs/${encodeURIComponent(jobId)}/cancel`, jsonPost({})),

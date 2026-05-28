@@ -27,6 +27,7 @@ export type OperatorName =
   | "dataset.pre_encode"
   | "training.lora"
   | "memory.query"
+  | "artifact.promote_bundle_audio"
   | "artifact.annotate";
 
 export interface AudioMetadata {

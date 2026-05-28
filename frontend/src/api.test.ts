@@ -43,6 +43,24 @@ const server = setupServer(
       checks: [{ name: "artifact-root", status: "ok", message: "/tmp/lab" }],
     }),
   ),
+  http.post("http://api.test/artifacts/art_bundle/bundle-audio/promote", async ({ request }) => {
+    const payload = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({
+      artifact_id: "art_promoted",
+      kind: "audio",
+      path: "/tmp/art_promoted/take.wav",
+      file: { filename: "take.wav", media_type: "audio/wav", byte_size: 3200 },
+      audio: { sample_rate: 8000, channels: 1, frames: 800, duration_seconds: 0.1, format: "WAV" },
+      source_artifact_ids: ["art_bundle"],
+      recipe_id: "recipe_promote",
+      label: payload.label ?? "take",
+      prompt: payload.prompt ?? null,
+      tags: [],
+      metadata: { operator: "artifact.promote_bundle_audio", bundle_audio_path: payload.path },
+      session_id: payload.session_id ?? null,
+      created_at: "2026-05-27T15:00:00.000Z",
+    });
+  }),
   http.post("http://api.test/recipes/recipe_1/fork", async ({ request }) => {
     const payload = (await request.json()) as Record<string, unknown>;
     return HttpResponse.json({
@@ -104,6 +122,22 @@ describe("createApi", () => {
     expect(api.bundleFileUrl("art_bundle", "plots/main plot.png")).toBe(
       "http://api.test/artifacts/art_bundle/bundle-file?path=plots%2Fmain%20plot.png",
     );
+  });
+
+  it("promotes audio from a bundle into a first-class artifact", async () => {
+    await expect(
+      createApi("http://api.test").promoteBundleAudio("art_bundle", {
+        path: "take.wav",
+        label: "keeper take",
+        session_id: "sess_1",
+      }),
+    ).resolves.toMatchObject({
+      artifact_id: "art_promoted",
+      kind: "audio",
+      label: "keeper take",
+      session_id: "sess_1",
+      metadata: { operator: "artifact.promote_bundle_audio", bundle_audio_path: "take.wav" },
+    });
   });
 
   it("reads readiness checks", async () => {

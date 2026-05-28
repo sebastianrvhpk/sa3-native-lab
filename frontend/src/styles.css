@@ -649,6 +649,16 @@ label {
   font-size: 0.72rem;
 }
 
+.bundle-audio-children p {
+  margin: 0;
+  border: 1px solid rgb(182 51 91 / 0.22);
+  border-radius: 7px;
+  padding: 6px 7px;
+  color: #8f2448;
+  background: rgb(255 220 231 / 0.44);
+  font-size: 0.66rem;
+}
+
 .bundle-audio-children article {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(150px, 220px) max-content;
@@ -692,17 +702,38 @@ label {
   height: 30px;
 }
 
-.bundle-audio-children a {
+.bundle-audio-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  min-width: 0;
+}
+
+.bundle-audio-children a,
+.bundle-audio-children button {
   border: 1px solid var(--line-soft);
   border-radius: 999px;
   min-height: 28px;
   padding: 0 8px;
   display: inline-flex;
   align-items: center;
+  gap: 4px;
   color: var(--ink);
   text-decoration: none;
   background: rgb(255 255 255 / 0.54);
   font-size: 0.68rem;
+  box-shadow: none;
+  white-space: nowrap;
+}
+
+.bundle-audio-children button {
+  background: linear-gradient(135deg, rgb(201 238 72 / 0.22), rgb(85 198 199 / 0.13)), rgb(255 255 255 / 0.58);
+}
+
+.bundle-audio-children button:disabled {
+  cursor: wait;
+  opacity: 0.68;
 }
 
 .bundle-reuse-actions {
@@ -770,6 +801,10 @@ label {
 
   .bundle-audio-children audio {
     grid-column: 1 / -1;
+  }
+
+  .bundle-audio-actions {
+    justify-content: flex-start;
   }
 }
 
