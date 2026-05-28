@@ -13,6 +13,11 @@ from typing import Any
 import numpy as np
 
 from latent_audio_primitives.geometry import geometry_report
+from latent_audio_primitives.flow_prompt import (
+    parse_float_sequence,
+    sa3_flow_losses_for_prompts,
+    timesteps_from_logsnr_values,
+)
 from latent_audio_primitives.index import LatentMemoryIndex
 from latent_audio_primitives.latent_blur import LatentBlurSpec, apply_latent_blur
 from latent_audio_primitives.latent_dsp import LatentDSPSpec, apply_latent_dsp
@@ -142,6 +147,7 @@ FIELD_HINTS: dict[str, dict[str, Any]] = {
     "exclude_self": {"type": "checkbox", "default": True},
     "optimization_steps": {"type": "number", "default": 100, "min": 1, "step": 1},
     "search_mode": {"type": "select", "default": "beam", "options": ["beam", "greedy", "coordinate"], "description": "Prompt search strategy used by the native probe scorer."},
+    "scorer": {"type": "select", "default": "lexical_probe", "options": ["lexical_probe", "sa3_flow_probe", "clap"], "description": "Prompt objective. SA3 flow loads the Medium model; CLAP is reserved for a later adapter."},
     "seed_prompt": {"type": "text", "default": "audio texture", "description": "Starting text for prompt search or soft-prompt optimization."},
     "vocabulary": {"type": "text", "default": ", ".join(DEFAULT_PROMPT_SEARCH_VOCABULARY), "advanced": True},
     "tokens_generated": {"type": "number", "default": 4, "min": 1, "max": 32, "step": 1},
@@ -150,6 +156,16 @@ FIELD_HINTS: dict[str, dict[str, Any]] = {
     "runs": {"type": "number", "default": 4, "min": 1, "max": 64, "step": 1, "advanced": True},
     "rounds": {"type": "number", "default": 2, "min": 1, "max": 12, "step": 1, "advanced": True},
     "candidate_batch_size": {"type": "number", "default": 0, "min": 0, "step": 1, "advanced": True},
+    "score_samples": {"type": "number", "default": 1, "min": 1, "step": 1, "advanced": True},
+    "logsnr_values": {"type": "text", "default": "", "advanced": True, "placeholder": "2,0,-2"},
+    "timestep_values": {"type": "text", "default": "", "advanced": True, "placeholder": "0.12,0.5,0.88"},
+    "min_t": {"type": "number", "default": 0.05, "min": 0.0, "max": 1.0, "step": 0.01, "advanced": True},
+    "max_t": {"type": "number", "default": 0.95, "min": 0.0, "max": 1.0, "step": 0.01, "advanced": True},
+    "shared_noise": {"type": "checkbox", "default": True, "advanced": True},
+    "antithetic_noise": {"type": "checkbox", "default": False, "advanced": True},
+    "normalize_mse": {"type": "checkbox", "default": True, "advanced": True},
+    "cosine_weight": {"type": "number", "default": 0.0, "min": 0.0, "step": 0.05, "advanced": True},
+    "conditional_delta_weight": {"type": "number", "default": 0.0, "min": 0.0, "step": 0.05, "advanced": True},
     "prefix": {"type": "text", "advanced": True, "placeholder": "optional"},
     "suffix": {"type": "text", "advanced": True, "placeholder": "optional"},
     "separator": {"type": "text", "default": " ", "advanced": True},
@@ -469,11 +485,12 @@ class RuntimeDispatcher:
             OperatorSpec(
                 name=OperatorName.EXPERIMENT_PROMPT_SEARCH,
                 maturity="probe",
-                backends=[BackendName.CPU],
+                backends=[BackendName.CPU, BackendName.TORCH_MPS, BackendName.TORCH_CPU],
                 inputs=["source?"],
                 params={
                     "target_audio_path": "file|null",
                     "seed_prompt": "str|null",
+                    "scorer": "lexical_probe|sa3_flow_probe|clap",
                     "search_mode": "beam|greedy|coordinate",
                     "vocabulary": "csv",
                     "tokens_generated": "int",
@@ -485,10 +502,25 @@ class RuntimeDispatcher:
                     "prefix": "str|null",
                     "suffix": "str|null",
                     "modifier_axes": "csv|null",
+                    "model": "medium|sm-music|sm-sfx|null",
+                    "duration_seconds": "float|null",
+                    "score_samples": "int",
+                    "logsnr_values": "csv|null",
+                    "timestep_values": "csv|null",
+                    "min_t": "float",
+                    "max_t": "float",
+                    "shared_noise": "bool",
+                    "antithetic_noise": "bool",
+                    "normalize_mse": "bool",
+                    "cosine_weight": "float",
+                    "conditional_delta_weight": "float",
+                    "velocity_convention": "noise_minus_data|data_minus_noise",
+                    "device": "str|null",
+                    "model_half": "bool",
                     "seed": "int|null",
                 },
                 produces=[ArtifactKind.BUNDLE],
-                status="implemented with lexical probe scorer; model-backed scorer queued",
+                status="implemented with lexical and optional SA3 flow probe scorer; CLAP scorer queued",
             ),
             *self._script_operator_specs(),
         ]
@@ -1160,10 +1192,32 @@ class RuntimeDispatcher:
             seed_prompt=seed_prompt,
             source=source,
         )
-        scorer = _lexical_prompt_scorer(target_tokens)
-        batch_scorer = lambda prompts: [scorer(prompt) for prompt in prompts]
+        scorer_kind = str(params.get("scorer") or "lexical_probe").lower()
+        if scorer_kind == "lexical_probe":
+            scorer = _lexical_prompt_scorer(target_tokens)
+            batch_scorer = lambda prompts: [scorer(prompt) for prompt in prompts]
+            scorer_metadata: dict[str, Any] = {
+                "kind": "lexical_probe",
+                "model_backed": False,
+                "notes": "Deterministic local scorer for wiring and triage; choose sa3_flow_probe for frozen SA3 flow-loss scoring.",
+                "target_tokens": sorted(target_tokens)[:48],
+            }
+        elif scorer_kind == "sa3_flow_probe":
+            context.set_progress(0.10, "loading SA3 flow prompt scorer")
+            batch_scorer, scorer_metadata = self._sa3_flow_prompt_batch_scorer(
+                recipe,
+                params=params,
+                target_audio_path=target_audio_path,
+                source=source,
+                seed=seed,
+            )
+            scorer = lambda prompt: batch_scorer([prompt])[0]
+        elif scorer_kind == "clap":
+            raise RuntimeError("CLAP prompt scorer is not implemented yet; choose lexical_probe or sa3_flow_probe.")
+        else:
+            raise ValueError("prompt search scorer must be 'lexical_probe', 'sa3_flow_probe', or 'clap'")
 
-        context.set_progress(0.20, f"running {search_mode} prompt search")
+        context.set_progress(0.20, f"running {search_mode} prompt search with {scorer_kind}")
         if search_mode == "coordinate":
             axes = _parse_modifier_axes(params.get("modifier_axes")) or default_modifier_axes()
             result = coordinate_prompt_search(
@@ -1211,12 +1265,7 @@ class RuntimeDispatcher:
         payload = {
             "operator": _operator_value(recipe.operator),
             "status": "probe",
-            "scorer": {
-                "kind": "lexical_probe",
-                "model_backed": False,
-                "notes": "Deterministic local scorer for wiring and triage; replace with SA3/CLAP scoring for semantic audio-text ranking.",
-                "target_tokens": sorted(target_tokens)[:48],
-            },
+            "scorer": scorer_metadata,
             "source_artifact_id": source_id,
             "target_audio_path": target_audio_path or None,
             "search_mode": search_mode,
@@ -1240,10 +1289,11 @@ class RuntimeDispatcher:
             prompt=result.prompt,
             metadata={
                 "operator": _operator_value(recipe.operator),
-                "metric": "lexical_probe",
+                "metric": scorer_metadata["kind"],
                 "result_count": 1,
                 "candidate_count": len(result.history),
                 "search_mode": search_mode,
+                "scorer": scorer_metadata["kind"],
             },
         )
         return JobResult(
@@ -1252,10 +1302,86 @@ class RuntimeDispatcher:
                 "prompt": result.prompt,
                 "score": float(result.score),
                 "candidate_count": len(result.history),
-                "scorer": "lexical_probe",
+                "scorer": scorer_metadata["kind"],
                 "search_mode": search_mode,
             },
         )
+
+    def _sa3_flow_prompt_batch_scorer(
+        self,
+        recipe: Recipe,
+        *,
+        params: dict[str, Any],
+        target_audio_path: str,
+        source: ArtifactRecord | None,
+        seed: int,
+    ):
+        if not target_audio_path:
+            raise ValueError("SA3 flow prompt scorer requires params.target_audio_path or an audio source artifact")
+        try:
+            import torchaudio
+            from stable_audio_3 import StableAudioModel
+        except Exception as exc:
+            raise RuntimeError("SA3 flow prompt scorer requires the Stable Audio 3 torch runtime extras") from exc
+
+        model_name = str(recipe.model or params.get("model") or "medium")
+        device = str(params.get("device") or _device_for_backend(recipe.backend))
+        stable_model = StableAudioModel.from_pretrained(
+            model_name,
+            device=device,
+            model_half=bool(params.get("model_half", False)),
+        )
+        audio, sample_rate = torchaudio.load(target_audio_path)
+        duration = float(params.get("duration_seconds") or params.get("duration") or 0.0)
+        if duration <= 0:
+            duration = float(audio.shape[-1] / sample_rate)
+        seed_prompt = str(params.get("seed_prompt") or (source.prompt if source else "") or "audio texture")
+        conditioning = [{"prompt": seed_prompt, "seconds_total": duration}]
+        audio_sample_size = stable_model._adapt_sample_size(conditioning, 5292032, duration_padding_sec=6.0)
+        target_latents, _ = stable_model._encode_audio_input((sample_rate, audio), audio_sample_size)
+        timestep_values = parse_float_sequence(params.get("timestep_values"))
+        if not timestep_values:
+            timestep_values = timesteps_from_logsnr_values(params.get("logsnr_values"))
+        effective_samples = len(timestep_values) if timestep_values else max(1, int(params.get("score_samples", 1) or 1))
+
+        def batch_scorer(prompts: list[str]) -> list[float]:
+            losses = sa3_flow_losses_for_prompts(
+                stable_model,
+                target_latents,
+                prompts,
+                duration=duration,
+                seed=seed,
+                min_t=float(params.get("min_t", 0.05) or 0.05),
+                max_t=float(params.get("max_t", 0.95) or 0.95),
+                score_samples=effective_samples,
+                shared_noise=bool(params.get("shared_noise", True)),
+                timestep_values=timestep_values or None,
+                cosine_weight=float(params.get("cosine_weight", 0.0) or 0.0),
+                antithetic_noise=bool(params.get("antithetic_noise", False)),
+                normalize_mse=bool(params.get("normalize_mse", True)),
+                conditional_delta_weight=float(params.get("conditional_delta_weight", 0.0) or 0.0),
+                velocity_convention=str(params.get("velocity_convention") or "noise_minus_data"),
+            )
+            return [-loss for loss in losses]
+
+        metadata = {
+            "kind": "sa3_flow_probe",
+            "model_backed": True,
+            "model": model_name,
+            "device": device,
+            "duration_seconds": duration,
+            "score_samples": effective_samples,
+            "timestep_values": timestep_values,
+            "shared_noise": bool(params.get("shared_noise", True)),
+            "antithetic_noise": bool(params.get("antithetic_noise", False)),
+            "normalize_mse": bool(params.get("normalize_mse", True)),
+            "cosine_weight": float(params.get("cosine_weight", 0.0) or 0.0),
+            "conditional_delta_weight": float(params.get("conditional_delta_weight", 0.0) or 0.0),
+            "velocity_convention": str(params.get("velocity_convention") or "noise_minus_data"),
+            "target_audio_path": target_audio_path,
+            "notes": "Frozen SA3 flow-loss scorer; prompt scores are negative losses against the target latent.",
+        }
+        return batch_scorer, metadata
 
     def _run_script_experiment(self, recipe: Recipe, context: JobContext) -> JobResult:
         output_id, marker_path = self.store.reserve_artifact_path(filename=f"{_operator_slug(recipe.operator)}.zip")

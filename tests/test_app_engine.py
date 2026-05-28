@@ -176,7 +176,77 @@ def test_runtime_prompt_search_returns_probe_bundle(tmp_path):
     assert finished.metrics["scorer"] == "lexical_probe"
     assert inspection.bundle_summary["kind"] == "prompt-search"
     assert inspection.bundle_summary["prompt_search"]["prompt"] == payload["prompt"]
+    assert inspection.bundle_summary["prompt_search"]["model_backed"] is False
     assert inspection.bundle_preview["prompt"] == payload["prompt"]
+
+
+def test_runtime_prompt_search_uses_sa3_flow_probe_scorer(tmp_path):
+    store = ArtifactStore(tmp_path / "lab")
+    audio_path = tmp_path / "target.wav"
+    sf.write(audio_path, np.zeros((800, 1), dtype=np.float32), 8000)
+    source = store.import_audio_file(audio_path, prompt="cold texture", label="target")
+    runtime = RuntimeDispatcher(store, repo_root=tmp_path)
+
+    def fake_flow_scorer(recipe, *, params, target_audio_path, source, seed):
+        assert recipe.backend == BackendName.TORCH_CPU
+        assert params["model"] == "medium"
+        assert Path(target_audio_path).name == "target.wav"
+        assert source.prompt == "cold texture"
+        assert seed == 11
+
+        def batch(prompts):
+            return [10.0 if "warm" in prompt else 0.0 for prompt in prompts]
+
+        return batch, {
+            "kind": "sa3_flow_probe",
+            "model_backed": True,
+            "model": "medium",
+            "device": "test",
+            "duration_seconds": 1.0,
+            "score_samples": 2,
+            "timestep_values": [0.25, 0.75],
+            "velocity_convention": "noise_minus_data",
+        }
+
+    runtime._sa3_flow_prompt_batch_scorer = fake_flow_scorer  # type: ignore[method-assign]
+    jobs = JobManager(store.jobs_dir)
+    recipe = Recipe(
+        operator=OperatorName.EXPERIMENT_PROMPT_SEARCH,
+        backend=BackendName.TORCH_CPU,
+        inputs={"source": source.artifact_id},
+        params={
+            "scorer": "sa3_flow_probe",
+            "search_mode": "beam",
+            "seed_prompt": "target",
+            "vocabulary": "warm, cold",
+            "tokens_generated": 1,
+            "beam_width": 2,
+            "branch_factor": 2,
+            "model": "medium",
+            "score_samples": 2,
+            "timestep_values": "0.25,0.75",
+            "seed": 11,
+        },
+    )
+
+    record = jobs.submit(recipe, runtime.handler_for_recipe(recipe))
+    finished = _wait_for_job(jobs, record.job_id)
+    artifact = store.get_artifact(finished.artifact_ids[0])
+    payload = json.loads(artifact.path.read_text(encoding="utf-8"))
+    inspection = store.inspect_artifact(artifact.artifact_id)
+
+    assert finished.status == JobStatus.SUCCEEDED
+    assert payload["scorer"]["kind"] == "sa3_flow_probe"
+    assert payload["scorer"]["model_backed"] is True
+    assert payload["scorer"]["model"] == "medium"
+    assert "warm" in payload["prompt"]
+    assert finished.metrics["scorer"] == "sa3_flow_probe"
+    assert artifact.metadata["metric"] == "sa3_flow_probe"
+    assert artifact.metadata["scorer"] == "sa3_flow_probe"
+    assert inspection.bundle_summary["prompt_search"]["scorer"] == "sa3_flow_probe"
+    assert inspection.bundle_summary["prompt_search"]["model"] == "medium"
+    assert inspection.bundle_summary["prompt_search"]["score_samples"] == 2
+    assert inspection.bundle_summary["prompt_search"]["families"][0]["prompt"] == payload["prompt"]
 
 
 def test_audio_peaks_are_derived_from_audio_file(tmp_path):
@@ -253,8 +323,11 @@ def test_operator_specs_cover_typed_request_params(tmp_path):
 
     prompt_ui_fields = {field.key: field for field in specs[OperatorName.EXPERIMENT_PROMPT_SEARCH].ui_fields}
     assert [option.value for option in prompt_ui_fields["search_mode"].options] == ["beam", "greedy", "coordinate"]
+    assert [option.value for option in prompt_ui_fields["scorer"].options] == ["lexical_probe", "sa3_flow_probe", "clap"]
     assert prompt_ui_fields["target_audio_path"].artifact_kinds == [ArtifactKind.AUDIO]
     assert prompt_ui_fields["tokens_generated"].default == 4
+    assert prompt_ui_fields["score_samples"].default == 1
+    assert specs[OperatorName.EXPERIMENT_PROMPT_SEARCH].backends == [BackendName.CPU, BackendName.TORCH_MPS, BackendName.TORCH_CPU]
 
 
 def test_sessions_persist_and_attach_artifacts(tmp_path):

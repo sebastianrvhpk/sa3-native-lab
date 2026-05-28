@@ -967,6 +967,7 @@ def _prompt_search_summary(json_payloads: list[tuple[str, Any]]) -> dict[str, An
             scorer = {}
         history = payload.get("history")
         beams = payload.get("beams")
+        families = _prompt_search_families(payload, beams, history)
         return {
             "path": path,
             "prompt": payload.get("prompt"),
@@ -976,10 +977,41 @@ def _prompt_search_summary(json_payloads: list[tuple[str, Any]]) -> dict[str, An
             "candidate_count": payload.get("candidate_count"),
             "scorer": scorer.get("kind"),
             "model_backed": scorer.get("model_backed"),
+            "model": scorer.get("model"),
+            "device": scorer.get("device"),
+            "duration_seconds": scorer.get("duration_seconds"),
+            "score_samples": scorer.get("score_samples"),
+            "timestep_values": scorer.get("timestep_values"),
+            "velocity_convention": scorer.get("velocity_convention"),
+            "target_audio_path": payload.get("target_audio_path"),
             "history": history[:8] if isinstance(history, list) else [],
             "beams": beams[:8] if isinstance(beams, list) else [],
+            "families": families,
         }
     return None
+
+
+def _prompt_search_families(payload: dict[str, Any], beams: Any, history: Any) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+
+    def add(candidate: Any, *, source: str) -> None:
+        if not isinstance(candidate, dict):
+            return
+        prompt = candidate.get("prompt")
+        if not isinstance(prompt, str) or not prompt.strip():
+            return
+        if any(item.get("prompt") == prompt for item in rows):
+            return
+        rows.append({"prompt": prompt, "score": candidate.get("score"), "source": source})
+
+    add({"prompt": payload.get("prompt"), "score": payload.get("score")}, source="selected")
+    if isinstance(beams, list):
+        for candidate in beams:
+            add(candidate, source="beam")
+    if isinstance(history, list):
+        for candidate in history:
+            add(candidate, source="history")
+    return [{**item, "rank": index + 1} for index, item in enumerate(rows[:12])]
 
 
 def _profile_summary(npz_summaries: list[dict[str, Any]]) -> dict[str, Any] | None:
