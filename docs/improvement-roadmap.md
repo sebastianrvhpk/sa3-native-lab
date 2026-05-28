@@ -49,12 +49,14 @@ For the broader stack direction and promotion triggers, see
    share a vector bundle or prompt. Session/archive filters now surface saved
    decisions by decision, kind, model, operator, family, tag, text, and source
    lineage. Prompt-search takes now expose first-pass target-vs-take descriptor
-   deltas; next they need richer cross-run and sweep-family comparisons.
+   deltas plus a decision-study summary over keeper/maybe/reject annotations;
+   next they need richer cross-run and sweep-family comparisons.
 
 2. Presets for Operator Studio.
-   Store named parameter sets for blur, DSP, graft, renoise, and cyclic roll.
-   This would make explorations reproducible without turning everything into
-   manual form entry.
+   Browser-local named presets now exist for blur, DSP, graft, renoise, and
+   cyclic roll. They can be saved, updated, selected, and deleted per operator
+   mode. Next, promote useful presets into backend recipe history with explicit
+   diffs before adding a heavier database-backed preset library.
 
 3. Artifact filtering and tagging.
    Labels, tags, notes, keeper/maybe/reject listening decisions, archive search,
@@ -103,10 +105,10 @@ For the broader stack direction and promotion triggers, see
    takes are grouped under the prompt-search family and can be played, sent to
    A/B beside the candidate, marked keeper/maybe/rejected with notes, and
    compared to the target through lightweight descriptor deltas. They can also be
-   recovered later through decision/model/operator/family filters. The next
-   research step is correlating descriptor deltas with saved listening decisions
-   and adding layer/alpha comparisons. CLAP or hybrid scoring belongs after that
-   comparison workflow has real usage.
+   summarized through a decision-study panel and recovered later through
+   decision/model/operator/family filters. The next research step is richer
+   layer/alpha comparison, cross-run aggregation, and runtime-cost notes. CLAP or
+   hybrid scoring belongs after that comparison workflow has real usage.
 
 5. Geometry and control probes.
    `experiment.geometry_audit` now produces a local latent geometry report
@@ -147,6 +149,8 @@ For the broader stack direction and promotion triggers, see
    frontend forms. Select membership, integer controls, and alpha list parsing
    are validated. The next step is richer cross-field constraints such as donor
    requirements, source artifact kind, and mode-specific path compatibility.
+   Operator presets are still browser-local; persisted preset contracts should
+   wait until recipe diffs and validation metadata are stable enough to save.
 
 4. Add persistent worker processes.
    Repeated Medium generation would benefit from a resident MLX/PyTorch worker

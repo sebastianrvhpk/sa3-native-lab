@@ -16,7 +16,7 @@ smoke tests, but they are not the app default.
 | Audio to audio | `optimized/mlx/sa3 --init-audio` | `/generate/audio-to-audio` | implemented |
 | Inpaint | `optimized/mlx/sa3 --inpaint-range` | `/generate/inpaint` | implemented |
 | SAME encode/decode | SAME adapter scripts and tests | `/latents/encode`, `/latents/decode` | implemented |
-| Latent blur/DSP/graft/renoise/roll | `latent_audio_primitives` wrappers | `/operators/run`, Operator Studio | implemented with native parameter controls |
+| Latent blur/DSP/graft/renoise/roll | `latent_audio_primitives` wrappers | `/operators/run`, Operator Studio | implemented with native parameter controls and local presets |
 | Real waveform peaks | audio artifacts via `soundfile` | `/artifacts/{id}/peaks` | implemented |
 | Audio descriptor comparison | `latent_audio_primitives.audio_descriptors` | `/artifacts/{target}/descriptor-comparison/{take}`, prompt-search take delta strip | implemented first slice |
 | Artifact annotation/search | `ArtifactStore.annotate_artifact`, `/artifacts?q=&tags=` | Specimen annotation panel, session/archive filters by decision, tag, kind, model, operator, family, text, and lineage | implemented |
@@ -57,7 +57,9 @@ marks whether each mode is native, partial, or still scaffolded.
 Operator Studio exposes the direct latent operators as native controls rather
 than notebook snippets: cyclic roll, blur, DSP, graft, and renoise all map to
 their executable request params, with donor-latent selection shown only when the
-chosen mode needs a donor.
+chosen mode needs a donor. Browser-local presets now save and reload named
+parameter sets per operator mode; backend-backed preset history and recipe diffs
+remain future promotion work.
 
 The session archive now supports label, notes, tag annotation, listening
 decisions, and local recovery filters. Latent memory query is promoted from
@@ -75,16 +77,19 @@ for Medium-backed flow-loss scoring against a target audio latent. This is still
 marked as a probe until the real Medium/MPS path has short-audio listening
 validation, runtime-cost notes, and richer candidate comparison. The first
 candidate-comparison slice now shows target-vs-take descriptor deltas for
-generated prompt-search takes. CLAP or hybrid scoring remains a future adapter
+generated prompt-search takes and summarizes those deltas against saved
+keeper/maybe/reject decisions. CLAP or hybrid scoring remains a future adapter
 behind the same `scorer` field.
 
 ## Next Promotion Targets
 
-1. Correlate prompt-search descriptor deltas with keeper/maybe/reject decisions
-   and document the useful Medium/MPS score-sample/timestep settings.
+1. Extend prompt-search decision correlation across runs and document the useful
+   Medium/MPS score-sample/timestep settings.
 2. Add CLAP or hybrid prompt scoring only after the SA3 flow probe has a good
    comparison workflow.
 3. Control-head recipes for Mode 12 and the labelled-probe part of Mode 15.
-4. Operator presets and operator-studio recipe diffs for repeatable latent explorations.
+4. Promote Operator Studio presets into backend recipe diffs for shareable
+   repeatable latent explorations.
 5. Richer memory/dataset browsing, including preview audio for non-local children.
-6. Long-job controls for LoRA training: pause/cancel is not yet implemented.
+6. Long-job controls for LoRA training: pause/resume, priority, and
+   resource-aware scheduling are not yet implemented.
