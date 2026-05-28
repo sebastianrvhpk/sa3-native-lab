@@ -104,7 +104,7 @@ export function validateRecipeField(field: RecipeField, value: RecipeValue | und
     if (field.max !== undefined && numberValue > field.max) return `${field.label} must be at most ${field.max}`;
     if (field.step === 1 && !Number.isInteger(numberValue)) return `${field.label} must be a whole number`;
   }
-  if (field.key === "alphas" && stringValue(value) && !parseNumberList(value).length) return `${field.label} must include at least one number`;
+  if (field.key === "alphas" && stringValue(value) && !parseNumberList(value ?? "").length) return `${field.label} must include at least one number`;
   return undefined;
 }
 
