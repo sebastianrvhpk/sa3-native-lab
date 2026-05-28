@@ -1100,6 +1100,41 @@ audio {
   align-items: center;
 }
 
+.aria-slider-track {
+  position: relative;
+  height: 24px;
+}
+
+.aria-slider-track::before {
+  content: "";
+  position: absolute;
+  top: 11px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--teal), var(--chartreuse), var(--pink));
+  box-shadow: 0 0 0 1px rgb(45 51 52 / 0.34);
+}
+
+.aria-slider-thumb {
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: radial-gradient(circle at 36% 34%, rgb(255 255 255 / 0.92), var(--blue));
+  transform: translateY(-50%);
+  box-shadow: 0 0 0 3px rgb(255 255 255 / 0.5);
+}
+
+.aria-slider-thumb[data-focus-visible],
+.field-checkbox[data-focus-visible],
+.path-actions button[data-focus-visible] {
+  outline: 2px solid var(--green);
+  outline-offset: 3px;
+}
+
 .range-pair input[type="number"] {
   padding: 0 8px;
 }
@@ -1149,6 +1184,30 @@ audio {
   min-height: auto;
 }
 
+.checkbox-box {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+  border: 2px solid var(--ink);
+  border-radius: 4px;
+  background: rgb(255 255 255 / 0.7);
+}
+
+.field-checkbox[data-selected] .checkbox-box {
+  background:
+    linear-gradient(135deg, var(--chartreuse), var(--teal)),
+    var(--green);
+  box-shadow: inset 0 0 0 3px rgb(255 255 255 / 0.7);
+}
+
+.field-error {
+  display: block;
+  margin-top: 5px;
+  color: rgb(146 44 65);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
 .path-field {
   min-width: 0;
 }
@@ -1167,6 +1226,10 @@ audio {
 
 .path-actions button {
   padding: 0 9px;
+}
+
+.path-actions button[data-disabled] {
+  opacity: 0.45;
 }
 
 .mode-atlas {

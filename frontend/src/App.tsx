@@ -19,7 +19,6 @@ import {
   Play,
   Plus,
   Repeat,
-  Route,
   Search,
   SlidersHorizontal,
   SkipBack,
@@ -33,6 +32,21 @@ import {
 import modelImage from "../../stable-audio-3.png";
 import { createApi, type ArtifactAnnotationPayload, type ExperimentPayload } from "./api";
 import { createControlPlaneClient, DEFAULT_CONTROL_PLANE_URL } from "./controlPlane";
+import { RecipeFields } from "./RecipeFields";
+import {
+  buildExperimentPayload,
+  buildOperatorParams,
+  defaultFieldForm,
+  experimentReady,
+  fieldKeys,
+  operatorBackend,
+  operatorReady,
+  operatorSeed,
+  operatorUsesDonor,
+  type FieldConfig,
+  type RecipeField,
+  type RecipeValue,
+} from "./recipeFormModel";
 import { useBenchStore } from "./store";
 import type { ArtifactRecord, JobRecord, ModelStatus, NotebookMode, OperatorName, OperatorSpec, SessionRecord } from "./types";
 
@@ -58,24 +72,7 @@ type ExperimentMode =
   | "memory.query"
   | "training.lora";
 
-type RecipeValue = string | number | boolean;
-type RecipeFieldType = "text" | "number" | "range" | "select" | "checkbox" | "path" | "artifact-path";
 type GenerationMode = "generate.text_to_audio" | "generate.audio_to_audio" | "generate.inpaint";
-
-interface RecipeField {
-  key: string;
-  label: string;
-  type: RecipeFieldType;
-  defaultValue?: RecipeValue;
-  required?: boolean;
-  advanced?: boolean;
-  min?: number;
-  max?: number;
-  step?: number;
-  options?: readonly { value: string; label: string }[];
-  artifactKinds?: readonly ArtifactRecord["kind"][];
-  placeholder?: string;
-}
 
 interface ExperimentConfig {
   value: ExperimentMode;
@@ -88,10 +85,6 @@ interface ExperimentConfig {
   fields: readonly RecipeField[];
   selectedAudioFallback?: string;
   selectedLatentFallback?: boolean;
-}
-
-interface FieldConfig {
-  fields: readonly RecipeField[];
 }
 
 type LatentOperatorMode =
@@ -1121,6 +1114,8 @@ export function App() {
                 artifacts={allArtifacts}
                 selectedArtifact={selectedArtifact}
                 onChange={setOperatorField}
+                getArtifactPath={artifactPathForField}
+                getArtifactLabel={artifactName}
               />
               <button className="primary-action" disabled={!canRunOperator || runOperator.isPending || Boolean(operatorJob)} onClick={() => selectedArtifact && runOperator.mutate(selectedArtifact)}>
                 {runOperator.isPending || operatorJob ? <LoaderCircle className="spin" size={18} /> : <GitFork size={17} />}
@@ -1155,6 +1150,8 @@ export function App() {
                 artifacts={allArtifacts}
                 selectedArtifact={selectedArtifact}
                 onChange={setExperimentField}
+                getArtifactPath={artifactPathForField}
+                getArtifactLabel={artifactName}
               />
               <button className="primary-action" disabled={!canRunExperiment || runExperiment.isPending || Boolean(experimentJob)} onClick={() => runExperiment.mutate()}>
                 {runExperiment.isPending || experimentJob ? <LoaderCircle className="spin" size={18} /> : <Play size={18} />}
@@ -1995,57 +1992,6 @@ function placeholderPeaks(seed: string, count: number) {
   });
 }
 
-function RecipeFields({
-  config,
-  form,
-  artifacts,
-  selectedArtifact,
-  onChange,
-}: {
-  config: FieldConfig;
-  form: Record<string, RecipeValue>;
-  artifacts: ArtifactRecord[];
-  selectedArtifact: ArtifactRecord | null;
-  onChange: (key: string, value: RecipeValue) => void;
-}) {
-  const coreFields = config.fields.filter((field) => !field.advanced);
-  const advancedFields = config.fields.filter((field) => field.advanced);
-  return (
-    <div className="recipe-fields">
-      {coreFields.map((field) => (
-        <RecipeFieldControl
-          key={field.key}
-          field={field}
-          value={form[field.key]}
-          artifacts={artifacts}
-          selectedArtifact={selectedArtifact}
-          onChange={(value) => onChange(field.key, value)}
-        />
-      ))}
-      {advancedFields.length ? (
-        <details className="recipe-advanced">
-          <summary>
-            <SlidersHorizontal size={15} />
-            Parameters
-          </summary>
-          <div className="recipe-fields advanced">
-            {advancedFields.map((field) => (
-              <RecipeFieldControl
-                key={field.key}
-                field={field}
-                value={form[field.key]}
-                artifacts={artifacts}
-                selectedArtifact={selectedArtifact}
-                onChange={(value) => onChange(field.key, value)}
-              />
-            ))}
-          </div>
-        </details>
-      ) : null}
-    </div>
-  );
-}
-
 function SpecCoverage({ spec, controlledKeys }: { spec: OperatorSpec | undefined; controlledKeys: readonly string[] }) {
   const params = specParamKeys(spec);
   const missing = missingParamKeys(spec, controlledKeys);
@@ -2081,131 +2027,6 @@ function SpecCoveragePair({
   );
 }
 
-function RecipeFieldControl({
-  field,
-  value,
-  artifacts,
-  selectedArtifact,
-  onChange,
-}: {
-  field: RecipeField;
-  value: RecipeValue | undefined;
-  artifacts: ArtifactRecord[];
-  selectedArtifact: ArtifactRecord | null;
-  onChange: (value: RecipeValue) => void;
-}) {
-  if (field.type === "checkbox") {
-    return (
-      <label className="field-checkbox">
-        <input type="checkbox" checked={Boolean(value)} onChange={(event) => onChange(event.target.checked)} />
-        <span>{field.label}</span>
-      </label>
-    );
-  }
-
-  if (field.type === "select") {
-    return (
-      <label className="control-cell">
-        {field.label}
-        <select value={String(value ?? "")} onChange={(event) => onChange(event.target.value)}>
-          {field.options?.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </label>
-    );
-  }
-
-  if (field.type === "number") {
-    return (
-      <label className="control-cell">
-        {field.label}
-        <input
-          type="number"
-          min={field.min}
-          max={field.max}
-          step={field.step ?? "any"}
-          value={value === undefined ? "" : String(value)}
-          onChange={(event) => onChange(event.target.value === "" ? "" : Number(event.target.value))}
-        />
-      </label>
-    );
-  }
-
-  if (field.type === "range") {
-    const numericValue = typeof value === "number" && Number.isFinite(value) ? value : Number(field.defaultValue ?? field.min ?? 0);
-    return (
-      <label className="control-cell range-field">
-        <span>
-          {field.label}
-          <strong>{formatControlNumber(numericValue)}</strong>
-        </span>
-        <div className="range-pair">
-          <input
-            type="range"
-            min={field.min}
-            max={field.max}
-            step={field.step ?? 0.01}
-            value={numericValue}
-            onChange={(event) => onChange(Number(event.target.value))}
-          />
-          <input
-            type="number"
-            min={field.min}
-            max={field.max}
-            step={field.step ?? "any"}
-            value={numericValue}
-            onChange={(event) => onChange(event.target.value === "" ? "" : Number(event.target.value))}
-          />
-        </div>
-      </label>
-    );
-  }
-
-  if (field.type === "artifact-path") {
-    const candidates = artifacts.filter((artifact) => !field.artifactKinds?.length || field.artifactKinds.includes(artifact.kind));
-    const selectedCandidate =
-      selectedArtifact && (!field.artifactKinds?.length || field.artifactKinds.includes(selectedArtifact.kind)) ? selectedArtifact : null;
-    return (
-      <label className="control-cell path-field">
-        {field.label}
-        <input
-          value={String(value ?? "")}
-          placeholder={field.placeholder}
-          onChange={(event) => onChange(event.target.value)}
-        />
-        <div className="path-actions">
-          <select value="" onChange={(event) => event.target.value && onChange(event.target.value)}>
-            <option value="">Artifacts</option>
-            {candidates.map((artifact) => (
-              <option key={artifact.artifact_id} value={artifactPathForField(artifact, field.key)}>
-                {artifactName(artifact)}
-              </option>
-            ))}
-          </select>
-          <button type="button" disabled={!selectedCandidate} onClick={() => selectedCandidate && onChange(artifactPathForField(selectedCandidate, field.key))}>
-            <Route size={15} />
-            Selected
-          </button>
-        </div>
-      </label>
-    );
-  }
-
-  return (
-    <label className="control-cell">
-      {field.label}
-      <input
-        value={String(value ?? "")}
-        placeholder={field.placeholder}
-        onChange={(event) => onChange(event.target.value)}
-      />
-    </label>
-  );
-}
-
 function defaultExperimentForm(mode: ExperimentMode): Record<string, RecipeValue> {
   const config = experimentCatalog.find((item) => item.value === mode) ?? experimentCatalog[0];
   const form = defaultFieldForm(config);
@@ -2219,26 +2040,6 @@ function defaultOperatorForm(mode: LatentOperatorMode): Record<string, RecipeVal
   const form = defaultFieldForm(config);
   if (!form.backend) form.backend = config.defaultBackend;
   return form;
-}
-
-function defaultFieldForm(config: FieldConfig): Record<string, RecipeValue> {
-  const form: Record<string, RecipeValue> = {};
-  for (const field of config.fields) {
-    if (field.defaultValue !== undefined) {
-      form[field.key] = field.defaultValue;
-    } else if (field.type === "checkbox") {
-      form[field.key] = false;
-    } else if (field.type === "select") {
-      form[field.key] = field.options?.[0]?.value ?? "";
-    } else {
-      form[field.key] = "";
-    }
-  }
-  return form;
-}
-
-function fieldKeys(config: FieldConfig): string[] {
-  return config.fields.map((field) => field.key).filter((key) => key !== "backend");
 }
 
 function generationControlKeys(mode: GenerationMode): readonly string[] {
@@ -2256,119 +2057,11 @@ function missingParamKeys(spec: OperatorSpec | undefined, controlledKeys: readon
   return specParamKeys(spec).filter((key) => !controlled.has(key));
 }
 
-function experimentReady(config: ExperimentConfig, form: Record<string, RecipeValue>, selectedArtifact: ArtifactRecord | null) {
-  if (config.selectedLatentFallback && selectedArtifact?.kind !== "latent") {
-    return false;
-  }
-  if (config.selectedAudioFallback && selectedArtifact?.kind === "audio" && !stringValue(form[config.selectedAudioFallback])) {
-    return true;
-  }
-  return config.fields.every((field) => !field.required || Boolean(stringValue(form[field.key])));
-}
-
-function buildExperimentPayload({
-  config,
-  form,
-  selectedArtifact,
-  sessionId,
-}: {
-  config: ExperimentConfig;
-  form: Record<string, RecipeValue>;
-  selectedArtifact: ArtifactRecord | null;
-  sessionId?: string | null;
-}): ExperimentPayload {
-  const params: Record<string, unknown> = {};
-  const inputs: Record<string, string> = {};
-
-  for (const field of config.fields) {
-    if (field.key === "backend" || field.key === "model" || field.key === "seed") continue;
-    const value = form[field.key];
-    if (field.type === "checkbox") {
-      params[field.key] = Boolean(value);
-    } else if (value !== undefined && stringValue(value) !== "") {
-      params[field.key] = value;
-    }
-  }
-
-  if (config.selectedAudioFallback && !params[config.selectedAudioFallback] && selectedArtifact?.kind === "audio") {
-    inputs.source = selectedArtifact.artifact_id;
-  }
-  if (config.selectedLatentFallback && selectedArtifact?.kind === "latent") {
-    inputs.source = selectedArtifact.artifact_id;
-  }
-
-  const backend = (stringValue(form.backend) || config.backend) as ExperimentPayload["backend"];
-  const seedValue = form.seed;
-  const seed = typeof seedValue === "number" && Number.isFinite(seedValue) ? seedValue : undefined;
-  const model = stringValue(form.model) || config.modelDefault || null;
-
-  return {
-    operator: config.value,
-    backend,
-    inputs,
-    model,
-    seed,
-    session_id: sessionId,
-    params,
-  };
-}
-
 function findActiveSession(sessions: SessionRecord[], sessionId: string | null): SessionRecord | null {
   if (sessionId) {
     return sessions.find((session) => session.session_id === sessionId) ?? null;
   }
   return sessions.find((session) => session.status === "active") ?? null;
-}
-
-function operatorReady(
-  config: OperatorConfig,
-  form: Record<string, RecipeValue>,
-  selectedArtifact: ArtifactRecord | null,
-  donorArtifactId: string,
-) {
-  if (selectedArtifact?.kind !== "latent") return false;
-  if (operatorUsesDonor(config, form) && !donorArtifactId) return false;
-  return config.fields.every((field) => !field.required || Boolean(stringValue(form[field.key])));
-}
-
-function buildOperatorParams(config: OperatorConfig, form: Record<string, RecipeValue>) {
-  const params: Record<string, unknown> = {};
-  for (const field of config.fields) {
-    if (field.key === "backend") continue;
-    const value = form[field.key];
-    if (field.type === "checkbox") {
-      params[field.key] = Boolean(value);
-      continue;
-    }
-    if (value === undefined || stringValue(value) === "") continue;
-    if (field.key === "channels") {
-      params[field.key] = parseNumberList(value).map((item) => Math.trunc(item));
-    } else if (field.key === "pca_component_gains") {
-      params[field.key] = parseNumberList(value);
-    } else {
-      params[field.key] = value;
-    }
-  }
-  return params;
-}
-
-function operatorBackend(form: Record<string, RecipeValue>, fallback: OperatorConfig["defaultBackend"]) {
-  const value = stringValue(form.backend);
-  return value === "torch_cpu" || value === "torch_mps" ? value : fallback;
-}
-
-function operatorSeed(form: Record<string, RecipeValue>, fallback: number) {
-  const value = form.seed;
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  const parsed = Number(stringValue(value));
-  return Number.isFinite(parsed) ? parsed : fallback;
-}
-
-function operatorUsesDonor(config: OperatorConfig, form: Record<string, RecipeValue>) {
-  if (config.requiresDonor) return true;
-  if (config.value !== "latent.dsp") return false;
-  const mode = stringValue(form.mode);
-  return mode === "fft_phase_blend" || mode === "fft_mag_phase_graft" || mode === "fft_phase_from_donor";
 }
 
 function generationFields(): RecipeField[] {
@@ -2399,11 +2092,6 @@ function artifactPathForField(artifact: ArtifactRecord, fieldKey: string) {
   }
   if (fieldKey === "target_memory_path" || fieldKey === "reference_memory_path") return `${source}/memory`;
   return source;
-}
-
-function stringValue(value: RecipeValue | undefined) {
-  if (value === undefined || value === null) return "";
-  return String(value).trim();
 }
 
 function parseTags(value: string) {
@@ -2542,19 +2230,6 @@ function formatJobElapsed(job: JobRecord) {
   if (seconds < 60) return `${seconds}s`;
   const minutes = Math.floor(seconds / 60);
   return `${minutes}m ${String(seconds % 60).padStart(2, "0")}s`;
-}
-
-function parseNumberList(value: RecipeValue) {
-  return stringValue(value)
-    .split(/[,\s]+/)
-    .map((item) => Number(item))
-    .filter((item) => Number.isFinite(item));
-}
-
-function formatControlNumber(value: number) {
-  if (Math.abs(value) >= 100) return value.toFixed(0);
-  if (Math.abs(value) >= 10) return value.toFixed(1);
-  return value.toFixed(2).replace(/\.?0+$/, "");
 }
 
 function statusClass(status: string) {
