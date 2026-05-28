@@ -65,9 +65,8 @@ audio hits in A/B, or reuse latent hits as donor latents.
 
 ## Next Promotion Targets
 
-1. Sweep-specific family views: metric tables, sibling recipe comparison, and
-   explicit A/B promotion.
-2. Deeper backend-parsed profile/vector/memory/sweep bundle metadata and plots.
+1. Sweep-specific family metric tables and sibling recipe comparison.
+2. Deeper profile/vector/memory/sweep bundle plots and reuse actions.
 3. Prompt-search recipes for Colab Modes 2/3/5.
 4. Geometry/control-head recipes for Modes 12/15.
 5. Operator presets and operator-studio recipe diffs for repeatable latent explorations.

@@ -39,11 +39,12 @@ source audio / prompt
 | P1 | App-shaped tRPC workbench reads | `apps/control-plane` + feature-flagged frontend client | Promote carefully | control-plane tests, frontend build, `sa3-lab dev --with-control-plane` |
 | P1 | Typed recipe replay/fork, retry, cancellation | Python API + tRPC job/recipe routers + React actions | Promote | API tests, control-plane tests, frontend build |
 | P1 | Live job event snapshots | `/jobs/{id}/events` + React Query/live cache merge | Promote first slice | websocket API test, frontend build |
-| P1 | Control-plane job-event bridge | tRPC/SSE `jobs.events` subscription over Python job snapshots | Promote first slice | control-plane tests, frontend build |
+| P1 | Control-plane job-event bridge | tRPC/SSE `jobs.events` subscription over Python job snapshots with heartbeat/resume diagnostics | Promote | control-plane tests, frontend build |
 | P1 | Runtime readiness checks | `/readiness` + `system.readiness` + readiness panel | Promote | API tests, control-plane tests, frontend tests |
 | P1 | Fork-with-edited-params UI | recipe-derived fork editor with diff/reset controls | Promote | frontend tests/build |
 | P1 | Bundle inspection and result families | `/artifacts/{id}/inspect` + `families.load` + result rail/detail panel | Promote | API tests, control-plane tests, frontend tests |
-| P1 | Typed bundle readers | `BundleField` + bundle classifier for memory/profile/vector/sweep/soft-prompt/training outputs | Promote first slice | frontend tests/build |
+| P1 | Typed bundle readers | backend `bundle_summary` parser + `BundleField` readers for memory/profile/vector/sweep/soft-prompt/training outputs | Promote | API tests, frontend tests/build |
+| P1 | Alpha-sweep family promotion | `FamilyDetailPanel` alpha variant band with explicit A/B promotion | Promote first slice | frontend tests/build |
 | P2 | Memory atlas and retrieval | `LatentMemoryIndex` + `memory.query` + memory-hit reuse actions | Promote first slice | nearest-neighbor runtime test, frontend smoke |
 | P2 | Residual steering and prompt search | existing scripts/experiments | Defer | model-backed recipe tests |
 
@@ -58,12 +59,11 @@ source audio / prompt
 
 ## Immediate Next Queue
 
-1. Harden the tRPC/SSE job-event bridge with reconnect/resume history, stderr
-   tails, and explicit event-source diagnostics.
-2. Add backend-parsed metadata for style profiles, vectors, soft prompts,
-   memory collections, sweeps, and training outputs.
-3. Add sweep-family metric tables, promotion semantics, and recipe comparison
-   across sibling runs.
+1. Add durable event history/reconnect replay and stderr-tail recovery guidance
+   behind `jobs.events`.
+2. Add bundle plots and richer reuse actions for style profiles, vectors, soft
+   prompts, memory collections, sweeps, and training outputs.
+3. Add sweep-family metric tables and recipe comparison across sibling runs.
 4. Add prompt-search recipe adapters for Colab Modes 2/3/5.
 5. Add geometry/control-head recipe adapters for Colab Modes 12/15.
 6. Add parameter presets and recipe diffing for Operator Studio.

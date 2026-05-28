@@ -10,8 +10,10 @@ For the broader stack direction and promotion triggers, see
 
 1. Harden live job-event transport.
    Typed job events now reach the UI through a tRPC/SSE control-plane bridge
-   when the control plane is enabled. The next trust step is reconnect/resume
-   history, stderr tails, and clearer event-source diagnostics.
+   when the control plane is enabled. The bridge now emits monotonic IDs,
+   resume-aware sequencing, heartbeat events, and log-tail diagnostics. The
+   next trust step is durable event history/reconnect replay and clearer
+   failure recovery guidance.
 
 2. Improve error surfacing.
    Job failures should show command, stderr tail, missing file paths, model
@@ -31,8 +33,8 @@ For the broader stack direction and promotion triggers, see
 
 1. Deepen result-family views for sweeps.
    Recipe families now appear with metrics, a detail panel, per-result playback,
-   A/B assignment, replay, and fork actions. Next they need sweep-specific
-   metric tables, sibling recipe comparison, and explicit promotion semantics.
+   explicit A/B promotion, replay, and fork actions. Next they need
+   sweep-specific metric tables and sibling recipe comparison.
 
 2. Presets for Operator Studio.
    Store named parameter sets for blur, DSP, graft, renoise, and cyclic roll.
@@ -45,9 +47,10 @@ For the broader stack direction and promotion triggers, see
 
 4. Better bundle readers.
    Bundle file inventory, JSON previews, memory-result reuse, and first-pass
-   typed readers now exist. Next, vector/profile/soft-prompt/sweep bundles
-   should expose parsed dimensions, plots, generated audio children, and richer
-   reuse actions without making the user inspect zip contents.
+   typed readers now exist. The backend now parses JSON/NPZ bundle summaries.
+   Next, vector/profile/soft-prompt/sweep bundles should expose plots,
+   generated audio children, and richer reuse actions without making the user
+   inspect zip contents.
 
 ## P2: Research Cognition
 
@@ -89,8 +92,9 @@ For the broader stack direction and promotion triggers, see
 1. Move more app-shaped actions into tRPC.
    `workbench.load`, job lifecycle, recipe replay/fork, artifact inspection, and
    family reads now exist, and `jobs.events` bridges live snapshots over
-   tRPC/SSE. Next should be event history/reconnect and archive mutations as
-   the normal UI path. Keep the Python worker as the model/runtime owner.
+   tRPC/SSE with heartbeat/resume diagnostics. Next should be durable event
+   history and archive mutations as the normal UI path. Keep the Python worker
+   as the model/runtime owner.
 
 2. Generate frontend schemas from backend operator specs.
    Operator/experiment field catalogs currently live in the frontend. A future
@@ -111,9 +115,10 @@ For the broader stack direction and promotion triggers, see
    tests and future workers cleaner.
 
 6. Add typed artifact inspectors.
-   Each artifact kind should have a dedicated inspector component and backend
-   reader: audio, latent, vector bundle, profile, soft prompt, training output,
-   and memory collection.
+   Bundle summaries now parse JSON/NPZ metadata in the backend. Next each kind
+   should grow a dedicated inspector component with plots and reuse actions:
+   audio, latent, vector bundle, profile, soft prompt, training output, and
+   memory collection.
 
 7. Continue extracting app surfaces from `App.tsx`.
    Audio playback, artifact display, job progress, result families, recipe

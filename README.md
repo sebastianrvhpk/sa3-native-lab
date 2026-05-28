@@ -233,8 +233,9 @@ supports audio import, MLX text generation, SAME encode/decode, latent operator
 jobs, Recipe Studio script experiments, Colab Mode Atlas parity/status, job
 polling plus live job snapshots, cancellation/retry, recipe replay/fork editing,
 recipe diff/reset controls, result-family grouping with detail playback,
-memory-query result reuse, typed bundle inspectors, readiness checks, artifact
-selection, real waveform peaks, download, and A/B audio playback.
+alpha-sweep variant promotion, memory-query result reuse, backend-parsed typed
+bundle inspectors, readiness checks, artifact selection, real waveform peaks,
+download, and A/B audio playback.
 
 ### Notebook Parity Check
 
