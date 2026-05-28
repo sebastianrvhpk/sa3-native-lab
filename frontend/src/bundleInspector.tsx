@@ -229,6 +229,7 @@ export interface BundleDomainSection {
   title: string;
   rows: [string, unknown][];
   files?: string[];
+  items?: { label: string; meta?: string }[];
 }
 
 export function bundleDomainSections(summary: Record<string, unknown> | undefined): BundleDomainSection[] {
@@ -284,6 +285,10 @@ export function bundleDomainSections(summary: Record<string, unknown> | undefine
   }
   const promptSearch = objectValue(summary.prompt_search);
   if (promptSearch) {
+    const families = arrayOfObjects(promptSearch.families).slice(0, 5).map((candidate) => ({
+      label: String(candidate.prompt ?? "candidate"),
+      meta: promptCandidateMeta(candidate),
+    }));
     sections.push({
       title: "Prompt Search",
       rows: [
@@ -291,8 +296,13 @@ export function bundleDomainSections(summary: Record<string, unknown> | undefine
         ["score", formatMaybeNumber(promptSearch.score)],
         ["mode", promptSearch.search_mode],
         ["scorer", promptSearch.scorer],
+        ["model-backed", formatBoolean(promptSearch.model_backed)],
+        ["model", promptSearch.model],
+        ["samples", promptSearch.score_samples],
+        ["duration", formatSeconds(promptSearch.duration_seconds)],
       ],
       files: arrayOfStrings([promptSearch.path]),
+      items: families,
     });
   }
   const profile = objectValue(summary.profile);
@@ -388,7 +398,14 @@ export function summarizeBundle(summary: Record<string, unknown> | undefined, pr
   const promptSearch = summary.prompt_search && typeof summary.prompt_search === "object" ? (summary.prompt_search as Record<string, unknown>) : null;
   if (promptSearch) {
     rows.unshift(["prompt", promptSearch.prompt], ["score", formatMaybeNumber(promptSearch.score)]);
-    rows.push(["mode", promptSearch.search_mode], ["scorer", promptSearch.scorer], ["candidates", promptSearch.candidate_count]);
+    rows.push(
+      ["mode", promptSearch.search_mode],
+      ["scorer", promptSearch.scorer],
+      ["model", promptSearch.model],
+      ["model-backed", formatBoolean(promptSearch.model_backed)],
+      ["samples", promptSearch.score_samples],
+      ["candidates", promptSearch.candidate_count],
+    );
   }
   const profile = summary.profile && typeof summary.profile === "object" ? (summary.profile as Record<string, unknown>) : null;
   const profiles = Array.isArray(profile?.profiles) ? profile.profiles : [];
@@ -425,6 +442,16 @@ function BundleDomainCards({ sections }: { sections: BundleDomainSection[] }) {
               ))}
           </div>
           {section.files?.length ? <span>{section.files.slice(0, 3).join(" · ")}</span> : null}
+          {section.items?.length ? (
+            <ul className="bundle-domain-candidates">
+              {section.items.slice(0, 5).map((item) => (
+                <li key={`${section.title}:${item.label}:${item.meta ?? ""}`}>
+                  <span>{item.label}</span>
+                  {item.meta ? <small>{item.meta}</small> : null}
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </article>
       ))}
     </div>
@@ -509,6 +536,25 @@ function bundleKindDescription(kind: string) {
   if (kind === "soft-prompt") return "Optimized conditioning tensors for prompt continuation";
   if (kind === "training") return "Adapter checkpoints, logs, and long-running training outputs";
   return "Script output files preserved as a replayable artifact";
+}
+
+function promptCandidateMeta(candidate: Record<string, unknown>) {
+  const parts = [
+    candidate.rank !== undefined ? `#${candidate.rank}` : "",
+    typeof candidate.source === "string" ? candidate.source : "",
+    candidate.score !== undefined ? formatMaybeNumber(candidate.score) : "",
+  ].filter(Boolean);
+  return parts.join(" · ");
+}
+
+function formatBoolean(value: unknown) {
+  if (typeof value !== "boolean") return undefined;
+  return value ? "yes" : "no";
+}
+
+function formatSeconds(value: unknown) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return undefined;
+  return `${formatMaybeNumber(value)}s`;
 }
 
 function BundlePreview({

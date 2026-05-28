@@ -86,24 +86,55 @@ describe("recipe form model", () => {
       fields: [
         { key: "target_audio_path", label: "Target audio", type: "artifact-path", artifactKinds: ["audio"] },
         { key: "search_mode", label: "Search mode", type: "select", defaultValue: "beam" },
+        { key: "scorer", label: "Scorer", type: "select", defaultValue: "lexical_probe" },
+        { key: "model", label: "SA3 model", type: "select", defaultValue: "medium" },
+        { key: "duration_seconds", label: "Duration", type: "number" },
         { key: "tokens_generated", label: "Tokens", type: "number", defaultValue: 4 },
+        { key: "score_samples", label: "Score samples", type: "number", defaultValue: 1 },
+        { key: "seed", label: "Seed", type: "number", defaultValue: 0 },
       ],
     };
     const audio = artifact("audio");
 
-    expect(experimentReady(config, { target_audio_path: "", search_mode: "beam", tokens_generated: 4 }, audio)).toBe(true);
+    expect(
+      experimentReady(
+        config,
+        {
+          target_audio_path: "",
+          search_mode: "beam",
+          scorer: "sa3_flow_probe",
+          model: "medium",
+          duration_seconds: 8,
+          tokens_generated: 4,
+          score_samples: 2,
+          seed: 13,
+        },
+        audio,
+      ),
+    ).toBe(true);
     expect(
       buildExperimentPayload({
         config,
-        form: { target_audio_path: "", search_mode: "beam", tokens_generated: 4 },
+        form: {
+          target_audio_path: "",
+          search_mode: "beam",
+          scorer: "sa3_flow_probe",
+          model: "medium",
+          duration_seconds: 8,
+          tokens_generated: 4,
+          score_samples: 2,
+          seed: 13,
+        },
         selectedArtifact: audio,
         sessionId: "sess_1",
       }),
     ).toMatchObject({
       operator: "experiment.prompt_search",
       backend: "cpu",
+      model: "medium",
+      seed: 13,
       inputs: { source: audio.artifact_id },
-      params: { search_mode: "beam", tokens_generated: 4 },
+      params: { search_mode: "beam", scorer: "sa3_flow_probe", duration_seconds: 8, tokens_generated: 4, score_samples: 2 },
     });
   });
 

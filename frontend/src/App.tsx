@@ -147,6 +147,17 @@ const promptSearchModeOptions = [
   { value: "coordinate", label: "coordinate" },
 ] as const;
 
+const promptSearchScorerOptions = [
+  { value: "lexical_probe", label: "lexical probe" },
+  { value: "sa3_flow_probe", label: "SA3 flow probe" },
+  { value: "clap", label: "CLAP queued" },
+] as const;
+
+const velocityConventionOptions = [
+  { value: "noise_minus_data", label: "noise minus data" },
+  { value: "data_minus_noise", label: "data minus noise" },
+] as const;
+
 const promptSearchVocabulary = [
   "warm",
   "cold",
@@ -538,18 +549,48 @@ const experimentCatalog: readonly ExperimentConfig[] = [
       { key: "target_audio_path", label: "Target audio", type: "artifact-path", artifactKinds: ["audio"] },
       { key: "seed_prompt", label: "Seed prompt", type: "text", defaultValue: "audio texture" },
       { key: "search_mode", label: "Search mode", type: "select", defaultValue: "beam", options: promptSearchModeOptions },
+      { key: "scorer", label: "Scorer", type: "select", defaultValue: "lexical_probe", options: promptSearchScorerOptions },
+      { key: "model", label: "SA3 model", type: "select", defaultValue: "medium", options: sa3ModelOptions },
+      {
+        key: "duration_seconds",
+        label: "Duration",
+        type: "number",
+        min: 0,
+        step: 0.5,
+        description: "Leave empty or zero to infer the target audio duration.",
+      },
       { key: "tokens_generated", label: "Tokens", type: "number", defaultValue: 4, min: 1, step: 1 },
       { key: "beam_width", label: "Beam width", type: "number", defaultValue: 4, min: 1, step: 1 },
+      { key: "score_samples", label: "Score samples", type: "number", defaultValue: 1, min: 1, step: 1 },
+      { key: "seed", label: "Seed", type: "number", defaultValue: 0, step: 1 },
       { key: "vocabulary", label: "Vocabulary", type: "text", defaultValue: promptSearchVocabulary, advanced: true },
       { key: "branch_factor", label: "Branch factor", type: "number", defaultValue: 64, min: 0, step: 1, advanced: true },
       { key: "runs", label: "Greedy runs", type: "number", defaultValue: 4, min: 1, step: 1, advanced: true },
       { key: "rounds", label: "Coordinate rounds", type: "number", defaultValue: 2, min: 1, step: 1, advanced: true },
       { key: "candidate_batch_size", label: "Batch size", type: "number", defaultValue: 0, min: 0, step: 1, advanced: true },
+      { key: "timestep_values", label: "Timesteps", type: "text", placeholder: "0.12,0.5,0.88", advanced: true },
+      { key: "logsnr_values", label: "LogSNR probes", type: "text", placeholder: "2,0,-2", advanced: true },
+      { key: "min_t", label: "Min t", type: "number", defaultValue: 0.05, min: 0, max: 1, step: 0.01, advanced: true },
+      { key: "max_t", label: "Max t", type: "number", defaultValue: 0.95, min: 0, max: 1, step: 0.01, advanced: true },
+      { key: "shared_noise", label: "Shared noise", type: "checkbox", defaultValue: true, advanced: true },
+      { key: "antithetic_noise", label: "Antithetic noise", type: "checkbox", defaultValue: false, advanced: true },
+      { key: "normalize_mse", label: "Normalize MSE", type: "checkbox", defaultValue: true, advanced: true },
+      { key: "cosine_weight", label: "Cosine weight", type: "number", defaultValue: 0, min: 0, step: 0.05, advanced: true },
+      { key: "conditional_delta_weight", label: "Delta weight", type: "number", defaultValue: 0, min: 0, step: 0.05, advanced: true },
+      {
+        key: "velocity_convention",
+        label: "Velocity",
+        type: "select",
+        defaultValue: "noise_minus_data",
+        options: velocityConventionOptions,
+        advanced: true,
+      },
       { key: "prefix", label: "Prefix", type: "text", advanced: true },
       { key: "suffix", label: "Suffix", type: "text", advanced: true },
       { key: "separator", label: "Separator", type: "text", defaultValue: " ", advanced: true },
       { key: "modifier_axes", label: "Modifier axes", type: "text", placeholder: "bright|dark|warm; sparse|dense", advanced: true },
-      { key: "seed", label: "Seed", type: "number", defaultValue: 0, step: 1, advanced: true },
+      { key: "device", label: "Device", type: "text", placeholder: "auto", advanced: true },
+      { key: "model_half", label: "Half precision", type: "checkbox", defaultValue: false, advanced: true },
       { key: "backend", label: "Backend", type: "select", defaultValue: "cpu", options: backendOptions, advanced: true },
     ],
   },

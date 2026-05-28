@@ -103,8 +103,16 @@ describe("bundle inspector summaries", () => {
           prompt: "warm granular loop",
           score: 0.82,
           search_mode: "beam",
-          scorer: "lexical_probe",
+          scorer: "sa3_flow_probe",
+          model_backed: true,
+          model: "medium",
+          score_samples: 2,
+          duration_seconds: 8,
           candidate_count: 12,
+          families: [
+            { rank: 1, prompt: "warm granular loop", score: 0.82, source: "selected" },
+            { rank: 2, prompt: "warm granular loop shimmer", score: 0.78, source: "beam" },
+          ],
         },
       },
       {},
@@ -113,16 +121,35 @@ describe("bundle inspector summaries", () => {
 
     expect(summary.label).toBe("Prompt search");
     expect(summary.rows).toContainEqual(["prompt", "warm granular loop"]);
-    expect(summary.rows).toContainEqual(["scorer", "lexical_probe"]);
-    expect(bundleDomainSections({ prompt_search: { path: "prompt_search.json", prompt: "warm granular loop", score: 0.82, search_mode: "beam", scorer: "lexical_probe" } })).toContainEqual({
+    expect(summary.rows).toContainEqual(["scorer", "sa3_flow_probe"]);
+    expect(summary.rows).toContainEqual(["model", "medium"]);
+    expect(bundleDomainSections({
+      prompt_search: {
+        path: "prompt_search.json",
+        prompt: "warm granular loop",
+        score: 0.82,
+        search_mode: "beam",
+        scorer: "sa3_flow_probe",
+        model_backed: true,
+        model: "medium",
+        score_samples: 2,
+        duration_seconds: 8,
+        families: [{ rank: 1, prompt: "warm granular loop", score: 0.82, source: "selected" }],
+      },
+    })).toContainEqual({
       title: "Prompt Search",
       rows: [
         ["prompt", "warm granular loop"],
         ["score", "0.82"],
         ["mode", "beam"],
-        ["scorer", "lexical_probe"],
+        ["scorer", "sa3_flow_probe"],
+        ["model-backed", "yes"],
+        ["model", "medium"],
+        ["samples", 2],
+        ["duration", "8s"],
       ],
       files: ["prompt_search.json"],
+      items: [{ label: "warm granular loop", meta: "#1 · selected · 0.82" }],
     });
     expect(
       bundleReuseActions({

@@ -502,7 +502,7 @@ class RuntimeDispatcher:
                     "prefix": "str|null",
                     "suffix": "str|null",
                     "modifier_axes": "csv|null",
-                    "model": "medium|sm-music|sm-sfx|null",
+                    "model": "medium|small-music|small-sfx|null",
                     "duration_seconds": "float|null",
                     "score_samples": "int",
                     "logsnr_values": "csv|null",

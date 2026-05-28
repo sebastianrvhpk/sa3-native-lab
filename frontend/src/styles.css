@@ -639,6 +639,30 @@ label {
   font-size: 0.64rem;
 }
 
+.bundle-domain-candidates {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bundle-domain-candidates li {
+  border: 1px solid rgb(45 51 52 / 0.12);
+  border-radius: 6px;
+  padding: 4px 5px;
+  background: rgb(255 255 255 / 0.32);
+  min-width: 0;
+}
+
+.bundle-domain-candidates span,
+.bundle-domain-candidates small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .bundle-audio-children {
   display: grid;
   gap: 7px;
