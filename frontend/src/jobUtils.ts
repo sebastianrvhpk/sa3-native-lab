@@ -8,6 +8,11 @@ export function progressPercent(job: JobRecord) {
   return Math.max(0, Math.min(100, Math.round((job.progress ?? 0) * 100)));
 }
 
+export function landingArtifactId(job: JobRecord) {
+  if (job.status !== "succeeded") return null;
+  return job.artifact_ids.at(-1) ?? null;
+}
+
 export function shortOperatorName(operator: OperatorName) {
   return operator.replace(/^experiment\./, "").replace(/^generate\./, "").replace(/^latent\./, "").replaceAll("_", " ");
 }

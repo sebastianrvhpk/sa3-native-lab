@@ -56,7 +56,7 @@ import { BundleField, type PromptCandidateGenerationRequest } from "./bundleInsp
 import { createControlPlaneClient, DEFAULT_CONTROL_PLANE_URL, type ResultFamily, type WorkbenchState } from "./controlPlane";
 import { ForkRecipePanel } from "./forkRecipePanel";
 import { JobProgress, type JobActionHandlers } from "./jobProgress";
-import { isJobActive, shortOperatorName } from "./jobUtils";
+import { isJobActive, landingArtifactId, shortOperatorName } from "./jobUtils";
 import { ListeningDecisionBadge } from "./listeningDecision";
 import {
   createOperatorPreset,
@@ -1021,6 +1021,10 @@ export function App() {
 
   useEffect(() => {
     if (!runningJobIds) return;
+    const landTerminalJob = (job: JobRecord) => {
+      const artifactId = landingArtifactId(job);
+      if (artifactId) selectArtifact(artifactId);
+    };
     if (controlPlane) {
       const subscriptions = runningJobIds.split("|").map((jobId) =>
         controlPlane.jobs.events.subscribe(
@@ -1031,6 +1035,7 @@ export function App() {
               if (!job) return;
               setLiveJobsById((current) => ({ ...current, [job.job_id]: job }));
               if (!isJobActive(job)) {
+                landTerminalJob(job);
                 void invalidate();
               }
             },
@@ -1051,6 +1056,7 @@ export function App() {
         if (!job) return;
         setLiveJobsById((current) => ({ ...current, [job.job_id]: job }));
         if (!isJobActive(job)) {
+          landTerminalJob(job);
           void invalidate();
         }
       };
@@ -1059,7 +1065,7 @@ export function App() {
     return () => {
       sockets.forEach((socket) => socket.close());
     };
-  }, [api, controlPlane, runningJobIds]);
+  }, [api, controlPlane, runningJobIds, selectArtifact]);
 
   const importAudio = useMutation({
     mutationFn: (file: File) => api.importAudio(file, file.name, activeSessionId),

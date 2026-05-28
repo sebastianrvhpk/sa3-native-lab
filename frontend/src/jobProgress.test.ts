@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { jobPhase, jobRecoveryHints } from "./jobProgress";
+import { landingArtifactId } from "./jobUtils";
 import type { JobRecord } from "./types";
 
 describe("job recovery hints", () => {
@@ -42,6 +43,12 @@ describe("job recovery hints", () => {
       label: "generating",
       tone: "model",
     });
+  });
+
+  it("lands on the newest produced artifact only after successful jobs", () => {
+    expect(landingArtifactId(job({ status: "succeeded", artifact_ids: ["art_a", "art_b"] }))).toBe("art_b");
+    expect(landingArtifactId(job({ status: "failed", artifact_ids: ["art_a"] }))).toBeNull();
+    expect(landingArtifactId(job({ status: "succeeded", artifact_ids: [] }))).toBeNull();
   });
 });
 
