@@ -9,6 +9,14 @@ export interface PromptSearchPreset {
   fields: Record<string, RecipeValue>;
 }
 
+export interface PromptSearchScorerNote {
+  scorer: string;
+  label: string;
+  cost: string;
+  guidance: string;
+  maturity: "ready" | "probe" | "queued";
+}
+
 export const promptSearchPresets: readonly PromptSearchPreset[] = [
   {
     id: "mode2-hard-token",
@@ -75,8 +83,37 @@ export const promptSearchPresets: readonly PromptSearchPreset[] = [
   },
 ];
 
+export const promptSearchScorerNotes: readonly PromptSearchScorerNote[] = [
+  {
+    scorer: "lexical_probe",
+    label: "Lexical probe",
+    cost: "fast CPU",
+    guidance: "Use for wiring, vocabulary shape, and cheap prompt-family iteration. It is not an audio-text inversion score.",
+    maturity: "ready",
+  },
+  {
+    scorer: "sa3_flow_probe",
+    label: "SA3 flow probe",
+    cost: "slow MPS",
+    guidance: "Use on short targets or promising candidates. Keep score samples low until the take comparison has enough evidence.",
+    maturity: "probe",
+  },
+  {
+    scorer: "clap",
+    label: "CLAP",
+    cost: "queued",
+    guidance: "Reserved behind the scorer contract. Add only after Medium flow comparisons produce enough listened examples.",
+    maturity: "queued",
+  },
+];
+
 export function promptSearchPresetById(presetId: string): PromptSearchPreset | undefined {
   return promptSearchPresets.find((preset) => preset.id === presetId);
+}
+
+export function promptSearchScorerNote(scorer: RecipeValue | undefined): PromptSearchScorerNote {
+  const value = typeof scorer === "string" ? scorer : "";
+  return promptSearchScorerNotes.find((note) => note.scorer === value) ?? promptSearchScorerNotes[0];
 }
 
 export function applyPromptSearchPreset(

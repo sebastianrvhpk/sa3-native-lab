@@ -2248,11 +2248,16 @@ audio {
   gap: 10px;
 }
 
+.prompt-search-guide {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 10px;
+}
+
 .prompt-search-preset-rack {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
   gap: 7px;
-  margin-bottom: 10px;
 }
 
 .prompt-search-preset-rack button {
@@ -2296,6 +2301,57 @@ audio {
 .prompt-search-preset-rack small {
   color: var(--muted);
   font-size: 0.6rem;
+}
+
+.prompt-search-scorer-note {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  gap: 3px 8px;
+  border: 1px solid rgb(45 51 52 / 0.18);
+  border-radius: 7px;
+  padding: 7px 8px;
+  background:
+    linear-gradient(135deg, rgb(255 255 255 / 0.58), rgb(255 255 255 / 0.2)),
+    linear-gradient(120deg, rgb(201 238 72 / 0.14), rgb(85 198 199 / 0.12));
+  min-width: 0;
+}
+
+.prompt-search-scorer-note.probe {
+  background:
+    linear-gradient(135deg, rgb(255 255 255 / 0.58), rgb(255 255 255 / 0.2)),
+    linear-gradient(120deg, rgb(243 168 60 / 0.16), rgb(85 198 199 / 0.12));
+}
+
+.prompt-search-scorer-note.queued {
+  background:
+    linear-gradient(135deg, rgb(255 255 255 / 0.58), rgb(255 255 255 / 0.2)),
+    linear-gradient(120deg, rgb(234 74 162 / 0.12), rgb(143 91 210 / 0.12));
+}
+
+.prompt-search-scorer-note strong,
+.prompt-search-scorer-note span,
+.prompt-search-scorer-note p {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.prompt-search-scorer-note strong {
+  color: var(--ink);
+  font-size: 0.68rem;
+}
+
+.prompt-search-scorer-note span {
+  color: #2f6c64;
+  font-size: 0.62rem;
+  font-weight: 760;
+}
+
+.prompt-search-scorer-note p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.62rem;
 }
 
 .control-cell,

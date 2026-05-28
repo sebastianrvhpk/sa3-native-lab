@@ -59,7 +59,7 @@ import {
   type OperatorPreset,
   type OperatorPresetDiffRow,
 } from "./operatorPresets";
-import { applyPromptSearchPreset, promptSearchPresets, type PromptSearchPreset } from "./promptSearchPresets";
+import { applyPromptSearchPreset, promptSearchPresets, promptSearchScorerNote, type PromptSearchPreset } from "./promptSearchPresets";
 import { RecipeFields } from "./RecipeFields";
 import { FamilyDetailPanel, ResultFamilyPanel } from "./resultFamilies";
 import {
@@ -1577,6 +1577,7 @@ export function App() {
               {activeExperiment.value === "experiment.prompt_search" ? (
                 <PromptSearchPresetRack
                   presets={promptSearchPresets}
+                  scorer={experimentForm.scorer}
                   onApply={(presetId) => setExperimentForm((current) => applyPromptSearchPreset(current, presetId))}
                 />
               ) : null}
@@ -1684,20 +1685,30 @@ export function App() {
 
 function PromptSearchPresetRack({
   presets,
+  scorer,
   onApply,
 }: {
   presets: readonly PromptSearchPreset[];
+  scorer: RecipeValue | undefined;
   onApply: (presetId: string) => void;
 }) {
+  const note = promptSearchScorerNote(scorer);
   return (
-    <div className="prompt-search-preset-rack" aria-label="Prompt search presets">
-      {presets.map((preset) => (
-        <button key={preset.id} type="button" onClick={() => onApply(preset.id)} title={preset.intent}>
-          <Search aria-hidden="true" size={13} />
-          <span>{preset.label}</span>
-          <small>{preset.modeLabel} · {preset.cost}</small>
-        </button>
-      ))}
+    <div className="prompt-search-guide">
+      <div className="prompt-search-preset-rack" aria-label="Prompt search presets">
+        {presets.map((preset) => (
+          <button key={preset.id} type="button" onClick={() => onApply(preset.id)} title={preset.intent}>
+            <Search aria-hidden="true" size={13} />
+            <span>{preset.label}</span>
+            <small>{preset.modeLabel} · {preset.cost}</small>
+          </button>
+        ))}
+      </div>
+      <div className={`prompt-search-scorer-note ${note.maturity}`}>
+        <strong>{note.label}</strong>
+        <span>{note.cost}</span>
+        <p>{note.guidance}</p>
+      </div>
     </div>
   );
 }

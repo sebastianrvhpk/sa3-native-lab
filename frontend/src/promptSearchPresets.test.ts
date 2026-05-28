@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { applyPromptSearchPreset, promptSearchPresetById } from "./promptSearchPresets";
+import { applyPromptSearchPreset, promptSearchPresetById, promptSearchScorerNote } from "./promptSearchPresets";
 
 describe("prompt search presets", () => {
   it("applies the Mode 2 hard-token defaults without replacing target input", () => {
@@ -32,6 +32,18 @@ describe("prompt search presets", () => {
         duration_seconds: 6,
         score_samples: 2,
       },
+    });
+  });
+
+  it("explains selected scorer maturity and cost", () => {
+    expect(promptSearchScorerNote("sa3_flow_probe")).toMatchObject({
+      label: "SA3 flow probe",
+      cost: "slow MPS",
+      maturity: "probe",
+    });
+    expect(promptSearchScorerNote("unknown")).toMatchObject({
+      scorer: "lexical_probe",
+      cost: "fast CPU",
     });
   });
 });
