@@ -4,6 +4,8 @@ import {
   createOperatorPreset,
   deleteOperatorPreset,
   loadOperatorPresets,
+  operatorPresetChanged,
+  operatorPresetDiffRows,
   persistOperatorPresets,
   upsertOperatorPreset,
 } from "./operatorPresets";
@@ -56,6 +58,32 @@ describe("operator presets", () => {
 
     expect(next).toEqual([expect.objectContaining({ id: "preset_a", name: "brighter roll", form: { shift_frames: 8 } })]);
     expect(deleteOperatorPreset(next, "preset_a")).toEqual([]);
+  });
+
+  it("describes current parameter drift from a selected preset", () => {
+    const preset = createOperatorPreset({
+      id: "preset_a",
+      name: "phase graft",
+      operator: "latent.graft",
+      form: { alpha: 0.35, mode: "blend", seed: 7 },
+      donorArtifactId: "art_donor_a",
+      now: "2026-05-28T12:00:00.000Z",
+    });
+
+    const rows = operatorPresetDiffRows(preset, {
+      alpha: 0.5,
+      mode: "blend",
+      window_seconds: 1.25,
+    }, "art_donor_b");
+
+    expect(rows).toEqual([
+      { key: "alpha", label: "alpha", presetValue: 0.35, currentValue: 0.5, status: "changed" },
+      { key: "seed", label: "seed", presetValue: 7, currentValue: null, status: "removed" },
+      { key: "window_seconds", label: "window seconds", presetValue: null, currentValue: 1.25, status: "added" },
+      { key: "donorArtifactId", label: "donor latent", presetValue: "art_donor_a", currentValue: "art_donor_b", status: "changed" },
+    ]);
+    expect(operatorPresetChanged(preset, preset.form, "art_donor_a")).toBe(false);
+    expect(operatorPresetChanged(preset, { ...preset.form, alpha: 0.8 }, "art_donor_a")).toBe(true);
   });
 });
 

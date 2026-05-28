@@ -53,9 +53,11 @@ import {
   createOperatorPreset,
   deleteOperatorPreset,
   loadOperatorPresets,
+  operatorPresetDiffRows,
   persistOperatorPresets,
   upsertOperatorPreset,
   type OperatorPreset,
+  type OperatorPresetDiffRow,
 } from "./operatorPresets";
 import { RecipeFields } from "./RecipeFields";
 import { FamilyDetailPanel, ResultFamilyPanel } from "./resultFamilies";
@@ -853,6 +855,14 @@ export function App() {
   const activeOperatorConfig = useMemo(() => withOperatorSpecFields(baseOperatorConfig, activeOperatorSpec), [baseOperatorConfig, activeOperatorSpec]);
   const activeExperiment = useMemo(() => withOperatorSpecFields(baseExperiment, activeExperimentSpec), [baseExperiment, activeExperimentSpec]);
   const activeOperatorPresets = useMemo(() => operatorPresets.filter((preset) => preset.operator === operator), [operatorPresets, operator]);
+  const selectedOperatorPreset = useMemo(
+    () => operatorPresets.find((preset) => preset.id === selectedOperatorPresetId) ?? null,
+    [operatorPresets, selectedOperatorPresetId],
+  );
+  const operatorPresetDiffs = useMemo(
+    () => selectedOperatorPreset ? operatorPresetDiffRows(selectedOperatorPreset, operatorForm, donorArtifactId) : [],
+    [donorArtifactId, operatorForm, selectedOperatorPreset],
+  );
   const generationNeedsSource = generationMode !== "generate.text_to_audio";
   const generationSource = selectedArtifact?.kind === "audio" ? selectedArtifact : null;
   const canGenerate = !generationNeedsSource || Boolean(generationSource);
@@ -1498,11 +1508,14 @@ export function App() {
               <SpecCoverage spec={activeOperatorSpec} controlledKeys={fieldKeys(activeOperatorConfig)} />
               <OperatorPresetRack
                 presets={activeOperatorPresets}
+                selectedPreset={selectedOperatorPreset}
                 selectedPresetId={selectedOperatorPresetId}
                 presetName={operatorPresetName}
+                diffRows={operatorPresetDiffs}
                 onSelectPreset={applyOperatorPreset}
                 onChangePresetName={setOperatorPresetName}
                 onSavePreset={saveOperatorPreset}
+                onResetPreset={() => selectedOperatorPreset && applyOperatorPreset(selectedOperatorPreset.id)}
                 onDeletePreset={removeOperatorPreset}
               />
               {operatorUsesDonor(activeOperatorConfig, operatorForm) ? (
@@ -2422,52 +2435,90 @@ function LineageThread({ artifact, sources }: { artifact: ArtifactRecord; source
 
 function OperatorPresetRack({
   presets,
+  selectedPreset,
   selectedPresetId,
   presetName,
+  diffRows,
   onSelectPreset,
   onChangePresetName,
   onSavePreset,
+  onResetPreset,
   onDeletePreset,
 }: {
   presets: OperatorPreset[];
+  selectedPreset: OperatorPreset | null;
   selectedPresetId: string;
   presetName: string;
+  diffRows: OperatorPresetDiffRow[];
   onSelectPreset: (presetId: string) => void;
   onChangePresetName: (name: string) => void;
   onSavePreset: () => void;
+  onResetPreset: () => void;
   onDeletePreset: () => void;
 }) {
+  const diffStatus = !selectedPreset ? "empty" : diffRows.length ? "changed" : "clean";
   return (
-    <div className="operator-preset-rack" aria-label="Operator presets">
-      <label>
-        Preset
-        <select value={selectedPresetId} onChange={(event) => onSelectPreset(event.target.value)}>
-          <option value="">New preset</option>
-          {presets.map((preset) => (
-            <option key={preset.id} value={preset.id}>
-              {preset.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label>
-        Name
-        <input
-          value={presetName}
-          onChange={(event) => onChangePresetName(event.target.value)}
-          placeholder={presets.length ? "save current params" : "name this setting"}
-        />
-      </label>
-      <button type="button" onClick={onSavePreset} title="Save current operator parameters">
-        <Plus aria-hidden="true" size={13} />
-        Save
-      </button>
-      <button type="button" onClick={onDeletePreset} disabled={!selectedPresetId} title="Delete selected operator preset">
-        <X aria-hidden="true" size={13} />
-        Delete
-      </button>
+    <div className="operator-preset-stack">
+      <div className="operator-preset-rack" aria-label="Operator presets">
+        <label>
+          Preset
+          <select value={selectedPresetId} onChange={(event) => onSelectPreset(event.target.value)}>
+            <option value="">New preset</option>
+            {presets.map((preset) => (
+              <option key={preset.id} value={preset.id}>
+                {preset.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Name
+          <input
+            value={presetName}
+            onChange={(event) => onChangePresetName(event.target.value)}
+            placeholder={presets.length ? "save current params" : "name this setting"}
+          />
+        </label>
+        <button type="button" onClick={onSavePreset} title="Save current operator parameters">
+          <Plus aria-hidden="true" size={13} />
+          Save
+        </button>
+        <button type="button" onClick={onResetPreset} disabled={!selectedPreset || !diffRows.length} title="Revert current parameters to the selected preset">
+          <Repeat aria-hidden="true" size={13} />
+          Revert
+        </button>
+        <button type="button" onClick={onDeletePreset} disabled={!selectedPresetId} title="Delete selected operator preset">
+          <X aria-hidden="true" size={13} />
+          Delete
+        </button>
+      </div>
+      <div className={`operator-preset-diff ${diffStatus}`} aria-label="Operator preset diff">
+        <div className="operator-preset-diff-head">
+          <strong>{!selectedPreset ? "Preset diff" : diffRows.length ? `${diffRows.length} unsaved change${diffRows.length === 1 ? "" : "s"}` : "Matches preset"}</strong>
+          <small>{selectedPreset ? selectedPreset.name : "save or select a preset to compare params"}</small>
+        </div>
+        {diffRows.length ? (
+          <div className="operator-preset-diff-list">
+            {diffRows.slice(0, 4).map((row) => (
+              <span key={row.key} className={row.status} title={`${formatPresetValue(row.presetValue)} -> ${formatPresetValue(row.currentValue)}`}>
+                <b>{row.label}</b>
+                <i>{formatPresetValue(row.presetValue)}</i>
+                <em>{formatPresetValue(row.currentValue)}</em>
+              </span>
+            ))}
+          </div>
+        ) : null}
+      </div>
     </div>
   );
+}
+
+function formatPresetValue(value: RecipeValue | null): string {
+  if (value === null || value === "") return "none";
+  if (typeof value === "number") return Number.isInteger(value) ? value.toString() : value.toFixed(3).replace(/0+$/, "").replace(/\.$/, "");
+  if (typeof value === "boolean") return value ? "on" : "off";
+  if (value.length > 18) return `${value.slice(0, 15)}...`;
+  return value;
 }
 
 function SpecCoverage({ spec, controlledKeys }: { spec: OperatorSpec | undefined; controlledKeys: readonly string[] }) {
