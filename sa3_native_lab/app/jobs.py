@@ -24,10 +24,12 @@ class JobContext:
         self._manager = manager
         self.job_id = job_id
 
-    def set_progress(self, progress: float, message: str | None = None) -> None:
+    def set_progress(self, progress: float, message: str | None = None, *, phase: str | None = None) -> None:
         update: dict[str, Any] = {"progress": progress}
         if message is not None:
             update["message"] = message
+        if phase is not None:
+            update["phase"] = phase
         self._manager.update(self.job_id, **update)
 
     def log(self, line: str) -> None:
@@ -56,7 +58,7 @@ class JobManager:
         self._load_existing_jobs()
 
     def submit(self, recipe: Recipe, handler: JobHandler) -> JobRecord:
-        record = JobRecord(recipe=recipe, message="queued")
+        record = JobRecord(recipe=recipe, phase="queued", message="queued")
         with self._lock:
             self._records[record.job_id] = record
             self._persist(record)
@@ -115,6 +117,7 @@ class JobManager:
                 update={
                     "status": JobStatus.CANCELLED,
                     "finished_at": utc_now(),
+                    "phase": "cancelled",
                     "message": "cancel requested",
                 }
             )
@@ -135,6 +138,7 @@ class JobManager:
             status=JobStatus.RUNNING,
             started_at=utc_now(),
             progress=0.01,
+            phase="preflight",
             message="running",
         )
         try:
@@ -146,6 +150,7 @@ class JobManager:
                 status=JobStatus.SUCCEEDED,
                 finished_at=utc_now(),
                 progress=1.0,
+                phase="done",
                 message="succeeded",
                 artifact_ids=result.artifact_ids,
                 metrics=result.metrics,
@@ -159,6 +164,7 @@ class JobManager:
                 status=JobStatus.FAILED,
                 finished_at=utc_now(),
                 progress=1.0,
+                phase="failed",
                 message="failed",
                 error=str(exc),
             )
@@ -176,6 +182,7 @@ class JobManager:
                         update={
                             "status": JobStatus.FAILED,
                             "finished_at": utc_now(),
+                            "phase": "failed",
                             "message": "interrupted before daemon restart",
                             "error": "job was not running after daemon restart",
                         }

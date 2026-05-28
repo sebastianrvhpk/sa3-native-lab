@@ -260,7 +260,7 @@ def test_sa3_model_download_progress_reports_checkpoint(monkeypatch):
     downloads: list[tuple[str, str]] = []
 
     class FakeContext:
-        def set_progress(self, progress: float, message: str) -> None:
+        def set_progress(self, progress: float, message: str, *, phase: str | None = None) -> None:
             updates.append((progress, message))
 
     def fake_hf_hub_download(*, repo_id: str, filename: str, tqdm_class):
@@ -390,6 +390,29 @@ def test_operator_specs_cover_typed_request_params(tmp_path):
     assert prompt_ui_fields["score_samples"].default == 1
     assert specs[OperatorName.EXPERIMENT_PROMPT_SEARCH].backends == [BackendName.CPU, BackendName.TORCH_MPS, BackendName.TORCH_CPU]
 
+    profile_generate_fields = {field.key: field for field in specs[OperatorName.EXPERIMENT_STYLE_PROFILE_GENERATE].ui_fields}
+    assert {"duration_seconds", "steps", "cfg_scale", "seed", "save_original", "device", "no_half"} <= set(profile_generate_fields)
+    assert profile_generate_fields["model"].default == "medium"
+    assert profile_generate_fields["duration_seconds"].min == 0.5
+
+    audio_vector_fields = {field.key: field for field in specs[OperatorName.EXPERIMENT_AUDIO_STYLE_VECTORS].ui_fields}
+    assert {"name", "chunked", "normalize_frame", "device"} <= set(audio_vector_fields)
+    assert audio_vector_fields["normalize_frame"].advanced is True
+
+    lora_fields = {field.key: field for field in specs[OperatorName.TRAIN_LORA].ui_fields}
+    assert {"model", "base_precision", "svd_bases_path", "lora_checkpoint", "checkpoint_every", "log_every", "demo_every", "num_workers"} <= set(lora_fields)
+    assert [option.value for option in lora_fields["adapter_type"].options] == [
+        "lora",
+        "dora",
+        "dora-rows",
+        "dora-cols",
+        "bora",
+        "lora-xs",
+        "dora-rows-xs",
+        "dora-cols-xs",
+        "bora-xs",
+    ]
+
 
 def test_colab_mode_map_covers_notebook_sections():
     notebook_path = Path(__file__).resolve().parents[1] / "colab" / "sa3_same_native_experimental_modes.ipynb"
@@ -478,6 +501,7 @@ def test_job_manager_persists_success(tmp_path):
     assert (tmp_path / f"{record.job_id}.json").exists()
     events = manager.event_history(record.job_id)
     assert [event.job.status for event in events] == [JobStatus.QUEUED, JobStatus.RUNNING, JobStatus.SUCCEEDED]
+    assert [event.job.phase for event in events] == ["queued", "preflight", "done"]
     assert [event.sequence for event in events] == [1, 2, 3]
     assert (tmp_path / "events" / f"{record.job_id}.jsonl").exists()
 

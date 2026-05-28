@@ -128,6 +128,7 @@ FIELD_HINTS: dict[str, dict[str, Any]] = {
     "model": {"type": "select", "description": "Model family used by the selected backend or script adapter."},
     "decoder": {"type": "select", "options": ["same-s", "same-l"], "advanced": True},
     "backend": {"type": "select", "advanced": True},
+    "no_half": {"type": "checkbox", "default": False, "advanced": True, "description": "Force full precision for script adapters that expose a no-half flag."},
     "mode": {"type": "select"},
     "shift_frames": {"type": "number", "default": 1, "min": -4096, "max": 4096, "step": 1},
     "strength": {"type": "range", "default": 1.0, "min": 0.0, "max": 1.5, "step": 0.01},
@@ -141,6 +142,10 @@ FIELD_HINTS: dict[str, dict[str, Any]] = {
     "layer": {"type": "number", "default": -1, "step": 1, "advanced": True},
     "layers": {"type": "text", "advanced": True, "placeholder": "blank or 1,4,8"},
     "limit": {"type": "number", "default": 0, "min": 0, "step": 1, "advanced": True},
+    "chunk_duration": {"type": "number", "default": 0.0, "min": 0.0, "step": 0.1, "advanced": True},
+    "hop_duration": {"type": "number", "default": 0.0, "min": 0.0, "step": 0.1, "advanced": True},
+    "max_chunks_per_file": {"type": "number", "default": 0, "min": 0, "step": 1, "advanced": True},
+    "drop_last_chunk": {"type": "checkbox", "default": False, "advanced": True},
     "n_components": {"type": "number", "default": 8, "min": 1, "step": 1, "description": "Number of principal components to keep in the geometry audit."},
     "num_pairs": {"type": "number", "default": 2, "min": 1, "step": 1},
     "axis": {"type": "text", "default": "valence", "required": True},
@@ -181,11 +186,20 @@ FIELD_HINTS: dict[str, dict[str, Any]] = {
     "sample_size": {"type": "number", "default": 12582912, "min": 1, "step": 1, "advanced": True},
     "pad": {"type": "checkbox", "default": False, "advanced": True},
     "model_half": {"type": "checkbox", "default": False, "advanced": True},
+    "match_std": {"type": "checkbox", "default": True, "advanced": True},
+    "no_std": {"type": "checkbox", "default": False, "advanced": True},
+    "save_original": {"type": "checkbox", "default": False, "advanced": True},
+    "normalize_frame": {"type": "checkbox", "default": False, "advanced": True},
     "rank": {"type": "number", "default": 16, "min": 1, "step": 1},
     "lora_alpha": {"type": "number", "step": 1, "advanced": True},
-    "adapter_type": {"type": "select", "default": "lora", "options": ["lora", "lora-xs"], "advanced": True},
+    "adapter_type": {"type": "select", "default": "dora-rows", "options": ["lora", "dora", "dora-rows", "dora-cols", "bora", "lora-xs", "dora-rows-xs", "dora-cols-xs", "bora-xs"], "advanced": True},
+    "base_precision": {"type": "select", "default": "bf16", "options": ["bf16", "bfloat16", "fp16", "float16"], "advanced": True},
     "dropout": {"type": "number", "default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05, "advanced": True},
     "logger": {"type": "select", "default": "csv", "options": ["wandb", "comet", "csv", "none"], "advanced": True},
+    "checkpoint_every": {"type": "number", "default": 500, "min": 1, "step": 1, "advanced": True},
+    "log_every": {"type": "number", "default": 100, "min": 1, "step": 1, "advanced": True},
+    "demo_every": {"type": "number", "default": 500, "min": 1, "step": 1, "advanced": True},
+    "num_workers": {"type": "number", "default": 8, "min": 0, "step": 1, "advanced": True},
     "include": {"type": "text", "advanced": True},
     "exclude": {"type": "text", "advanced": True},
     "device": {"type": "text", "advanced": True},
@@ -255,6 +269,8 @@ def _field_options(key: str, param_type: Any, hint: dict[str, Any]) -> list[Oper
     raw_options = hint.get("options")
     if raw_options is None:
         raw_options = _literal_options(param_type)
+    if not raw_options and hint.get("type") == "select" and isinstance(param_type, str) and "|" not in param_type and param_type not in GENERIC_TYPE_PARTS:
+        raw_options = [param_type]
     if not raw_options:
         return []
     return [_field_option(str(value), key=key) for value in raw_options]
@@ -539,7 +555,16 @@ class RuntimeDispatcher:
                 maturity="lab",
                 backends=[BackendName.TORCH_MPS, BackendName.TORCH_CPU],
                 inputs=[],
-                params={"positive_path": "folder", "negative_path": "folder", "model": "same-s|same-l", "limit": "int"},
+                params={
+                    "positive_path": "folder",
+                    "negative_path": "folder",
+                    "name": "str",
+                    "model": "same-s|same-l",
+                    "limit": "int",
+                    "chunked": "bool",
+                    "normalize_frame": "bool",
+                    "device": "str|null",
+                },
                 produces=[ArtifactKind.BUNDLE],
                 status="script adapter",
             ),
@@ -548,7 +573,14 @@ class RuntimeDispatcher:
                 maturity="lab",
                 backends=[BackendName.TORCH_MPS, BackendName.TORCH_CPU],
                 inputs=[],
-                params={"input_path": "folder", "model": "same-s|same-l", "name": "str"},
+                params={
+                    "input_path": "folder",
+                    "name": "str",
+                    "model": "same-s|same-l",
+                    "limit": "int",
+                    "chunked": "bool",
+                    "device": "str|null",
+                },
                 produces=[ArtifactKind.BUNDLE],
                 status="script adapter",
             ),
@@ -566,7 +598,21 @@ class RuntimeDispatcher:
                 maturity="lab",
                 backends=[BackendName.TORCH_MPS, BackendName.TORCH_CPU],
                 inputs=[],
-                params={"profile_path": "file", "prompt": "str", "alpha": "float", "duration_seconds": "float"},
+                params={
+                    "profile_path": "file",
+                    "prompt": "str",
+                    "alpha": "float",
+                    "model": "medium|small-music|small-sfx",
+                    "duration_seconds": "float",
+                    "steps": "int",
+                    "cfg_scale": "float",
+                    "seed": "int|null",
+                    "match_std": "bool",
+                    "no_std": "bool",
+                    "save_original": "bool",
+                    "device": "str|null",
+                    "no_half": "bool",
+                },
                 produces=[ArtifactKind.AUDIO],
                 status="script adapter",
             ),
@@ -575,7 +621,20 @@ class RuntimeDispatcher:
                 maturity="lab",
                 backends=[BackendName.TORCH_MPS, BackendName.TORCH_CPU],
                 inputs=[],
-                params={"direction_path": "file", "prompt": "str", "alpha": "float", "std_alpha": "float"},
+                params={
+                    "direction_path": "file",
+                    "prompt": "str",
+                    "alpha": "float",
+                    "std_alpha": "float",
+                    "model": "medium|small-music|small-sfx",
+                    "duration_seconds": "float",
+                    "steps": "int",
+                    "cfg_scale": "float",
+                    "seed": "int|null",
+                    "save_original": "bool",
+                    "device": "str|null",
+                    "no_half": "bool",
+                },
                 produces=[ArtifactKind.AUDIO],
                 status="script adapter",
             ),
@@ -584,7 +643,19 @@ class RuntimeDispatcher:
                 maturity="lab",
                 backends=[BackendName.TORCH_MPS, BackendName.TORCH_CPU],
                 inputs=[],
-                params={"direction_path": "file", "prompt": "str", "alpha": "float"},
+                params={
+                    "direction_path": "file",
+                    "prompt": "str",
+                    "alpha": "float",
+                    "model": "medium|small-music|small-sfx",
+                    "duration_seconds": "float",
+                    "steps": "int",
+                    "cfg_scale": "float",
+                    "seed": "int|null",
+                    "save_original": "bool",
+                    "device": "str|null",
+                    "no_half": "bool",
+                },
                 produces=[ArtifactKind.AUDIO],
                 status="script adapter",
             ),
@@ -593,7 +664,18 @@ class RuntimeDispatcher:
                 maturity="probe",
                 backends=[BackendName.TORCH_MPS, BackendName.TORCH_CPU],
                 inputs=[],
-                params={"axis": "str|all", "num_pairs": "int", "layers": "csv"},
+                params={
+                    "axis": "str|all",
+                    "num_pairs": "int",
+                    "model": "medium|small-music|small-sfx",
+                    "duration_seconds": "float",
+                    "steps": "int",
+                    "cfg_scale": "float",
+                    "seed": "int|null",
+                    "layers": "csv",
+                    "device": "str|null",
+                    "no_half": "bool",
+                },
                 produces=[ArtifactKind.BUNDLE],
                 status="script adapter",
             ),
@@ -602,7 +684,22 @@ class RuntimeDispatcher:
                 maturity="probe",
                 backends=[BackendName.TORCH_MPS, BackendName.TORCH_CPU],
                 inputs=[],
-                params={"positive_path": "folder", "negative_path": "folder|null", "baseline": "prompt|negative_audio"},
+                params={
+                    "positive_path": "folder",
+                    "negative_path": "folder|null",
+                    "baseline": "prompt|negative_audio",
+                    "prompt": "str|null",
+                    "model": "medium|small-music|small-sfx",
+                    "duration_seconds": "float",
+                    "steps": "int",
+                    "cfg_scale": "float",
+                    "seed": "int|null",
+                    "init_noise_level": "float",
+                    "layers": "csv",
+                    "limit": "int",
+                    "device": "str|null",
+                    "no_half": "bool",
+                },
                 produces=[ArtifactKind.BUNDLE],
                 status="script adapter",
             ),
@@ -611,7 +708,19 @@ class RuntimeDispatcher:
                 maturity="lab",
                 backends=[BackendName.TORCH_MPS, BackendName.TORCH_CPU],
                 inputs=[],
-                params={"vectors_path": "folder|file", "prompt": "str", "alphas": "csv", "layer": "int"},
+                params={
+                    "vectors_path": "folder|file",
+                    "prompt": "str",
+                    "alphas": "csv",
+                    "model": "medium|small-music|small-sfx",
+                    "duration_seconds": "float",
+                    "steps": "int",
+                    "cfg_scale": "float",
+                    "seed": "int|null",
+                    "layer": "int",
+                    "device": "str|null",
+                    "no_half": "bool",
+                },
                 produces=[ArtifactKind.AUDIO, ArtifactKind.BUNDLE],
                 status="script adapter",
             ),
@@ -629,7 +738,20 @@ class RuntimeDispatcher:
                 maturity="probe",
                 backends=[BackendName.TORCH_MPS, BackendName.TORCH_CPU],
                 inputs=["source?"],
-                params={"target_audio_path": "file|null", "seed_prompt": "str", "optimization_steps": "int"},
+                params={
+                    "target_audio_path": "file|null",
+                    "seed_prompt": "str",
+                    "model": "medium|small-music|small-sfx",
+                    "duration_seconds": "float|null",
+                    "optimization_steps": "int",
+                    "lr": "float",
+                    "reg_weight": "float",
+                    "seed": "int|null",
+                    "train_keys": "csv",
+                    "velocity_convention": "noise_minus_data|data_minus_noise",
+                    "device": "str|null",
+                    "no_half": "bool",
+                },
                 produces=[ArtifactKind.BUNDLE],
                 status="script adapter",
             ),
@@ -638,7 +760,15 @@ class RuntimeDispatcher:
                 maturity="lab",
                 backends=[BackendName.TORCH_MPS, BackendName.TORCH_CPU],
                 inputs=[],
-                params={"soft_prompt_path": "file", "steps": "int", "seed": "int"},
+                params={
+                    "soft_prompt_path": "file",
+                    "model": "medium|small-music|small-sfx",
+                    "steps": "int",
+                    "cfg_scale": "float",
+                    "seed": "int",
+                    "device": "str|null",
+                    "no_half": "bool",
+                },
                 produces=[ArtifactKind.AUDIO],
                 status="script adapter",
             ),
@@ -654,6 +784,7 @@ class RuntimeDispatcher:
                     "sample_size": "int",
                     "pad": "bool",
                     "model_half": "bool",
+                    "device": "str|null",
                 },
                 produces=[ArtifactKind.BUNDLE],
                 status="script adapter",
@@ -675,14 +806,28 @@ class RuntimeDispatcher:
                 params={
                     "encoded_dir": "folder",
                     "data_dir": "folder|null",
+                    "model": "medium-base",
                     "steps": "int",
                     "rank": "int",
                     "lora_alpha": "int",
-                    "adapter_type": "lora|lora-xs",
+                    "adapter_type": "lora|dora|dora-rows|dora-cols|bora|lora-xs|dora-rows-xs|dora-cols-xs|bora-xs",
                     "dropout": "float",
+                    "svd_bases_path": "file|null",
+                    "base_precision": "bf16|bfloat16|fp16|float16",
+                    "lora_checkpoint": "file|null",
+                    "lr": "float",
+                    "batch_size": "int",
+                    "duration_seconds": "float",
+                    "seed": "int|null",
+                    "device": "str|null",
                     "logger": "wandb|comet|csv|none",
                     "include": "patterns",
                     "exclude": "patterns",
+                    "name": "str",
+                    "checkpoint_every": "int",
+                    "log_every": "int",
+                    "demo_every": "int",
+                    "num_workers": "int",
                 },
                 produces=[ArtifactKind.BUNDLE],
                 status="script adapter; long-running training",
@@ -840,7 +985,7 @@ class RuntimeDispatcher:
             end = float(params["inpaint_end_seconds"])
             command.extend(["--inpaint-range", f"{start},{end}"])
 
-        context.set_progress(0.05, "starting MLX subprocess")
+        context.set_progress(0.05, "starting MLX subprocess", phase="model_setup")
         process = subprocess.Popen(
             command,
             cwd=str(self.mlx_dir),
@@ -906,7 +1051,7 @@ class RuntimeDispatcher:
             "operator": _operator_value(recipe.operator),
         }
 
-        context.set_progress(0.15, f"running {recipe.operator}")
+        context.set_progress(0.15, f"running {recipe.operator}", phase="transform")
         if recipe.operator == OperatorName.LATENT_BLUR:
             spec = LatentBlurSpec(**_dataclass_kwargs(LatentBlurSpec, {"name": "api", **params}))
             result = apply_latent_blur(x, spec)
@@ -948,7 +1093,7 @@ class RuntimeDispatcher:
             raise ValueError(f"unsupported latent operator: {recipe.operator}")
 
         output = _bct_to_time_major(result)
-        context.set_progress(0.75, "saving latent artifact")
+        context.set_progress(0.75, "saving latent artifact", phase="saving")
         artifact = self.store.store_latent_array(
             output,
             latent_rate=source.latent.latent_rate,
@@ -970,7 +1115,7 @@ class RuntimeDispatcher:
         params = dict(recipe.params)
         model_name = str(recipe.model or params.get("model") or "same-l")
         adapter = self._same_adapter(model_name, recipe.backend)
-        context.set_progress(0.20, f"loaded SAME encoder {model_name}")
+        context.set_progress(0.20, f"loaded SAME encoder {model_name}", phase="encoding")
 
         item = adapter.encode_file(
             source.path,
@@ -985,7 +1130,7 @@ class RuntimeDispatcher:
             chunk_size=int(params.get("chunk_size", 128)),
             overlap=int(params.get("overlap", 32)),
         )
-        context.set_progress(0.75, "saving encoded latent")
+        context.set_progress(0.75, "saving encoded latent", phase="saving")
         artifact = self.store.store_latent_array(
             item.latent,
             latent_rate=item.latent_rate,
@@ -1008,7 +1153,7 @@ class RuntimeDispatcher:
         params = dict(recipe.params)
         model_name = str(recipe.model or params.get("model") or "same-l")
         adapter = self._same_adapter(model_name, recipe.backend)
-        context.set_progress(0.20, f"loaded SAME decoder {model_name}")
+        context.set_progress(0.20, f"loaded SAME decoder {model_name}", phase="decoding")
 
         latents = _time_major_to_bct(self.store.load_latent_array(source_id))
         device = getattr(adapter.autoencoder, "device", None)
@@ -1022,7 +1167,7 @@ class RuntimeDispatcher:
         )
         output_id, output_path = self.store.reserve_artifact_path(filename=f"{source_id}.decoded.wav")
         _write_audio_tensor(output_path, audio, sample_rate=int(adapter.sample_rate))
-        context.set_progress(0.80, "saving decoded audio")
+        context.set_progress(0.80, "saving decoded audio", phase="saving")
         artifact = self.store.finalize_audio_file(
             artifact_id=output_id,
             path=output_path,
@@ -1062,7 +1207,7 @@ class RuntimeDispatcher:
             latent = self.store.load_latent_array(record.artifact_id)
             candidates.append(_latent_record_to_item(record, latent))
 
-        context.set_progress(0.45, f"indexed {len(candidates)} latent memories")
+        context.set_progress(0.45, f"indexed {len(candidates)} latent memories", phase="indexing")
         results = []
         if candidates:
             index = LatentMemoryIndex(candidates)
@@ -1088,7 +1233,7 @@ class RuntimeDispatcher:
             "results": results,
         }
         output_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-        context.set_progress(0.85, "saving memory query")
+        context.set_progress(0.85, "saving memory query", phase="saving")
         artifact = self.store.finalize_bundle_path(
             artifact_id=output_id,
             path=output_path,
@@ -1141,7 +1286,7 @@ class RuntimeDispatcher:
         if not items:
             raise ValueError("geometry audit requires at least one local latent artifact")
 
-        context.set_progress(0.45, f"auditing {len(items)} latent artifacts")
+        context.set_progress(0.45, f"auditing {len(items)} latent artifacts", phase="analyzing")
         report = geometry_report(items, n_components=n_components)
         output_id, output_path = self.store.reserve_artifact_path(filename="geometry_report.json")
         payload = {
@@ -1154,7 +1299,7 @@ class RuntimeDispatcher:
             "report": report,
         }
         output_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-        context.set_progress(0.85, "saving geometry audit")
+        context.set_progress(0.85, "saving geometry audit", phase="saving")
         artifact = self.store.finalize_bundle_path(
             artifact_id=output_id,
             path=output_path,
@@ -1215,7 +1360,7 @@ class RuntimeDispatcher:
                 "target_tokens": sorted(target_tokens)[:48],
             }
         elif scorer_kind == "sa3_flow_probe":
-            context.set_progress(0.10, "loading SA3 flow prompt scorer")
+            context.set_progress(0.10, "loading SA3 flow prompt scorer", phase="model_setup")
             batch_scorer, scorer_metadata = self._sa3_flow_prompt_batch_scorer(
                 recipe,
                 context=context,
@@ -1230,7 +1375,7 @@ class RuntimeDispatcher:
         else:
             raise ValueError("prompt search scorer must be 'lexical_probe', 'sa3_flow_probe', or 'clap'")
 
-        context.set_progress(0.20, f"running {search_mode} prompt search with {scorer_kind}")
+        context.set_progress(0.20, f"running {search_mode} prompt search with {scorer_kind}", phase="scoring")
         if search_mode == "coordinate":
             axes = _parse_modifier_axes(params.get("modifier_axes")) or default_modifier_axes()
             result = coordinate_prompt_search(
@@ -1273,7 +1418,7 @@ class RuntimeDispatcher:
         else:
             raise ValueError("prompt search mode must be 'beam', 'greedy', or 'coordinate'")
 
-        context.set_progress(0.70, "saving prompt search bundle")
+        context.set_progress(0.70, "saving prompt search bundle", phase="saving")
         history = [{"prompt": prompt, "score": float(score)} for prompt, score in result.history[:300]]
         payload = {
             "operator": _operator_value(recipe.operator),
@@ -1347,14 +1492,14 @@ class RuntimeDispatcher:
             progress_start=0.105,
             progress_end=0.135,
         )
-        context.set_progress(0.135, f"loading SA3 flow scorer model={model_name} device={device}")
+        context.set_progress(0.135, f"loading SA3 flow scorer model={model_name} device={device}", phase="model_setup")
         context.log(f"SA3 flow prompt scorer loading model={model_name} device={device}")
         stable_model = StableAudioModel.from_pretrained(
             model_name,
             device=device,
             model_half=bool(params.get("model_half", False)),
         )
-        context.set_progress(0.14, "loading target audio for SA3 flow scorer")
+        context.set_progress(0.14, "loading target audio for SA3 flow scorer", phase="io")
         audio, sample_rate = torchaudio.load(target_audio_path)
         duration = float(params.get("duration_seconds") or params.get("duration") or 0.0)
         if duration <= 0:
@@ -1362,13 +1507,13 @@ class RuntimeDispatcher:
         seed_prompt = str(params.get("seed_prompt") or (source.prompt if source else "") or "audio texture")
         conditioning = [{"prompt": seed_prompt, "seconds_total": duration}]
         audio_sample_size = stable_model._adapt_sample_size(conditioning, 5292032, duration_padding_sec=6.0)
-        context.set_progress(0.16, "encoding target audio to SA3 latents")
+        context.set_progress(0.16, "encoding target audio to SA3 latents", phase="encoding")
         target_latents, _ = stable_model._encode_audio_input((sample_rate, audio), audio_sample_size)
         timestep_values = parse_float_sequence(params.get("timestep_values"))
         if not timestep_values:
             timestep_values = timesteps_from_logsnr_values(params.get("logsnr_values"))
         effective_samples = len(timestep_values) if timestep_values else max(1, int(params.get("score_samples", 1) or 1))
-        context.set_progress(0.18, f"prepared SA3 flow scorer with {effective_samples} sample(s)")
+        context.set_progress(0.18, f"prepared SA3 flow scorer with {effective_samples} sample(s)", phase="scoring")
         context.log(f"SA3 flow scorer target duration={duration:.2f}s samples={effective_samples}")
         scored_count = 0
 
@@ -1377,6 +1522,7 @@ class RuntimeDispatcher:
             context.set_progress(
                 min(0.68, 0.22 + min(scored_count, 1000) / 1000 * 0.42),
                 f"scoring {len(prompts)} prompt candidate(s) with SA3 flow loss",
+                phase="scoring",
             )
             losses = sa3_flow_losses_for_prompts(
                 stable_model,
@@ -1399,6 +1545,7 @@ class RuntimeDispatcher:
             context.set_progress(
                 min(0.68, 0.22 + min(scored_count, 1000) / 1000 * 0.42),
                 f"scored {scored_count} prompt candidate(s) with SA3 flow loss",
+                phase="scoring",
             )
             return [-loss for loss in losses]
 
@@ -1427,14 +1574,14 @@ class RuntimeDispatcher:
         output_root.mkdir(parents=True, exist_ok=True)
         command, primary_output = self._script_experiment_command(recipe, output_root)
 
-        context.set_progress(0.05, f"starting {_operator_value(recipe.operator)}")
+        context.set_progress(0.05, f"starting {_operator_value(recipe.operator)}", phase="preflight")
         return_code = self._run_subprocess(command, cwd=self.repo_root, context=context)
         if return_code != 0:
             raise RuntimeError(f"{recipe.operator} failed with exit code {return_code}")
         if not primary_output.exists():
             raise RuntimeError(f"{recipe.operator} did not create expected output: {primary_output}")
 
-        context.set_progress(0.85, "registering experiment artifacts")
+        context.set_progress(0.85, "registering experiment artifacts", phase="saving")
         artifact_ids = self._register_script_outputs(
             recipe,
             primary_output=primary_output,
@@ -1951,7 +2098,7 @@ def _download_sa3_model_files_with_progress(
     for index, (filename, label) in enumerate(files):
         file_start = progress_start + span * index / len(files)
         file_end = progress_start + span * (index + 1) / len(files)
-        context.set_progress(file_start, f"resolving SA3 {model_name} {label}")
+        context.set_progress(file_start, f"resolving SA3 {model_name} {label}", phase="model_setup")
 
         class JobDownloadTqdm(tqdm):
             def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -1974,11 +2121,12 @@ def _download_sa3_model_files_with_progress(
                 context.set_progress(
                     file_start + (file_end - file_start) * fraction,
                     f"downloading SA3 {model_name} {label} {percent}%",
+                    phase="model_setup",
                 )
                 return result
 
         hf_hub_download(repo_id=repo_id, filename=filename, tqdm_class=JobDownloadTqdm)
-        context.set_progress(file_end, f"resolved SA3 {model_name} {label}")
+        context.set_progress(file_end, f"resolved SA3 {model_name} {label}", phase="model_setup")
 
 
 def _hf_cached_file(repo_id: str, filename: str) -> bool:
@@ -2021,7 +2169,24 @@ def _update_subprocess_progress(context: JobContext, line: str) -> None:
     if not 0 <= percent <= 100:
         return
     progress = 0.05 + (percent / 100.0) * 0.80
-    context.set_progress(min(0.84, max(0.05, progress)), line[:240])
+    context.set_progress(min(0.84, max(0.05, progress)), line[:240], phase=_phase_from_message(line))
+
+
+def _phase_from_message(message: str) -> str:
+    text = message.lower()
+    if re.search(r"(download|weight|checkpoint|loading|load model|tokenizer|hugging ?face)", text):
+        return "model_setup"
+    if re.search(r"(sample|sampling|generate|generating|denoise|step)", text):
+        return "sampling"
+    if re.search(r"(score|scoring|candidate|loss)", text):
+        return "scoring"
+    if re.search(r"(encode|embedding|latent|pre-encode|pre encode)", text):
+        return "encoding"
+    if re.search(r"(decode|vocoder|same)", text):
+        return "decoding"
+    if re.search(r"(save|saving|write|writing|bundle|artifact|export)", text):
+        return "saving"
+    return "subprocess"
 
 
 def _default_script_model(operator: OperatorName | str) -> str:

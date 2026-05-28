@@ -128,6 +128,7 @@ export interface JobRecord {
   status: JobStatus;
   recipe: Recipe;
   progress: number;
+  phase?: string | null;
   message?: string | null;
   artifact_ids: string[];
   metrics: Record<string, unknown>;

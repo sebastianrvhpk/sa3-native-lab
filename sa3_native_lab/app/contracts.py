@@ -221,6 +221,7 @@ class JobRecord(ContractModel):
     status: JobStatus = JobStatus.QUEUED
     recipe: Recipe
     progress: float = 0.0
+    phase: str | None = None
     message: str | None = None
     artifact_ids: list[str] = Field(default_factory=list)
     metrics: dict[str, Any] = Field(default_factory=dict)

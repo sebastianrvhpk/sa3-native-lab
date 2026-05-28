@@ -84,6 +84,8 @@ export function jobPhase(job: JobRecord): JobPhase {
   if (job.status === "succeeded") return { label: "done", tone: "done" };
   if (job.status === "failed") return { label: "failed", tone: "failed" };
   if (job.status === "cancelled") return { label: "cancelled", tone: "cancelled" };
+  const contractedPhase = job.phase ? phaseFromContract(job.phase) : null;
+  if (contractedPhase) return contractedPhase;
 
   const text = [job.message, latestUsefulLog(job), ...job.logs.slice(-4)].filter(Boolean).join("\n").toLowerCase();
   if (/(sample|sampling|generate|generating|denoise|step|score|scoring|candidate)/.test(text)) {
@@ -102,6 +104,21 @@ export function jobPhase(job: JobRecord): JobPhase {
     return { label: "saving", tone: "io" };
   }
   return { label: "running", tone: "running" };
+}
+
+function phaseFromContract(phase: string): JobPhase | null {
+  const normalized = phase.replace(/[_-]+/g, " ").trim().toLowerCase();
+  if (!normalized || normalized === "running") return null;
+  if (normalized === "preflight") return { label: "preflight", tone: "running" };
+  if (normalized === "subprocess") return { label: "subprocess", tone: "running" };
+  if (normalized === "io" || normalized === "saving" || normalized === "indexing") return { label: normalized, tone: "io" };
+  if (normalized === "done") return { label: "done", tone: "done" };
+  if (normalized === "failed") return { label: "failed", tone: "failed" };
+  if (normalized === "cancelled") return { label: "cancelled", tone: "cancelled" };
+  if (/(model|setup|sample|sampling|score|scoring|encode|encoding|decode|decoding|transform|analyzing)/.test(normalized)) {
+    return { label: normalized, tone: "model" };
+  }
+  return { label: normalized.slice(0, 18), tone: "running" };
 }
 
 export function jobRecoveryHints(job: JobRecord): JobRecoveryHint[] {
