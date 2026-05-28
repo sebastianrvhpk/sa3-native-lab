@@ -18,9 +18,11 @@ and the next risks for turning the Colab experiments into a proper app.
   shape/rate, source artifact IDs, recipe ID, tags, and freeform metadata.
 - The frontend is no longer just a generic dashboard. It has a listening bench,
   Operator Studio, Recipe Studio, Mode Atlas, job rail, artifact rail, waveform
-  peaks, playback, and A/B slots.
+  peaks, playback, A/B slots, result-family inspection, memory-hit reuse, and
+  recipe fork diff/reset controls.
 - A first TypeScript tRPC control plane exists in `apps/control-plane`; it owns
-  app-shaped workbench reads while Python remains the model/runtime worker.
+  app-shaped workbench reads plus job lifecycle, recipe, artifact, family, and
+  archive procedures while Python remains the model/runtime worker.
 - Medium/SAME-L is now the default path across app contracts, runtime fallbacks,
   frontend defaults, README commands, docs, and tests.
 
@@ -28,17 +30,16 @@ and the next risks for turning the Colab experiments into a proper app.
 
 - Frontend field schemas are still duplicated in TypeScript instead of coming
   from backend operator/experiment specs. This is the biggest drift risk.
-- The tRPC control plane is still only a read-side slice. Mutations, replay,
-  cancellation, and result-family semantics are still split across React and
-  Python endpoints.
+- Live job event transport still bypasses tRPC and uses the Python WebSocket
+  path directly. Reconnect/resume semantics are not yet handled.
 - `RuntimeDispatcher` owns many responsibilities: backend status, MLX
   generation, SAME encode/decode, latent operators, script adapters, subprocess
   wrapping, and output finalization. It works, but it will become harder to test
   as more Colab modes become native.
 - Bundle artifacts are too opaque. The app knows they exist but does not yet
   inspect vector/profile/soft-prompt contents in a native way.
-- Long-running jobs do not yet have cancellation, retry, pause/resume, or
-  resource-aware scheduling.
+- Long-running jobs have cancel/retry, but not pause/resume, priority,
+  resource-aware scheduling, or resident worker reuse.
 - Error messages are preserved in job records but not yet transformed into
   user-friendly recovery guidance.
 - The frontend build is clean, but there are no frontend unit tests for form to
@@ -50,9 +51,9 @@ and the next risks for turning the Colab experiments into a proper app.
    Keep the canonical operator/experiment field definitions in Python, then
    generate or fetch frontend controls from those specs.
 
-2. Promote app-level actions into tRPC.
-   Start with recipe replay, job-event/cancel/retry actions, archive mutations,
-   and result-family reads. Avoid one-to-one endpoint mirroring.
+2. Promote job events into tRPC.
+   Job lifecycle, recipe, archive, and family procedures exist. The next
+   app-level contract gap is a subscription/event bridge with reconnect.
 
 3. Split runtime adapters.
    Move MLX, SAME, latent operators, and script recipes into modules such as
@@ -67,9 +68,9 @@ and the next risks for turning the Colab experiments into a proper app.
    Give bundle types readers and UI panels instead of treating every bundle as
    a zip file.
 
-6. Add job control endpoints.
-   Start with cancel/retry. Later add priorities, worker pools, and resident
-   model workers.
+6. Add deeper job control.
+   Later add pause/resume, priorities, worker pools, and resident model
+   workers.
 
 7. Harden docs around machine profiles.
    Document what runs on M1/MPS/MLX, what is realistic on CPU, and what remains

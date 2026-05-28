@@ -22,14 +22,16 @@ For the broader stack direction and promotion triggers, see
    acceptance, disk space, model cache paths, and optional extras.
 
 4. Tighten fork-with-changes forms.
-   The UI can fork recipe params, backend, model, seed, and notes. Next it
-   should derive bounds from operator specs and show recipe deltas before submit.
+   The UI can fork recipe params, backend, model, seed, and notes with visible
+   deltas plus reset controls. Next it should derive bounds and required fields
+   from operator specs.
 
 ## P1: Exploration Speed
 
 1. Deepen result-family views for sweeps.
-   Recipe families now appear with metrics and latest artifacts. Next they need
-   per-result playback, A/B promotion, metric tables, and recipe deltas.
+   Recipe families now appear with metrics, a detail panel, per-result playback,
+   A/B assignment, replay, and fork actions. Next they need sweep-specific
+   metric tables, sibling recipe comparison, and explicit promotion semantics.
 
 2. Presets for Operator Studio.
    Store named parameter sets for blur, DSP, graft, renoise, and cyclic roll.
@@ -49,8 +51,9 @@ For the broader stack direction and promotion triggers, see
 
 1. Memory browser and query surface.
    Local latent-artifact nearest-neighbor query now exists as `memory.query`.
-   The next step is a richer browser for encoded SAME datasets, preview audio,
-   tags, and reuse as donors or style references.
+   Bundle previews now allow selecting hits, A/B assignment for audio hits, and
+   donor reuse for latent hits. The next step is a richer browser for encoded
+   SAME datasets, preview audio, tags, and style-reference promotion.
 
 2. Latent channel and time-region views.
    Graft/renoise masks would be more intuitive as channel/time selections,
@@ -109,6 +112,11 @@ For the broader stack direction and promotion triggers, see
    Each artifact kind should have a dedicated inspector component and backend
    reader: audio, latent, vector bundle, profile, soft prompt, training output,
    and memory collection.
+
+7. Extract app surfaces from `App.tsx`.
+   The bench now has enough real pieces that `Specimen`, `FamilyDetailPanel`,
+   `ForkRecipePanel`, bundle preview, session tray, and audio deck should move
+   into focused modules before adding Storybook or MSW scenarios.
 
 ## Verification Plan
 

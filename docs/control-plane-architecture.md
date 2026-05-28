@@ -45,6 +45,11 @@ job snapshots currently use the Python WebSocket endpoint directly. When the env
 var is absent, the frontend falls back to the existing direct Python read
 queries and Python mutations.
 
+On the UI side, result families are now treated as app objects: the right rail
+can inspect a family, play its audio artifacts, assign A/B comparison slots,
+show related jobs, and branch the recipe with visible diffs. Memory-query
+bundle hits can also feed app actions when they resolve to local artifacts.
+
 The local runner can launch the full path:
 
 ```bash
@@ -96,6 +101,8 @@ Future responsibilities:
 1. Add a tRPC subscription bridge for job-event snapshots and reconnect.
 2. Promote archive annotation/search mutations to the normal UI path.
 3. Add bounded fork forms derived from operator specs.
-4. Add family-specific inspectors for sweeps, memory query bundles, and style
+4. Promote family detail and memory-result actions into tRPC procedures where
+   they need server-side shaping beyond `workbench.load`.
+5. Add family-specific inspectors for sweeps, memory query bundles, and style
    profile bundles.
-5. Evaluate Postgres only after these procedures stabilize.
+6. Evaluate Postgres only after these procedures stabilize.

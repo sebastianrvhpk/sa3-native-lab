@@ -231,8 +231,9 @@ Open the printed Vite URL, normally `http://127.0.0.1:5173`. The first bench
 supports audio import, MLX text generation, SAME encode/decode, latent operator
 jobs, Recipe Studio script experiments, Colab Mode Atlas parity/status, job
 polling plus live job snapshots, cancellation/retry, recipe replay/fork editing,
-result-family grouping, bundle previews, readiness checks, artifact selection,
-real waveform peaks, download, and A/B audio playback.
+recipe diff/reset controls, result-family grouping with detail playback,
+memory-query result reuse, bundle previews, readiness checks, artifact
+selection, real waveform peaks, download, and A/B audio playback.
 
 ### Notebook Parity Check
 

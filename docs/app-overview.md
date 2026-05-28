@@ -61,7 +61,10 @@ polling. The bench also has a Run Monitor that surfaces active jobs, percent
 progress, live event snapshots, elapsed time, cancellation, retry, and the
 latest backend message near the controls that started the work. Selected
 artifacts can be labeled, tagged, annotated, replayed from their recipe, and
-searched later from the archive.
+searched later from the archive. Result families can be inspected as a compact
+branch surface with source references, per-artifact playback, A/B assignment,
+job progress, replay, and fork actions. Forked recipes show changed fields and
+per-parameter reset controls before submit.
 
 Read-heavy workbench state can now be loaded through the TypeScript tRPC
 control plane. This is enabled by setting `VITE_SA3_CONTROL_PLANE_URL` or by
@@ -105,7 +108,9 @@ Artifacts can also carry user labels, notes, and tags for archive search.
 Bundle artifacts can be inspected through the API and UI to reveal their file
 inventory, parsed preview metadata, recipe, source artifacts, and child
 artifacts. Jobs and artifacts with the same recipe are grouped as result
-families in the right rail with run metrics when the job reports them.
+families in the right rail with run metrics when the job reports them. Memory
+query bundle previews expose ranked hits that can be selected, placed in A/B
+when audio, or reused as latent donors when the hit is a latent artifact.
 
 ## Runtime Assumptions
 
@@ -135,7 +140,8 @@ Confirmed in the current codebase:
   inspection, and result-family procedures are implemented behind the
   control-plane launch flag.
 - The frontend has live job-event snapshots, a readiness panel, a recipe fork
-  editor, result-family metrics, and bundle previews.
+  editor with diffs and resets, result-family detail playback, memory-result
+  reuse actions, and bundle previews.
 - The frontend builds and the Python test suite passes locally.
 
 Still partial:
@@ -143,9 +149,11 @@ Still partial:
 - Some Colab modes are mapped but not yet first-class native interactions.
 - Type-specific readers for profiles, vectors, soft prompts, training outputs,
   and memory collections are still shallow.
-- Memory-query bundles expose preview rows, but still need preview playback and
-  reuse as donors/style references.
-- Multi-output sweeps have family grouping and metrics, but still need
-  per-result playback, promotion, and recipe deltas.
+- Memory-query bundles expose preview rows and donor/A-B reuse actions, but
+  still need richer dataset browsing, preview audio for non-local children, and
+  style-reference promotion.
+- Multi-output sweeps have family grouping, metrics, direct playback, A/B
+  assignment, and recipe fork deltas, but still need sweep-specific metric
+  tables and promotion semantics.
 - Live job events currently come from the Python WebSocket path; tRPC does not
   yet own subscription transport.

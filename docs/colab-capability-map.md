@@ -59,13 +59,16 @@ chosen mode needs a donor.
 The session archive now supports label, notes, and tag annotation plus local
 archive search. Latent memory query is promoted from concept to recipe: selecting
 a latent artifact can produce a `memory_query.json` bundle ranked by cosine or
-Euclidean summary distance against other local latent artifacts.
+Euclidean summary distance against other local latent artifacts. Those local
+memory hits are now actionable in the bundle preview: select the artifact, place
+audio hits in A/B, or reuse latent hits as donor latents.
 
 ## Next Promotion Targets
 
-1. Result-family view for sweeps: one row per alpha, with A/B promotion.
+1. Sweep-specific family views: metric tables, sibling recipe comparison, and
+   explicit A/B promotion.
 2. First-class profile/vector/memory bundle readers instead of zip/JSON-only treatment.
 3. Prompt-search recipes for Colab Modes 2/3/5.
 4. Geometry/control-head recipes for Modes 12/15.
-5. Operator presets and recipe diffs for repeatable latent explorations.
+5. Operator presets and operator-studio recipe diffs for repeatable latent explorations.
 6. Long-job controls for LoRA training: pause/cancel is not yet implemented.
