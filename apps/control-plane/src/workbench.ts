@@ -175,24 +175,28 @@ export function shapeWorkbenchState(snapshot: WorkbenchSnapshot, input: Workbenc
 
 export function buildResultFamilies(artifacts: ArtifactRecord[], jobs: JobRecord[]): ResultFamily[] {
   const artifactsByRecipe = groupArtifactsByRecipe(artifacts);
-  const families = new Map<string, { recipe: Recipe; jobs: JobRecord[]; artifacts: ArtifactRecord[] }>();
+  const families = new Map<string, { familyId: string; recipe: Recipe; jobs: JobRecord[]; artifacts: ArtifactRecord[] }>();
 
   for (const job of jobs) {
     const recipeId = job.recipe.recipe_id;
-    const family = families.get(recipeId);
+    const familyId = resultFamilyIdForRecipe(job.recipe);
+    const recipeArtifacts = artifactsByRecipe.get(recipeId) ?? [];
+    const family = families.get(familyId);
     if (family) {
       family.jobs.push(job);
+      family.artifacts = uniqueById([...family.artifacts, ...recipeArtifacts]);
     } else {
-      families.set(recipeId, {
+      families.set(familyId, {
+        familyId,
         recipe: job.recipe,
         jobs: [job],
-        artifacts: artifactsByRecipe.get(recipeId) ?? [],
+        artifacts: recipeArtifacts,
       });
     }
   }
 
-  return [...families.entries()]
-    .map(([recipeId, family]) => {
+  return [...families.values()]
+    .map((family) => {
       const artifactIds = unique([
         ...family.jobs.flatMap((job) => job.artifact_ids),
         ...family.artifacts.map((artifact) => artifact.artifact_id),
@@ -204,23 +208,34 @@ export function buildResultFamilies(artifacts: ArtifactRecord[], jobs: JobRecord
       ];
       const sortedArtifacts = sortNewestBy(family.artifacts, (artifact) => artifact.created_at);
       const sortedJobs = sortNewestBy(family.jobs, (job) => job.finished_at ?? job.started_at ?? job.created_at);
+      const recipe = sortedJobs[0]?.recipe ?? family.recipe;
       return {
-        familyId: recipeId,
-        recipeId,
-        recipe: family.recipe,
-        operator: family.recipe.operator,
-        sessionId: family.recipe.session_id ?? null,
+        familyId: family.familyId,
+        recipeId: recipe.recipe_id,
+        recipe,
+        operator: recipe.operator,
+        sessionId: recipe.session_id ?? null,
         status: familyStatus(family.jobs),
         jobIds: family.jobs.map((job) => job.job_id),
         artifactIds,
         artifactKinds,
         metrics: sortedJobs[0]?.metrics ?? {},
         latestArtifactId: sortedArtifacts[0]?.artifact_id ?? artifactIds[0] ?? null,
-        createdAt: oldestTimestamp(timestamps) ?? family.recipe.created_at,
-        updatedAt: newestTimestamp(timestamps) ?? family.recipe.created_at,
+        createdAt: oldestTimestamp(timestamps) ?? recipe.created_at,
+        updatedAt: newestTimestamp(timestamps) ?? recipe.created_at,
       } satisfies ResultFamily;
     })
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+}
+
+function resultFamilyIdForRecipe(recipe: Recipe): string {
+  const sourceId = typeof recipe.inputs.source === "string" ? recipe.inputs.source : "";
+  const metadata = recordValue(recipe.params.metadata);
+  const origin = metadata?.generation_origin;
+  if (recipe.operator === "generate.text_to_audio" && sourceId && origin === "prompt_search_candidate") {
+    return `prompt-candidates:${sourceId}`;
+  }
+  return recipe.recipe_id;
 }
 
 function findActiveSession(sessions: SessionRecord[], sessionId: string | null): SessionRecord | null {
@@ -257,6 +272,19 @@ function groupArtifactsByRecipe(artifacts: ArtifactRecord[]): Map<string, Artifa
 
 function unique<T>(items: T[]): T[] {
   return [...new Set(items)];
+}
+
+function uniqueById(artifacts: ArtifactRecord[]): ArtifactRecord[] {
+  const seen = new Set<string>();
+  return artifacts.filter((artifact) => {
+    if (seen.has(artifact.artifact_id)) return false;
+    seen.add(artifact.artifact_id);
+    return true;
+  });
+}
+
+function recordValue(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
 }
 
 function newestTimestamp(timestamps: string[]): string | null {

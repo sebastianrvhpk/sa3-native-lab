@@ -334,6 +334,9 @@ class TextGenerateRequest(ContractModel):
     model: str = "medium"
     decoder: str | None = None
     backend: BackendName = BackendName.MLX
+    source_artifact_id: str | None = None
+    notes: str | None = None
+    metadata: dict[str, Any] | None = None
     session_id: str | None = None
 
 

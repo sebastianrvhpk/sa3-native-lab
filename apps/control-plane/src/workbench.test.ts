@@ -36,6 +36,37 @@ test("shapeWorkbenchState groups active session workbench data", () => {
   assert.deepEqual(state.readiness.readyBackends, ["mlx", "torch_mps"]);
 });
 
+test("shapeWorkbenchState groups prompt candidate takes under their search bundle", () => {
+  const session = sessionRecord("sess_active", "2026-05-27T14:00:00.000Z");
+  const bundle = artifactRecord("art_prompt_bundle", "bundle", session.session_id, "2026-05-27T14:05:00.000Z");
+  const firstJob = promptCandidateJob("job_candidate_a", session.session_id, bundle.artifact_id, "2026-05-27T14:10:00.000Z");
+  const secondJob = promptCandidateJob("job_candidate_b", session.session_id, bundle.artifact_id, "2026-05-27T14:11:00.000Z");
+  const firstTake = {
+    ...artifactRecord("art_candidate_a", "audio", session.session_id, "2026-05-27T14:12:00.000Z"),
+    recipe_id: firstJob.recipe.recipe_id,
+    source_artifact_ids: [bundle.artifact_id],
+  };
+  const secondTake = {
+    ...artifactRecord("art_candidate_b", "audio", session.session_id, "2026-05-27T14:13:00.000Z"),
+    recipe_id: secondJob.recipe.recipe_id,
+    source_artifact_ids: [bundle.artifact_id],
+  };
+
+  const state = shapeWorkbenchState(
+    snapshot({
+      sessions: [session],
+      artifacts: [bundle, firstTake, secondTake],
+      jobs: [firstJob, secondJob],
+    }),
+    { sessionId: session.session_id },
+  );
+
+  assert.equal(state.sessionResultFamilies.length, 1);
+  assert.equal(state.sessionResultFamilies[0]?.familyId, `prompt-candidates:${bundle.artifact_id}`);
+  assert.deepEqual(new Set(state.sessionResultFamilies[0]?.artifactIds), new Set([firstTake.artifact_id, secondTake.artifact_id]));
+  assert.deepEqual(new Set(state.sessionResultFamilies[0]?.jobIds), new Set([firstJob.job_id, secondJob.job_id]));
+});
+
 test("tRPC workbench.load aggregates Python runtime calls", async () => {
   const session = sessionRecord("sess_active", "2026-05-27T14:00:00.000Z");
   const artifact = artifactRecord("art_session", "audio", session.session_id, "2026-05-27T14:10:00.000Z");
@@ -335,6 +366,24 @@ function jobRecord(jobId: string, status: JobRecord["status"], sessionId: string
     created_at: createdAt,
     started_at: status === "queued" ? null : createdAt,
     finished_at: status === "succeeded" ? now : null,
+  };
+}
+
+function promptCandidateJob(jobId: string, sessionId: string | null, sourceId: string, createdAt: string): JobRecord {
+  return {
+    ...jobRecord(jobId, "succeeded", sessionId, createdAt),
+    recipe: {
+      ...jobRecord(jobId, "succeeded", sessionId, createdAt).recipe,
+      inputs: { source: sourceId },
+      params: {
+        prompt: `candidate ${jobId}`,
+        metadata: {
+          generation_origin: "prompt_search_candidate",
+          prompt_search_bundle_id: sourceId,
+          prompt_candidate_rank: jobId.endsWith("_a") ? 1 : 2,
+        },
+      },
+    },
   };
 }
 

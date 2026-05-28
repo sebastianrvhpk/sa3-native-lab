@@ -285,12 +285,15 @@ def create_app(
 
     @app.post("/generate/text", response_model=JobRecord)
     def generate_text(request: TextGenerateRequest) -> JobRecord:
+        inputs = {"source": request.source_artifact_id} if request.source_artifact_id else {}
         recipe = Recipe(
             operator=OperatorName.TEXT_TO_AUDIO,
             backend=request.backend,
-            params=request.model_dump(mode="json", exclude={"session_id"}),
+            inputs=inputs,
+            params=request.model_dump(mode="json", exclude={"source_artifact_id", "notes", "session_id"}),
             model=request.model,
             seed=request.seed,
+            notes=request.notes,
             session_id=request.session_id,
         )
         return _submit_recipe(jobs, runtime, recipe)
@@ -301,9 +304,10 @@ def create_app(
             operator=OperatorName.AUDIO_TO_AUDIO,
             backend=request.backend,
             inputs={"source": request.source_artifact_id},
-            params=request.model_dump(mode="json", exclude={"source_artifact_id", "session_id"}),
+            params=request.model_dump(mode="json", exclude={"source_artifact_id", "notes", "session_id"}),
             model=request.model,
             seed=request.seed,
+            notes=request.notes,
             session_id=request.session_id,
         )
         return _submit_recipe(jobs, runtime, recipe)
@@ -314,9 +318,10 @@ def create_app(
             operator=OperatorName.INPAINT,
             backend=request.backend,
             inputs={"source": request.source_artifact_id},
-            params=request.model_dump(mode="json", exclude={"source_artifact_id", "session_id"}),
+            params=request.model_dump(mode="json", exclude={"source_artifact_id", "notes", "session_id"}),
             model=request.model,
             seed=request.seed,
+            notes=request.notes,
             session_id=request.session_id,
         )
         return _submit_recipe(jobs, runtime, recipe)

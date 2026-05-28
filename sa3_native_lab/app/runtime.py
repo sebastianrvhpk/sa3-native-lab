@@ -363,6 +363,7 @@ class RuntimeDispatcher:
                     "apg_scale": "float",
                     "model": "sm-music|sm-sfx|medium",
                     "decoder": "same-s|same-l|null",
+                    "metadata": "dict|null",
                 },
                 produces=[ArtifactKind.AUDIO],
                 status="implemented",
@@ -383,6 +384,7 @@ class RuntimeDispatcher:
                     "model": "sm-music|sm-sfx|medium",
                     "decoder": "same-s|same-l|null",
                     "init_noise_level": "float",
+                    "metadata": "dict|null",
                 },
                 produces=[ArtifactKind.AUDIO],
                 status="implemented",
@@ -405,6 +407,7 @@ class RuntimeDispatcher:
                     "init_noise_level": "float",
                     "inpaint_start_seconds": "float",
                     "inpaint_end_seconds": "float",
+                    "metadata": "dict|null",
                 },
                 produces=[ArtifactKind.AUDIO],
                 status="implemented",
@@ -866,19 +869,23 @@ class RuntimeDispatcher:
             raise RuntimeError(f"MLX generation did not create output file: {output_path}")
 
         source_ids = [recipe.inputs["source"]] if "source" in recipe.inputs else []
+        artifact_metadata = {
+            "backend": BackendName.MLX.value,
+            "model": model,
+            "decoder": decoder,
+            "steps": steps,
+            "duration_seconds": duration,
+        }
+        request_metadata = params.get("metadata")
+        if isinstance(request_metadata, dict):
+            artifact_metadata.update(_clean_params(request_metadata))
         artifact = self.store.finalize_audio_file(
             artifact_id=output_id,
             path=output_path,
             recipe=recipe,
             source_artifact_ids=source_ids,
             prompt=prompt,
-            metadata={
-                "backend": BackendName.MLX.value,
-                "model": model,
-                "decoder": decoder,
-                "steps": steps,
-                "duration_seconds": duration,
-            },
+            metadata=artifact_metadata,
         )
         return JobResult(artifact_ids=[artifact.artifact_id], metrics={"return_code": return_code})
 

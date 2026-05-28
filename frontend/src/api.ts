@@ -36,6 +36,9 @@ export interface GenerateTextPayload {
   model: "sm-music" | "sm-sfx" | "medium";
   decoder: "same-s" | "same-l";
   backend: "mlx";
+  source_artifact_id?: string | null;
+  notes?: string | null;
+  metadata?: Record<string, unknown> | null;
   session_id?: string | null;
 }
 
