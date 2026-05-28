@@ -64,6 +64,7 @@ class OperatorName(str, Enum):
     DATASET_PRE_ENCODE = "dataset.pre_encode"
     TRAIN_LORA = "training.lora"
     MEMORY_QUERY = "memory.query"
+    ARTIFACT_PROMOTE_BUNDLE_AUDIO = "artifact.promote_bundle_audio"
     ANNOTATE = "artifact.annotate"
 
 
@@ -168,6 +169,13 @@ class ArtifactInspection(ContractModel):
     bundle_audio_files: list[BundleAudioEntry] = Field(default_factory=list)
     bundle_preview: dict[str, Any] = Field(default_factory=dict)
     bundle_summary: dict[str, Any] = Field(default_factory=dict)
+
+
+class BundleAudioPromotionRequest(ContractModel):
+    path: str
+    label: str | None = None
+    prompt: str | None = None
+    session_id: str | None = None
 
 
 class SessionStatus(str, Enum):

@@ -18,10 +18,12 @@ from .contracts import (
     ArtifactRecord,
     AudioMetadata,
     AudioPeaksResponse,
+    BackendName,
     BundleAudioEntry,
     BundleFileEntry,
     FileInfo,
     LatentMetadata,
+    OperatorName,
     Recipe,
     SessionCreateRequest,
     SessionRecord,
@@ -433,6 +435,51 @@ class ArtifactStore:
         if record.path.name == safe_path:
             return record.path.read_bytes(), record.file.media_type if record.file else _guess_media_type(record.path), record.path.name
         raise KeyError(inner_path)
+
+    def promote_bundle_audio(
+        self,
+        artifact_id: str,
+        inner_path: str,
+        *,
+        label: str | None = None,
+        prompt: str | None = None,
+        session_id: str | None = None,
+    ) -> ArtifactRecord:
+        bundle = self.get_artifact(artifact_id)
+        if bundle.kind != ArtifactKind.BUNDLE:
+            raise ValueError(f"artifact {artifact_id} is not a bundle artifact")
+        safe_path = _safe_bundle_member_path(inner_path)
+        content, media_type, filename = self.bundle_file(artifact_id, safe_path)
+        suffix = Path(safe_path.lower()).suffix
+        if suffix not in AUDIO_SUFFIXES and not (media_type or "").startswith("audio/"):
+            raise ValueError(f"bundle file is not a supported audio file: {safe_path}")
+
+        promoted_id, promoted_path = self.reserve_artifact_path(filename=filename)
+        promoted_path.write_bytes(content)
+        recipe = Recipe(
+            operator=OperatorName.ARTIFACT_PROMOTE_BUNDLE_AUDIO,
+            backend=BackendName.CPU,
+            inputs={"source": artifact_id},
+            params={"path": safe_path},
+            model=None,
+            session_id=session_id or bundle.session_id,
+        )
+        return self.finalize_audio_file(
+            artifact_id=promoted_id,
+            path=promoted_path,
+            media_type=media_type,
+            recipe=recipe,
+            source_artifact_ids=[artifact_id],
+            prompt=prompt if prompt is not None else bundle.prompt,
+            label=label or Path(filename).stem,
+            metadata={
+                "operator": OperatorName.ARTIFACT_PROMOTE_BUNDLE_AUDIO.value,
+                "bundle_artifact_id": artifact_id,
+                "bundle_audio_path": safe_path,
+                "promoted_from_bundle": True,
+            },
+            session_id=session_id or bundle.session_id,
+        )
 
     def list_artifacts(
         self,

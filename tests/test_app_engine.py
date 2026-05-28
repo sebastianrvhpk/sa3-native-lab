@@ -529,6 +529,34 @@ def test_fastapi_inspects_bundle_artifact(tmp_path):
     assert audio.status_code == 200
     assert audio.headers["content-type"] == "audio/wav"
 
+    promoted = client.post(
+        f"/artifacts/{record.artifact_id}/bundle-audio/promote",
+        json={"path": "take.wav", "label": "keeper take", "session_id": "sess_bundle"},
+    )
+    assert promoted.status_code == 200
+    promoted_payload = promoted.json()
+    assert promoted_payload["kind"] == "audio"
+    assert promoted_payload["label"] == "keeper take"
+    assert promoted_payload["session_id"] == "sess_bundle"
+    assert promoted_payload["source_artifact_ids"] == [record.artifact_id]
+    assert promoted_payload["metadata"]["operator"] == "artifact.promote_bundle_audio"
+    assert promoted_payload["metadata"]["bundle_audio_path"] == "take.wav"
+    assert promoted_payload["audio"]["sample_rate"] == 8000
+
+    promoted_inspection = client.get(f"/artifacts/{record.artifact_id}/inspect").json()
+    assert promoted_inspection["children"][0]["artifact_id"] == promoted_payload["artifact_id"]
+    promoted_recipe = app.state.store.get_recipe(promoted_payload["recipe_id"])
+    assert promoted_recipe.operator == OperatorName.ARTIFACT_PROMOTE_BUNDLE_AUDIO
+    peaks = client.get(f"/artifacts/{promoted_payload['artifact_id']}/peaks", params={"bins": 8})
+    assert peaks.status_code == 200
+    assert peaks.json()["bins"] == 8
+
+    rejected = client.post(
+        f"/artifacts/{record.artifact_id}/bundle-audio/promote",
+        json={"path": "plot.png"},
+    )
+    assert rejected.status_code == 422
+
 
 def test_runtime_same_encode_decode_with_fake_adapter(tmp_path):
     store = ArtifactStore(tmp_path / "lab")

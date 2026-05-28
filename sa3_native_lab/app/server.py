@@ -16,6 +16,7 @@ from .contracts import (
     ArtifactRecord,
     AudioPeaksResponse,
     AudioToAudioRequest,
+    BundleAudioPromotionRequest,
     ExperimentRunRequest,
     HealthResponse,
     InpaintRequest,
@@ -158,6 +159,21 @@ def create_app(
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         headers = {"Content-Disposition": f'inline; filename="{filename}"'}
         return Response(content=content, media_type=media_type or "application/octet-stream", headers=headers)
+
+    @app.post("/artifacts/{artifact_id}/bundle-audio/promote", response_model=ArtifactRecord)
+    def promote_bundle_audio(artifact_id: str, request: BundleAudioPromotionRequest) -> ArtifactRecord:
+        try:
+            return store.promote_bundle_audio(
+                artifact_id,
+                request.path,
+                label=request.label,
+                prompt=request.prompt,
+                session_id=request.session_id,
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=f"bundle audio not found: {request.path}") from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     @app.get("/artifacts/{artifact_id}/peaks", response_model=AudioPeaksResponse)
     def get_artifact_peaks(artifact_id: str, bins: int = 96) -> AudioPeaksResponse:
