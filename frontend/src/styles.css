@@ -1607,6 +1607,25 @@ audio {
   background: linear-gradient(135deg, rgb(234 74 162 / 0.16), rgb(201 238 72 / 0.16)), rgb(255 255 255 / 0.62);
 }
 
+.job-recovery-hints {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.job-recovery-hints span {
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgb(45 51 52 / 0.12);
+  border-radius: 999px;
+  padding: 0 8px;
+  background: linear-gradient(135deg, rgb(255 226 77 / 0.24), rgb(85 198 199 / 0.18)), rgb(255 255 255 / 0.56);
+  color: var(--ink);
+  font-size: 0.7rem;
+  font-weight: 720;
+}
+
 .job-log-drawer {
   border: 1px solid var(--line-soft);
   border-radius: 8px;
