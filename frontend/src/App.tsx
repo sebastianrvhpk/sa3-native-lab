@@ -655,6 +655,7 @@ export function App() {
   const [experimentForm, setExperimentForm] = useState<Record<string, RecipeValue>>(() => defaultExperimentForm("experiment.audio_style_vectors"));
   const [liveJobsById, setLiveJobsById] = useState<Record<string, JobRecord>>({});
   const [forkTarget, setForkTarget] = useState<Recipe | null>(null);
+  const [inspectedFamilyId, setInspectedFamilyId] = useState<string | null>(null);
 
   const workbenchState = workbench.data;
   const allArtifacts = workbenchState?.artifacts ?? artifacts.data ?? [];
@@ -683,6 +684,7 @@ export function App() {
   const runningJobs = workbenchState?.runningJobs ?? allJobs.filter(isJobActive);
   const resultFamilies = workbenchState?.resultFamilies ?? buildResultFamilies(allArtifacts, allJobs);
   const sessionResultFamilies = workbenchState?.sessionResultFamilies ?? filterFamiliesForWork(resultFamilies, sessionArtifacts, sessionJobs);
+  const inspectedFamily = sessionResultFamilies.find((family) => family.familyId === inspectedFamilyId) ?? sessionResultFamilies[0] ?? null;
   const latestJobs = workbenchState?.latestJob ? [workbenchState.latestJob, ...allJobs.filter((job) => job.job_id !== workbenchState.latestJob?.job_id)].slice(0, 8) : allJobs.slice(0, 8);
   const compareA = allArtifacts.find((item) => item.artifact_id === compare.a) ?? null;
   const compareB = allArtifacts.find((item) => item.artifact_id === compare.b) ?? null;
@@ -722,6 +724,16 @@ export function App() {
     const latestActive = allSessions.find((session) => session.status === "active") ?? allSessions[0];
     setSession(latestActive.session_id, latestActive.created_at);
   }, [sessionId, allSessions, setSession]);
+
+  useEffect(() => {
+    if (!sessionResultFamilies.length) {
+      setInspectedFamilyId(null);
+      return;
+    }
+    if (!inspectedFamilyId || !sessionResultFamilies.some((family) => family.familyId === inspectedFamilyId)) {
+      setInspectedFamilyId(sessionResultFamilies[0].familyId);
+    }
+  }, [inspectedFamilyId, sessionResultFamilies]);
 
   const invalidate = async () => {
     await Promise.all([
@@ -1288,9 +1300,24 @@ export function App() {
             families={sessionResultFamilies}
             artifacts={allArtifacts}
             selectedId={selectedArtifact?.artifact_id ?? null}
+            inspectedFamilyId={inspectedFamily?.familyId ?? null}
             onSelect={selectArtifact}
+            onInspectFamily={setInspectedFamilyId}
             onReplayRecipe={(recipeId) => replayRecipeMutation.mutate(recipeId)}
             onForkRecipe={setForkTarget}
+          />
+          <FamilyDetailPanel
+            family={inspectedFamily}
+            artifacts={allArtifacts}
+            jobs={allJobs}
+            selectedId={selectedArtifact?.artifact_id ?? null}
+            apiBase={apiBase}
+            onSelect={selectArtifact}
+            onCompare={setCompare}
+            onReplayRecipe={(recipeId) => replayRecipeMutation.mutate(recipeId)}
+            onForkRecipe={setForkTarget}
+            onCancelJob={(job) => cancelJobMutation.mutate(job.job_id)}
+            onRetryJob={(job) => retryJobMutation.mutate(job.job_id)}
           />
           <SessionTray
             artifacts={sessionArtifacts}
@@ -1954,14 +1981,18 @@ function ResultFamilyPanel({
   families,
   artifacts,
   selectedId,
+  inspectedFamilyId,
   onSelect,
+  onInspectFamily,
   onReplayRecipe,
   onForkRecipe,
 }: {
   families: ResultFamily[];
   artifacts: ArtifactRecord[];
   selectedId: string | null;
+  inspectedFamilyId: string | null;
   onSelect: (artifactId: string | null) => void;
+  onInspectFamily: (familyId: string) => void;
   onReplayRecipe: (recipeId: string) => void;
   onForkRecipe: (recipe: Recipe) => void;
 }) {
@@ -1974,9 +2005,10 @@ function ResultFamilyPanel({
       {families.slice(0, 5).map((family) => {
         const latest = family.latestArtifactId ? artifactMap.get(family.latestArtifactId) ?? null : null;
         const selected = Boolean(latest && latest.artifact_id === selectedId);
+        const inspected = family.familyId === inspectedFamilyId;
         return (
-          <article key={family.familyId} className={`family-row ${selected ? "selected" : ""}`}>
-            <button type="button" onClick={() => onSelect(latest?.artifact_id ?? null)}>
+          <article key={family.familyId} className={`family-row ${selected ? "selected" : ""} ${inspected ? "inspected" : ""}`}>
+            <button type="button" onClick={() => { onInspectFamily(family.familyId); onSelect(latest?.artifact_id ?? null); }}>
               <div>
                 <strong>{shortOperatorName(family.operator)}</strong>
                 <span>
@@ -1998,6 +2030,10 @@ function ResultFamilyPanel({
               )}
             </div>
             <MetricChips metrics={family.metrics} />
+            <button type="button" className="family-replay" onClick={() => onInspectFamily(family.familyId)} title="Inspect family artifacts and jobs">
+              <Search size={14} />
+              Inspect
+            </button>
             <button type="button" className="family-replay" onClick={() => onReplayRecipe(family.recipeId)} title="Replay family recipe">
               <Repeat size={14} />
               Replay
@@ -2010,6 +2046,117 @@ function ResultFamilyPanel({
         );
       })}
     </div>
+  );
+}
+
+function FamilyDetailPanel({
+  family,
+  artifacts,
+  jobs,
+  selectedId,
+  apiBase,
+  onSelect,
+  onCompare,
+  onReplayRecipe,
+  onForkRecipe,
+  onCancelJob,
+  onRetryJob,
+}: {
+  family: ResultFamily | null;
+  artifacts: ArtifactRecord[];
+  jobs: JobRecord[];
+  selectedId: string | null;
+  apiBase: string;
+  onSelect: (artifactId: string | null) => void;
+  onCompare: (slot: "a" | "b", artifactId: string | null) => void;
+  onReplayRecipe: (recipeId: string) => void;
+  onForkRecipe: (recipe: Recipe) => void;
+} & JobActionHandlers) {
+  if (!family) {
+    return <div className="quiet-panel compact">No family selected</div>;
+  }
+  const artifactMap = new Map(artifacts.map((artifact) => [artifact.artifact_id, artifact]));
+  const familyArtifacts = sortNewest(family.artifactIds.map((artifactId) => artifactMap.get(artifactId)).filter((artifact): artifact is ArtifactRecord => Boolean(artifact)));
+  const familyJobs = sortNewestJobs(family.jobIds.map((jobId) => jobs.find((job) => job.job_id === jobId)).filter((job): job is JobRecord => Boolean(job)));
+  const sourceIds = Object.values(family.recipe.inputs).filter((value): value is string => typeof value === "string" && value.length > 0);
+  const sourceArtifacts = sourceIds.map((artifactId) => artifactMap.get(artifactId)).filter((artifact): artifact is ArtifactRecord => Boolean(artifact));
+
+  return (
+    <section className="family-detail">
+      <div className="family-detail-head">
+        <div>
+          <span className="eyebrow">Family Detail</span>
+          <strong>{shortOperatorName(family.operator)}</strong>
+        </div>
+        <span className={`family-status ${family.status}`}>{family.status}</span>
+      </div>
+      <div className="family-recipe-strip">
+        <span>{family.recipe.backend}</span>
+        {family.recipe.model ? <span>{family.recipe.model}</span> : null}
+        {family.recipe.seed !== null && family.recipe.seed !== undefined ? <span>seed {family.recipe.seed}</span> : null}
+        <span>{formatFamilyStamp(family.updatedAt)}</span>
+      </div>
+      {sourceArtifacts.length ? (
+        <div className="family-source-strip" aria-label="Family source artifacts">
+          {sourceArtifacts.slice(0, 3).map((artifact) => (
+            <button key={artifact.artifact_id} type="button" onClick={() => onSelect(artifact.artifact_id)} title={artifactName(artifact)}>
+              <ArtifactIcon artifact={artifact} />
+              <span>{artifactName(artifact)}</span>
+            </button>
+          ))}
+        </div>
+      ) : null}
+      <div className="family-detail-actions">
+        <button type="button" onClick={() => onReplayRecipe(family.recipeId)}>
+          <Repeat size={14} />
+          Replay
+        </button>
+        <button type="button" onClick={() => onForkRecipe(family.recipe)}>
+          <GitFork size={14} />
+          Fork
+        </button>
+      </div>
+      <div className="family-artifacts">
+        {familyArtifacts.length ? (
+          familyArtifacts.map((artifact) => (
+            <article key={artifact.artifact_id} className={`family-artifact ${artifact.artifact_id === selectedId ? "selected" : ""}`}>
+              <button type="button" className="family-artifact-main" onClick={() => onSelect(artifact.artifact_id)}>
+                <ArtifactIcon artifact={artifact} />
+                <div>
+                  <strong>{artifactName(artifact)}</strong>
+                  <span>{artifactMeta(artifact)}</span>
+                </div>
+              </button>
+              {artifact.kind === "audio" ? (
+                <>
+                  <AudioDeck artifact={artifact} apiBase={apiBase} compact />
+                  <div className="family-artifact-actions">
+                    <button type="button" onClick={() => onCompare("a", artifact.artifact_id)}>A</button>
+                    <button type="button" onClick={() => onCompare("b", artifact.artifact_id)}>B</button>
+                  </div>
+                </>
+              ) : null}
+            </article>
+          ))
+        ) : (
+          <div className="quiet-panel compact">No artifacts landed yet</div>
+        )}
+      </div>
+      {familyJobs.length ? (
+        <details className="family-job-drawer">
+          <summary>
+            <Gauge size={14} />
+            Jobs
+            <span>{familyJobs.length}</span>
+          </summary>
+          <div className="family-job-list">
+            {familyJobs.map((job) => (
+              <JobProgress key={job.job_id} job={job} compact onCancelJob={onCancelJob} onRetryJob={onRetryJob} />
+            ))}
+          </div>
+        </details>
+      ) : null}
+    </section>
   );
 }
 
@@ -2758,6 +2905,12 @@ function formatSessionStamp(value: string) {
   if (!Number.isFinite(started) || started <= 0) return "All work";
   const date = new Date(started);
   return `Since ${date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+}
+
+function formatFamilyStamp(value: string) {
+  const timestamp = Date.parse(value);
+  if (!Number.isFinite(timestamp) || timestamp <= 0) return "recent";
+  return new Date(timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
 function formatBytes(bytes: number) {
