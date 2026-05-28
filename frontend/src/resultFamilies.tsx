@@ -2,11 +2,13 @@ import { useMemo, useState } from "react";
 import { Gauge, GitFork, Repeat, Search } from "lucide-react";
 
 import { ArtifactIcon } from "./artifactDisplay";
+import type { ArtifactAnnotationPayload } from "./api";
 import { artifactMeta, artifactName, formatFamilyStamp, sortNewest, sortNewestJobs } from "./artifactUtils";
 import { AudioDeck } from "./audioDeck";
 import type { ResultFamily } from "./controlPlane";
 import { JobProgress, type JobActionHandlers } from "./jobProgress";
 import { shortOperatorName } from "./jobUtils";
+import { listeningDecision, ListeningDecisionBadge, ListeningDecisionControls } from "./listeningDecision";
 import type { ArtifactRecord, JobRecord, Recipe } from "./types";
 
 export function ResultFamilyPanel({
@@ -36,6 +38,7 @@ export function ResultFamilyPanel({
     <div className="family-stack">
       {families.slice(0, 5).map((family) => {
         const latest = family.latestArtifactId ? artifactMap.get(family.latestArtifactId) ?? null : null;
+        const familyArtifacts = family.artifactIds.map((artifactId) => artifactMap.get(artifactId)).filter((artifact): artifact is ArtifactRecord => Boolean(artifact));
         const selected = Boolean(latest && latest.artifact_id === selectedId);
         const inspected = family.familyId === inspectedFamilyId;
         return (
@@ -59,6 +62,7 @@ export function ResultFamilyPanel({
               )}
             </div>
             <MetricChips metrics={family.metrics} />
+            <DecisionSummary artifacts={familyArtifacts} />
             <button type="button" className="family-replay" onClick={() => onInspectFamily(family.familyId)} title="Inspect family artifacts and jobs">
               <Search size={14} />
               Inspect
@@ -88,6 +92,7 @@ export function FamilyDetailPanel({
   onSelect,
   onInspectFamily,
   onCompare,
+  onAnnotate,
   onReplayRecipe,
   onForkRecipe,
   onCancelJob,
@@ -102,6 +107,7 @@ export function FamilyDetailPanel({
   onSelect: (artifactId: string | null) => void;
   onInspectFamily?: (familyId: string) => void;
   onCompare: (slot: "a" | "b", artifactId: string | null) => void;
+  onAnnotate: (artifactId: string, payload: ArtifactAnnotationPayload) => void;
   onReplayRecipe: (recipeId: string) => void;
   onForkRecipe: (recipe: Recipe) => void;
 } & JobActionHandlers) {
@@ -171,6 +177,7 @@ export function FamilyDetailPanel({
                 <div>
                   <strong>{artifactName(artifact)}</strong>
                   <span>{artifactMeta(artifact)}</span>
+                  <ListeningDecisionBadge artifact={artifact} />
                 </div>
               </button>
               {artifact.kind === "audio" ? (
@@ -180,6 +187,7 @@ export function FamilyDetailPanel({
                     <button type="button" onClick={() => onCompare("a", artifact.artifact_id)}>A</button>
                     <button type="button" onClick={() => onCompare("b", artifact.artifact_id)}>B</button>
                   </div>
+                  <ListeningDecisionControls artifact={artifact} source="family_detail" compact onDecide={onAnnotate} />
                 </>
               ) : null}
             </article>
@@ -203,6 +211,32 @@ export function FamilyDetailPanel({
         </details>
       ) : null}
     </section>
+  );
+}
+
+function DecisionSummary({ artifacts }: { artifacts: ArtifactRecord[] }) {
+  const counts = artifacts.reduce(
+    (items, artifact) => {
+      const decision = listeningDecision(artifact);
+      if (decision) items[decision] += 1;
+      return items;
+    },
+    { keeper: 0, maybe: 0, rejected: 0 },
+  );
+  const entries = [
+    ["keeper", counts.keeper],
+    ["maybe", counts.maybe],
+    ["rejected", counts.rejected],
+  ].filter(([, count]) => Number(count) > 0);
+  if (!entries.length) return null;
+  return (
+    <div className="decision-summary" aria-label="Listening decision summary">
+      {entries.map(([label, count]) => (
+        <i key={label} className={String(label)}>
+          {String(count)} {label}
+        </i>
+      ))}
+    </div>
   );
 }
 

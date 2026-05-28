@@ -37,6 +37,7 @@ import { createControlPlaneClient, DEFAULT_CONTROL_PLANE_URL, type ResultFamily,
 import { ForkRecipePanel } from "./forkRecipePanel";
 import { JobProgress, type JobActionHandlers } from "./jobProgress";
 import { isJobActive, shortOperatorName } from "./jobUtils";
+import { ListeningDecisionBadge } from "./listeningDecision";
 import { RecipeFields } from "./RecipeFields";
 import { FamilyDetailPanel, ResultFamilyPanel } from "./resultFamilies";
 import {
@@ -1544,6 +1545,7 @@ export function App() {
             onSelect={selectArtifact}
             onInspectFamily={setInspectedFamilyId}
             onCompare={setCompare}
+            onAnnotate={(artifactId, payload) => annotateArtifact.mutate({ artifactId, payload })}
             onReplayRecipe={(recipeId) => replayRecipeMutation.mutate(recipeId)}
             onForkRecipe={setForkTarget}
             onCancelJob={(job) => cancelJobMutation.mutate(job.job_id)}
@@ -1689,6 +1691,7 @@ function Specimen({
             onUseInRecipe={onUseInRecipe}
             onUsePrompt={onUsePrompt}
             onGeneratePrompt={onGeneratePrompt}
+            onAnnotate={onAnnotate}
             getArtifactPath={getArtifactPath}
           />
         )}
@@ -2109,6 +2112,7 @@ function SessionArtifactRow({
       <div>
         <strong>{artifactName(artifact)}</strong>
         <span>{artifactMeta(artifact)}</span>
+        <ListeningDecisionBadge artifact={artifact} />
         {artifact.tags.length ? (
           <span className="artifact-tags">
             {artifact.tags.slice(0, 3).map((tag) => (

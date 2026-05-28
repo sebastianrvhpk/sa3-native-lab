@@ -802,6 +802,92 @@ label {
   align-items: center;
 }
 
+.prompt-generated-take .listening-decision-controls {
+  grid-column: 1 / -1;
+}
+
+.listening-decision-controls {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.listening-decision-controls.compact {
+  gap: 0;
+}
+
+.listening-decision-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.listening-decision-buttons button {
+  min-height: 26px;
+  width: auto;
+  padding: 0 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border-radius: 999px;
+  color: var(--ink);
+  background: rgb(255 255 255 / 0.54);
+  box-shadow: none;
+  font-size: 0.64rem;
+  white-space: nowrap;
+}
+
+.listening-decision-buttons button.active.keeper {
+  background: linear-gradient(135deg, rgb(201 238 72 / 0.42), rgb(85 198 199 / 0.28));
+}
+
+.listening-decision-buttons button.active.maybe {
+  background: linear-gradient(135deg, rgb(243 168 60 / 0.34), rgb(201 238 72 / 0.24));
+}
+
+.listening-decision-buttons button.active.rejected {
+  background: linear-gradient(135deg, rgb(234 74 162 / 0.24), rgb(143 91 210 / 0.18));
+}
+
+.listening-decision-controls input {
+  min-height: 28px;
+  border-radius: 7px;
+  padding: 0 8px;
+  font-size: 0.66rem;
+  background: rgb(255 255 255 / 0.58);
+}
+
+.listening-decision-badge,
+.decision-summary i {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  border: 1px solid rgb(45 51 52 / 0.12);
+  border-radius: 999px;
+  padding: 2px 6px;
+  color: var(--ink);
+  background: rgb(255 255 255 / 0.48);
+  font-size: 0.62rem;
+  line-height: 1.25;
+  font-style: normal;
+}
+
+.listening-decision-badge.keeper,
+.decision-summary i.keeper {
+  background: rgb(201 238 72 / 0.24);
+}
+
+.listening-decision-badge.maybe,
+.decision-summary i.maybe {
+  background: rgb(243 168 60 / 0.2);
+}
+
+.listening-decision-badge.rejected,
+.decision-summary i.rejected {
+  background: rgb(234 74 162 / 0.16);
+}
+
 .bundle-audio-children {
   display: grid;
   gap: 7px;
@@ -2532,6 +2618,12 @@ audio {
 }
 
 .family-kinds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.decision-summary {
   display: flex;
   flex-wrap: wrap;
   gap: 5px;

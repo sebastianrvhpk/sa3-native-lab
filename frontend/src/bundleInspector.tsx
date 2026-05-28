@@ -3,8 +3,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AudioLines, CirclePlus, FlaskConical, Sparkles } from "lucide-react";
 
 import { createApi } from "./api";
+import type { ArtifactAnnotationPayload } from "./api";
 import { artifactMeta, artifactName, formatBytes, sortNewest } from "./artifactUtils";
 import { AudioDeck } from "./audioDeck";
+import { ListeningDecisionBadge, ListeningDecisionControls } from "./listeningDecision";
 import type { ArtifactInspection, ArtifactRecord, BundleAudioEntry, BundleFileEntry } from "./types";
 
 export function BundleField({
@@ -17,6 +19,7 @@ export function BundleField({
   onUseInRecipe,
   onUsePrompt,
   onGeneratePrompt,
+  onAnnotate,
   getArtifactPath,
 }: {
   artifact: ArtifactRecord;
@@ -28,6 +31,7 @@ export function BundleField({
   onUseInRecipe: (fieldKey: string, path: string, mode: string) => void;
   onUsePrompt: (prompt: string) => void;
   onGeneratePrompt: (request: PromptCandidateGenerationRequest) => void;
+  onAnnotate: (artifactId: string, payload: ArtifactAnnotationPayload) => void;
   getArtifactPath: (artifact: ArtifactRecord, fieldKey: string) => string;
 }) {
   const api = useMemo(() => createApi(apiBase), [apiBase]);
@@ -76,6 +80,7 @@ export function BundleField({
             promoteAudioError={promoteBundleAudio.isError ? errorMessage(promoteBundleAudio.error) : null}
             onUsePrompt={onUsePrompt}
             onGeneratePrompt={onGeneratePrompt}
+            onAnnotate={onAnnotate}
             onUseInRecipe={onUseInRecipe}
             artifacts={artifacts}
             onCompare={onCompare}
@@ -193,6 +198,7 @@ function BundleReaderPanel({
   promoteAudioError,
   onUsePrompt,
   onGeneratePrompt,
+  onAnnotate,
   onUseInRecipe,
   artifacts,
   onCompare,
@@ -205,6 +211,7 @@ function BundleReaderPanel({
   promoteAudioError: string | null;
   onUsePrompt: (prompt: string) => void;
   onGeneratePrompt: (request: PromptCandidateGenerationRequest) => void;
+  onAnnotate: (artifactId: string, payload: ArtifactAnnotationPayload) => void;
   onUseInRecipe: (fieldKey: string, path: string, mode: string) => void;
   artifacts: ArtifactRecord[];
   onCompare: (slot: "a" | "b", artifactId: string | null) => void;
@@ -243,6 +250,7 @@ function BundleReaderPanel({
         apiBase={apiBase}
         onUsePrompt={onUsePrompt}
         onGeneratePrompt={onGeneratePrompt}
+        onAnnotate={onAnnotate}
         onUseInRecipe={onUseInRecipe}
         onCompare={onCompare}
         onSelectArtifact={onSelectArtifact}
@@ -309,6 +317,7 @@ function PromptSearchCandidatePanel({
   apiBase,
   onUsePrompt,
   onGeneratePrompt,
+  onAnnotate,
   onUseInRecipe,
   onCompare,
   onSelectArtifact,
@@ -319,6 +328,7 @@ function PromptSearchCandidatePanel({
   apiBase: string;
   onUsePrompt: (prompt: string) => void;
   onGeneratePrompt: (request: PromptCandidateGenerationRequest) => void;
+  onAnnotate: (artifactId: string, payload: ArtifactAnnotationPayload) => void;
   onUseInRecipe: (fieldKey: string, path: string, mode: string) => void;
   onCompare: (slot: "a" | "b", artifactId: string | null) => void;
   onSelectArtifact: (artifactId: string | null) => void;
@@ -362,6 +372,7 @@ function PromptSearchCandidatePanel({
                     <button type="button" onClick={() => onSelectArtifact(take.artifact_id)} title={artifactName(take)}>
                       <AudioLines size={14} />
                       <span>{generatedTakeLabel(take)}</span>
+                      <ListeningDecisionBadge artifact={take} />
                     </button>
                     <AudioDeck artifact={take} apiBase={apiBase} compact />
                     <div className="prompt-generated-actions">
@@ -374,6 +385,11 @@ function PromptSearchCandidatePanel({
                         B
                       </button>
                     </div>
+                    <ListeningDecisionControls
+                      artifact={take}
+                      source="prompt_candidate_bench"
+                      onDecide={onAnnotate}
+                    />
                   </div>
                 ))}
               </div>

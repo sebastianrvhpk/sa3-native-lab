@@ -34,6 +34,7 @@ describe("FamilyDetailPanel", () => {
     const onSelect = vi.fn();
     const onInspectFamily = vi.fn();
     const onForkRecipe = vi.fn();
+    const onAnnotate = vi.fn();
     const family = sweepFamily();
     const sibling = sweepFamily({
       recipe_id: "recipe_sibling",
@@ -59,6 +60,7 @@ describe("FamilyDetailPanel", () => {
           onSelect={onSelect}
           onInspectFamily={onInspectFamily}
           onCompare={onCompare}
+          onAnnotate={onAnnotate}
           onReplayRecipe={vi.fn()}
           onForkRecipe={onForkRecipe}
         />
@@ -77,6 +79,11 @@ describe("FamilyDetailPanel", () => {
     const negativeVariant = screen.getByText("alpha -4").closest("article");
     expect(negativeVariant).not.toBeNull();
     await user.click(within(negativeVariant as HTMLElement).getByRole("button", { name: "A" }));
+    const negativeArtifact = screen.getAllByText("alpha_neg4p00")
+      .map((element) => element.closest(".family-artifact"))
+      .find((element): element is HTMLElement => Boolean(element));
+    expect(negativeArtifact).not.toBeNull();
+    await user.click(within(negativeArtifact as HTMLElement).getByRole("button", { name: /keep/i }));
     await user.click(within(negativeVariant as HTMLElement).getByTitle("Fork the sweep recipe"));
     await user.click(within(screen.getByLabelText("Sort sweep variants")).getByRole("button", { name: "score" }));
     await user.click(within(screen.getByLabelText("Sibling sweep comparison")).getByRole("button", { name: /inspect/i }));
@@ -85,6 +92,10 @@ describe("FamilyDetailPanel", () => {
     expect(tableRows[0]).toHaveTextContent("alpha_pos4p00");
 
     expect(onCompare).toHaveBeenCalledWith("a", "art_neg");
+    expect(onAnnotate).toHaveBeenCalledWith("art_neg", expect.objectContaining({
+      tags: ["keeper"],
+      metadata: expect.objectContaining({ listening_decision: "keeper", listening_decision_source: "family_detail" }),
+    }));
     expect(onInspectFamily).toHaveBeenCalledWith("recipe_sibling");
     expect(onForkRecipe).toHaveBeenCalledWith(family.recipe);
   });
