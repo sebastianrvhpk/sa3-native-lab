@@ -29,8 +29,9 @@ import {
 import modelImage from "../../stable-audio-3.png";
 import { createApi, type ArtifactAnnotationPayload, type ExperimentPayload, type RecipeForkPayload } from "./api";
 import { ArtifactBadge, ArtifactIcon } from "./artifactDisplay";
-import { artifactMeta, artifactName, artifactShape, formatBytes, sortNewest, sortNewestJobs } from "./artifactUtils";
+import { artifactMeta, artifactName, artifactShape, sortNewest, sortNewestJobs } from "./artifactUtils";
 import { AudioDeck, TinyWave } from "./audioDeck";
+import { BundleField } from "./bundleInspector";
 import { createControlPlaneClient, DEFAULT_CONTROL_PLANE_URL, type ResultFamily, type WorkbenchState } from "./controlPlane";
 import { ForkRecipePanel } from "./forkRecipePanel";
 import { JobProgress, type JobActionHandlers } from "./jobProgress";
@@ -1917,143 +1918,6 @@ function LatentField({ artifact }: { artifact: ArtifactRecord }) {
   );
 }
 
-function BundleField({
-  artifact,
-  artifacts,
-  apiBase,
-  onCompare,
-  onSelectArtifact,
-  onUseAsDonor,
-}: {
-  artifact: ArtifactRecord;
-  artifacts: ArtifactRecord[];
-  apiBase: string;
-  onCompare: (slot: "a" | "b", artifactId: string | null) => void;
-  onSelectArtifact: (artifactId: string | null) => void;
-  onUseAsDonor: (artifactId: string) => void;
-}) {
-  const api = useMemo(() => createApi(apiBase), [apiBase]);
-  const inspection = useQuery({
-    queryKey: ["artifact-inspection", apiBase, artifact.artifact_id],
-    queryFn: () => api.inspectArtifact(artifact.artifact_id),
-    enabled: artifact.kind === "bundle",
-    staleTime: 30000,
-  });
-  const fileName = artifact.file?.filename ?? artifactName(artifact);
-  const cells = artifact.recipe_id ? 36 : 18;
-  const bundleFiles = inspection.data?.bundle_files ?? [];
-  const totalBytes = bundleFiles.reduce((total, item) => total + item.byte_size, 0);
-  return (
-    <div className="bundle-field" aria-label={`Experiment bundle ${fileName}`}>
-      {Array.from({ length: cells }, (_, index) => (
-        <span key={index} />
-      ))}
-      <div className="bundle-readout">
-        <strong>{fileName}</strong>
-        <span>
-          {inspection.isLoading ? "Inspecting..." : bundleFiles.length ? `${bundleFiles.length} files · ${formatBytes(totalBytes)}` : artifact.file ? formatBytes(artifact.file.byte_size) : "bundle"}
-        </span>
-        {bundleFiles.length ? (
-          <div className="bundle-file-list">
-            {bundleFiles.slice(0, 4).map((file) => (
-              <i key={file.path}>
-                {file.path}
-                <small>{formatBytes(file.byte_size)}</small>
-              </i>
-            ))}
-          </div>
-        ) : null}
-        {inspection.data ? (
-          <BundlePreview
-            preview={inspection.data.bundle_preview}
-            artifacts={artifacts}
-            sourceCount={inspection.data.sources.length}
-            childCount={inspection.data.children.length}
-            onCompare={onCompare}
-            onSelectArtifact={onSelectArtifact}
-            onUseAsDonor={onUseAsDonor}
-          />
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-function BundlePreview({
-  preview,
-  artifacts,
-  sourceCount,
-  childCount,
-  onCompare,
-  onSelectArtifact,
-  onUseAsDonor,
-}: {
-  preview: Record<string, unknown>;
-  artifacts: ArtifactRecord[];
-  sourceCount: number;
-  childCount: number;
-  onCompare: (slot: "a" | "b", artifactId: string | null) => void;
-  onSelectArtifact: (artifactId: string | null) => void;
-  onUseAsDonor: (artifactId: string) => void;
-}) {
-  const rows = [
-    ["operator", preview.operator],
-    ["results", preview.result_count],
-    ["metric", preview.metric],
-    ["candidates", preview.candidate_count],
-    ["top k", preview.top_k],
-    ["sources", sourceCount],
-    ["children", childCount],
-  ].filter(([, value]) => value !== undefined && value !== null && value !== "");
-  const results = Array.isArray(preview.results) ? preview.results.slice(0, 3) : [];
-  const artifactMap = new Map(artifacts.map((artifact) => [artifact.artifact_id, artifact]));
-  if (!rows.length && !results.length) return null;
-  return (
-    <div className="bundle-preview">
-      {rows.length ? (
-        <div className="metric-chips">
-          {rows.slice(0, 6).map(([key, value]) => (
-            <i key={String(key)}>
-              {String(key)}: {String(value)}
-            </i>
-          ))}
-        </div>
-      ) : null}
-      {results.length ? (
-        <div className="bundle-result-list">
-          {results.map((result, index) => {
-            const item = result && typeof result === "object" ? (result as Record<string, unknown>) : {};
-            const artifactId = typeof item.artifact_id === "string" ? item.artifact_id : "";
-            const localArtifact = artifactId ? artifactMap.get(artifactId) ?? null : null;
-            return (
-              <article key={`${String(item.artifact_id ?? index)}-${index}`}>
-                <div>
-                  <strong>{localArtifact ? artifactName(localArtifact) : String(item.artifact_id ?? `result ${index + 1}`)}</strong>
-                  <small>{formatBundleScore(item) || (localArtifact ? artifactMeta(localArtifact) : "memory hit")}</small>
-                </div>
-                <div className="memory-hit-actions">
-                  <button type="button" disabled={!localArtifact} onClick={() => onSelectArtifact(localArtifact?.artifact_id ?? null)}>
-                    Select
-                  </button>
-                  <button type="button" disabled={localArtifact?.kind !== "audio"} onClick={() => localArtifact && onCompare("a", localArtifact.artifact_id)}>
-                    A
-                  </button>
-                  <button type="button" disabled={localArtifact?.kind !== "audio"} onClick={() => localArtifact && onCompare("b", localArtifact.artifact_id)}>
-                    B
-                  </button>
-                  <button type="button" disabled={localArtifact?.kind !== "latent"} onClick={() => localArtifact && onUseAsDonor(localArtifact.artifact_id)}>
-                    Donor
-                  </button>
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
 function LineageThread({ artifact, sources }: { artifact: ArtifactRecord; sources: ArtifactRecord[] }) {
   const sourceLabels = sources.length ? sources.slice(0, 3).map(artifactName) : ["origin"];
   return (
@@ -2219,14 +2083,6 @@ function formatSessionStamp(value: string) {
   if (!Number.isFinite(started) || started <= 0) return "All work";
   const date = new Date(started);
   return `Since ${date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
-}
-
-function formatBundleScore(item: Record<string, unknown>) {
-  const score = typeof item.score === "number" ? item.score : null;
-  const distance = typeof item.distance === "number" ? item.distance : null;
-  if (score !== null) return `score ${score.toFixed(3)}`;
-  if (distance !== null) return `distance ${distance.toFixed(3)}`;
-  return "";
 }
 
 function createdAfter(createdAt: string, startedAt: string) {

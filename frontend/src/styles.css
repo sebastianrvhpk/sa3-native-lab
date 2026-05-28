@@ -459,6 +459,77 @@ label {
   gap: 5px;
 }
 
+.bundle-kind-panel {
+  grid-column: 1 / -1;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  padding: 8px;
+  display: grid;
+  gap: 7px;
+  background:
+    linear-gradient(135deg, rgb(85 198 199 / 0.12), rgb(201 238 72 / 0.1)),
+    rgb(255 255 255 / 0.42);
+}
+
+.bundle-kind-panel > div:first-child {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.bundle-kind-panel strong,
+.bundle-kind-panel span,
+.bundle-kind-rows i,
+.bundle-kind-rows small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bundle-kind-panel strong {
+  color: var(--ink);
+  font-size: 0.78rem;
+}
+
+.bundle-kind-panel span {
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
+.bundle-kind-rows {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(74px, 1fr));
+  gap: 5px;
+}
+
+.bundle-kind-rows i {
+  border: 1px solid var(--line-soft);
+  border-radius: 7px;
+  padding: 5px 6px;
+  display: grid;
+  gap: 2px;
+  font-style: normal;
+  color: var(--quiet);
+  background: rgb(255 255 255 / 0.42);
+}
+
+.bundle-kind-rows small {
+  color: var(--ink);
+}
+
+.bundle-kind-panel.memory {
+  background: linear-gradient(135deg, rgb(85 198 199 / 0.17), rgb(143 91 210 / 0.12)), rgb(255 255 255 / 0.42);
+}
+
+.bundle-kind-panel.sweep {
+  background: linear-gradient(135deg, rgb(243 168 60 / 0.18), rgb(65 108 199 / 0.12)), rgb(255 255 255 / 0.42);
+}
+
+.bundle-kind-panel.profile,
+.bundle-kind-panel.vectors {
+  background: linear-gradient(135deg, rgb(201 238 72 / 0.17), rgb(85 198 199 / 0.12)), rgb(255 255 255 / 0.42);
+}
+
 .bundle-file-list i {
   display: grid;
   grid-template-columns: minmax(0, 1fr) max-content;
