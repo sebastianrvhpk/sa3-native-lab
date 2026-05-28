@@ -130,6 +130,8 @@ export interface JobRecord {
   finished_at?: string | null;
 }
 
+export type JobEvent = { type: "snapshot"; job: JobRecord } | { type: "error"; error: string };
+
 export interface ModelStatus {
   backend: BackendName;
   available: boolean;

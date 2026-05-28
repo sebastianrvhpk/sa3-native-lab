@@ -1409,6 +1409,11 @@ audio {
   white-space: nowrap;
 }
 
+.monitor-state.live {
+  color: var(--green);
+  background: linear-gradient(135deg, rgb(201 238 72 / 0.34), rgb(85 198 199 / 0.24));
+}
+
 .monitor-jobs {
   display: grid;
   gap: 8px;

@@ -31,7 +31,7 @@ import {
 
 import modelImage from "../../stable-audio-3.png";
 import { createApi, type ArtifactAnnotationPayload, type ExperimentPayload } from "./api";
-import { createControlPlaneClient, DEFAULT_CONTROL_PLANE_URL, type ResultFamily } from "./controlPlane";
+import { createControlPlaneClient, DEFAULT_CONTROL_PLANE_URL, type ResultFamily, type WorkbenchState } from "./controlPlane";
 import { RecipeFields } from "./RecipeFields";
 import {
   buildExperimentPayload,
@@ -48,7 +48,7 @@ import {
   type RecipeValue,
 } from "./recipeFormModel";
 import { useBenchStore } from "./store";
-import type { ArtifactRecord, JobRecord, ModelStatus, NotebookMode, OperatorName, OperatorSpec, SessionRecord } from "./types";
+import type { ArtifactRecord, JobEvent, JobRecord, ModelStatus, NotebookMode, OperatorName, OperatorSpec, SessionRecord } from "./types";
 
 const audioModels = [
   { value: "medium", label: "medium", decoder: "same-l" },
@@ -640,6 +640,7 @@ export function App() {
   const [donorArtifactId, setDonorArtifactId] = useState("");
   const [experimentMode, setExperimentMode] = useState<ExperimentMode>("experiment.audio_style_vectors");
   const [experimentForm, setExperimentForm] = useState<Record<string, RecipeValue>>(() => defaultExperimentForm("experiment.audio_style_vectors"));
+  const [liveJobsById, setLiveJobsById] = useState<Record<string, JobRecord>>({});
 
   const workbenchState = workbench.data;
   const allArtifacts = workbenchState?.artifacts ?? artifacts.data ?? [];
@@ -654,7 +655,8 @@ export function App() {
   const audioArtifacts = allArtifacts.filter((item) => item.kind === "audio");
   const latentArtifacts = allArtifacts.filter((item) => item.kind === "latent");
   const bundleArtifacts = allArtifacts.filter((item) => item.kind === "bundle");
-  const allJobs = workbenchState?.jobs ?? jobs.data ?? [];
+  const serverJobs = workbenchState?.jobs ?? jobs.data ?? [];
+  const allJobs = mergeJobRecords(serverJobs, Object.values(liveJobsById));
   const sessionJobs = workbenchState?.sessionJobs ?? (activeSessionId
     ? allJobs.filter((item) => item.recipe.session_id === activeSessionId)
     : allJobs.filter((item) => createdAfter(item.created_at, sessionStartedAt)));
@@ -690,6 +692,8 @@ export function App() {
   const decodeJob = activeJobForOperator(runningJobs, "latent.decode");
   const operatorJob = activeJobForOperator(runningJobs, operator);
   const experimentJob = activeJobForOperator(runningJobs, activeExperiment.value);
+  const runningJobIds = runningJobs.map((job) => job.job_id).sort().join("|");
+  const liveEventing = Object.values(liveJobsById).some((job) => isJobActive(job));
 
   useEffect(() => {
     if (!selectedArtifactId && visibleArtifacts[0]) {
@@ -713,6 +717,25 @@ export function App() {
       queryClient.invalidateQueries({ queryKey: ["sessions", apiBase] }),
     ]);
   };
+
+  useEffect(() => {
+    if (!runningJobIds) return;
+    const sockets = runningJobIds.split("|").map((jobId) => {
+      const socket = new WebSocket(api.jobEventsUrl(jobId));
+      socket.onmessage = (event) => {
+        const job = parseJobEvent(event.data);
+        if (!job) return;
+        setLiveJobsById((current) => ({ ...current, [job.job_id]: job }));
+        if (!isJobActive(job)) {
+          void invalidate();
+        }
+      };
+      return socket;
+    });
+    return () => {
+      sockets.forEach((socket) => socket.close());
+    };
+  }, [api, runningJobIds]);
 
   const importAudio = useMutation({
     mutationFn: (file: File) => api.importAudio(file, file.name, activeSessionId),
@@ -940,6 +963,7 @@ export function App() {
           <RunMonitor
             runningJobs={runningJobs}
             latestJob={latestJobs[0] ?? null}
+            eventing={liveEventing}
             onCancelJob={(job) => cancelJobMutation.mutate(job.job_id)}
             onRetryJob={(job) => retryJobMutation.mutate(job.job_id)}
           />
@@ -1609,11 +1633,13 @@ interface JobActionHandlers {
 function RunMonitor({
   runningJobs,
   latestJob,
+  eventing = false,
   onCancelJob,
   onRetryJob,
 }: {
   runningJobs: JobRecord[];
   latestJob: JobRecord | null;
+  eventing?: boolean;
 } & JobActionHandlers) {
   const monitorJobs = runningJobs.length ? runningJobs.slice(0, 3) : latestJob ? [latestJob] : [];
   if (!monitorJobs.length) {
@@ -1636,7 +1662,7 @@ function RunMonitor({
           <span className="eyebrow">Run Monitor</span>
           <strong>{busy ? `${runningJobs.length} active job${runningJobs.length === 1 ? "" : "s"}` : "Last run"}</strong>
         </div>
-        <span className="monitor-state">{busy ? "running" : latestJob?.status ?? "idle"}</span>
+        <span className={`monitor-state ${eventing ? "live" : ""}`}>{busy ? (eventing ? "live events" : "running") : latestJob?.status ?? "idle"}</span>
       </div>
       <div className="monitor-jobs">
         {monitorJobs.map((job) => (
@@ -2378,6 +2404,26 @@ function sortNewest(artifacts: ArtifactRecord[]) {
 
 function sortNewestJobs(jobs: JobRecord[]) {
   return [...jobs].sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
+}
+
+function mergeJobRecords(baseJobs: JobRecord[], overlayJobs: JobRecord[]) {
+  const byId = new Map(baseJobs.map((job) => [job.job_id, job]));
+  for (const job of overlayJobs) {
+    byId.set(job.job_id, job);
+  }
+  return sortNewestJobs([...byId.values()]);
+}
+
+function parseJobEvent(raw: string): JobRecord | null {
+  try {
+    const payload = JSON.parse(raw) as JobEvent | JobRecord;
+    if ("type" in payload) {
+      return payload.type === "snapshot" ? payload.job : null;
+    }
+    return "job_id" in payload ? payload : null;
+  } catch {
+    return null;
+  }
 }
 
 function buildResultFamilies(artifacts: ArtifactRecord[], jobs: JobRecord[]): ResultFamily[] {

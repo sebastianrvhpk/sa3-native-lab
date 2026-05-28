@@ -135,6 +135,7 @@ export function createApi(baseUrl: string) {
   return {
     base,
     artifactFileUrl: (artifactId: string) => `${base}/artifacts/${artifactId}/file`,
+    jobEventsUrl: (jobId: string) => websocketUrl(base, `/jobs/${encodeURIComponent(jobId)}/events`),
     health: () => request<HealthResponse>("/health"),
     operatorSpecs: () => request<OperatorSpec[]>("/operators/specs"),
     sessions: () => request<SessionRecord[]>("/sessions"),
@@ -191,6 +192,12 @@ export function createApi(baseUrl: string) {
     runExperiment: (payload: ExperimentPayload) =>
       request<JobRecord>("/experiments/run", jsonPost(payload)),
   };
+}
+
+function websocketUrl(base: string, path: string): string {
+  const url = new URL(`${base}${path}`);
+  url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+  return url.toString();
 }
 
 function jsonPost(payload: unknown): RequestInit {

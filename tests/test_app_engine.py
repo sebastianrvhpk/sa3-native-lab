@@ -373,6 +373,11 @@ def test_fastapi_surface_imports_and_runs_latent_job(tmp_path):
     retry_finished = _wait_for_api_job(client, retry.json()["job_id"])
     assert retry_finished["status"] == "succeeded"
 
+    with client.websocket_connect(f"/jobs/{retry_finished['job_id']}/events") as websocket:
+        event = websocket.receive_json()
+    assert event["type"] == "snapshot"
+    assert event["job"]["job_id"] == retry_finished["job_id"]
+
 
 def test_colab_mode_atlas_covers_numbered_modes(tmp_path):
     pytest.importorskip("fastapi")

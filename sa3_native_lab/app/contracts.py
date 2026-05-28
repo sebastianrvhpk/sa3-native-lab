@@ -33,6 +33,11 @@ class JobStatus(str, Enum):
     CANCELLED = "cancelled"
 
 
+class JobEventType(str, Enum):
+    SNAPSHOT = "snapshot"
+    ERROR = "error"
+
+
 class OperatorName(str, Enum):
     TEXT_TO_AUDIO = "generate.text_to_audio"
     AUDIO_TO_AUDIO = "generate.audio_to_audio"
@@ -199,6 +204,16 @@ class JobRecord(ContractModel):
         if value < 0.0 or value > 1.0:
             raise ValueError("progress must be in [0, 1]")
         return value
+
+
+class JobEvent(ContractModel):
+    type: JobEventType = JobEventType.SNAPSHOT
+    job: JobRecord
+
+
+class JobErrorEvent(ContractModel):
+    type: JobEventType = JobEventType.ERROR
+    error: str
 
 
 class ModelStatus(ContractModel):

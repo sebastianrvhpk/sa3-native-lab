@@ -19,6 +19,8 @@ from .contracts import (
     ExperimentRunRequest,
     HealthResponse,
     InpaintRequest,
+    JobErrorEvent,
+    JobEvent,
     JobStatus,
     JobRecord,
     LatentDecodeRequest,
@@ -343,10 +345,10 @@ def create_app(
             try:
                 record = jobs.get(job_id)
             except KeyError:
-                await websocket.send_json({"error": f"job not found: {job_id}"})
+                await websocket.send_json(JobErrorEvent(error=f"job not found: {job_id}").model_dump(mode="json"))
                 await websocket.close(code=1008)
                 return
-            payload = record.model_dump(mode="json")
+            payload = JobEvent(job=record).model_dump(mode="json")
             if payload != previous_payload:
                 await websocket.send_json(payload)
                 previous_payload = payload
