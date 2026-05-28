@@ -16,6 +16,12 @@ describe("job recovery hints", () => {
     });
   });
 
+  it("points Hugging Face cache failures at disk space", () => {
+    expect(jobRecoveryHints(job({ error: "Internal Writer Error: Background writer channel closed after disk space warning" }))).toContainEqual(
+      expect.objectContaining({ title: "Disk space" }),
+    );
+  });
+
   it("keeps cancelled jobs retryable without pretending they failed", () => {
     expect(job({ status: "cancelled" }).status).toBe("cancelled");
     expect(jobRecoveryHints(job({ status: "cancelled" }))).toEqual([

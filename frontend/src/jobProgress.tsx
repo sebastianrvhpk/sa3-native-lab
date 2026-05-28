@@ -124,6 +124,9 @@ export function jobRecoveryHints(job: JobRecord): JobRecoveryHint[] {
   if (/(out of memory|oom|mps|metal|allocation)/.test(text)) {
     hints.push({ title: "Memory pressure", detail: "Try shorter duration, fewer steps, smaller batch size, or a CPU fallback for non-generation jobs." });
   }
+  if (/(disk space|no space|hf-cache-space|hugging face cache|background writer channel closed|writer error)/.test(text)) {
+    hints.push({ title: "Disk space", detail: "Free space in the Hugging Face cache or set HF_HOME to a larger volume before retrying." });
+  }
   if (/exit code/.test(text)) {
     hints.push({ title: "Subprocess failed", detail: "Open the log tail for the script output, adjust the recipe, then retry from the preserved job." });
   }

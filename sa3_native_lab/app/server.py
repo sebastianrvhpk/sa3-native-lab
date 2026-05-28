@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import os
+import shutil
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile, WebSocket
@@ -453,6 +455,7 @@ def _readiness_response(store: ArtifactStore, runtime: RuntimeDispatcher) -> Rea
         _artifact_root_check(store),
         *_backend_readiness_checks(runtime),
         _huggingface_readiness_check(),
+        _hf_cache_space_check(),
         _mlx_medium_weight_check(runtime.repo_root),
         _same_l_access_check(),
     ]
@@ -499,6 +502,49 @@ def _huggingface_readiness_check() -> ReadinessCheck:
         return ReadinessCheck(name=check.name, status=check.status, message=check.message, detail=check.detail)
     except Exception as exc:
         return ReadinessCheck(name="hf-auth", status="warn", message="Hugging Face auth could not be checked", detail=str(exc))
+
+
+def _hf_cache_space_check() -> ReadinessCheck:
+    cache_dir = _hf_cache_dir()
+    try:
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        free_bytes = shutil.disk_usage(cache_dir).free
+    except Exception as exc:
+        return ReadinessCheck(name="hf-cache-space", status="warn", message="Hugging Face cache space could not be checked", detail=str(exc))
+    required_bytes = 9_222_120_000
+    if _hf_cached_file("stabilityai/stable-audio-3-medium", "model.safetensors"):
+        return ReadinessCheck(name="hf-cache-space", status="ok", message="SA3 Medium torch checkpoint is cached")
+    if free_bytes < required_bytes:
+        return ReadinessCheck(
+            name="hf-cache-space",
+            status="warn",
+            message=f"SA3 Medium torch checkpoint needs about {_format_bytes(required_bytes)} free; {_format_bytes(free_bytes)} is free",
+            detail=f"cache: {cache_dir}",
+        )
+    return ReadinessCheck(
+        name="hf-cache-space",
+        status="ok",
+        message=f"Hugging Face cache has {_format_bytes(free_bytes)} free for first Medium torch download",
+        detail=f"cache: {cache_dir}",
+    )
+
+
+def _hf_cached_file(repo_id: str, filename: str) -> bool:
+    try:
+        from huggingface_hub import try_to_load_from_cache
+
+        return isinstance(try_to_load_from_cache(repo_id, filename), str)
+    except Exception:
+        return False
+
+
+def _hf_cache_dir() -> Path:
+    hf_home = os.environ.get("HF_HOME")
+    return (Path(hf_home) if hf_home else Path.home() / ".cache" / "huggingface") / "hub"
+
+
+def _format_bytes(value: int | float) -> str:
+    return f"{float(value) / (1024**3):.1f} GiB"
 
 
 def _mlx_medium_weight_check(repo_root: Path) -> ReadinessCheck:

@@ -4,6 +4,7 @@ import json
 import os
 import platform
 import re
+import shutil
 import subprocess
 import sys
 from dataclasses import fields
@@ -72,6 +73,7 @@ SCRIPT_EXPERIMENT_OPERATORS = {
 PROGRESS_PERCENT_RE = re.compile(r"(?<![\d.])(\d{1,3})(?:\.\d+)?%")
 
 AUDIO_EXTENSIONS = {".wav", ".flac", ".mp3", ".ogg", ".m4a", ".aiff", ".aif"}
+SA3_MEDIUM_CHECKPOINT_BYTES = 9_222_120_000
 DEFAULT_PROMPT_SEARCH_VOCABULARY = [
     "warm",
     "cold",
@@ -1328,6 +1330,7 @@ class RuntimeDispatcher:
 
         model_name = str(recipe.model or params.get("model") or "medium")
         device = str(params.get("device") or _device_for_backend(recipe.backend))
+        _ensure_sa3_model_cache_space(model_name)
         context.set_progress(0.11, f"loading SA3 flow scorer model={model_name} device={device}")
         context.log(f"SA3 flow prompt scorer loading model={model_name} device={device}")
         stable_model = StableAudioModel.from_pretrained(
@@ -1888,6 +1891,41 @@ def _device_for_backend(backend: BackendName | str) -> str:
             pass
         return "cpu"
     return "cpu"
+
+
+def _ensure_sa3_model_cache_space(model_name: str) -> None:
+    if model_name != "medium" or _hf_cached_file("stabilityai/stable-audio-3-medium", "model.safetensors"):
+        return
+    cache_dir = _hf_cache_dir()
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    free_bytes = shutil.disk_usage(cache_dir).free
+    if free_bytes >= SA3_MEDIUM_CHECKPOINT_BYTES:
+        return
+    raise RuntimeError(
+        "SA3 Medium torch checkpoint is not cached and needs about "
+        f"{_format_bytes(SA3_MEDIUM_CHECKPOINT_BYTES)} free in the Hugging Face cache; "
+        f"{_format_bytes(free_bytes)} is currently free at {cache_dir}. "
+        "Free disk space, move HF_HOME to a larger volume, or use the MLX generation path for Medium."
+    )
+
+
+def _hf_cached_file(repo_id: str, filename: str) -> bool:
+    try:
+        from huggingface_hub import try_to_load_from_cache
+
+        return isinstance(try_to_load_from_cache(repo_id, filename), str)
+    except Exception:
+        return False
+
+
+def _hf_cache_dir() -> Path:
+    hf_home = os.environ.get("HF_HOME")
+    return (Path(hf_home) if hf_home else Path.home() / ".cache" / "huggingface") / "hub"
+
+
+def _format_bytes(value: int | float) -> str:
+    gib = float(value) / (1024**3)
+    return f"{gib:.1f} GiB"
 
 
 def _write_audio_tensor(path: Path, audio: Any, *, sample_rate: int) -> None:
