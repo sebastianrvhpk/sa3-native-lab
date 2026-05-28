@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  audioDescriptorDeltaRows,
   bundleDomainSections,
   bundleReuseActions,
   promptCandidateGeneratedArtifacts,
+  promptSearchTargetArtifact,
   promptSearchCandidates,
   summarizeBundle,
 } from "./bundleInspector";
@@ -203,6 +205,60 @@ describe("bundle inspector summaries", () => {
       expect.objectContaining({
         artifact_id: "art_take",
       }),
+    ]);
+    expect(
+      promptSearchTargetArtifact(
+        {
+          artifact_id: "art_prompt_bundle",
+          kind: "bundle",
+          source_artifact_ids: ["art_target", "art_other"],
+          metadata: {},
+          tags: [],
+          path: "/tmp/bundle.zip",
+          created_at: "2026-05-28T15:00:00.000Z",
+        },
+        [
+          {
+            artifact_id: "art_target",
+            kind: "audio",
+            source_artifact_ids: [],
+            metadata: {},
+            tags: [],
+            path: "/tmp/target.wav",
+            created_at: "2026-05-28T14:00:00.000Z",
+          },
+          {
+            artifact_id: "art_other",
+            kind: "latent",
+            source_artifact_ids: [],
+            metadata: {},
+            tags: [],
+            path: "/tmp/latent.npy",
+            created_at: "2026-05-28T14:01:00.000Z",
+          },
+        ] as never,
+      ),
+    ).toEqual(expect.objectContaining({ artifact_id: "art_target" }));
+    expect(
+      audioDescriptorDeltaRows({
+        target_artifact_id: "art_target",
+        take_artifact_id: "art_take",
+        target: {},
+        take: {},
+        delta: {
+          rms_dbfs: 1.25,
+          spectral_centroid_hz: 220.4,
+          spectral_flux: 0.005,
+          spectral_flatness: -0.08,
+          stereo_width: 0.03,
+        },
+      }),
+    ).toEqual([
+      expect.objectContaining({ key: "rms_dbfs", label: "level", value: "+1.3 dB", tone: "up" }),
+      expect.objectContaining({ key: "spectral_centroid_hz", label: "bright", value: "+220 Hz", tone: "up" }),
+      expect.objectContaining({ key: "spectral_flux", label: "motion", value: "+0.01", tone: "neutral" }),
+      expect.objectContaining({ key: "spectral_flatness", label: "noise", value: "-0.08", tone: "down" }),
+      expect.objectContaining({ key: "stereo_width", label: "width", value: "+0.03", tone: "up" }),
     ]);
   });
 });

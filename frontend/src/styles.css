@@ -802,6 +802,67 @@ label {
   align-items: center;
 }
 
+.descriptor-delta {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+  gap: 4px;
+  min-width: 0;
+}
+
+.descriptor-delta i {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+  border: 1px solid rgb(45 51 52 / 0.13);
+  border-radius: 6px;
+  padding: 4px 5px;
+  background:
+    linear-gradient(135deg, rgb(85 198 199 / 0.1), rgb(234 74 162 / 0.08)),
+    rgb(255 255 255 / 0.38);
+  font-style: normal;
+}
+
+.descriptor-delta span,
+.descriptor-delta strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.descriptor-delta span {
+  color: var(--quiet);
+  font-size: 0.6rem;
+  font-weight: 500;
+}
+
+.descriptor-delta strong {
+  color: var(--ink);
+  font-size: 0.67rem;
+  font-weight: 720;
+}
+
+.descriptor-delta i.up strong {
+  color: var(--green);
+}
+
+.descriptor-delta i.down strong {
+  color: var(--rose);
+}
+
+.descriptor-delta i.neutral strong {
+  color: var(--muted);
+}
+
+.descriptor-delta.unavailable {
+  border: 1px dashed rgb(45 51 52 / 0.18);
+  border-radius: 6px;
+  padding: 5px 6px;
+  color: var(--muted);
+  background: rgb(255 255 255 / 0.28);
+  font-size: 0.64rem;
+}
+
 .prompt-generated-take .listening-decision-controls {
   grid-column: 1 / -1;
 }

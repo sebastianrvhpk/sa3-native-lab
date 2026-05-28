@@ -48,6 +48,14 @@ export interface AudioPeaksResponse {
   peaks: number[];
 }
 
+export interface AudioDescriptorComparison {
+  target_artifact_id: string;
+  take_artifact_id: string;
+  target: Record<string, number>;
+  take: Record<string, number>;
+  delta: Record<string, number>;
+}
+
 export interface LatentMetadata {
   shape: [number, number];
   latent_rate: number;

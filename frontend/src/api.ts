@@ -2,6 +2,7 @@ import type {
   ArtifactInspection,
   ArtifactKind,
   ArtifactRecord,
+  AudioDescriptorComparison,
   AudioPeaksResponse,
   HealthResponse,
   JobRecord,
@@ -173,6 +174,10 @@ export function createApi(baseUrl: string) {
     },
     audioPeaks: (artifactId: string, bins = 96) =>
       request<AudioPeaksResponse>(`/artifacts/${encodeURIComponent(artifactId)}/peaks?bins=${bins}`),
+    audioDescriptorComparison: (targetArtifactId: string, takeArtifactId: string) =>
+      request<AudioDescriptorComparison>(
+        `/artifacts/${encodeURIComponent(targetArtifactId)}/descriptor-comparison/${encodeURIComponent(takeArtifactId)}`,
+      ),
     inspectArtifact: (artifactId: string) =>
       request<ArtifactInspection>(`/artifacts/${encodeURIComponent(artifactId)}/inspect`),
     promoteBundleAudio: (artifactId: string, payload: BundleAudioPromotionPayload) =>

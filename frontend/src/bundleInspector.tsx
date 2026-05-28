@@ -7,7 +7,7 @@ import type { ArtifactAnnotationPayload } from "./api";
 import { artifactMeta, artifactName, formatBytes, sortNewest } from "./artifactUtils";
 import { AudioDeck } from "./audioDeck";
 import { ListeningDecisionBadge, ListeningDecisionControls } from "./listeningDecision";
-import type { ArtifactInspection, ArtifactRecord, BundleAudioEntry, BundleFileEntry } from "./types";
+import type { ArtifactInspection, ArtifactRecord, AudioDescriptorComparison, BundleAudioEntry, BundleFileEntry } from "./types";
 
 export function BundleField({
   artifact,
@@ -336,6 +336,7 @@ function PromptSearchCandidatePanel({
   const candidates = promptSearchCandidates(summary);
   if (!candidates.length) return null;
   const totalTakes = promptCandidateGeneratedArtifacts(artifact.artifact_id, artifacts).length;
+  const targetArtifact = promptSearchTargetArtifact(artifact, artifacts);
   return (
     <div className="prompt-candidate-panel" aria-label="Prompt search candidates">
       <div className="prompt-candidate-head">
@@ -375,6 +376,7 @@ function PromptSearchCandidatePanel({
                       <ListeningDecisionBadge artifact={take} />
                     </button>
                     <AudioDeck artifact={take} apiBase={apiBase} compact />
+                    <PromptTakeDescriptorDelta apiBase={apiBase} target={targetArtifact} take={take} />
                     <div className="prompt-generated-actions">
                       <button type="button" onClick={() => onCompare("a", take.artifact_id)} title="Send generated take to comparison slot A">
                         <FlaskConical aria-hidden="true" size={12} />
@@ -401,6 +403,48 @@ function PromptSearchCandidatePanel({
   );
 }
 
+function PromptTakeDescriptorDelta({
+  apiBase,
+  target,
+  take,
+}: {
+  apiBase: string;
+  target: ArtifactRecord | null;
+  take: ArtifactRecord;
+}) {
+  const api = useMemo(() => createApi(apiBase), [apiBase]);
+  const comparison = useQuery({
+    queryKey: ["audio-descriptor-comparison", apiBase, target?.artifact_id, take.artifact_id],
+    queryFn: () => {
+      if (!target) throw new Error("prompt-search target audio unavailable");
+      return api.audioDescriptorComparison(target.artifact_id, take.artifact_id);
+    },
+    enabled: Boolean(target),
+    staleTime: 60000,
+  });
+  if (!target) {
+    return <div className="descriptor-delta unavailable">target delta unavailable</div>;
+  }
+  if (comparison.isLoading) {
+    return <div className="descriptor-delta unavailable">measuring delta...</div>;
+  }
+  if (comparison.isError || !comparison.data) {
+    return <div className="descriptor-delta unavailable">delta unavailable</div>;
+  }
+  const rows = audioDescriptorDeltaRows(comparison.data);
+  if (!rows.length) return null;
+  return (
+    <div className="descriptor-delta" aria-label={`Descriptor delta for ${artifactName(take)}`}>
+      {rows.map((row) => (
+        <i key={row.key} className={row.tone} title={row.title}>
+          <span>{row.label}</span>
+          <strong>{row.value}</strong>
+        </i>
+      ))}
+    </div>
+  );
+}
+
 export function promptCandidateGeneratedArtifacts(bundleArtifactId: string, artifacts: ArtifactRecord[], prompt?: string): ArtifactRecord[] {
   return sortNewest(
     artifacts.filter((artifact) => {
@@ -410,6 +454,57 @@ export function promptCandidateGeneratedArtifacts(bundleArtifactId: string, arti
       return artifact.metadata.generation_origin === "prompt_search_candidate";
     }),
   );
+}
+
+export function promptSearchTargetArtifact(bundleArtifact: ArtifactRecord, artifacts: ArtifactRecord[]): ArtifactRecord | null {
+  for (const sourceId of bundleArtifact.source_artifact_ids) {
+    const source = artifacts.find((artifact) => artifact.artifact_id === sourceId);
+    if (source?.kind === "audio") return source;
+  }
+  return null;
+}
+
+export interface DescriptorDeltaRow {
+  key: string;
+  label: string;
+  value: string;
+  tone: "up" | "down" | "neutral";
+  title: string;
+}
+
+const DESCRIPTOR_DELTA_KEYS = [
+  { key: "rms_dbfs", label: "level" },
+  { key: "spectral_centroid_hz", label: "bright" },
+  { key: "spectral_flux", label: "motion" },
+  { key: "spectral_flatness", label: "noise" },
+  { key: "stereo_width", label: "width" },
+] as const;
+
+export function audioDescriptorDeltaRows(comparison: AudioDescriptorComparison): DescriptorDeltaRow[] {
+  return DESCRIPTOR_DELTA_KEYS.flatMap((item) => {
+    const value = comparison.delta[item.key];
+    if (typeof value !== "number" || !Number.isFinite(value)) return [];
+    return [{
+      key: item.key,
+      label: item.label,
+      value: formatDescriptorDelta(item.key, value),
+      tone: descriptorDeltaTone(item.key, value),
+      title: `${item.label}: generated take ${formatDescriptorDelta(item.key, value)} vs target`,
+    }];
+  });
+}
+
+function formatDescriptorDelta(key: string, value: number): string {
+  const prefix = value > 0 ? "+" : "";
+  if (key === "rms_dbfs") return `${prefix}${value.toFixed(1)} dB`;
+  if (key.endsWith("_hz")) return `${prefix}${Math.round(value)} Hz`;
+  return `${prefix}${value.toFixed(2)}`;
+}
+
+function descriptorDeltaTone(key: string, value: number): DescriptorDeltaRow["tone"] {
+  const threshold = key === "rms_dbfs" ? 0.25 : key.endsWith("_hz") ? 25 : 0.02;
+  if (Math.abs(value) < threshold) return "neutral";
+  return value > 0 ? "up" : "down";
 }
 
 function promptCandidateGenerationRequest(

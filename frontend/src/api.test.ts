@@ -35,6 +35,15 @@ const server = setupServer(
       bundle_summary: { kind: "sweep", file_count: 1 },
     }),
   ),
+  http.get("http://api.test/artifacts/art_target/descriptor-comparison/art_take", () =>
+    HttpResponse.json({
+      target_artifact_id: "art_target",
+      take_artifact_id: "art_take",
+      target: { duration_seconds: 8, rms_dbfs: -18, spectral_centroid_hz: 440 },
+      take: { duration_seconds: 8, rms_dbfs: -16, spectral_centroid_hz: 900 },
+      delta: { rms_dbfs: 2, spectral_centroid_hz: 460, spectral_flux: 0.02, spectral_flatness: 0.1, stereo_width: 0.05 },
+    }),
+  ),
   http.get("http://api.test/readiness", () =>
     HttpResponse.json({
       ok: true,
@@ -137,6 +146,14 @@ describe("createApi", () => {
       label: "keeper take",
       session_id: "sess_1",
       metadata: { operator: "artifact.promote_bundle_audio", bundle_audio_path: "take.wav" },
+    });
+  });
+
+  it("compares descriptors between a target and generated take", async () => {
+    await expect(createApi("http://api.test").audioDescriptorComparison("art_target", "art_take")).resolves.toMatchObject({
+      target_artifact_id: "art_target",
+      take_artifact_id: "art_take",
+      delta: { rms_dbfs: 2, spectral_centroid_hz: 460 },
     });
   });
 
