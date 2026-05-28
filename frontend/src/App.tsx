@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Activity,
+  Archive,
   AudioLines,
   Box,
   Braces,
@@ -819,6 +820,18 @@ export function App() {
     },
   });
 
+  const archiveSession = useMutation({
+    mutationFn: async (session: SessionRecord) => {
+      await api.updateSession(session.session_id, { status: "archived" });
+      return api.createSession({ name: `Session ${new Date().toLocaleString()}` });
+    },
+    onSuccess: async (session) => {
+      setSession(session.session_id, session.created_at);
+      selectArtifact(null);
+      await invalidate();
+    },
+  });
+
   const cancelJobMutation = useMutation({
     mutationFn: (jobId: string) => api.cancelJob(jobId),
     onSuccess: invalidate,
@@ -1380,8 +1393,10 @@ export function App() {
             session={activeSession}
             sessionStartedAt={activeSession?.created_at ?? sessionStartedAt}
             creatingSession={createSession.isPending}
+            archivingSession={archiveSession.isPending}
             onSelect={selectArtifact}
             onStartSession={() => createSession.mutate()}
+            onArchiveSession={() => activeSession && archiveSession.mutate(activeSession)}
             onCancelJob={(job) => cancelJobMutation.mutate(job.job_id)}
             onRetryJob={(job) => retryJobMutation.mutate(job.job_id)}
           />
@@ -1694,8 +1709,10 @@ function SessionTray({
   session,
   sessionStartedAt,
   creatingSession,
+  archivingSession,
   onSelect,
   onStartSession,
+  onArchiveSession,
   onCancelJob,
   onRetryJob,
 }: {
@@ -1709,8 +1726,10 @@ function SessionTray({
   session: SessionRecord | null;
   sessionStartedAt: string;
   creatingSession: boolean;
+  archivingSession: boolean;
   onSelect: (artifactId: string | null) => void;
   onStartSession: () => void;
+  onArchiveSession: () => void;
 } & JobActionHandlers) {
   const [archiveQuery, setArchiveQuery] = useState("");
   const [archiveTag, setArchiveTag] = useState("");
@@ -1731,10 +1750,22 @@ function SessionTray({
           <span className="eyebrow">Session</span>
           <strong>{session?.name ?? formatSessionStamp(sessionStartedAt)}</strong>
         </div>
-        <button type="button" className="session-new" onClick={onStartSession} title="New session" disabled={creatingSession}>
-          {creatingSession ? <LoaderCircle className="spin" size={16} /> : <Plus size={16} />}
-          {creatingSession ? "Creating" : "New"}
-        </button>
+        <div className="session-actions">
+          <button type="button" className="session-new" onClick={onStartSession} title="New session" disabled={creatingSession || archivingSession}>
+            {creatingSession ? <LoaderCircle className="spin" size={16} /> : <Plus size={16} />}
+            {creatingSession ? "Creating" : "New"}
+          </button>
+          <button
+            type="button"
+            className="session-new"
+            onClick={onArchiveSession}
+            title="Archive this session and start a clean one"
+            disabled={!session || session.status === "archived" || creatingSession || archivingSession || activeJobs.length > 0}
+          >
+            {archivingSession ? <LoaderCircle className="spin" size={16} /> : <Archive size={16} />}
+            {archivingSession ? "Archiving" : "Archive"}
+          </button>
+        </div>
       </div>
 
       {activeJobs.length ? (

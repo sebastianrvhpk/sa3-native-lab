@@ -65,6 +65,19 @@ const server = setupServer(
       created_at: "2026-05-27T15:00:00.000Z",
     });
   }),
+  http.patch("http://api.test/sessions/sess_1", async ({ request }) => {
+    const payload = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({
+      session_id: "sess_1",
+      name: payload.name ?? "session one",
+      status: payload.status ?? "active",
+      notes: payload.notes ?? null,
+      metadata: {},
+      created_at: "2026-05-27T15:00:00.000Z",
+      updated_at: "2026-05-27T15:05:00.000Z",
+      archived_at: payload.status === "archived" ? "2026-05-27T15:05:00.000Z" : null,
+    });
+  }),
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
@@ -104,6 +117,14 @@ describe("createApi", () => {
     ).resolves.toMatchObject({
       job_id: "job_fork",
       recipe: { params: { shift_frames: 4 }, seed: 11 },
+    });
+  });
+
+  it("updates session archive state", async () => {
+    await expect(createApi("http://api.test").updateSession("sess_1", { status: "archived" })).resolves.toMatchObject({
+      session_id: "sess_1",
+      status: "archived",
+      archived_at: "2026-05-27T15:05:00.000Z",
     });
   });
 });
