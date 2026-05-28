@@ -782,6 +782,7 @@ const audioToAudioControlKeys = [...generateControlKeys, "init_noise_level"];
 const inpaintControlKeys = [...audioToAudioControlKeys, "inpaint_start_seconds", "inpaint_end_seconds"];
 const sameEncodeControlKeys = ["model", "chunked", "chunk_size", "overlap", "prompt", "notes"];
 const sameDecodeControlKeys = ["model", "chunked", "chunk_size", "overlap", "notes"];
+const systemParamKeys = new Set(["metadata"]);
 
 const generationCatalog: readonly GenerationConfig[] = [
   {
@@ -2757,7 +2758,7 @@ function specParamKeys(spec: OperatorSpec | undefined): string[] {
 
 function missingParamKeys(spec: OperatorSpec | undefined, controlledKeys: readonly string[]): string[] {
   const controlled = new Set(controlledKeys);
-  return specParamKeys(spec).filter((key) => !controlled.has(key));
+  return specParamKeys(spec).filter((key) => !systemParamKeys.has(key) && !controlled.has(key));
 }
 
 function filteredOperatorSpec(spec: OperatorSpec | undefined, fieldKeysToKeep: readonly string[]): OperatorSpec | undefined {
