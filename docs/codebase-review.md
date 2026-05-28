@@ -18,8 +18,9 @@ and the next risks for turning the Colab experiments into a proper app.
   shape/rate, source artifact IDs, recipe ID, tags, and freeform metadata.
 - The frontend is no longer just a generic dashboard. It has a listening bench,
   Operator Studio, Recipe Studio, Mode Atlas, job rail, artifact rail, waveform
-  peaks, playback, A/B slots, result-family inspection, memory-hit reuse, and
-  alpha-sweep promotion plus recipe fork diff/reset controls.
+  peaks, region-loop playback, A/B slots, result-family inspection,
+  memory-hit reuse, archive-and-new sessions, and alpha-sweep promotion plus
+  recipe fork diff/reset controls.
 - A first TypeScript tRPC control plane exists in `apps/control-plane`; it owns
   app-shaped workbench reads plus job lifecycle, recipe, artifact, family, and
   archive procedures plus durable-journal-aware job-event subscriptions while
@@ -31,11 +32,13 @@ and the next risks for turning the Colab experiments into a proper app.
 - Backend operator specs now include `ui_fields`, and the frontend merges those
   fields into Operator Studio and Recipe Studio so bounds, defaults, options,
   required fields, artifact-kind hints, and backend choices are visible.
-- Job progress cards now classify common failures into recovery hints instead
-  of leaving the user with only a raw failed status.
+- Job progress cards now classify running phases and common failures instead
+  of leaving the user with only a raw status.
 - Bundle inspection promotes JSON/NPZ summaries, metric scalars, and plot/image
   discovery into typed reader rows. Reusable bundles can now populate Recipe
-  Studio fields directly, and alpha sweep families have a compact metric table.
+  Studio fields directly. Inline image plots now render from bundle artifacts,
+  and alpha sweep families have sortable metrics, best-candidate marking, and
+  A/B promotion from the table.
 
 ## Important Risks
 
@@ -50,9 +53,9 @@ and the next risks for turning the Colab experiments into a proper app.
   wrapping, and output finalization. It works, but it will become harder to test
   as more Colab modes become native.
 - Bundle artifacts have backend-parsed JSON/NPZ summaries, metric rows, plot
-  file discovery, typed UI readers, and recipe-input actions, but embedded
-  vector/profile/soft-prompt plot previews and deeper inspectors are still
-  missing.
+  file discovery, inline image previews, typed UI readers, and recipe-input
+  actions, but vector/profile/soft-prompt-specific inspectors are still
+  shallow.
 - Long-running jobs have cancel/retry, but not pause/resume, priority,
   resource-aware scheduling, or resident worker reuse.
 - Error messages are now transformed into first-pass recovery hints, but command
@@ -81,8 +84,9 @@ and the next risks for turning the Colab experiments into a proper app.
    Recipe Studio payloads.
 
 5. Add artifact inspectors.
-   Extend bundle readers from plot discovery and recipe actions to actual
-   embedded previews and kind-specific inspectors.
+   Extend current audio/latent/bundle vitals and inline plot previews into
+   domain-specific vector, profile, soft-prompt, training, sweep, and memory
+   inspectors.
 
 6. Add deeper job control.
    Later add pause/resume, priorities, worker pools, and resident model

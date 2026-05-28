@@ -12,7 +12,8 @@ For the broader stack direction and promotion triggers, see
    Typed job events now reach the UI through a tRPC/SSE control-plane bridge
    when the control plane is enabled. The bridge now emits monotonic IDs,
    resume-aware sequencing, heartbeat events, log-tail diagnostics, and
-   durable Python job-journal replay. The next trust step is richer command and
+   durable Python job-journal replay. Job cards now also derive readable phases
+   from current event text. The next trust step is richer command and
    stderr-tail context plus eventually replacing live polling with a stream
    source.
 
@@ -40,7 +41,8 @@ For the broader stack direction and promotion triggers, see
 1. Deepen result-family views for sweeps.
    Recipe families now appear with metrics, a detail panel, per-result playback,
    explicit A/B promotion, replay, fork actions, and a compact sweep metric
-   table. Next they need sortable columns and sibling recipe comparison.
+   table with sort controls and best-candidate marking. Next they need sibling
+   recipe comparison across separate sweep runs.
 
 2. Presets for Operator Studio.
    Store named parameter sets for blur, DSP, graft, renoise, and cyclic roll.
@@ -48,17 +50,19 @@ For the broader stack direction and promotion triggers, see
    manual form entry.
 
 3. Artifact filtering and tagging.
-   Labels, tags, notes, and archive search are now implemented. Next filters
-   should cover kind, model, operator, date, status, and source lineage.
+   Labels, tags, notes, archive search, and archive-and-new session cleanup are
+   now implemented. Next filters should cover kind, model, operator, date,
+   status, and source lineage.
 
 4. Better bundle readers.
    Bundle file inventory, JSON previews, memory-result reuse, and first-pass
    typed readers now exist. The backend now parses JSON/NPZ bundle summaries
    and promotes metric scalars plus plot/image files into reader rows. Bundle
    cards can now route profiles, vectors, directions, soft prompts, memory
-   folders, and LoRA checkpoints into Recipe Studio. Next, vector/profile/
-   soft-prompt/sweep bundles should expose actual embedded plot previews and
-   generated audio children without making the user inspect zip contents.
+   folders, and LoRA checkpoints into Recipe Studio, and discovered image plots
+   render inline through the bundle-file endpoint. Next, vector/profile/
+   soft-prompt/sweep bundles should expose generated audio children and richer
+   domain-specific controls without making the user inspect zip contents.
 
 ## P2: Research Cognition
 
@@ -127,9 +131,10 @@ For the broader stack direction and promotion triggers, see
 6. Add typed artifact inspectors.
    Bundle summaries now parse JSON/NPZ metadata, metric scalars, and plot/image
    file discovery in the backend, and reusable bundles can populate Recipe
-   Studio fields. Next each kind should grow a dedicated inspector component
-   with embedded previews and richer actions: audio, latent, vector bundle,
-   profile, soft prompt, training output, and memory collection.
+   Studio fields. The specimen panel now shows kind-specific vitals for audio,
+   latent, and bundle artifacts. Next each bundle kind should grow a dedicated
+   inspector component with richer actions: vector bundle, profile, soft prompt,
+   training output, sweep, and memory collection.
 
 7. Continue extracting app surfaces from `App.tsx`.
    Audio playback, artifact display, job progress, result families, recipe

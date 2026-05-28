@@ -41,6 +41,7 @@ Important endpoints:
 - `GET /operators/specs`
 - `GET /colab/modes`
 - `GET /artifacts/{artifact_id}/inspect`
+- `GET /artifacts/{artifact_id}/bundle-file?path=...`
 - `POST /audio/import`
 - `POST /generate/text`
 - `POST /latents/encode`
@@ -56,18 +57,21 @@ Important endpoints:
 ### Listening Bench
 
 The React app in `frontend/` is the working interface. It supports artifact
-selection, waveform inspection, audio playback, A/B comparison, MLX generation,
-SAME encode/decode, latent-operator runs, Recipe Studio, Mode Atlas, and job
-polling. The bench also has a Run Monitor that surfaces active jobs, percent
-progress, live event snapshots, heartbeat diagnostics, elapsed time,
+selection, waveform inspection, audio playback, region looping, playback-rate
+checks, A/B comparison, MLX generation, SAME encode/decode, latent-operator
+runs, Recipe Studio, Mode Atlas, and job polling. The bench also has a Run
+Monitor that surfaces active jobs, percent progress, derived phase labels,
+artifact counts, live event snapshots, heartbeat diagnostics, elapsed time,
 cancellation, retry, the latest backend message, and recovery hints for common
 failures such as gated Hugging Face access, missing MLX setup, path mistakes,
-subprocess exits, and memory pressure. Selected artifacts can be labeled, tagged, annotated,
-replayed from their recipe, and searched later from the archive. Result families
-can be inspected as a compact branch surface with source references,
-per-artifact playback, A/B assignment, alpha-sweep promotion controls, job
-progress, replay, and fork actions. Forked recipes show changed fields and
-per-parameter reset controls before submit.
+subprocess exits, and memory pressure. Selected artifacts can be labeled,
+tagged, annotated, replayed from their recipe, inspected by kind, and searched
+later from the archive. A session can be archived into the background while a
+fresh session starts cleanly. Result families can be inspected as a compact
+branch surface with source references, per-artifact playback, A/B assignment,
+sortable alpha-sweep promotion controls, job progress, replay, and fork
+actions. Forked recipes show changed fields and per-parameter reset controls
+before submit.
 
 Read-heavy workbench state can now be loaded through the TypeScript tRPC
 control plane. This is enabled by setting `VITE_SA3_CONTROL_PLANE_URL` or by
@@ -124,8 +128,9 @@ Artifacts can also carry user labels, notes, and tags for archive search.
 Bundle artifacts can be inspected through the API and UI to reveal their file
 inventory, backend-parsed JSON/NPZ summaries, parsed preview metadata, recipe,
 source artifacts, and child artifacts. Sweep and script bundles now promote
-`metrics.json` values and plot/image files into the reader summary instead of
-leaving them buried in zip contents. Reusable bundle types expose native
+`metrics.json` values and plot/image files into the reader summary, and image
+plots can render inline through the bundle-file endpoint instead of staying
+buried in zip contents. Reusable bundle types expose native
 Recipe Studio actions such as use as profile, sweep vectors, use direction, use
 soft prompt, use memory, and use checkpoint. Jobs and artifacts with the same
 recipe are grouped as result families in the right rail with run metrics when
@@ -164,9 +169,11 @@ Confirmed in the current codebase:
   readiness panel, a recipe fork
   editor with diffs and resets, result-family detail playback, memory-result
   reuse actions, alpha-sweep variant promotion with a compact metric table,
-  bundle-to-recipe reuse actions, job recovery hints,
+  metric sorting, best-candidate marking, bundle-to-recipe reuse actions, job
+  phase labels, job recovery hints,
   backend-derived operator field metadata, backend-parsed typed bundle
-  inspectors, bundle metrics, and plot/file preview shells.
+  inspectors, bundle metrics, inline plot/image previews, and kind-specific
+  artifact vitals.
 - Core app surfaces are now split into focused modules for audio playback,
   artifact display, job progress, result families, recipe forks, and bundle
   inspection.
@@ -176,16 +183,17 @@ Still partial:
 
 - Some Colab modes are mapped but not yet first-class native interactions.
 - Type-specific readers for profiles, vectors, soft prompts, training outputs,
-  sweeps, and memory collections now receive backend-parsed summaries plus
-  first-pass metrics/plot discovery and recipe-input actions, but still need
-  actual embedded plot rendering and richer kind-specific inspectors.
+  sweeps, and memory collections now receive backend-parsed summaries,
+  first-pass metrics/plot discovery, embedded image plot rendering, and
+  recipe-input actions, but still need richer domain-specific controls for each
+  bundle type.
 - Memory-query bundles expose preview rows and donor/A-B reuse actions, but
   still need richer dataset browsing, preview audio for non-local children, and
   style-reference promotion.
 - Multi-output sweeps have family grouping, metrics, direct playback, explicit
-  A/B promotion controls, recipe fork deltas, inspected metric summaries, and a
-  compact alpha/metric table, but still need sortable columns and sibling
-  recipe comparison.
+  A/B promotion controls, recipe fork deltas, inspected metric summaries, best
+  candidate marking, sort controls, and a compact alpha/metric table, but still
+  need sibling recipe comparison across separate sweep runs.
 - Live job events now reach React through the control plane when that path is
   enabled; the bridge replays Python's durable job journal and can later switch
   its live source to Python WebSocket without changing the UI contract.

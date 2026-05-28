@@ -53,14 +53,15 @@ Python read queries, Python mutations, and Python job WebSockets.
 
 On the UI side, result families are now treated as app objects: the right rail
 can inspect a family, play its audio artifacts, assign A/B comparison slots,
-show related jobs, promote alpha-sweep variants, and branch the recipe with
-visible diffs. Memory-query bundle hits can also feed app actions when they
-resolve to local artifacts. Bundle inspection now includes backend-parsed
-summaries for JSON/NPZ outputs, metric scalars, and plot/image discovery in
-addition to file inventory. Reusable bundles can populate Recipe Studio fields
-for vectors, directions, profiles, memory folders, soft prompts, and LoRA
-checkpoints. Operator specs also carry backend-derived `ui_fields`, which React
-merges into the hand-shaped instrument forms.
+show related jobs, promote alpha-sweep variants from sortable metric rows, mark
+the best candidate when a metric exists, and branch the recipe with visible
+diffs. Memory-query bundle hits can also feed app actions when they resolve to
+local artifacts. Bundle inspection now includes backend-parsed summaries for
+JSON/NPZ outputs, metric scalars, plot/image discovery, and inline image plot
+rendering in addition to file inventory. Reusable bundles can populate Recipe
+Studio fields for vectors, directions, profiles, memory folders, soft prompts,
+and LoRA checkpoints. Operator specs also carry backend-derived `ui_fields`,
+which React merges into the hand-shaped instrument forms.
 
 The local runner can launch the full path:
 
@@ -116,6 +117,6 @@ Future responsibilities:
 3. Move more bounded fork and recipe forms onto backend-derived `ui_fields`.
 4. Promote family detail and memory-result actions into tRPC procedures where
    they need server-side shaping beyond `workbench.load`.
-5. Add richer family-specific inspectors and embedded plot previews for sweeps, memory
-   query bundles, and style profile bundles.
+5. Add richer family-specific inspectors for sweeps, memory query bundles, and
+   style profile bundles now that embedded image plot previews exist.
 6. Evaluate Postgres only after these procedures stabilize.

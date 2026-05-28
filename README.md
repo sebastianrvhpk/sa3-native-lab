@@ -238,12 +238,13 @@ npm run dev
 Open the printed Vite URL, normally `http://127.0.0.1:5173`. The first bench
 supports audio import, MLX text generation, SAME encode/decode, latent operator
 jobs, Recipe Studio script experiments, Colab Mode Atlas parity/status, job
-polling plus durable live job replay, cancellation/retry, recipe replay/fork
-editing, recipe diff/reset controls, result-family grouping with detail
-playback, alpha-sweep variant promotion and metric tables, memory-query result
-reuse, bundle-to-recipe actions, backend-parsed typed bundle inspectors,
-readiness checks, artifact selection, real waveform peaks, download, and A/B
-audio playback.
+polling plus durable live job replay, job phase labels, cancellation/retry,
+recipe replay/fork editing, recipe diff/reset controls, archive-and-new session
+cleanup, result-family grouping with detail playback, sortable alpha-sweep
+variant promotion and metric tables, memory-query result reuse,
+bundle-to-recipe actions, backend-parsed typed bundle inspectors, inline bundle
+plot previews, readiness checks, artifact selection, kind-specific artifact
+vitals, real waveform peaks, region looping, download, and A/B audio playback.
 
 ### Notebook Parity Check
 
