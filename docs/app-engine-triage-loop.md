@@ -48,7 +48,7 @@ source audio / prompt
 | P1 | Bundle inspection and result families | `/artifacts/{id}/inspect` + `families.load` + result rail/detail panel | Promote | API tests, control-plane tests, frontend tests |
 | P1 | Typed bundle readers | backend `bundle_summary` parser + `BundleField` readers for memory/profile/vector/sweep/soft-prompt/training outputs, metrics, plot discovery, inline plot rendering, and recipe-input reuse | Promote | API tests, frontend tests/build |
 | P1 | Alpha-sweep family promotion | `FamilyDetailPanel` alpha variant band with explicit A/B promotion, sortable metric table, best-candidate marking, and sibling sweep comparison | Promote | frontend tests/build |
-| P1 | Prompt-candidate generation bench | Prompt-search bundle reader + text generation lineage metadata + grouped prompt-candidate result families | Promote | frontend tests/build, control-plane family test |
+| P1 | Prompt-candidate generation bench | Prompt-search bundle reader + text generation lineage metadata + grouped prompt-candidate result families, inline playback, A/B assignment, and durable keeper/maybe/reject listening decisions | Promote | frontend tests/build, control-plane family test |
 | P1 | Session cleanup | archive-and-new session action plus searchable archive drawer | Promote | API/client tests, frontend build |
 | P1 | Kind-specific artifact vitals | specimen inspector rows for audio, latent, and bundle artifacts | Promote first slice | frontend build |
 | P2 | Memory atlas and retrieval | `LatentMemoryIndex` + `memory.query` + memory-hit reuse actions | Promote first slice | nearest-neighbor runtime test, frontend smoke |
@@ -68,20 +68,22 @@ source audio / prompt
 
 ## Immediate Next Queue
 
-1. Add saved A/B decisions and promotion notes for prompt-candidate takes so
-   listenable candidates can become annotated keepers instead of transient
-   comparison slots.
+1. Add archive and session filters for listening decisions, family source, model,
+   operator, and artifact kind so keepers can be recovered without reading the
+   full job stream.
 2. Add richer domain-specific inspectors for style profiles, vectors, prompt
    search, soft prompts, memory collections, sweeps, geometry audits, and
    training outputs.
-3. Add CLAP or hybrid scorer only after the SA3 flow prompt-candidate bench has
+3. Add descriptor deltas for prompt-search targets versus generated takes, then
+   relate those deltas to keeper/maybe/reject notes.
+4. Add CLAP or hybrid scorer only after the SA3 flow prompt-candidate bench has
    enough generated/listened examples to justify another scoring objective.
-4. Add control-head recipe adapters for Mode 12 and labelled-probe extensions
+5. Add control-head recipe adapters for Mode 12 and labelled-probe extensions
    for Mode 15.
-5. Continue shrinking frontend field drift until backend `ui_fields` can drive
+6. Continue shrinking frontend field drift until backend `ui_fields` can drive
    most controls without losing the instrument-specific layout.
-6. Add parameter presets and recipe diffing for Operator Studio.
-7. Promote MLX generation from subprocess-only to a resident worker when repeated
+7. Add parameter presets and recipe diffing for Operator Studio.
+8. Promote MLX generation from subprocess-only to a resident worker when repeated
    generation needs lower overhead.
-8. Add deeper visual lineage for multi-step artifact families once recipe jobs
+9. Add deeper visual lineage for multi-step artifact families once recipe jobs
    are populated enough to make the routing real.

@@ -66,8 +66,9 @@ artifact counts, live event snapshots, heartbeat diagnostics, elapsed time,
 cancellation, retry, the latest backend message, and recovery hints for common
 failures such as gated Hugging Face access, missing MLX setup, path mistakes,
 subprocess exits, and memory pressure. Selected artifacts can be labeled,
-tagged, annotated, replayed from their recipe, inspected by kind, and searched
-later from the archive. A session can be archived into the background while a
+tagged, annotated, marked keeper/maybe/rejected from listening surfaces,
+replayed from their recipe, inspected by kind, and searched later from the
+archive. A session can be archived into the background while a
 fresh session starts cleanly. Result families can be inspected as a compact
 branch surface with source references, per-artifact playback, A/B assignment,
 sortable alpha-sweep promotion controls, job progress, replay, and fork
@@ -142,7 +143,8 @@ soft prompt, use memory, and use checkpoint. Prompt-search bundles expose
 candidate prompts as a small listening bench: a candidate can be used as the
 main generation prompt, sent to an alpha sweep, or rendered as MLX audio with
 lineage back to the bundle. Generated candidate takes appear inline beside the
-prompt, can be played immediately, and can be assigned to A/B comparison slots.
+prompt, can be played immediately, assigned to A/B comparison slots, and marked
+keeper/maybe/rejected with optional listening notes.
 Jobs and artifacts with the same recipe are grouped as result families in the
 right rail with run metrics when the job reports them; prompt-candidate
 generations are grouped under their search bundle instead of scattering as
@@ -179,10 +181,10 @@ Confirmed in the current codebase:
   target audio artifact. It supports `lexical_probe` for cheap deterministic
   wiring and `sa3_flow_probe` for an optional Medium-backed flow-loss objective.
   Prompt-search candidates can be rendered as generated audio takes with
-  lineage, inline playback, and A/B assignment. CLAP remains queued behind the
-  same explicit scorer field.
-- Artifact annotation and archive search are implemented for labels, notes, and
-  tags.
+  lineage, inline playback, A/B assignment, and saved listening decisions. CLAP
+  remains queued behind the same explicit scorer field.
+- Artifact annotation and archive search are implemented for labels, notes,
+  tags, and durable keeper/maybe/reject listening decisions.
 - tRPC workbench, readiness, job lifecycle, recipe replay/fork, artifact
   inspection, result-family procedures, and job-event subscriptions are
   implemented behind the control-plane launch flag.
@@ -195,8 +197,8 @@ Confirmed in the current codebase:
   backend-derived operator field metadata, backend-parsed typed bundle
   inspectors, bundle metrics, inline plot/image previews, and kind-specific
   artifact vitals, embedded bundle-audio playback and promotion, prompt-search
-  scorer controls, candidate-family bundle reading, sibling sweep comparison,
-  and the first native geometry-audit recipe.
+  scorer controls, candidate-family bundle reading, durable listening decision
+  controls, sibling sweep comparison, and the first native geometry-audit recipe.
 - Core app surfaces are now split into focused modules for audio playback,
   artifact display, job progress, result families, recipe forks, and bundle
   inspection.
@@ -206,8 +208,8 @@ Still partial:
 
 - Some Colab modes are mapped but not yet first-class native interactions.
   Prompt-search modes now have a native recipe path and an SA3 flow-loss scorer,
-  but real Medium/MPS listening validation and candidate comparison UX are still
-  needed before calling Mode 2/3/5 parity complete.
+  but richer descriptor deltas and comparison reports are still needed before
+  calling Mode 2/3/5 parity complete.
 - Type-specific readers for profiles, vectors, soft prompts, training outputs,
   sweeps, memory collections, and geometry audits now receive backend-parsed
   summaries, first-pass metrics/plot discovery, embedded image/audio rendering,
@@ -218,8 +220,8 @@ Still partial:
   style-reference promotion.
 - Multi-output sweeps have family grouping, metrics, direct playback, explicit
   A/B promotion controls, recipe fork deltas, inspected metric summaries, best
-  candidate marking, sort controls, a compact alpha/metric table, and sibling
-  recipe comparison across separate sweep runs.
+  candidate marking, saved listening decisions, sort controls, a compact
+  alpha/metric table, and sibling recipe comparison across separate sweep runs.
 - Live job events now reach React through the control plane when that path is
   enabled; the bridge replays Python's durable job journal and can later switch
   its live source to Python WebSocket without changing the UI contract.

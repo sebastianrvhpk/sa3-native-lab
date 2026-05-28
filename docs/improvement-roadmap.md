@@ -43,10 +43,11 @@ For the broader stack direction and promotion triggers, see
 1. Deepen result-family views for sweeps.
    Recipe families now appear with metrics, a detail panel, per-result playback,
    explicit A/B promotion, replay, fork actions, and a compact sweep metric
-   table with sort controls and best-candidate marking. Sibling alpha-sweep
-   families are now compared in the family detail panel when they share a vector
-   bundle or prompt. Next they need richer cross-run promotion notes and saved
-   A/B decisions.
+   table with sort controls, best-candidate marking, and durable
+   keeper/maybe/reject listening decisions on playable artifacts. Sibling
+   alpha-sweep families are now compared in the family detail panel when they
+   share a vector bundle or prompt. Next they need richer cross-run descriptor
+   deltas and filters that surface the saved decisions across the archive.
 
 2. Presets for Operator Studio.
    Store named parameter sets for blur, DSP, graft, renoise, and cyclic roll.
@@ -54,9 +55,10 @@ For the broader stack direction and promotion triggers, see
    manual form entry.
 
 3. Artifact filtering and tagging.
-   Labels, tags, notes, archive search, and archive-and-new session cleanup are
-   now implemented. Next filters should cover kind, model, operator, date,
-   status, and source lineage.
+   Labels, tags, notes, keeper/maybe/reject listening decisions, archive search,
+   and archive-and-new session cleanup are now implemented. Next filters should
+   cover decision, kind, model, operator, date, status, result family, and source
+   lineage.
 
 4. Better bundle readers.
    Bundle file inventory, JSON previews, memory-result reuse, and first-pass
@@ -67,10 +69,10 @@ For the broader stack direction and promotion triggers, see
    and discovered image plots plus embedded audio files render through the
    bundle-file endpoint. Embedded bundle audio can now be promoted into normal
    audio artifacts. Prompt-search bundles now show scorer metadata, compact
-   candidate families, inline generated takes, and A/B assignment for candidate
-   audio. Next, vector/profile/soft-prompt/sweep/geometry/prompt search bundles
-   should expose richer domain-specific controls without making the user
-   inspect zip contents.
+   candidate families, inline generated takes, A/B assignment for candidate
+   audio, and saved listening decisions with notes. Next, vector/profile/
+   soft-prompt/sweep/geometry/prompt search bundles should expose richer
+   domain-specific controls without making the user inspect zip contents.
 
 ## P2: Research Cognition
 
@@ -94,10 +96,11 @@ For the broader stack direction and promotion triggers, see
    scoring over Medium flow losses. A tiny authenticated Medium/MPS smoke run
    succeeded locally on short target audio. Prompt candidates can now launch
    MLX text-to-audio jobs with lineage back to the search bundle; generated
-   takes are grouped under the prompt-search family and can be played or sent to
-   A/B beside the candidate. The next research step is saved listening
-   decisions, descriptor deltas, and layer/alpha comparisons. CLAP or hybrid
-   scoring belongs after that comparison workflow has real usage.
+   takes are grouped under the prompt-search family and can be played, sent to
+   A/B beside the candidate, or marked keeper/maybe/rejected with notes. The
+   next research step is descriptor deltas and layer/alpha comparisons that can
+   be correlated with those saved listening decisions. CLAP or hybrid scoring
+   belongs after that comparison workflow has real usage.
 
 5. Geometry and control probes.
    `experiment.geometry_audit` now produces a local latent geometry report
