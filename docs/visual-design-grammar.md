@@ -1,0 +1,101 @@
+# Visual Design Grammar
+
+This document translates the visual references into app semantics for SA3
+Native Lab. The goal is not to copy the images literally. The goal is to make
+the local instrument feel tactile, playful, and expressive while every strong
+visual motif still maps to real app state.
+
+## Reference Reading
+
+The references combine three useful ideas:
+
+- A tactile lab surface: matte paper, visible grain, fold marks, pencil lines,
+  small labels, and sketch-like boundaries.
+- Modular instruments: dense gradient cells, transport wheels, timeline bars,
+  waveform lanes, knobs, and clustered controls.
+- Organic flow: thin grey tendrils, nodes, and routing-like curves that imply
+  signal movement, provenance, memory, or dependency.
+
+The danger is that the references can easily become decoration. In this app,
+flow lines should not imply routing unless the data exists. Dense cells should
+not hide missing parameters. Wheels should not appear unless they control or
+play something real.
+
+## Motif To Function
+
+| Motif | App meaning | Current allowed use |
+| --- | --- | --- |
+| Paper grain and folds | Research notebook / local lab surface | Global page background and panel texture. |
+| Gradient cells | Parameterized controls, operators, presets, bundle affordances | Recipe fields, operator controls, prompt-search tools, bundle workflow chips. |
+| Dark bordered modules | Executable surfaces or inspectable artifact groups | Operator Studio, Recipe Studio, specimen surface, audition stack, result families. |
+| Thin grey lines | Real lineage, source relationships, or low-priority lab-surface flow | `LineageThread` and subtle non-interactive workbench background only. |
+| Nodes / dots | Artifact/source/decision branch points | Lineage rows, decision memory, prompt history, A/B routes. |
+| Transport wheel | Playback or macro execution control | AudioDeck play button only for now. |
+| Rainbow waveform lane | Perceptual listening axis | AudioDeck waveform and compact audition playback. |
+| Grid clusters | Mode/operator families or dense parameter sets | RecipeFields, Operator Studio, prompt search presets. |
+| Hand labels | Human annotation and experiment labels | Eyebrows, rail heads, chips, small metadata labels. |
+
+## Visual Semantics
+
+- `green`: available/runnable, framed playback controls, positive decision.
+- `teal/cyan`: audio flow, listening, runtime-ready state.
+- `orange/amber`: experimental/probe or cost-warning state.
+- `rose`: rejected, danger, or high-cost/queued state.
+- `violet/blue`: latent/model-space, scorer/probe, bundle evidence.
+- Soft gradients are allowed when they encode family, state, or interaction
+  density. Flat color should be rare.
+
+## Layout Rules
+
+- The first viewport should still teach the actual workbench: source artifacts,
+  current specimen, controls, result families, and audition.
+- The current specimen and playback surface remain the main focal objects.
+- Runtime/readiness state should stay available but visually subordinate.
+- Dense modules are acceptable when controls remain readable and stable.
+- Flow lines remain faint unless they correspond to real lineage or dependency.
+
+## Interaction Rules
+
+- Prompt-search preset/vocabulary/axis cells write directly to recipe params.
+- Audition-stack rows select real audio artifacts and can route them into A/B.
+- Bundle action cells should only appear when the bundle contains reusable data.
+- Future drag/routing interactions must create or inspect real recipe/source
+  relationships, not just move decorative nodes.
+
+## Anti-Copy Rules
+
+- Do not add fake node graphs before graph semantics exist.
+- Do not add decorative lines that look clickable or imply missing routing.
+- Do not turn every panel into a colorful tile; repeated colors must mean
+  operation family, status, or object kind.
+- Do not let paper texture reduce contrast or readability.
+- Do not use large wheels for non-playback controls until macro parameters are
+  real.
+
+## Stack Assessment
+
+The current stack is enough for the first visual pass:
+
+- CSS variables and pseudo layers for paper, watercolor gradients, and subtle
+  flow fields.
+- React component state for real selected artifacts, prompt history, decisions,
+  recipes, and A/B slots.
+- Lucide icons for symbolic controls.
+
+Near-horizon additions should remain conditional:
+
+- Motion for React: causal transitions for queued/running/produced, A/B
+  promotion, lineage forked, and artifact selected.
+- wavesurfer.js: only when waveform markers, zoom, and editable loop regions
+  become central.
+- React Flow: only when lineage edges become an interactive graph of real
+  recipe/source/output relationships.
+
+## Acceptance Criteria
+
+- The app feels more tactile and alive without hiding parameter access.
+- Text remains readable on desktop and mobile.
+- Flow styling does not imply unavailable routing.
+- Play and audition controls become more visually central.
+- Prompt, operator, and recipe controls feel like instrument modules rather
+  than generic forms.

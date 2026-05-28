@@ -17,6 +17,7 @@ For the current app-level description and improvement queue, see:
 - `docs/improvement-roadmap.md`
 - `docs/colab-parity-matrix.md`
 - `docs/implementation-readiness.md`
+- `docs/visual-design-grammar.md`
 - `docs/architecture-horizon.md`
 
 ## Upstream

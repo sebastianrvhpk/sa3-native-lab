@@ -138,6 +138,13 @@ For the broader stack direction and promotion triggers, see
 
 ## P3: Interface Polish
 
+0. Visual grammar.
+   The first reference-vibe pass now has a canonical grammar in
+   `docs/visual-design-grammar.md`. The app uses paper texture, watercolor
+   gradients, pencil-line modules, gradient control cells, richer transport
+   wheels, and subtle workbench flow fields. Future visual passes should keep
+   lines/nodes tied to real lineage, provenance, memory, or playback state.
+
 1. Responsive visual QA.
    Keep checking desktop and mobile screenshots for text collision, oversized
    controls, and panels that become too dense.
