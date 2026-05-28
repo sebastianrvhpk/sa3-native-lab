@@ -1,6 +1,6 @@
 import { createTRPCClient, httpBatchLink } from "@trpc/client";
 
-import type { AppRouter, WorkbenchState } from "../../apps/control-plane/src";
+import type { AppRouter, ResultFamily, WorkbenchState } from "../../apps/control-plane/src";
 
 export const DEFAULT_CONTROL_PLANE_URL = import.meta.env.VITE_SA3_CONTROL_PLANE_URL ?? "";
 
@@ -20,4 +20,4 @@ export function controlPlaneEndpoint(baseUrl: string) {
   return trimmed.endsWith("/trpc") ? trimmed : `${trimmed}/trpc`;
 }
 
-export type { WorkbenchState };
+export type { ResultFamily, WorkbenchState };

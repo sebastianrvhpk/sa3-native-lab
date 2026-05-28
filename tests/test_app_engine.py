@@ -183,6 +183,11 @@ def test_bundle_artifact_zips_directory_outputs(tmp_path):
     assert record.path.suffix == ".zip"
     assert record.path.exists()
     assert store.get_recipe(recipe.recipe_id).operator == OperatorName.EXPERIMENT_SA3_VECTORS_EXTRACT
+    inspection = store.inspect_artifact(record.artifact_id)
+    assert inspection.recipe is not None
+    assert inspection.recipe.recipe_id == recipe.recipe_id
+    assert [item.path for item in inspection.bundle_files] == ["summary.txt"]
+    assert inspection.bundle_files[0].byte_size == len("best_layer=2\n")
 
 
 def test_job_manager_persists_success(tmp_path):
@@ -384,6 +389,29 @@ def test_colab_mode_atlas_covers_numbered_modes(tmp_path):
     for expected in ["0", "0c", "0e", "0d", "0h", "0f", "0g", "1", "1b", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"]:
         assert expected in mode_ids
     assert any(mode["status"] == "native recipe" and "experiment.alpha_sweep" in mode["operators"] for mode in modes)
+
+
+def test_fastapi_inspects_bundle_artifact(tmp_path):
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+
+    from sa3_native_lab.app.server import create_app
+
+    app = create_app(artifact_root=tmp_path / "lab", repo_root=tmp_path)
+    client = TestClient(app)
+    output_dir = tmp_path / "bundle"
+    output_dir.mkdir()
+    (output_dir / "metrics.json").write_text('{"score": 0.8}\n', encoding="utf-8")
+    recipe = Recipe(operator=OperatorName.EXPERIMENT_ALPHA_SWEEP, backend=BackendName.TORCH_CPU)
+    record = app.state.store.finalize_bundle_path(artifact_id="art_bundle", path=output_dir, recipe=recipe)
+
+    response = client.get(f"/artifacts/{record.artifact_id}/inspect")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["artifact"]["artifact_id"] == record.artifact_id
+    assert payload["recipe"]["operator"] == "experiment.alpha_sweep"
+    assert payload["bundle_files"][0]["path"] == "metrics.json"
 
 
 def test_runtime_same_encode_decode_with_fake_adapter(tmp_path):

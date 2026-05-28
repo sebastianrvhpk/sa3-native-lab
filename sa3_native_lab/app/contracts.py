@@ -89,6 +89,12 @@ class AudioPeaksResponse(ContractModel):
     peaks: list[float]
 
 
+class BundleFileEntry(ContractModel):
+    path: str
+    byte_size: int
+    compressed_size: int | None = None
+
+
 class LatentMetadata(ContractModel):
     shape: tuple[int, int]
     latent_rate: float
@@ -134,6 +140,14 @@ class Recipe(ContractModel):
     session_id: str | None = None
     created_at: datetime = Field(default_factory=utc_now)
     version: int = 1
+
+
+class ArtifactInspection(ContractModel):
+    artifact: ArtifactRecord
+    recipe: Recipe | None = None
+    sources: list[ArtifactRecord] = Field(default_factory=list)
+    children: list[ArtifactRecord] = Field(default_factory=list)
+    bundle_files: list[BundleFileEntry] = Field(default_factory=list)
 
 
 class SessionStatus(str, Enum):

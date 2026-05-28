@@ -41,6 +41,10 @@ const annotateInputSchema = z.object({
   metadata: z.record(z.string(), z.unknown()).nullable().optional(),
 });
 
+const artifactIdInputSchema = z.object({
+  artifactId: z.string().min(1),
+});
+
 export const appRouter = t.router({
   workbench: t.router({
     load: t.procedure
@@ -62,6 +66,22 @@ export const appRouter = t.router({
       const { recipeId, ...payload } = input;
       return createPythonClient(ctx).forkRecipe(recipeId, payload);
     }),
+  }),
+  artifacts: t.router({
+    inspect: t.procedure.input(artifactIdInputSchema).query(({ ctx, input }) => createPythonClient(ctx).inspectArtifact(input.artifactId)),
+  }),
+  families: t.router({
+    load: t.procedure
+      .input(workbenchLoadInputSchema.optional().default({}))
+      .query(async ({ ctx, input }) => {
+        const { apiBase: baseUrl = ctx.baseUrl, ...workbenchInput } = input;
+        const state = await loadWorkbenchState(createPythonClient({ ...ctx, baseUrl }), workbenchInput);
+        return {
+          resultFamilies: state.resultFamilies,
+          sessionResultFamilies: state.sessionResultFamilies,
+          archiveResultFamilies: state.archiveResultFamilies,
+        };
+      }),
   }),
   archive: t.router({
     search: t.procedure.input(archiveSearchInputSchema).query(({ ctx, input }) =>

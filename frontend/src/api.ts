@@ -1,4 +1,15 @@
-import type { ArtifactKind, ArtifactRecord, AudioPeaksResponse, HealthResponse, JobRecord, NotebookMode, OperatorName, OperatorSpec, SessionRecord } from "./types";
+import type {
+  ArtifactInspection,
+  ArtifactKind,
+  ArtifactRecord,
+  AudioPeaksResponse,
+  HealthResponse,
+  JobRecord,
+  NotebookMode,
+  OperatorName,
+  OperatorSpec,
+  SessionRecord,
+} from "./types";
 
 export const CONFIGURED_API_BASE = import.meta.env.VITE_SA3_API_BASE?.trim() || null;
 export const DEFAULT_API_BASE = CONFIGURED_API_BASE ?? "http://127.0.0.1:8733";
@@ -147,6 +158,8 @@ export function createApi(baseUrl: string) {
     },
     audioPeaks: (artifactId: string, bins = 96) =>
       request<AudioPeaksResponse>(`/artifacts/${encodeURIComponent(artifactId)}/peaks?bins=${bins}`),
+    inspectArtifact: (artifactId: string) =>
+      request<ArtifactInspection>(`/artifacts/${encodeURIComponent(artifactId)}/inspect`),
     jobs: () => request<JobRecord[]>("/jobs"),
     job: (jobId: string) => request<JobRecord>(`/jobs/${encodeURIComponent(jobId)}`),
     cancelJob: (jobId: string) => request<JobRecord>(`/jobs/${encodeURIComponent(jobId)}/cancel`, jsonPost({})),

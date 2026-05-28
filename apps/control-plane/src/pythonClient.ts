@@ -1,4 +1,5 @@
 import type {
+  ArtifactInspection,
   ArtifactKind,
   ArtifactRecord,
   HealthResponse,
@@ -69,6 +70,7 @@ export function createPythonClient({ baseUrl, fetchImpl = fetch }: PythonClientO
       const query = params.toString();
       return request<ArtifactRecord[]>(query ? `/artifacts?${query}` : "/artifacts");
     },
+    inspectArtifact: (artifactId: string) => request<ArtifactInspection>(`/artifacts/${encodeURIComponent(artifactId)}/inspect`),
     jobs: () => request<JobRecord[]>("/jobs"),
     job: (jobId: string) => request<JobRecord>(`/jobs/${encodeURIComponent(jobId)}`),
     cancelJob: (jobId: string) => request<JobRecord>(`/jobs/${encodeURIComponent(jobId)}/cancel`, jsonPatchOrPost("POST", {})),

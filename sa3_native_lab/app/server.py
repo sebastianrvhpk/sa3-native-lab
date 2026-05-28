@@ -11,6 +11,7 @@ from sa3_native_lab import __version__
 
 from .contracts import (
     ArtifactAnnotationRequest,
+    ArtifactInspection,
     ArtifactKind,
     ArtifactRecord,
     AudioPeaksResponse,
@@ -119,6 +120,13 @@ def create_app(
     def get_artifact(artifact_id: str) -> ArtifactRecord:
         try:
             return store.get_artifact(artifact_id)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=f"artifact not found: {artifact_id}") from exc
+
+    @app.get("/artifacts/{artifact_id}/inspect", response_model=ArtifactInspection)
+    def inspect_artifact(artifact_id: str) -> ArtifactInspection:
+        try:
+            return store.inspect_artifact(artifact_id)
         except KeyError as exc:
             raise HTTPException(status_code=404, detail=f"artifact not found: {artifact_id}") from exc
 

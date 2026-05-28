@@ -438,8 +438,8 @@ label {
 
 .bundle-readout {
   grid-column: 1 / -1;
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
   gap: 10px;
   color: var(--muted);
   font-size: 0.78rem;
@@ -448,6 +448,28 @@ label {
 
 .bundle-readout strong {
   color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bundle-file-list {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 5px;
+}
+
+.bundle-file-list i {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  gap: 8px;
+  font-style: normal;
+  color: var(--muted);
+  min-width: 0;
+}
+
+.bundle-file-list i,
+.bundle-file-list small {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1507,6 +1529,122 @@ audio {
   display: grid;
   gap: 12px;
   margin-bottom: 14px;
+}
+
+.family-stack {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.family-row {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px;
+  display: grid;
+  gap: 8px;
+  background:
+    linear-gradient(135deg, rgb(201 238 72 / 0.14), rgb(85 198 199 / 0.12), rgb(234 74 162 / 0.1)),
+    rgb(255 255 255 / 0.48);
+}
+
+.family-row.selected {
+  border-color: rgb(45 51 52 / 0.58);
+  box-shadow: inset 0 0 0 1px rgb(45 51 52 / 0.18);
+}
+
+.family-row > button:first-child {
+  width: 100%;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  gap: 8px;
+  text-align: left;
+  background: transparent;
+}
+
+.family-row strong,
+.family-row span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.family-row strong {
+  font-size: 0.78rem;
+}
+
+.family-row span {
+  color: var(--muted);
+  font-size: 0.7rem;
+  margin-top: 2px;
+}
+
+.family-status {
+  display: inline-flex;
+  margin-top: 0;
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  padding: 4px 7px;
+  color: var(--ink);
+  background: rgb(255 255 255 / 0.5);
+  align-self: start;
+}
+
+.family-status.running,
+.family-status.queued {
+  background: linear-gradient(135deg, rgb(201 238 72 / 0.3), rgb(85 198 199 / 0.22));
+}
+
+.family-status.failed,
+.family-status.cancelled {
+  background: linear-gradient(135deg, rgb(234 74 162 / 0.18), rgb(243 168 60 / 0.2));
+}
+
+.family-kinds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.family-kinds i {
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  padding: 3px 7px;
+  color: var(--muted);
+  background: rgb(255 255 255 / 0.48);
+  font-style: normal;
+  font-size: 0.68rem;
+}
+
+.family-kinds .audio {
+  color: var(--cyan);
+}
+
+.family-kinds .latent {
+  color: var(--amber);
+}
+
+.family-kinds .bundle {
+  color: var(--violet);
+}
+
+.family-replay {
+  width: max-content;
+  min-height: 28px;
+  padding: 0 8px;
+  border-radius: 6px;
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  box-shadow: none;
+  font-size: 0.72rem;
+  background: rgb(255 255 255 / 0.54);
 }
 
 .session-head {

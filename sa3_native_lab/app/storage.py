@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import shutil
+import zipfile
 from pathlib import Path
 from typing import Any, BinaryIO
 
@@ -11,10 +12,12 @@ import numpy as np
 
 from .contracts import (
     ArtifactAnnotationRequest,
+    ArtifactInspection,
     ArtifactKind,
     ArtifactRecord,
     AudioMetadata,
     AudioPeaksResponse,
+    BundleFileEntry,
     FileInfo,
     LatentMetadata,
     Recipe,
@@ -345,6 +348,34 @@ class ArtifactStore:
             raise KeyError(artifact_id)
         return ArtifactRecord.model_validate(_read_json(path))
 
+    def inspect_artifact(self, artifact_id: str) -> ArtifactInspection:
+        record = self.get_artifact(artifact_id)
+        recipe = None
+        if record.recipe_id:
+            try:
+                recipe = self.get_recipe(record.recipe_id)
+            except KeyError:
+                recipe = None
+        sources = []
+        for source_id in record.source_artifact_ids:
+            try:
+                sources.append(self.get_artifact(source_id))
+            except KeyError:
+                continue
+        children = [
+            item
+            for item in self.list_artifacts()
+            if record.artifact_id in item.source_artifact_ids
+        ]
+        children = sorted(children, key=lambda item: item.created_at, reverse=True)
+        return ArtifactInspection(
+            artifact=record,
+            recipe=recipe,
+            sources=sources,
+            children=children,
+            bundle_files=_bundle_file_entries(record.path) if record.kind == ArtifactKind.BUNDLE else [],
+        )
+
     def audio_peaks(self, artifact_id: str, *, bins: int = 96) -> AudioPeaksResponse:
         record = self.get_artifact(artifact_id)
         if record.kind != ArtifactKind.AUDIO or record.audio is None:
@@ -434,6 +465,33 @@ def _artifact_matches_search(record: ArtifactRecord, *, query: str | None, tags:
         *record.tags,
     ]
     return query_text in " ".join(haystack).lower()
+
+
+def _bundle_file_entries(path: Path) -> list[BundleFileEntry]:
+    if not path.exists():
+        return []
+    if path.is_dir():
+        entries = []
+        for child in sorted(item for item in path.rglob("*") if item.is_file()):
+            entries.append(
+                BundleFileEntry(
+                    path=str(child.relative_to(path)),
+                    byte_size=child.stat().st_size,
+                )
+            )
+        return entries
+    if zipfile.is_zipfile(path):
+        with zipfile.ZipFile(path) as archive:
+            return [
+                BundleFileEntry(
+                    path=item.filename,
+                    byte_size=int(item.file_size),
+                    compressed_size=int(item.compress_size),
+                )
+                for item in archive.infolist()
+                if not item.is_dir()
+            ]
+    return [BundleFileEntry(path=path.name, byte_size=path.stat().st_size)]
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:

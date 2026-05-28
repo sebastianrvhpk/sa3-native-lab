@@ -28,6 +28,8 @@ test("shapeWorkbenchState groups active session workbench data", () => {
   assert.deepEqual(state.archiveArtifacts.map((artifact) => artifact.artifact_id), [archiveArtifact.artifact_id]);
   assert.deepEqual(state.runningJobs.map((job) => job.job_id), [runningJob.job_id]);
   assert.equal(state.selectedArtifact?.artifact_id, sessionArtifact.artifact_id);
+  assert.deepEqual(state.sessionResultFamilies.map((family) => family.recipeId), [runningJob.recipe.recipe_id]);
+  assert.equal(state.sessionResultFamilies[0]?.status, "running");
   assert.equal(state.counts.audioArtifacts, 1);
   assert.equal(state.counts.latentArtifacts, 1);
   assert.deepEqual(state.readiness.readyBackends, ["mlx", "torch_mps"]);
@@ -59,6 +61,7 @@ test("tRPC workbench.load aggregates Python runtime calls", async () => {
   assert.equal(state.activeSessionId, session.session_id);
   assert.equal(state.sessionArtifacts[0]?.artifact_id, artifact.artifact_id);
   assert.equal(state.runningJobs[0]?.job_id, job.job_id);
+  assert.equal(state.sessionResultFamilies[0]?.recipeId, job.recipe.recipe_id);
   assert.equal(state.counts.scaffoldModes, 1);
 });
 
@@ -96,6 +99,50 @@ test("tRPC jobs and recipes procedures call Python lifecycle endpoints", async (
     ["POST", "/recipes/recipe_1/fork"],
   ]);
   assert.deepEqual(calls[3]?.body, { params: { shift_frames: 2 } });
+});
+
+test("tRPC artifact inspection and family loading expose app-shaped records", async () => {
+  const session = sessionRecord("sess_active", "2026-05-27T14:00:00.000Z");
+  const artifact = {
+    ...artifactRecord("art_bundle", "bundle", session.session_id, "2026-05-27T14:10:00.000Z"),
+    recipe_id: "recipe_job_done",
+    file: { filename: "alpha_sweep.zip", media_type: "application/zip", byte_size: 128, sha256: "abc" },
+  };
+  const job = {
+    ...jobRecord("job_done", "succeeded", session.session_id, "2026-05-27T14:11:00.000Z"),
+    artifact_ids: [artifact.artifact_id],
+  };
+  const fakeFetch: typeof fetch = async (url) => {
+    const path = new URL(String(url)).pathname;
+    const payloads: Record<string, unknown> = {
+      "/health": healthResponse(),
+      "/sessions": [session],
+      "/artifacts": [artifact],
+      "/jobs": [job],
+      "/colab/modes": [modeRecord("2", "native recipe")],
+      "/operators/specs": [operatorSpec("experiment.alpha_sweep")],
+      "/artifacts/art_bundle/inspect": {
+        artifact,
+        recipe: job.recipe,
+        sources: [],
+        children: [],
+        bundle_files: [{ path: "metrics.json", byte_size: 16, compressed_size: 12 }],
+      },
+    };
+    if (!(path in payloads)) {
+      return Response.json({ detail: "not found" }, { status: 404 });
+    }
+    return Response.json(payloads[path]);
+  };
+
+  const caller = appRouter.createCaller({ baseUrl: "http://python.test", fetchImpl: fakeFetch });
+
+  const inspection = await caller.artifacts.inspect({ artifactId: artifact.artifact_id });
+  const families = await caller.families.load({ sessionId: session.session_id });
+
+  assert.equal(inspection.bundle_files[0]?.path, "metrics.json");
+  assert.equal(families.sessionResultFamilies[0]?.latestArtifactId, artifact.artifact_id);
+  assert.equal(families.sessionResultFamilies[0]?.artifactKinds[0], "bundle");
 });
 
 function snapshot(overrides: Partial<WorkbenchSnapshot> = {}): WorkbenchSnapshot {

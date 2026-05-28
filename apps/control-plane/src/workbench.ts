@@ -1,11 +1,14 @@
 import { z } from "zod";
 
 import type {
+  ArtifactKind,
   ArtifactRecord,
   HealthResponse,
   JobRecord,
+  JobStatus,
   NotebookMode,
   OperatorSpec,
+  Recipe,
   SessionRecord,
 } from "./contracts.js";
 import type { PythonClient } from "./pythonClient.js";
@@ -38,6 +41,9 @@ export interface WorkbenchState extends WorkbenchSnapshot {
   archiveJobs: JobRecord[];
   runningJobs: JobRecord[];
   latestJob: JobRecord | null;
+  resultFamilies: ResultFamily[];
+  sessionResultFamilies: ResultFamily[];
+  archiveResultFamilies: ResultFamily[];
   counts: {
     audioArtifacts: number;
     latentArtifacts: number;
@@ -51,6 +57,21 @@ export interface WorkbenchState extends WorkbenchSnapshot {
     hasMediumMlx: boolean;
     hasTorch: boolean;
   };
+}
+
+export interface ResultFamily {
+  familyId: string;
+  recipeId: string;
+  recipe: Recipe;
+  operator: Recipe["operator"];
+  sessionId: string | null;
+  status: JobStatus | "mixed";
+  jobIds: string[];
+  artifactIds: string[];
+  artifactKinds: ArtifactKind[];
+  latestArtifactId: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export async function loadWorkbenchState(client: PythonClient, input: WorkbenchLoadInput = {}): Promise<WorkbenchState> {
@@ -106,6 +127,15 @@ export function shapeWorkbenchState(snapshot: WorkbenchSnapshot, input: Workbenc
   const runningJobs = jobs.filter(isJobActive);
   const selectedArtifact =
     artifacts.find((artifact) => artifact.artifact_id === input.selectedArtifactId) ?? sessionArtifacts[0] ?? null;
+  const resultFamilies = buildResultFamilies(artifacts, jobs);
+  const sessionRecipeIds = new Set([
+    ...sessionJobs.map((job) => job.recipe.recipe_id),
+    ...sessionArtifacts.map((artifact) => artifact.recipe_id).filter((recipeId): recipeId is string => Boolean(recipeId)),
+  ]);
+  const archiveRecipeIds = new Set([
+    ...archiveJobs.map((job) => job.recipe.recipe_id),
+    ...archiveArtifacts.map((artifact) => artifact.recipe_id).filter((recipeId): recipeId is string => Boolean(recipeId)),
+  ]);
   const readyBackends = snapshot.health.backends.filter((backend) => backend.available).map((backend) => backend.backend);
   const offlineBackends = snapshot.health.backends.filter((backend) => !backend.available).map((backend) => backend.backend);
 
@@ -123,6 +153,9 @@ export function shapeWorkbenchState(snapshot: WorkbenchSnapshot, input: Workbenc
     archiveJobs,
     runningJobs,
     latestJob: jobs[0] ?? null,
+    resultFamilies,
+    sessionResultFamilies: resultFamilies.filter((family) => sessionRecipeIds.has(family.recipeId)),
+    archiveResultFamilies: resultFamilies.filter((family) => archiveRecipeIds.has(family.recipeId)),
     counts: {
       audioArtifacts: artifacts.filter((artifact) => artifact.kind === "audio").length,
       latentArtifacts: artifacts.filter((artifact) => artifact.kind === "latent").length,
@@ -139,6 +172,54 @@ export function shapeWorkbenchState(snapshot: WorkbenchSnapshot, input: Workbenc
   };
 }
 
+export function buildResultFamilies(artifacts: ArtifactRecord[], jobs: JobRecord[]): ResultFamily[] {
+  const artifactsByRecipe = groupArtifactsByRecipe(artifacts);
+  const families = new Map<string, { recipe: Recipe; jobs: JobRecord[]; artifacts: ArtifactRecord[] }>();
+
+  for (const job of jobs) {
+    const recipeId = job.recipe.recipe_id;
+    const family = families.get(recipeId);
+    if (family) {
+      family.jobs.push(job);
+    } else {
+      families.set(recipeId, {
+        recipe: job.recipe,
+        jobs: [job],
+        artifacts: artifactsByRecipe.get(recipeId) ?? [],
+      });
+    }
+  }
+
+  return [...families.entries()]
+    .map(([recipeId, family]) => {
+      const artifactIds = unique([
+        ...family.jobs.flatMap((job) => job.artifact_ids),
+        ...family.artifacts.map((artifact) => artifact.artifact_id),
+      ]);
+      const artifactKinds = unique(family.artifacts.map((artifact) => artifact.kind));
+      const timestamps = [
+        ...family.jobs.map((job) => job.finished_at ?? job.started_at ?? job.created_at),
+        ...family.artifacts.map((artifact) => artifact.created_at),
+      ];
+      const sortedArtifacts = sortNewestBy(family.artifacts, (artifact) => artifact.created_at);
+      return {
+        familyId: recipeId,
+        recipeId,
+        recipe: family.recipe,
+        operator: family.recipe.operator,
+        sessionId: family.recipe.session_id ?? null,
+        status: familyStatus(family.jobs),
+        jobIds: family.jobs.map((job) => job.job_id),
+        artifactIds,
+        artifactKinds,
+        latestArtifactId: sortedArtifacts[0]?.artifact_id ?? artifactIds[0] ?? null,
+        createdAt: oldestTimestamp(timestamps) ?? family.recipe.created_at,
+        updatedAt: newestTimestamp(timestamps) ?? family.recipe.created_at,
+      } satisfies ResultFamily;
+    })
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+}
+
 function findActiveSession(sessions: SessionRecord[], sessionId: string | null): SessionRecord | null {
   if (sessionId) {
     return sessions.find((session) => session.session_id === sessionId) ?? null;
@@ -148,6 +229,45 @@ function findActiveSession(sessions: SessionRecord[], sessionId: string | null):
 
 function isJobActive(job: JobRecord): boolean {
   return job.status === "queued" || job.status === "running";
+}
+
+function familyStatus(jobs: JobRecord[]): ResultFamily["status"] {
+  if (!jobs.length) return "mixed";
+  if (jobs.some((job) => job.status === "running")) return "running";
+  if (jobs.some((job) => job.status === "queued")) return "queued";
+  if (jobs.some((job) => job.status === "failed")) return "failed";
+  if (jobs.every((job) => job.status === "cancelled")) return "cancelled";
+  if (jobs.every((job) => job.status === "succeeded")) return "succeeded";
+  return "mixed";
+}
+
+function groupArtifactsByRecipe(artifacts: ArtifactRecord[]): Map<string, ArtifactRecord[]> {
+  const groups = new Map<string, ArtifactRecord[]>();
+  for (const artifact of artifacts) {
+    if (!artifact.recipe_id) continue;
+    const group = groups.get(artifact.recipe_id) ?? [];
+    group.push(artifact);
+    groups.set(artifact.recipe_id, group);
+  }
+  return groups;
+}
+
+function unique<T>(items: T[]): T[] {
+  return [...new Set(items)];
+}
+
+function newestTimestamp(timestamps: string[]): string | null {
+  return timestamps.reduce<string | null>((latest, item) => {
+    if (!latest || new Date(item).getTime() > new Date(latest).getTime()) return item;
+    return latest;
+  }, null);
+}
+
+function oldestTimestamp(timestamps: string[]): string | null {
+  return timestamps.reduce<string | null>((oldest, item) => {
+    if (!oldest || new Date(item).getTime() < new Date(oldest).getTime()) return item;
+    return oldest;
+  }, null);
 }
 
 function createdAfter(createdAt: string, start: string): boolean {

@@ -31,7 +31,7 @@ import {
 
 import modelImage from "../../stable-audio-3.png";
 import { createApi, type ArtifactAnnotationPayload, type ExperimentPayload } from "./api";
-import { createControlPlaneClient, DEFAULT_CONTROL_PLANE_URL } from "./controlPlane";
+import { createControlPlaneClient, DEFAULT_CONTROL_PLANE_URL, type ResultFamily } from "./controlPlane";
 import { RecipeFields } from "./RecipeFields";
 import {
   buildExperimentPayload,
@@ -665,6 +665,8 @@ export function App() {
     ? allArtifacts.filter((item) => item.session_id !== activeSessionId)
     : allArtifacts.filter((item) => !createdAfter(item.created_at, sessionStartedAt)));
   const runningJobs = workbenchState?.runningJobs ?? allJobs.filter(isJobActive);
+  const resultFamilies = workbenchState?.resultFamilies ?? buildResultFamilies(allArtifacts, allJobs);
+  const sessionResultFamilies = workbenchState?.sessionResultFamilies ?? filterFamiliesForWork(resultFamilies, sessionArtifacts, sessionJobs);
   const latestJobs = workbenchState?.latestJob ? [workbenchState.latestJob, ...allJobs.filter((job) => job.job_id !== workbenchState.latestJob?.job_id)].slice(0, 8) : allJobs.slice(0, 8);
   const compareA = allArtifacts.find((item) => item.artifact_id === compare.a) ?? null;
   const compareB = allArtifacts.find((item) => item.artifact_id === compare.b) ?? null;
@@ -1204,10 +1206,17 @@ export function App() {
           <div className="rail-head">
             <div>
               <span className="eyebrow">Result Family</span>
-              <strong>{runningJobs.length} running</strong>
+              <strong>{sessionResultFamilies.length} families</strong>
             </div>
             <Activity size={19} />
           </div>
+          <ResultFamilyPanel
+            families={sessionResultFamilies}
+            artifacts={allArtifacts}
+            selectedId={selectedArtifact?.artifact_id ?? null}
+            onSelect={selectArtifact}
+            onReplayRecipe={(recipeId) => replayRecipeMutation.mutate(recipeId)}
+          />
           <SessionTray
             artifacts={sessionArtifacts}
             archivedArtifacts={archiveArtifacts}
@@ -1324,7 +1333,7 @@ function Specimen({
         ) : artifact.kind === "latent" ? (
           <LatentField artifact={artifact} />
         ) : (
-          <BundleField artifact={artifact} />
+          <BundleField artifact={artifact} apiBase={apiBase} />
         )}
         <LineageThread artifact={artifact} sources={sourceArtifacts} />
       </div>
@@ -1643,6 +1652,62 @@ function InlineJobStatus({ job, onCancelJob, onRetryJob }: { job: JobRecord | nu
   return (
     <div className="inline-job-status">
       <JobProgress job={job} compact onCancelJob={onCancelJob} onRetryJob={onRetryJob} />
+    </div>
+  );
+}
+
+function ResultFamilyPanel({
+  families,
+  artifacts,
+  selectedId,
+  onSelect,
+  onReplayRecipe,
+}: {
+  families: ResultFamily[];
+  artifacts: ArtifactRecord[];
+  selectedId: string | null;
+  onSelect: (artifactId: string | null) => void;
+  onReplayRecipe: (recipeId: string) => void;
+}) {
+  if (!families.length) {
+    return <div className="quiet-panel compact">No result families yet</div>;
+  }
+  const artifactMap = new Map(artifacts.map((artifact) => [artifact.artifact_id, artifact]));
+  return (
+    <div className="family-stack">
+      {families.slice(0, 5).map((family) => {
+        const latest = family.latestArtifactId ? artifactMap.get(family.latestArtifactId) ?? null : null;
+        const selected = Boolean(latest && latest.artifact_id === selectedId);
+        return (
+          <article key={family.familyId} className={`family-row ${selected ? "selected" : ""}`}>
+            <button type="button" onClick={() => onSelect(latest?.artifact_id ?? null)}>
+              <div>
+                <strong>{shortOperatorName(family.operator)}</strong>
+                <span>
+                  {family.artifactIds.length} artifact{family.artifactIds.length === 1 ? "" : "s"} · {family.jobIds.length} run
+                  {family.jobIds.length === 1 ? "" : "s"}
+                </span>
+              </div>
+              <span className={`family-status ${family.status}`}>{family.status}</span>
+            </button>
+            <div className="family-kinds" aria-label="Artifact kinds in family">
+              {family.artifactKinds.length ? (
+                family.artifactKinds.map((kind) => (
+                  <i key={kind} className={kind}>
+                    {kind}
+                  </i>
+                ))
+              ) : (
+                <i>empty</i>
+              )}
+            </div>
+            <button type="button" className="family-replay" onClick={() => onReplayRecipe(family.recipeId)} title="Replay family recipe">
+              <Repeat size={14} />
+              Replay
+            </button>
+          </article>
+        );
+      })}
     </div>
   );
 }
@@ -2042,9 +2107,18 @@ function LatentField({ artifact }: { artifact: ArtifactRecord }) {
   );
 }
 
-function BundleField({ artifact }: { artifact: ArtifactRecord }) {
+function BundleField({ artifact, apiBase }: { artifact: ArtifactRecord; apiBase: string }) {
+  const api = useMemo(() => createApi(apiBase), [apiBase]);
+  const inspection = useQuery({
+    queryKey: ["artifact-inspection", apiBase, artifact.artifact_id],
+    queryFn: () => api.inspectArtifact(artifact.artifact_id),
+    enabled: artifact.kind === "bundle",
+    staleTime: 30000,
+  });
   const fileName = artifact.file?.filename ?? artifactName(artifact);
   const cells = artifact.recipe_id ? 36 : 18;
+  const bundleFiles = inspection.data?.bundle_files ?? [];
+  const totalBytes = bundleFiles.reduce((total, item) => total + item.byte_size, 0);
   return (
     <div className="bundle-field" aria-label={`Experiment bundle ${fileName}`}>
       {Array.from({ length: cells }, (_, index) => (
@@ -2052,7 +2126,19 @@ function BundleField({ artifact }: { artifact: ArtifactRecord }) {
       ))}
       <div className="bundle-readout">
         <strong>{fileName}</strong>
-        <span>{artifact.file ? formatBytes(artifact.file.byte_size) : "bundle"}</span>
+        <span>
+          {inspection.isLoading ? "Inspecting..." : bundleFiles.length ? `${bundleFiles.length} files · ${formatBytes(totalBytes)}` : artifact.file ? formatBytes(artifact.file.byte_size) : "bundle"}
+        </span>
+        {bundleFiles.length ? (
+          <div className="bundle-file-list">
+            {bundleFiles.slice(0, 4).map((file) => (
+              <i key={file.path}>
+                {file.path}
+                <small>{formatBytes(file.byte_size)}</small>
+              </i>
+            ))}
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -2292,6 +2378,95 @@ function sortNewest(artifacts: ArtifactRecord[]) {
 
 function sortNewestJobs(jobs: JobRecord[]) {
   return [...jobs].sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
+}
+
+function buildResultFamilies(artifacts: ArtifactRecord[], jobs: JobRecord[]): ResultFamily[] {
+  const artifactsByRecipe = groupArtifactsByRecipe(artifacts);
+  const families = jobs.reduce<Map<string, { recipe: JobRecord["recipe"]; jobs: JobRecord[]; artifacts: ArtifactRecord[] }>>(
+    (items, job) => {
+      const recipeId = job.recipe.recipe_id;
+      const family = items.get(recipeId);
+      if (family) {
+        family.jobs.push(job);
+      } else {
+        items.set(recipeId, {
+          recipe: job.recipe,
+          jobs: [job],
+          artifacts: artifactsByRecipe.get(recipeId) ?? [],
+        });
+      }
+      return items;
+    },
+    new Map(),
+  );
+  return [...families.values()]
+    .map((family) => {
+      const recipeId = family.recipe.recipe_id;
+      const sortedArtifacts = sortNewest(family.artifacts);
+      const artifactIds = unique([
+        ...family.jobs.flatMap((job) => job.artifact_ids),
+        ...family.artifacts.map((artifact) => artifact.artifact_id),
+      ]);
+      const timestamps = [
+        ...family.jobs.map((job) => job.finished_at ?? job.started_at ?? job.created_at),
+        ...family.artifacts.map((artifact) => artifact.created_at),
+      ];
+      return {
+        familyId: recipeId,
+        recipeId,
+        recipe: family.recipe,
+        operator: family.recipe.operator,
+        sessionId: family.recipe.session_id ?? null,
+        status: familyStatus(family.jobs),
+        jobIds: family.jobs.map((job) => job.job_id),
+        artifactIds,
+        artifactKinds: unique(family.artifacts.map((artifact) => artifact.kind)),
+        latestArtifactId: sortedArtifacts[0]?.artifact_id ?? artifactIds[0] ?? null,
+        createdAt: oldestTimestamp(timestamps) ?? family.recipe.created_at,
+        updatedAt: newestTimestamp(timestamps) ?? family.recipe.created_at,
+      };
+    })
+    .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
+}
+
+function filterFamiliesForWork(families: ResultFamily[], artifacts: ArtifactRecord[], jobs: JobRecord[]) {
+  const recipeIds = new Set([
+    ...jobs.map((job) => job.recipe.recipe_id),
+    ...artifacts.map((artifact) => artifact.recipe_id).filter((recipeId): recipeId is string => Boolean(recipeId)),
+  ]);
+  return families.filter((family) => recipeIds.has(family.recipeId));
+}
+
+function groupArtifactsByRecipe(artifacts: ArtifactRecord[]) {
+  const groups = new Map<string, ArtifactRecord[]>();
+  for (const artifact of artifacts) {
+    if (!artifact.recipe_id) continue;
+    const group = groups.get(artifact.recipe_id) ?? [];
+    group.push(artifact);
+    groups.set(artifact.recipe_id, group);
+  }
+  return groups;
+}
+
+function familyStatus(jobs: JobRecord[]): ResultFamily["status"] {
+  if (jobs.some((job) => job.status === "running")) return "running";
+  if (jobs.some((job) => job.status === "queued")) return "queued";
+  if (jobs.some((job) => job.status === "failed")) return "failed";
+  if (jobs.length && jobs.every((job) => job.status === "cancelled")) return "cancelled";
+  if (jobs.length && jobs.every((job) => job.status === "succeeded")) return "succeeded";
+  return "mixed";
+}
+
+function unique<T>(items: T[]) {
+  return [...new Set(items)];
+}
+
+function newestTimestamp(timestamps: string[]) {
+  return timestamps.reduce<string | null>((latest, item) => (!latest || Date.parse(item) > Date.parse(latest) ? item : latest), null);
+}
+
+function oldestTimestamp(timestamps: string[]) {
+  return timestamps.reduce<string | null>((oldest, item) => (!oldest || Date.parse(item) < Date.parse(oldest) ? item : oldest), null);
 }
 
 function clamp(value: number, min: number, max: number) {

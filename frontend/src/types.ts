@@ -76,6 +76,12 @@ export interface ArtifactRecord {
   created_at: string;
 }
 
+export interface BundleFileEntry {
+  path: string;
+  byte_size: number;
+  compressed_size?: number | null;
+}
+
 export interface Recipe {
   recipe_id: string;
   operator: OperatorName;
@@ -88,6 +94,14 @@ export interface Recipe {
   session_id?: string | null;
   created_at: string;
   version: number;
+}
+
+export interface ArtifactInspection {
+  artifact: ArtifactRecord;
+  recipe?: Recipe | null;
+  sources: ArtifactRecord[];
+  children: ArtifactRecord[];
+  bundle_files: BundleFileEntry[];
 }
 
 export interface SessionRecord {

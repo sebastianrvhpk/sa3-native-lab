@@ -13,6 +13,25 @@ const server = setupServer(
       backends: [{ backend: "mlx", available: true, loaded: false, details: {} }],
     }),
   ),
+  http.get("http://api.test/artifacts/art_bundle/inspect", () =>
+    HttpResponse.json({
+      artifact: {
+        artifact_id: "art_bundle",
+        kind: "bundle",
+        path: "/tmp/art_bundle/bundle.zip",
+        file: { filename: "bundle.zip", media_type: "application/zip", byte_size: 32 },
+        source_artifact_ids: [],
+        recipe_id: "recipe_1",
+        tags: [],
+        metadata: {},
+        created_at: "2026-05-27T15:00:00.000Z",
+      },
+      recipe: null,
+      sources: [],
+      children: [],
+      bundle_files: [{ path: "metrics.json", byte_size: 16, compressed_size: 12 }],
+    }),
+  ),
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
@@ -24,6 +43,13 @@ describe("createApi", () => {
     await expect(createApi("http://api.test").health()).resolves.toMatchObject({
       artifact_root: "/tmp/lab",
       backends: [{ backend: "mlx", available: true }],
+    });
+  });
+
+  it("inspects bundle file inventories", async () => {
+    await expect(createApi("http://api.test").inspectArtifact("art_bundle")).resolves.toMatchObject({
+      artifact: { artifact_id: "art_bundle" },
+      bundle_files: [{ path: "metrics.json", byte_size: 16 }],
     });
   });
 });
