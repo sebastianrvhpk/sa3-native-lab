@@ -187,8 +187,9 @@ def test_runtime_prompt_search_uses_sa3_flow_probe_scorer(tmp_path):
     source = store.import_audio_file(audio_path, prompt="cold texture", label="target")
     runtime = RuntimeDispatcher(store, repo_root=tmp_path)
 
-    def fake_flow_scorer(recipe, *, params, target_audio_path, source, seed):
+    def fake_flow_scorer(recipe, *, context, params, target_audio_path, source, seed):
         assert recipe.backend == BackendName.TORCH_CPU
+        context.set_progress(0.18, "fake SA3 flow scorer ready")
         assert params["model"] == "medium"
         assert Path(target_audio_path).name == "target.wav"
         assert source.prompt == "cold texture"

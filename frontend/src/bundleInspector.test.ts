@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { bundleDomainSections, bundleReuseActions, summarizeBundle } from "./bundleInspector";
+import { bundleDomainSections, bundleReuseActions, promptSearchCandidates, summarizeBundle } from "./bundleInspector";
 
 describe("bundle inspector summaries", () => {
   it("promotes sweep metrics and plot counts into reader rows", () => {
@@ -159,5 +159,20 @@ describe("bundle inspector summaries", () => {
         bundle_summary: { kind: "prompt-search", prompt_search: { prompt: "warm granular loop" } },
       }),
     ).toEqual([{ label: "Use prompt in sweep", fieldKey: "prompt", mode: "experiment.alpha_sweep", value: "warm granular loop" }]);
+    expect(
+      promptSearchCandidates({
+        prompt_search: {
+          prompt: "warm granular loop",
+          score: 0.82,
+          families: [
+            { rank: 1, prompt: "warm granular loop", score: 0.82, source: "selected" },
+            { rank: 2, prompt: "warm granular loop shimmer", score: 0.78, source: "beam" },
+          ],
+        },
+      }),
+    ).toEqual([
+      { rank: 1, prompt: "warm granular loop", score: 0.82, source: "selected" },
+      { rank: 2, prompt: "warm granular loop shimmer", score: 0.78, source: "beam" },
+    ]);
   });
 });

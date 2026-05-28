@@ -1023,6 +1023,26 @@ export function App() {
     onSuccess: invalidate,
   });
 
+  const generatePromptCandidate = useMutation({
+    mutationFn: (candidatePrompt: string) => {
+      const selected = audioModels.find((item) => item.value === audioModel)!;
+      return api.generateText({
+        prompt: candidatePrompt,
+        negative_prompt: negativePrompt.trim() || null,
+        duration_seconds: duration,
+        steps,
+        seed,
+        cfg_scale: cfgScale,
+        apg_scale: apgScale,
+        model: selected.value,
+        decoder: audioDecoder,
+        backend: "mlx",
+        session_id: activeSessionId,
+      });
+    },
+    onSuccess: invalidate,
+  });
+
   const encode = useMutation({
     mutationFn: (artifact: ArtifactRecord) =>
       api.encodeLatent({
@@ -1124,6 +1144,16 @@ export function App() {
     });
   };
 
+  const usePromptCandidate = (candidatePrompt: string) => {
+    setGenerationMode("generate.text_to_audio");
+    setPrompt(candidatePrompt);
+  };
+
+  const runPromptCandidate = (candidatePrompt: string) => {
+    usePromptCandidate(candidatePrompt);
+    generatePromptCandidate.mutate(candidatePrompt);
+  };
+
   return (
     <main className="app-shell">
       <header className="top-strip">
@@ -1189,6 +1219,8 @@ export function App() {
             onSelectArtifact={selectArtifact}
             onUseAsDonor={useArtifactAsDonor}
             onUseInRecipe={useBundleInRecipe}
+            onUsePrompt={usePromptCandidate}
+            onGeneratePrompt={runPromptCandidate}
             getArtifactPath={artifactPathForField}
           />
           <RunMonitor
@@ -1597,6 +1629,8 @@ function Specimen({
   onSelectArtifact,
   onUseAsDonor,
   onUseInRecipe,
+  onUsePrompt,
+  onGeneratePrompt,
   getArtifactPath,
 }: {
   artifact: ArtifactRecord | null;
@@ -1609,6 +1643,8 @@ function Specimen({
   onSelectArtifact: (artifactId: string | null) => void;
   onUseAsDonor: (artifactId: string) => void;
   onUseInRecipe: (fieldKey: string, path: string, mode: string) => void;
+  onUsePrompt: (prompt: string) => void;
+  onGeneratePrompt: (prompt: string) => void;
   getArtifactPath: (artifact: ArtifactRecord, fieldKey: string) => string;
 }) {
   if (!artifact) {
@@ -1638,6 +1674,8 @@ function Specimen({
             onSelectArtifact={onSelectArtifact}
             onUseAsDonor={onUseAsDonor}
             onUseInRecipe={onUseInRecipe}
+            onUsePrompt={onUsePrompt}
+            onGeneratePrompt={onGeneratePrompt}
             getArtifactPath={getArtifactPath}
           />
         )}

@@ -1206,6 +1206,7 @@ class RuntimeDispatcher:
             context.set_progress(0.10, "loading SA3 flow prompt scorer")
             batch_scorer, scorer_metadata = self._sa3_flow_prompt_batch_scorer(
                 recipe,
+                context=context,
                 params=params,
                 target_audio_path=target_audio_path,
                 source=source,
@@ -1311,6 +1312,7 @@ class RuntimeDispatcher:
         self,
         recipe: Recipe,
         *,
+        context: JobContext,
         params: dict[str, Any],
         target_audio_path: str,
         source: ArtifactRecord | None,
@@ -1326,11 +1328,14 @@ class RuntimeDispatcher:
 
         model_name = str(recipe.model or params.get("model") or "medium")
         device = str(params.get("device") or _device_for_backend(recipe.backend))
+        context.set_progress(0.11, f"loading SA3 flow scorer model={model_name} device={device}")
+        context.log(f"SA3 flow prompt scorer loading model={model_name} device={device}")
         stable_model = StableAudioModel.from_pretrained(
             model_name,
             device=device,
             model_half=bool(params.get("model_half", False)),
         )
+        context.set_progress(0.14, "loading target audio for SA3 flow scorer")
         audio, sample_rate = torchaudio.load(target_audio_path)
         duration = float(params.get("duration_seconds") or params.get("duration") or 0.0)
         if duration <= 0:
@@ -1338,13 +1343,22 @@ class RuntimeDispatcher:
         seed_prompt = str(params.get("seed_prompt") or (source.prompt if source else "") or "audio texture")
         conditioning = [{"prompt": seed_prompt, "seconds_total": duration}]
         audio_sample_size = stable_model._adapt_sample_size(conditioning, 5292032, duration_padding_sec=6.0)
+        context.set_progress(0.16, "encoding target audio to SA3 latents")
         target_latents, _ = stable_model._encode_audio_input((sample_rate, audio), audio_sample_size)
         timestep_values = parse_float_sequence(params.get("timestep_values"))
         if not timestep_values:
             timestep_values = timesteps_from_logsnr_values(params.get("logsnr_values"))
         effective_samples = len(timestep_values) if timestep_values else max(1, int(params.get("score_samples", 1) or 1))
+        context.set_progress(0.18, f"prepared SA3 flow scorer with {effective_samples} sample(s)")
+        context.log(f"SA3 flow scorer target duration={duration:.2f}s samples={effective_samples}")
+        scored_count = 0
 
         def batch_scorer(prompts: list[str]) -> list[float]:
+            nonlocal scored_count
+            context.set_progress(
+                min(0.68, 0.22 + min(scored_count, 1000) / 1000 * 0.42),
+                f"scoring {len(prompts)} prompt candidate(s) with SA3 flow loss",
+            )
             losses = sa3_flow_losses_for_prompts(
                 stable_model,
                 target_latents,
@@ -1361,6 +1375,11 @@ class RuntimeDispatcher:
                 normalize_mse=bool(params.get("normalize_mse", True)),
                 conditional_delta_weight=float(params.get("conditional_delta_weight", 0.0) or 0.0),
                 velocity_convention=str(params.get("velocity_convention") or "noise_minus_data"),
+            )
+            scored_count += len(prompts)
+            context.set_progress(
+                min(0.68, 0.22 + min(scored_count, 1000) / 1000 * 0.42),
+                f"scored {scored_count} prompt candidate(s) with SA3 flow loss",
             )
             return [-loss for loss in losses]
 

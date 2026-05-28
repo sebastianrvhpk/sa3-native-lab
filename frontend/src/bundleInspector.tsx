@@ -14,6 +14,8 @@ export function BundleField({
   onSelectArtifact,
   onUseAsDonor,
   onUseInRecipe,
+  onUsePrompt,
+  onGeneratePrompt,
   getArtifactPath,
 }: {
   artifact: ArtifactRecord;
@@ -23,6 +25,8 @@ export function BundleField({
   onSelectArtifact: (artifactId: string | null) => void;
   onUseAsDonor: (artifactId: string) => void;
   onUseInRecipe: (fieldKey: string, path: string, mode: string) => void;
+  onUsePrompt: (prompt: string) => void;
+  onGeneratePrompt: (prompt: string) => void;
   getArtifactPath: (artifact: ArtifactRecord, fieldKey: string) => string;
 }) {
   const api = useMemo(() => createApi(apiBase), [apiBase]);
@@ -69,6 +73,9 @@ export function BundleField({
             onPromoteBundleAudio={(entry) => promoteBundleAudio.mutate(entry)}
             promotingAudioPath={promoteBundleAudio.isPending ? promoteBundleAudio.variables?.path ?? null : null}
             promoteAudioError={promoteBundleAudio.isError ? errorMessage(promoteBundleAudio.error) : null}
+            onUsePrompt={onUsePrompt}
+            onGeneratePrompt={onGeneratePrompt}
+            onUseInRecipe={onUseInRecipe}
           />
         ) : null}
         {inspection.data ? (
@@ -180,12 +187,18 @@ function BundleReaderPanel({
   onPromoteBundleAudio,
   promotingAudioPath,
   promoteAudioError,
+  onUsePrompt,
+  onGeneratePrompt,
+  onUseInRecipe,
 }: {
   inspection: ArtifactInspection;
   apiBase: string;
   onPromoteBundleAudio: (entry: BundleAudioEntry) => void;
   promotingAudioPath: string | null;
   promoteAudioError: string | null;
+  onUsePrompt: (prompt: string) => void;
+  onGeneratePrompt: (prompt: string) => void;
+  onUseInRecipe: (fieldKey: string, path: string, mode: string) => void;
 }) {
   const descriptor = summarizeBundle(inspection.bundle_summary, inspection.bundle_preview, inspection.bundle_files);
   const rows = descriptor.rows.filter(([, value]) => value !== undefined && value !== null && value !== "");
@@ -213,6 +226,12 @@ function BundleReaderPanel({
       ) : null}
       {plotFiles.length ? <PlotPreviewShell files={plotFiles} artifactId={inspection.artifact.artifact_id} getFileUrl={api.bundleFileUrl} /> : null}
       {domainSections.length ? <BundleDomainCards sections={domainSections} /> : null}
+      <PromptSearchCandidatePanel
+        summary={inspection.bundle_summary}
+        onUsePrompt={onUsePrompt}
+        onGeneratePrompt={onGeneratePrompt}
+        onUseInRecipe={onUseInRecipe}
+      />
       <BundleAudioChildren
         artifactId={inspection.artifact.artifact_id}
         entries={inspection.bundle_audio_files}
@@ -230,6 +249,73 @@ export interface BundleDomainSection {
   rows: [string, unknown][];
   files?: string[];
   items?: { label: string; meta?: string }[];
+}
+
+export interface PromptCandidateAction {
+  rank?: number;
+  prompt: string;
+  score?: unknown;
+  source?: string;
+}
+
+export function promptSearchCandidates(summary: Record<string, unknown> | undefined): PromptCandidateAction[] {
+  const promptSearch = objectValue(summary?.prompt_search);
+  if (!promptSearch) return [];
+  const seen = new Set<string>();
+  const candidates: PromptCandidateAction[] = [];
+  const add = (candidate: Record<string, unknown>, fallbackRank?: number) => {
+    const prompt = typeof candidate.prompt === "string" ? candidate.prompt.trim() : "";
+    if (!prompt || seen.has(prompt)) return;
+    seen.add(prompt);
+    candidates.push({
+      rank: typeof candidate.rank === "number" ? candidate.rank : fallbackRank,
+      prompt,
+      score: candidate.score,
+      source: typeof candidate.source === "string" ? candidate.source : undefined,
+    });
+  };
+  add({ prompt: promptSearch.prompt, score: promptSearch.score, source: "selected", rank: 1 }, 1);
+  for (const candidate of arrayOfObjects(promptSearch.families)) add(candidate);
+  return candidates.slice(0, 8);
+}
+
+function PromptSearchCandidatePanel({
+  summary,
+  onUsePrompt,
+  onGeneratePrompt,
+  onUseInRecipe,
+}: {
+  summary: Record<string, unknown> | undefined;
+  onUsePrompt: (prompt: string) => void;
+  onGeneratePrompt: (prompt: string) => void;
+  onUseInRecipe: (fieldKey: string, path: string, mode: string) => void;
+}) {
+  const candidates = promptSearchCandidates(summary);
+  if (!candidates.length) return null;
+  return (
+    <div className="prompt-candidate-panel" aria-label="Prompt search candidates">
+      <strong>Candidate prompts</strong>
+      {candidates.map((candidate) => (
+        <article key={`${candidate.rank ?? "candidate"}:${candidate.prompt}`}>
+          <div>
+            <span>{candidate.prompt}</span>
+            <small>{promptCandidateMeta(candidate)}</small>
+          </div>
+          <div className="prompt-candidate-actions">
+            <button type="button" onClick={() => onUsePrompt(candidate.prompt)}>
+              Use
+            </button>
+            <button type="button" onClick={() => onGeneratePrompt(candidate.prompt)}>
+              Generate
+            </button>
+            <button type="button" onClick={() => onUseInRecipe("prompt", candidate.prompt, "experiment.alpha_sweep")}>
+              Sweep
+            </button>
+          </div>
+        </article>
+      ))}
+    </div>
+  );
 }
 
 export function bundleDomainSections(summary: Record<string, unknown> | undefined): BundleDomainSection[] {
@@ -538,7 +624,7 @@ function bundleKindDescription(kind: string) {
   return "Script output files preserved as a replayable artifact";
 }
 
-function promptCandidateMeta(candidate: Record<string, unknown>) {
+function promptCandidateMeta(candidate: { rank?: number; source?: string; score?: unknown }) {
   const parts = [
     candidate.rank !== undefined ? `#${candidate.rank}` : "",
     typeof candidate.source === "string" ? candidate.source : "",
