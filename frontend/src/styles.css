@@ -688,6 +688,143 @@ label {
   font-size: 0.64rem;
 }
 
+.prompt-decision-study {
+  display: grid;
+  gap: 6px;
+  border: 1px solid rgb(45 51 52 / 0.14);
+  border-radius: 7px;
+  padding: 7px;
+  background:
+    linear-gradient(135deg, rgb(201 238 72 / 0.12), rgb(85 198 199 / 0.1), rgb(234 74 162 / 0.07)),
+    rgb(255 255 255 / 0.42);
+  min-width: 0;
+}
+
+.prompt-decision-study.unavailable {
+  border-style: dashed;
+  color: var(--muted);
+  font-size: 0.64rem;
+}
+
+.prompt-decision-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+}
+
+.prompt-decision-head strong {
+  color: var(--ink);
+  font-size: 0.7rem;
+}
+
+.prompt-decision-head span {
+  color: var(--muted);
+  font-size: 0.62rem;
+}
+
+.prompt-decision-summary,
+.prompt-decision-deltas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(66px, 1fr));
+  gap: 4px;
+  min-width: 0;
+}
+
+.prompt-decision-summary i,
+.prompt-decision-deltas i {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+  border: 1px solid rgb(45 51 52 / 0.12);
+  border-radius: 6px;
+  padding: 4px 5px;
+  background: rgb(255 255 255 / 0.4);
+  color: var(--quiet);
+  font-size: 0.59rem;
+  font-style: normal;
+}
+
+.prompt-decision-summary small,
+.prompt-decision-deltas small {
+  color: var(--ink);
+  font-size: 0.65rem;
+}
+
+.prompt-decision-summary i.up small,
+.prompt-decision-deltas i.up small {
+  color: var(--green);
+}
+
+.prompt-decision-summary i.down small,
+.prompt-decision-deltas i.down small {
+  color: var(--rose);
+}
+
+.prompt-decision-rows {
+  display: grid;
+  gap: 5px;
+}
+
+.prompt-decision-rows article {
+  display: grid;
+  gap: 5px;
+  border-top: 1px dashed rgb(45 51 52 / 0.15);
+  padding-top: 5px;
+  min-width: 0;
+}
+
+.prompt-decision-rows article > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  align-items: center;
+  min-width: 0;
+}
+
+.prompt-decision-rows strong,
+.prompt-decision-rows span,
+.prompt-decision-rows p,
+.prompt-decision-summary i,
+.prompt-decision-summary small,
+.prompt-decision-deltas i,
+.prompt-decision-deltas small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.prompt-decision-rows strong {
+  color: var(--ink);
+  font-size: 0.66rem;
+}
+
+.prompt-decision-rows span {
+  border: 1px solid rgb(45 51 52 / 0.16);
+  border-radius: 999px;
+  padding: 2px 6px;
+  background: rgb(255 255 255 / 0.5);
+  font-size: 0.58rem;
+}
+
+.prompt-decision-rows span.keeper {
+  color: var(--green);
+}
+
+.prompt-decision-rows span.maybe {
+  color: var(--blue);
+}
+
+.prompt-decision-rows span.rejected {
+  color: var(--rose);
+}
+
+.prompt-decision-rows p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.62rem;
+}
+
 .prompt-candidate-panel article {
   display: grid;
   grid-template-columns: minmax(0, 1fr) max-content;

@@ -1,13 +1,29 @@
 import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AudioLines, CirclePlus, FlaskConical, Sparkles } from "lucide-react";
+import { CirclePlus } from "lucide-react";
 
 import { createApi } from "./api";
 import type { ArtifactAnnotationPayload } from "./api";
-import { artifactMeta, artifactName, formatBytes, sortNewest } from "./artifactUtils";
-import { AudioDeck } from "./audioDeck";
-import { ListeningDecisionBadge, ListeningDecisionControls } from "./listeningDecision";
-import type { ArtifactInspection, ArtifactRecord, AudioDescriptorComparison, BundleAudioEntry, BundleFileEntry } from "./types";
+import { artifactMeta, artifactName, formatBytes } from "./artifactUtils";
+import {
+  PromptSearchCandidatePanel,
+  promptCandidateMeta,
+  type PromptCandidateGenerationRequest,
+} from "./promptSearchInspector";
+import type { ArtifactInspection, ArtifactRecord, BundleAudioEntry, BundleFileEntry } from "./types";
+
+export {
+  audioDescriptorDeltaRows,
+  promptCandidateGeneratedArtifacts,
+  promptDecisionCorrelationRows,
+  promptDecisionSummary,
+  promptSearchCandidates,
+  promptSearchTargetArtifact,
+  type DescriptorDeltaRow,
+  type PromptCandidateAction,
+  type PromptCandidateGenerationRequest,
+  type PromptDecisionCorrelationRow,
+} from "./promptSearchInspector";
 
 export function BundleField({
   artifact,
@@ -272,261 +288,6 @@ export interface BundleDomainSection {
   rows: [string, unknown][];
   files?: string[];
   items?: { label: string; meta?: string }[];
-}
-
-export interface PromptCandidateAction {
-  rank?: number;
-  prompt: string;
-  score?: unknown;
-  source?: string;
-}
-
-export interface PromptCandidateGenerationRequest extends PromptCandidateAction {
-  bundleArtifactId: string;
-  scorer?: string;
-  searchMode?: string;
-  searchModel?: string;
-  searchDurationSeconds?: number;
-}
-
-export function promptSearchCandidates(summary: Record<string, unknown> | undefined): PromptCandidateAction[] {
-  const promptSearch = objectValue(summary?.prompt_search);
-  if (!promptSearch) return [];
-  const seen = new Set<string>();
-  const candidates: PromptCandidateAction[] = [];
-  const add = (candidate: Record<string, unknown>, fallbackRank?: number) => {
-    const prompt = typeof candidate.prompt === "string" ? candidate.prompt.trim() : "";
-    if (!prompt || seen.has(prompt)) return;
-    seen.add(prompt);
-    candidates.push({
-      rank: typeof candidate.rank === "number" ? candidate.rank : fallbackRank,
-      prompt,
-      score: candidate.score,
-      source: typeof candidate.source === "string" ? candidate.source : undefined,
-    });
-  };
-  add({ prompt: promptSearch.prompt, score: promptSearch.score, source: "selected", rank: 1 }, 1);
-  for (const candidate of arrayOfObjects(promptSearch.families)) add(candidate);
-  return candidates.slice(0, 8);
-}
-
-function PromptSearchCandidatePanel({
-  summary,
-  artifact,
-  artifacts,
-  apiBase,
-  onUsePrompt,
-  onGeneratePrompt,
-  onAnnotate,
-  onUseInRecipe,
-  onCompare,
-  onSelectArtifact,
-}: {
-  summary: Record<string, unknown> | undefined;
-  artifact: ArtifactRecord;
-  artifacts: ArtifactRecord[];
-  apiBase: string;
-  onUsePrompt: (prompt: string) => void;
-  onGeneratePrompt: (request: PromptCandidateGenerationRequest) => void;
-  onAnnotate: (artifactId: string, payload: ArtifactAnnotationPayload) => void;
-  onUseInRecipe: (fieldKey: string, path: string, mode: string) => void;
-  onCompare: (slot: "a" | "b", artifactId: string | null) => void;
-  onSelectArtifact: (artifactId: string | null) => void;
-}) {
-  const candidates = promptSearchCandidates(summary);
-  if (!candidates.length) return null;
-  const totalTakes = promptCandidateGeneratedArtifacts(artifact.artifact_id, artifacts).length;
-  const targetArtifact = promptSearchTargetArtifact(artifact, artifacts);
-  return (
-    <div className="prompt-candidate-panel" aria-label="Prompt search candidates">
-      <div className="prompt-candidate-head">
-        <strong>Candidate prompts</strong>
-        <span>
-          <AudioLines size={13} />
-          {totalTakes} take{totalTakes === 1 ? "" : "s"}
-        </span>
-      </div>
-      {candidates.map((candidate) => {
-        const generated = promptCandidateGeneratedArtifacts(artifact.artifact_id, artifacts, candidate.prompt);
-        return (
-          <article key={`${candidate.rank ?? "candidate"}:${candidate.prompt}`} className={generated.length ? "has-takes" : ""}>
-            <div>
-              <span>{candidate.prompt}</span>
-              <small>{promptCandidateMeta(candidate)}</small>
-            </div>
-            <div className="prompt-candidate-actions">
-              <button type="button" onClick={() => onUsePrompt(candidate.prompt)}>
-                Use
-              </button>
-              <button type="button" onClick={() => onGeneratePrompt(promptCandidateGenerationRequest(candidate, artifact, summary))}>
-                <Sparkles aria-hidden="true" size={13} />
-                Generate
-              </button>
-              <button type="button" onClick={() => onUseInRecipe("prompt", candidate.prompt, "experiment.alpha_sweep")}>
-                Sweep
-              </button>
-            </div>
-            {generated.length ? (
-              <div className="prompt-generated-takes" aria-label={`Generated takes for ${candidate.prompt}`}>
-                {generated.slice(0, 3).map((take) => (
-                  <div key={take.artifact_id} className="prompt-generated-take">
-                    <button type="button" onClick={() => onSelectArtifact(take.artifact_id)} title={artifactName(take)}>
-                      <AudioLines size={14} />
-                      <span>{generatedTakeLabel(take)}</span>
-                      <ListeningDecisionBadge artifact={take} />
-                    </button>
-                    <AudioDeck artifact={take} apiBase={apiBase} compact />
-                    <PromptTakeDescriptorDelta apiBase={apiBase} target={targetArtifact} take={take} />
-                    <div className="prompt-generated-actions">
-                      <button type="button" onClick={() => onCompare("a", take.artifact_id)} title="Send generated take to comparison slot A">
-                        <FlaskConical aria-hidden="true" size={12} />
-                        A
-                      </button>
-                      <button type="button" onClick={() => onCompare("b", take.artifact_id)} title="Send generated take to comparison slot B">
-                        <FlaskConical aria-hidden="true" size={12} />
-                        B
-                      </button>
-                    </div>
-                    <ListeningDecisionControls
-                      artifact={take}
-                      source="prompt_candidate_bench"
-                      onDecide={onAnnotate}
-                    />
-                  </div>
-                ))}
-              </div>
-            ) : null}
-          </article>
-        );
-      })}
-    </div>
-  );
-}
-
-function PromptTakeDescriptorDelta({
-  apiBase,
-  target,
-  take,
-}: {
-  apiBase: string;
-  target: ArtifactRecord | null;
-  take: ArtifactRecord;
-}) {
-  const api = useMemo(() => createApi(apiBase), [apiBase]);
-  const comparison = useQuery({
-    queryKey: ["audio-descriptor-comparison", apiBase, target?.artifact_id, take.artifact_id],
-    queryFn: () => {
-      if (!target) throw new Error("prompt-search target audio unavailable");
-      return api.audioDescriptorComparison(target.artifact_id, take.artifact_id);
-    },
-    enabled: Boolean(target),
-    staleTime: 60000,
-  });
-  if (!target) {
-    return <div className="descriptor-delta unavailable">target delta unavailable</div>;
-  }
-  if (comparison.isLoading) {
-    return <div className="descriptor-delta unavailable">measuring delta...</div>;
-  }
-  if (comparison.isError || !comparison.data) {
-    return <div className="descriptor-delta unavailable">delta unavailable</div>;
-  }
-  const rows = audioDescriptorDeltaRows(comparison.data);
-  if (!rows.length) return null;
-  return (
-    <div className="descriptor-delta" aria-label={`Descriptor delta for ${artifactName(take)}`}>
-      {rows.map((row) => (
-        <i key={row.key} className={row.tone} title={row.title}>
-          <span>{row.label}</span>
-          <strong>{row.value}</strong>
-        </i>
-      ))}
-    </div>
-  );
-}
-
-export function promptCandidateGeneratedArtifacts(bundleArtifactId: string, artifacts: ArtifactRecord[], prompt?: string): ArtifactRecord[] {
-  return sortNewest(
-    artifacts.filter((artifact) => {
-      if (artifact.kind !== "audio") return false;
-      if (!artifact.source_artifact_ids.includes(bundleArtifactId)) return false;
-      if (prompt && artifact.prompt !== prompt) return false;
-      return artifact.metadata.generation_origin === "prompt_search_candidate";
-    }),
-  );
-}
-
-export function promptSearchTargetArtifact(bundleArtifact: ArtifactRecord, artifacts: ArtifactRecord[]): ArtifactRecord | null {
-  for (const sourceId of bundleArtifact.source_artifact_ids) {
-    const source = artifacts.find((artifact) => artifact.artifact_id === sourceId);
-    if (source?.kind === "audio") return source;
-  }
-  return null;
-}
-
-export interface DescriptorDeltaRow {
-  key: string;
-  label: string;
-  value: string;
-  tone: "up" | "down" | "neutral";
-  title: string;
-}
-
-const DESCRIPTOR_DELTA_KEYS = [
-  { key: "rms_dbfs", label: "level" },
-  { key: "spectral_centroid_hz", label: "bright" },
-  { key: "spectral_flux", label: "motion" },
-  { key: "spectral_flatness", label: "noise" },
-  { key: "stereo_width", label: "width" },
-] as const;
-
-export function audioDescriptorDeltaRows(comparison: AudioDescriptorComparison): DescriptorDeltaRow[] {
-  return DESCRIPTOR_DELTA_KEYS.flatMap((item) => {
-    const value = comparison.delta[item.key];
-    if (typeof value !== "number" || !Number.isFinite(value)) return [];
-    return [{
-      key: item.key,
-      label: item.label,
-      value: formatDescriptorDelta(item.key, value),
-      tone: descriptorDeltaTone(item.key, value),
-      title: `${item.label}: generated take ${formatDescriptorDelta(item.key, value)} vs target`,
-    }];
-  });
-}
-
-function formatDescriptorDelta(key: string, value: number): string {
-  const prefix = value > 0 ? "+" : "";
-  if (key === "rms_dbfs") return `${prefix}${value.toFixed(1)} dB`;
-  if (key.endsWith("_hz")) return `${prefix}${Math.round(value)} Hz`;
-  return `${prefix}${value.toFixed(2)}`;
-}
-
-function descriptorDeltaTone(key: string, value: number): DescriptorDeltaRow["tone"] {
-  const threshold = key === "rms_dbfs" ? 0.25 : key.endsWith("_hz") ? 25 : 0.02;
-  if (Math.abs(value) < threshold) return "neutral";
-  return value > 0 ? "up" : "down";
-}
-
-function promptCandidateGenerationRequest(
-  candidate: PromptCandidateAction,
-  artifact: ArtifactRecord,
-  summary: Record<string, unknown> | undefined,
-): PromptCandidateGenerationRequest {
-  const promptSearch = objectValue(summary?.prompt_search);
-  return {
-    ...candidate,
-    bundleArtifactId: artifact.artifact_id,
-    scorer: stringValue(promptSearch?.scorer),
-    searchMode: stringValue(promptSearch?.search_mode),
-    searchModel: stringValue(promptSearch?.model),
-    searchDurationSeconds: numberValue(promptSearch?.duration_seconds),
-  };
-}
-
-function generatedTakeLabel(artifact: ArtifactRecord) {
-  const rank = typeof artifact.metadata.prompt_candidate_rank === "number" ? `#${artifact.metadata.prompt_candidate_rank}` : "take";
-  const seed = typeof artifact.metadata.seed === "number" ? ` · seed ${artifact.metadata.seed}` : "";
-  return `${rank}${seed}`;
 }
 
 export function bundleDomainSections(summary: Record<string, unknown> | undefined): BundleDomainSection[] {
@@ -835,15 +596,6 @@ function bundleKindDescription(kind: string) {
   return "Script output files preserved as a replayable artifact";
 }
 
-function promptCandidateMeta(candidate: { rank?: number; source?: string; score?: unknown }) {
-  const parts = [
-    candidate.rank !== undefined ? `#${candidate.rank}` : "",
-    typeof candidate.source === "string" ? candidate.source : "",
-    candidate.score !== undefined ? formatMaybeNumber(candidate.score) : "",
-  ].filter(Boolean);
-  return parts.join(" · ");
-}
-
 function formatBoolean(value: unknown) {
   if (typeof value !== "boolean") return undefined;
   return value ? "yes" : "no";
@@ -1105,13 +857,6 @@ function objectValue(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
 }
 
-function stringValue(value: unknown): string | undefined {
-  return typeof value === "string" && value.trim() ? value : undefined;
-}
-
-function numberValue(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
-}
 
 function arrayOfObjects(value: unknown): Record<string, unknown>[] {
   return Array.isArray(value) ? value.filter((item): item is Record<string, unknown> => Boolean(objectValue(item))) : [];

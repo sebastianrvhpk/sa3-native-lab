@@ -5,6 +5,8 @@ import {
   bundleDomainSections,
   bundleReuseActions,
   promptCandidateGeneratedArtifacts,
+  promptDecisionCorrelationRows,
+  promptDecisionSummary,
   promptSearchTargetArtifact,
   promptSearchCandidates,
   summarizeBundle,
@@ -260,5 +262,44 @@ describe("bundle inspector summaries", () => {
       expect.objectContaining({ key: "spectral_flatness", label: "noise", value: "-0.08", tone: "down" }),
       expect.objectContaining({ key: "stereo_width", label: "width", value: "+0.03", tone: "up" }),
     ]);
+    const takeRows = promptDecisionCorrelationRows([
+      {
+        artifact_id: "art_take",
+        kind: "audio",
+        prompt: "warm granular loop shimmer",
+        source_artifact_ids: ["art_prompt_bundle"],
+        metadata: {
+          generation_origin: "prompt_search_candidate",
+          prompt_candidate_rank: 1,
+          seed: 7,
+          listening_decision: "keeper",
+          listening_decision_note: "wide useful texture",
+        },
+        tags: ["keeper"],
+        path: "/tmp/take.wav",
+        created_at: "2026-05-28T15:00:00.000Z",
+      },
+    ] as never, new Map([
+      ["art_take", {
+        target_artifact_id: "art_target",
+        take_artifact_id: "art_take",
+        target: {},
+        take: {},
+        delta: { rms_dbfs: 1.25, spectral_centroid_hz: 220.4, spectral_flux: 0.01 },
+      }],
+    ]));
+    expect(takeRows).toEqual([
+      expect.objectContaining({
+        artifactId: "art_take",
+        label: "#1 · seed 7",
+        decision: "keeper",
+        note: "wide useful texture",
+      }),
+    ]);
+    expect(promptDecisionSummary(takeRows)).toEqual(expect.arrayContaining([
+      { label: "keepers", value: "1", tone: "up" },
+      { label: "keeper bright", value: "+220 Hz", tone: "up" },
+      { label: "keeper level", value: "+1.3 dB", tone: "up" },
+    ]));
   });
 });
