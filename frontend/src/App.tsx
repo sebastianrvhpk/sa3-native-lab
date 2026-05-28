@@ -59,6 +59,7 @@ import {
   type OperatorPreset,
   type OperatorPresetDiffRow,
 } from "./operatorPresets";
+import { applyPromptSearchPreset, promptSearchPresets, type PromptSearchPreset } from "./promptSearchPresets";
 import { RecipeFields } from "./RecipeFields";
 import { FamilyDetailPanel, ResultFamilyPanel } from "./resultFamilies";
 import {
@@ -1573,6 +1574,12 @@ export function App() {
                 <span className={`recipe-chip ${activeExperiment.maturity}`}>{activeExperiment.maturity}</span>
               </div>
               <SpecCoverage spec={activeExperimentSpec} controlledKeys={fieldKeys(activeExperiment)} />
+              {activeExperiment.value === "experiment.prompt_search" ? (
+                <PromptSearchPresetRack
+                  presets={promptSearchPresets}
+                  onApply={(presetId) => setExperimentForm((current) => applyPromptSearchPreset(current, presetId))}
+                />
+              ) : null}
               <RecipeFields
                 config={activeExperiment}
                 form={experimentForm}
@@ -1672,6 +1679,26 @@ export function App() {
         </aside>
       </section>
     </main>
+  );
+}
+
+function PromptSearchPresetRack({
+  presets,
+  onApply,
+}: {
+  presets: readonly PromptSearchPreset[];
+  onApply: (presetId: string) => void;
+}) {
+  return (
+    <div className="prompt-search-preset-rack" aria-label="Prompt search presets">
+      {presets.map((preset) => (
+        <button key={preset.id} type="button" onClick={() => onApply(preset.id)} title={preset.intent}>
+          <Search aria-hidden="true" size={13} />
+          <span>{preset.label}</span>
+          <small>{preset.modeLabel} · {preset.cost}</small>
+        </button>
+      ))}
+    </div>
   );
 }
 

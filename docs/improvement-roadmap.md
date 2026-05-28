@@ -56,7 +56,10 @@ For the broader stack direction and promotion triggers, see
    prompt memory now groups generated prompt-candidate decisions across runs.
    Prompt-search bundles also compare generated takes across search runs by
    scorer, mode, model, duration, prompt variety, and listening decisions. Next
-   they need richer sweep-family and layer/alpha comparisons.
+   they need richer sweep-family and layer/alpha comparisons. Recipe Studio now
+   also has prompt-search presets for Mode 2 hard-token search, Mode 3 readable
+   prompt search, and a small Medium flow-score check, with cost labels visible
+   before the heavier scorer is selected.
 
 2. Presets for Operator Studio.
    Browser-local named presets now exist for blur, DSP, graft, renoise, and
