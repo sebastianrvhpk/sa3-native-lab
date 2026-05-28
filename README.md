@@ -207,10 +207,17 @@ output artifact instead of relying on notebook cell state.
 
 Colab-style experiment scripts are also available as background recipe jobs
 through `/experiments/run`. These bridge the notebook migration for style
-profiles, audio directions, residual vectors, alpha sweeps, soft prompts,
-dataset pre-encoding, and LoRA training. Script runs save audio artifacts when
-they produce listenable WAVs and zipped bundle artifacts for vector/profile
-outputs and training folders.
+profiles, audio directions, residual vectors, alpha sweeps, prompt search, soft
+prompts, dataset pre-encoding, and LoRA training. Script runs save audio
+artifacts when they produce listenable WAVs and zipped bundle artifacts for
+vector/profile outputs and training folders. `experiment.prompt_search` is a
+native CPU probe today: it uses a deterministic `lexical_probe` scorer to prove
+the app contract, controls, and bundle reader before a model-backed SA3/CLAP
+scorer is promoted.
+
+Bundle artifacts can be inspected with `/artifacts/{id}/inspect`; embedded audio
+inside a bundle can be streamed through `/artifacts/{id}/bundle-file` or promoted
+into a normal audio artifact through `/artifacts/{id}/bundle-audio/promote`.
 
 Audio artifacts can also be encoded to SAME latents and decoded back through the
 Torch/MPS autoencoder path:

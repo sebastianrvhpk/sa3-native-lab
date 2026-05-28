@@ -52,7 +52,8 @@ source audio / prompt
 | P1 | Kind-specific artifact vitals | specimen inspector rows for audio, latent, and bundle artifacts | Promote first slice | frontend build |
 | P2 | Memory atlas and retrieval | `LatentMemoryIndex` + `memory.query` + memory-hit reuse actions | Promote first slice | nearest-neighbor runtime test, frontend smoke |
 | P2 | SAME geometry audit | `geometry_report` + `experiment.geometry_audit` + bundle summary reader | Promote first slice | runtime test, frontend tests |
-| P2 | Residual steering and prompt search | existing scripts/experiments | Defer | model-backed recipe tests |
+| P2 | Prompt search probe | `experiment.prompt_search` + `prompt_optimization` helpers + prompt-search bundle reader | Promote as probe | runtime test, frontend tests |
+| P2 | Model-backed residual/prompt scoring | SA3 flow-loss / CLAP scorer adapters | Defer | model-backed recipe tests |
 
 ## Acceptance Tests Per Pass
 
@@ -65,10 +66,11 @@ source audio / prompt
 
 ## Immediate Next Queue
 
-1. Add richer domain-specific inspectors for style profiles, vectors, soft
-   prompts, memory collections, sweeps, geometry audits, and training outputs.
-2. Add prompt-search recipe adapters for Colab Modes 2/3/5 once the model-backed
-   scorer contract is ready.
+1. Add a model-backed scorer adapter for prompt-search Colab Modes 2/3/5, using
+   the current `experiment.prompt_search` probe contract as the UI/runtime shell.
+2. Add richer domain-specific inspectors for style profiles, vectors, prompt
+   search, soft prompts, memory collections, sweeps, geometry audits, and
+   training outputs.
 3. Add control-head recipe adapters for Mode 12 and labelled-probe extensions
    for Mode 15.
 4. Continue shrinking frontend field drift until backend `ui_fields` can drive

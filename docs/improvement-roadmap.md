@@ -61,10 +61,12 @@ For the broader stack direction and promotion triggers, see
    typed readers now exist. The backend now parses JSON/NPZ bundle summaries
    and promotes metric scalars plus plot/image files into reader rows. Bundle
    cards can now route profiles, vectors, directions, soft prompts, memory
-   folders, and LoRA checkpoints into Recipe Studio, and discovered image plots
-   plus embedded audio files render through the bundle-file endpoint. Next,
-   vector/profile/soft-prompt/sweep/geometry bundles should expose richer
-   domain-specific controls without making the user inspect zip contents.
+   folders, prompt-search candidates, and LoRA checkpoints into Recipe Studio,
+   and discovered image plots plus embedded audio files render through the
+   bundle-file endpoint. Embedded bundle audio can now be promoted into normal
+   audio artifacts. Next, vector/profile/soft-prompt/sweep/geometry/prompt-search
+   bundles should expose richer domain-specific controls without making the user
+   inspect zip contents.
 
 ## P2: Research Cognition
 
@@ -83,8 +85,11 @@ For the broader stack direction and promotion triggers, see
    latent, donor, operator, bundle, and decoded result relationships.
 
 4. Prompt/residual comparison bench.
-   Residual steering and prompt-search runs need descriptor deltas, layer/alpha
-   comparisons, and generated audio grids.
+   Prompt search now exists as `experiment.prompt_search` with beam, greedy, and
+   coordinate modes plus a clearly labelled `lexical_probe` scorer. The next
+   research step is replacing that probe with SA3/CLAP scoring, then pairing
+   prompt candidates with generated-audio grids, descriptor deltas, and
+   layer/alpha comparisons.
 
 5. Geometry and control probes.
    `experiment.geometry_audit` now produces a local latent geometry report
@@ -138,11 +143,13 @@ For the broader stack direction and promotion triggers, see
 6. Add typed artifact inspectors.
    Bundle summaries now parse JSON/NPZ metadata, metric scalars, and plot/image
    file discovery in the backend, and reusable bundles can populate Recipe
-   Studio fields. Bundle-contained audio children and geometry reports are now
-   also surfaced. The specimen panel shows kind-specific vitals for audio,
-   latent, and bundle artifacts. Next each bundle kind should grow a dedicated
-   inspector component with richer actions: vector bundle, profile, soft prompt,
-   training output, sweep, memory collection, and geometry audit.
+   Studio fields. Bundle-contained audio children, prompt-search reports, and
+   geometry reports are now also surfaced, and bundle audio can be promoted into
+   first-class audio artifacts. The specimen panel shows kind-specific vitals for
+   audio, latent, and bundle artifacts. Next each bundle kind should grow a
+   dedicated inspector component with richer actions: vector bundle, profile,
+   prompt search, soft prompt, training output, sweep, memory collection, and
+   geometry audit.
 
 7. Continue extracting app surfaces from `App.tsx`.
    Audio playback, artifact display, job progress, result families, recipe

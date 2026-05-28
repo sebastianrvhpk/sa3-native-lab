@@ -38,7 +38,9 @@ and the next risks for turning the Colab experiments into a proper app.
   discovery into typed reader rows. Reusable bundles can now populate Recipe
   Studio fields directly. Inline image plots now render from bundle artifacts,
   and alpha sweep families have sortable metrics, best-candidate marking, and
-  A/B promotion from the table.
+  A/B promotion from the table. Embedded bundle audio can be promoted into a
+  first-class audio artifact, and prompt-search bundles are parsed into native
+  reader rows and prompt reuse actions.
 
 ## Important Risks
 
@@ -54,8 +56,12 @@ and the next risks for turning the Colab experiments into a proper app.
   as more Colab modes become native.
 - Bundle artifacts have backend-parsed JSON/NPZ summaries, metric rows, plot
   file discovery, inline image previews, typed UI readers, and recipe-input
-  actions, but vector/profile/soft-prompt-specific inspectors are still
-  shallow.
+  actions, but vector/profile/prompt-search/soft-prompt-specific inspectors are
+  still shallow.
+- `experiment.prompt_search` is useful as an app contract and workflow probe,
+  but it currently uses a deterministic `lexical_probe` scorer. It should not be
+  presented as true audio-text inversion until the SA3/CLAP model-backed scorer
+  is implemented and validated.
 - Long-running jobs have cancel/retry, but not pause/resume, priority,
   resource-aware scheduling, or resident worker reuse.
 - Error messages are now transformed into first-pass recovery hints, but command
@@ -85,8 +91,8 @@ and the next risks for turning the Colab experiments into a proper app.
 
 5. Add artifact inspectors.
    Extend current audio/latent/bundle vitals and inline plot previews into
-   domain-specific vector, profile, soft-prompt, training, sweep, and memory
-   inspectors.
+   domain-specific vector, profile, prompt-search, soft-prompt, training, sweep,
+   and memory inspectors.
 
 6. Add deeper job control.
    Later add pause/resume, priorities, worker pools, and resident model

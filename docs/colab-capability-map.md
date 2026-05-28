@@ -29,6 +29,7 @@ smoke tests, but they are not the app default.
 | Prompt residual vectors | `scripts/extract_sa3_vectors.py` | `/experiments/run`, Recipe Studio | script-job adapter with native controls |
 | Audio residual vectors | `scripts/extract_audio_residual_vectors.py` | `/experiments/run`, Recipe Studio | script-job adapter with native controls |
 | Residual alpha sweep | `scripts/run_sa3_alpha_sweep.py` | `/experiments/run`, Recipe Studio | script-job adapter with native controls |
+| Prompt search | `latent_audio_primitives.prompt_optimization` | `/experiments/run`, Recipe Studio | native CPU probe with `lexical_probe`; model-backed scorer pending |
 | Soft prompt optimize/generate | `scripts/optimize_sa3_soft_prompt.py`, `scripts/generate_sa3_with_soft_prompt.py` | `/experiments/run`, Recipe Studio | script-job adapter with native controls |
 | Dataset pre-encode | `scripts/pre_encode_dataset.py` | `/experiments/run`, Recipe Studio | script-job adapter with native controls |
 | SAME geometry audit | `latent_audio_primitives.geometry.geometry_report` | `/experiments/run`, Recipe Studio | implemented for local latent artifacts |
@@ -64,10 +65,17 @@ Euclidean summary distance against other local latent artifacts. Those local
 memory hits are now actionable in the bundle preview: select the artifact, place
 audio hits in A/B, or reuse latent hits as donor latents.
 
+Prompt search is now promoted from helper-only code to a native CPU recipe:
+`experiment.prompt_search` runs beam, greedy, or coordinate hard-token search,
+stores `prompt_search.json`, and exposes the resulting prompt back into Recipe
+Studio. This is intentionally marked as a probe because it uses a deterministic
+`lexical_probe` scorer today; true Colab Mode 2/3/5 parity still needs a
+model-backed SA3 flow-loss, CLAP, or hybrid scorer.
+
 ## Next Promotion Targets
 
-1. Prompt-search recipes for Colab Modes 2/3/5; helpers exist, but the app still
-   needs a model-backed scorer adapter.
+1. Replace the prompt-search `lexical_probe` with a model-backed scorer adapter
+   for Colab Modes 2/3/5.
 2. Control-head recipes for Mode 12 and the labelled-probe part of Mode 15.
 3. Operator presets and operator-studio recipe diffs for repeatable latent explorations.
 4. Richer memory/dataset browsing, including preview audio for non-local children.

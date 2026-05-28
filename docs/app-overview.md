@@ -42,6 +42,7 @@ Important endpoints:
 - `GET /colab/modes`
 - `GET /artifacts/{artifact_id}/inspect`
 - `GET /artifacts/{artifact_id}/bundle-file?path=...`
+- `POST /artifacts/{artifact_id}/bundle-audio/promote`
 - `POST /audio/import`
 - `POST /generate/text`
 - `POST /latents/encode`
@@ -101,9 +102,9 @@ selection appears only for graft or DSP modes that need a donor.
 ### Recipe Studio
 
 Recipe Studio wraps the notebook/script experiments as background recipes. It
-covers style vectors, style profiles, residual vectors, alpha sweeps, soft
-prompts, dataset pre-encoding, local latent-memory query, local SAME geometry
-audit, and LoRA training.
+covers style vectors, style profiles, residual vectors, alpha sweeps, prompt
+search, soft prompts, dataset pre-encoding, local latent-memory query, local
+SAME geometry audit, and LoRA training.
 
 Operator and recipe controls are partly hand-shaped for playability and partly
 derived from backend `ui_fields` emitted by `/operators/specs`. The frontend
@@ -129,11 +130,14 @@ Artifacts can also carry user labels, notes, and tags for archive search.
 Bundle artifacts can be inspected through the API and UI to reveal their file
 inventory, embedded audio children, backend-parsed JSON/NPZ summaries, parsed
 preview metadata, recipe, source artifacts, and child artifacts. Sweep and
-script bundles now promote `metrics.json` values, plot/image files, geometry
-reports, and embedded WAV/FLAC/etc children into the reader summary; image plots
-render inline and bundle-contained audio can be played through the bundle-file
-endpoint instead of staying buried in zip contents. Reusable bundle types expose native
-Recipe Studio actions such as use as profile, sweep vectors, use direction, use
+script bundles now promote `metrics.json` values, plot/image files, prompt-search
+JSON, geometry reports, and embedded WAV/FLAC/etc children into the reader
+summary; image plots render inline and bundle-contained audio can be played
+through the bundle-file endpoint instead of staying buried in zip contents.
+Embedded bundle audio can also be promoted into a normal audio artifact, which
+gives it peaks, playback, lineage, recipe provenance, annotations, and reuse in
+the rest of the app. Reusable bundle types expose native Recipe Studio actions
+such as use as profile, sweep vectors, use direction, use prompt in sweep, use
 soft prompt, use memory, and use checkpoint. Jobs and artifacts with the same
 recipe are grouped as result families in the right rail with run metrics when
 the job reports them. Memory query bundle previews expose ranked hits that can
@@ -165,6 +169,10 @@ Confirmed in the current codebase:
   artifacts.
 - Local SAME geometry audit is reachable as a CPU recipe over stored latent
   artifacts, producing a report bundle with variance and summary metrics.
+- Local prompt search is reachable as a CPU probe recipe over a selected or
+  explicit target audio artifact. It currently uses a deterministic
+  `lexical_probe` scorer so the interface, recipe, and bundle contract are real;
+  SA3/CLAP model-backed scoring remains the research upgrade.
 - Artifact annotation and archive search are implemented for labels, notes, and
   tags.
 - tRPC workbench, readiness, job lifecycle, recipe replay/fork, artifact
@@ -178,8 +186,9 @@ Confirmed in the current codebase:
   phase labels, job recovery hints,
   backend-derived operator field metadata, backend-parsed typed bundle
   inspectors, bundle metrics, inline plot/image previews, and kind-specific
-  artifact vitals, embedded bundle-audio playback, sibling sweep comparison,
-  and the first native geometry-audit recipe.
+  artifact vitals, embedded bundle-audio playback and promotion, prompt-search
+  bundle reading, sibling sweep comparison, and the first native geometry-audit
+  recipe.
 - Core app surfaces are now split into focused modules for audio playback,
   artifact display, job progress, result families, recipe forks, and bundle
   inspection.
@@ -188,6 +197,8 @@ Confirmed in the current codebase:
 Still partial:
 
 - Some Colab modes are mapped but not yet first-class native interactions.
+  Prompt-search modes now have a native probe path, but the model-backed scorer
+  needed for true Colab Mode 2/3/5 parity is still pending.
 - Type-specific readers for profiles, vectors, soft prompts, training outputs,
   sweeps, memory collections, and geometry audits now receive backend-parsed
   summaries, first-pass metrics/plot discovery, embedded image/audio rendering,
