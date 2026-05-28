@@ -39,6 +39,12 @@ export function formatPlaybackTime(seconds: number) {
   return `${minutes}:${rest}`;
 }
 
+export function formatFamilyStamp(value: string) {
+  const timestamp = Date.parse(value);
+  if (!Number.isFinite(timestamp) || timestamp <= 0) return "recent";
+  return new Date(timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
 export function formatBytes(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
