@@ -107,6 +107,16 @@ export interface JobRecord {
   finished_at?: string | null;
 }
 
+export interface RecipeForkPayload {
+  inputs?: Record<string, string> | null;
+  params?: Record<string, unknown> | null;
+  backend?: BackendName | null;
+  model?: string | null;
+  seed?: number | null;
+  notes?: string | null;
+  session_id?: string | null;
+}
+
 export interface ModelStatus {
   backend: BackendName;
   available: boolean;

@@ -35,6 +35,9 @@ class JobContext:
             return
         self._manager.append_log(self.job_id, line)
 
+    def cancelled(self) -> bool:
+        return self._manager.is_cancelled(self.job_id)
+
 
 JobHandler = Callable[[JobContext], JobResult]
 
@@ -87,8 +90,35 @@ class JobManager:
             self._persist(updated)
             return updated
 
+    def cancel(self, job_id: str) -> JobRecord:
+        with self._lock:
+            if job_id not in self._records:
+                raise KeyError(job_id)
+            record = self._records[job_id]
+            if record.status in {JobStatus.SUCCEEDED, JobStatus.FAILED, JobStatus.CANCELLED}:
+                return record
+            future = self._futures.get(job_id)
+            if future is not None:
+                future.cancel()
+            updated = record.model_copy(
+                update={
+                    "status": JobStatus.CANCELLED,
+                    "finished_at": utc_now(),
+                    "message": "cancel requested",
+                }
+            )
+            self._records[job_id] = updated
+            self._persist(updated)
+            return updated
+
+    def is_cancelled(self, job_id: str) -> bool:
+        with self._lock:
+            return self._records[job_id].status == JobStatus.CANCELLED
+
     def _run_job(self, job_id: str, handler: JobHandler) -> None:
         context = JobContext(self, job_id)
+        if context.cancelled():
+            return
         self.update(
             job_id,
             status=JobStatus.RUNNING,
@@ -98,6 +128,8 @@ class JobManager:
         )
         try:
             result = handler(context)
+            if context.cancelled():
+                return
             self.update(
                 job_id,
                 status=JobStatus.SUCCEEDED,
@@ -108,6 +140,8 @@ class JobManager:
                 metrics=result.metrics,
             )
         except Exception as exc:  # pragma: no cover - traceback shape is not important
+            if context.cancelled():
+                return
             context.log(traceback.format_exc())
             self.update(
                 job_id,

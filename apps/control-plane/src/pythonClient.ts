@@ -5,6 +5,7 @@ import type {
   JobRecord,
   NotebookMode,
   OperatorSpec,
+  RecipeForkPayload,
   SessionRecord,
 } from "./contracts.js";
 
@@ -69,6 +70,12 @@ export function createPythonClient({ baseUrl, fetchImpl = fetch }: PythonClientO
       return request<ArtifactRecord[]>(query ? `/artifacts?${query}` : "/artifacts");
     },
     jobs: () => request<JobRecord[]>("/jobs"),
+    job: (jobId: string) => request<JobRecord>(`/jobs/${encodeURIComponent(jobId)}`),
+    cancelJob: (jobId: string) => request<JobRecord>(`/jobs/${encodeURIComponent(jobId)}/cancel`, jsonPatchOrPost("POST", {})),
+    retryJob: (jobId: string) => request<JobRecord>(`/jobs/${encodeURIComponent(jobId)}/retry`, jsonPatchOrPost("POST", {})),
+    replayRecipe: (recipeId: string) => request<JobRecord>(`/recipes/${encodeURIComponent(recipeId)}/replay`, jsonPatchOrPost("POST", {})),
+    forkRecipe: (recipeId: string, payload: RecipeForkPayload) =>
+      request<JobRecord>(`/recipes/${encodeURIComponent(recipeId)}/fork`, jsonPatchOrPost("POST", payload)),
     annotateArtifact: (artifactId: string, payload: ArtifactAnnotationPayload) =>
       request<ArtifactRecord>(`/artifacts/${encodeURIComponent(artifactId)}/annotate`, jsonPatchOrPost("POST", payload)),
   };

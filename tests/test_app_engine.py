@@ -4,6 +4,7 @@ import json
 import time
 from io import BytesIO
 from pathlib import Path
+from threading import Event
 
 import numpy as np
 import pytest
@@ -201,6 +202,30 @@ def test_job_manager_persists_success(tmp_path):
     assert (tmp_path / f"{record.job_id}.json").exists()
 
 
+def test_job_manager_cancels_running_job(tmp_path):
+    manager = JobManager(tmp_path)
+    started = Event()
+    recipe = Recipe(
+        operator=OperatorName.LATENT_CYCLIC_ROLL,
+        backend=BackendName.TORCH_CPU,
+        params={"shift_frames": 1},
+    )
+
+    def handler(context):
+        started.set()
+        while not context.cancelled():
+            time.sleep(0.01)
+        return JobResult(artifact_ids=["should_not_commit"])
+
+    record = manager.submit(recipe, handler)
+    assert started.wait(timeout=1)
+
+    cancelled = manager.cancel(record.job_id)
+
+    assert cancelled.status == JobStatus.CANCELLED
+    assert _wait_for_job(manager, record.job_id).artifact_ids == []
+
+
 def test_job_manager_caps_logs_to_recent_lines(tmp_path):
     manager = JobManager(tmp_path)
     recipe = Recipe(
@@ -325,6 +350,23 @@ def test_fastapi_surface_imports_and_runs_latent_job(tmp_path):
     recipe = client.get(f"/recipes/{finished['recipe']['recipe_id']}")
     assert recipe.status_code == 200
     assert recipe.json()["operator"] == "latent.cyclic_roll"
+
+    replay = client.post(f"/recipes/{finished['recipe']['recipe_id']}/replay")
+    assert replay.status_code == 200
+    replay_finished = _wait_for_api_job(client, replay.json()["job_id"])
+    assert replay_finished["status"] == "succeeded"
+    assert replay_finished["recipe"]["recipe_id"] != finished["recipe"]["recipe_id"]
+
+    fork = client.post(f"/recipes/{finished['recipe']['recipe_id']}/fork", json={"params": {"shift_frames": 2}})
+    assert fork.status_code == 200
+    fork_finished = _wait_for_api_job(client, fork.json()["job_id"])
+    assert fork_finished["status"] == "succeeded"
+    assert fork_finished["recipe"]["params"]["shift_frames"] == 2
+
+    retry = client.post(f"/jobs/{finished['job_id']}/retry")
+    assert retry.status_code == 200
+    retry_finished = _wait_for_api_job(client, retry.json()["job_id"])
+    assert retry_finished["status"] == "succeeded"
 
 
 def test_colab_mode_atlas_covers_numbered_modes(tmp_path):

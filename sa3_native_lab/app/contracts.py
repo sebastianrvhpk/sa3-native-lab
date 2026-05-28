@@ -303,6 +303,16 @@ class ExperimentRunRequest(ContractModel):
     session_id: str | None = None
 
 
+class RecipeForkRequest(ContractModel):
+    inputs: dict[str, str] | None = None
+    params: dict[str, Any] | None = None
+    backend: BackendName | None = None
+    model: str | None = None
+    seed: int | None = None
+    notes: str | None = None
+    session_id: str | None = None
+
+
 class ArtifactAnnotationRequest(ContractModel):
     label: str | None = None
     notes: str | None = None

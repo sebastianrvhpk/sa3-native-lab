@@ -26,6 +26,7 @@ from .contracts import (
     OperatorName,
     OperatorRunRequest,
     Recipe,
+    RecipeForkRequest,
     SessionCreateRequest,
     SessionRecord,
     SessionUpdateRequest,
@@ -148,6 +149,22 @@ def create_app(
             return store.get_recipe(recipe_id)
         except KeyError as exc:
             raise HTTPException(status_code=404, detail=f"recipe not found: {recipe_id}") from exc
+
+    @app.post("/recipes/{recipe_id}/replay", response_model=JobRecord)
+    def replay_recipe(recipe_id: str) -> JobRecord:
+        try:
+            recipe = store.get_recipe(recipe_id)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=f"recipe not found: {recipe_id}") from exc
+        return _submit_recipe(jobs, runtime, _fork_recipe(recipe))
+
+    @app.post("/recipes/{recipe_id}/fork", response_model=JobRecord)
+    def fork_recipe(recipe_id: str, request: RecipeForkRequest) -> JobRecord:
+        try:
+            recipe = store.get_recipe(recipe_id)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=f"recipe not found: {recipe_id}") from exc
+        return _submit_recipe(jobs, runtime, _fork_recipe(recipe, request))
 
     @app.post("/artifacts/{artifact_id}/annotate", response_model=ArtifactRecord)
     def annotate_artifact(artifact_id: str, request: ArtifactAnnotationRequest) -> ArtifactRecord:
@@ -295,6 +312,21 @@ def create_app(
         except KeyError as exc:
             raise HTTPException(status_code=404, detail=f"job not found: {job_id}") from exc
 
+    @app.post("/jobs/{job_id}/cancel", response_model=JobRecord)
+    def cancel_job(job_id: str) -> JobRecord:
+        try:
+            return jobs.cancel(job_id)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=f"job not found: {job_id}") from exc
+
+    @app.post("/jobs/{job_id}/retry", response_model=JobRecord)
+    def retry_job(job_id: str) -> JobRecord:
+        try:
+            record = jobs.get(job_id)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=f"job not found: {job_id}") from exc
+        return _submit_recipe(jobs, runtime, _fork_recipe(record.recipe))
+
     @app.websocket("/jobs/{job_id}/events")
     async def job_events(websocket: WebSocket, job_id: str) -> None:
         await websocket.accept()
@@ -331,3 +363,34 @@ def _submit_recipe(jobs: JobManager, runtime: RuntimeDispatcher, recipe: Recipe)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return jobs.submit(recipe, handler)
+
+
+def _fork_recipe(recipe: Recipe, request: RecipeForkRequest | None = None) -> Recipe:
+    inputs = dict(recipe.inputs)
+    params = dict(recipe.params)
+    backend = recipe.backend
+    model = recipe.model
+    seed = recipe.seed
+    notes = recipe.notes
+    session_id = recipe.session_id
+    if request is not None:
+        if request.inputs:
+            inputs.update(request.inputs)
+        if request.params:
+            params.update(request.params)
+        backend = request.backend or backend
+        model = request.model if request.model is not None else model
+        seed = request.seed if request.seed is not None else seed
+        notes = request.notes if request.notes is not None else notes
+        session_id = request.session_id if request.session_id is not None else session_id
+    return Recipe(
+        operator=recipe.operator,
+        backend=backend,
+        inputs=inputs,
+        params=params,
+        model=model,
+        seed=seed,
+        notes=notes,
+        session_id=session_id,
+        version=recipe.version,
+    )

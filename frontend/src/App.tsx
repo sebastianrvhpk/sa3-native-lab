@@ -728,6 +728,21 @@ export function App() {
     },
   });
 
+  const cancelJobMutation = useMutation({
+    mutationFn: (jobId: string) => api.cancelJob(jobId),
+    onSuccess: invalidate,
+  });
+
+  const retryJobMutation = useMutation({
+    mutationFn: (jobId: string) => api.retryJob(jobId),
+    onSuccess: invalidate,
+  });
+
+  const replayRecipeMutation = useMutation({
+    mutationFn: (recipeId: string) => api.replayRecipe(recipeId),
+    onSuccess: invalidate,
+  });
+
   const annotateArtifact = useMutation({
     mutationFn: ({ artifactId, payload }: { artifactId: string; payload: ArtifactAnnotationPayload }) =>
       api.annotateArtifact(artifactId, payload),
@@ -918,8 +933,14 @@ export function App() {
             annotating={annotateArtifact.isPending}
             onAnnotate={(artifactId, payload) => annotateArtifact.mutate({ artifactId, payload })}
             onCompare={setCompare}
+            onReplayRecipe={(recipeId) => replayRecipeMutation.mutate(recipeId)}
           />
-          <RunMonitor runningJobs={runningJobs} latestJob={latestJobs[0] ?? null} />
+          <RunMonitor
+            runningJobs={runningJobs}
+            latestJob={latestJobs[0] ?? null}
+            onCancelJob={(job) => cancelJobMutation.mutate(job.job_id)}
+            onRetryJob={(job) => retryJobMutation.mutate(job.job_id)}
+          />
 
           <div className="action-bands">
             <div className="band">
@@ -1015,7 +1036,11 @@ export function App() {
                 {generate.isPending || generateJob ? <LoaderCircle className="spin" size={18} /> : <Play size={18} />}
                 {generateJob ? "MLX running" : generate.isPending ? "Queueing" : "Run MLX"}
               </button>
-              <InlineJobStatus job={generateJob} />
+              <InlineJobStatus
+                job={generateJob}
+                onCancelJob={(job) => cancelJobMutation.mutate(job.job_id)}
+                onRetryJob={(job) => retryJobMutation.mutate(job.job_id)}
+              />
             </div>
 
             <div className="band">
@@ -1070,7 +1095,11 @@ export function App() {
                   {decodeJob ? "Decoding" : "Decode"}
                 </button>
               </div>
-              <InlineJobStatus job={encodeJob ?? decodeJob} />
+              <InlineJobStatus
+                job={encodeJob ?? decodeJob}
+                onCancelJob={(job) => cancelJobMutation.mutate(job.job_id)}
+                onRetryJob={(job) => retryJobMutation.mutate(job.job_id)}
+              />
             </div>
 
             <div className="band operator-band">
@@ -1121,7 +1150,11 @@ export function App() {
                 {runOperator.isPending || operatorJob ? <LoaderCircle className="spin" size={18} /> : <GitFork size={17} />}
                 {operatorJob ? "Fork running" : "Fork latent"}
               </button>
-              <InlineJobStatus job={operatorJob} />
+              <InlineJobStatus
+                job={operatorJob}
+                onCancelJob={(job) => cancelJobMutation.mutate(job.job_id)}
+                onRetryJob={(job) => retryJobMutation.mutate(job.job_id)}
+              />
             </div>
 
             <div className="band experiment-band">
@@ -1157,7 +1190,11 @@ export function App() {
                 {runExperiment.isPending || experimentJob ? <LoaderCircle className="spin" size={18} /> : <Play size={18} />}
                 {experimentJob ? "Recipe running" : "Run recipe"}
               </button>
-              <InlineJobStatus job={experimentJob} />
+              <InlineJobStatus
+                job={experimentJob}
+                onCancelJob={(job) => cancelJobMutation.mutate(job.job_id)}
+                onRetryJob={(job) => retryJobMutation.mutate(job.job_id)}
+              />
               <ModeAtlas modes={modeAtlasRows} activeOperator={activeExperiment.value} />
             </div>
           </div>
@@ -1184,6 +1221,8 @@ export function App() {
             creatingSession={createSession.isPending}
             onSelect={selectArtifact}
             onStartSession={() => createSession.mutate()}
+            onCancelJob={(job) => cancelJobMutation.mutate(job.job_id)}
+            onRetryJob={(job) => retryJobMutation.mutate(job.job_id)}
           />
           <ComparePanel a={compareA} b={compareB} apiBase={apiBase} />
           <div className="mini-counts">
@@ -1256,6 +1295,7 @@ function Specimen({
   annotating,
   onAnnotate,
   onCompare,
+  onReplayRecipe,
 }: {
   artifact: ArtifactRecord | null;
   artifacts: ArtifactRecord[];
@@ -1263,6 +1303,7 @@ function Specimen({
   annotating: boolean;
   onAnnotate: (artifactId: string, payload: ArtifactAnnotationPayload) => void;
   onCompare: (slot: "a" | "b", artifactId: string | null) => void;
+  onReplayRecipe: (recipeId: string) => void;
 }) {
   if (!artifact) {
     return (
@@ -1312,6 +1353,16 @@ function Specimen({
           </button>
           <button disabled={artifact.kind !== "audio"} onClick={() => onCompare("b", artifact.artifact_id)}>
             B
+          </button>
+          <button
+            type="button"
+            disabled={!artifact.recipe_id}
+            onClick={() => {
+              if (artifact.recipe_id) onReplayRecipe(artifact.recipe_id);
+            }}
+            title="Replay recipe"
+          >
+            <Repeat size={17} />
           </button>
           <a className="icon-link" href={fileUrl} download title="Download artifact">
             <Download size={17} />
@@ -1541,7 +1592,20 @@ function PlayableWave({
   );
 }
 
-function RunMonitor({ runningJobs, latestJob }: { runningJobs: JobRecord[]; latestJob: JobRecord | null }) {
+interface JobActionHandlers {
+  onCancelJob?: (job: JobRecord) => void;
+  onRetryJob?: (job: JobRecord) => void;
+}
+
+function RunMonitor({
+  runningJobs,
+  latestJob,
+  onCancelJob,
+  onRetryJob,
+}: {
+  runningJobs: JobRecord[];
+  latestJob: JobRecord | null;
+} & JobActionHandlers) {
   const monitorJobs = runningJobs.length ? runningJobs.slice(0, 3) : latestJob ? [latestJob] : [];
   if (!monitorJobs.length) {
     return (
@@ -1567,18 +1631,18 @@ function RunMonitor({ runningJobs, latestJob }: { runningJobs: JobRecord[]; late
       </div>
       <div className="monitor-jobs">
         {monitorJobs.map((job) => (
-          <JobProgress key={job.job_id} job={job} compact={monitorJobs.length > 1} />
+          <JobProgress key={job.job_id} job={job} compact={monitorJobs.length > 1} onCancelJob={onCancelJob} onRetryJob={onRetryJob} />
         ))}
       </div>
     </div>
   );
 }
 
-function InlineJobStatus({ job }: { job: JobRecord | null | undefined }) {
+function InlineJobStatus({ job, onCancelJob, onRetryJob }: { job: JobRecord | null | undefined } & JobActionHandlers) {
   if (!job) return null;
   return (
     <div className="inline-job-status">
-      <JobProgress job={job} compact />
+      <JobProgress job={job} compact onCancelJob={onCancelJob} onRetryJob={onRetryJob} />
     </div>
   );
 }
@@ -1596,6 +1660,8 @@ function SessionTray({
   creatingSession,
   onSelect,
   onStartSession,
+  onCancelJob,
+  onRetryJob,
 }: {
   artifacts: ArtifactRecord[];
   archivedArtifacts: ArtifactRecord[];
@@ -1609,7 +1675,7 @@ function SessionTray({
   creatingSession: boolean;
   onSelect: (artifactId: string | null) => void;
   onStartSession: () => void;
-}) {
+} & JobActionHandlers) {
   const [archiveQuery, setArchiveQuery] = useState("");
   const [archiveTag, setArchiveTag] = useState("");
   const sessionArtifacts = sortNewest(artifacts).slice(0, 8);
@@ -1639,7 +1705,7 @@ function SessionTray({
         <div className="session-block">
           <span className="session-label">Running</span>
           {activeJobs.map((job) => (
-            <JobProgress key={job.job_id} job={job} compact />
+            <JobProgress key={job.job_id} job={job} compact onCancelJob={onCancelJob} onRetryJob={onRetryJob} />
           ))}
         </div>
       ) : null}
@@ -1672,7 +1738,7 @@ function SessionTray({
           </summary>
           <div className="archive-list">
             {sessionJobs.map((job) => (
-              <JobProgress key={job.job_id} job={job} compact />
+              <JobProgress key={job.job_id} job={job} compact onCancelJob={onCancelJob} onRetryJob={onRetryJob} />
             ))}
           </div>
         </details>
@@ -1727,7 +1793,7 @@ function SessionTray({
             />
           ))}
           {archiveJobRows.map((job) => (
-            <JobProgress key={job.job_id} job={job} compact />
+            <JobProgress key={job.job_id} job={job} compact onCancelJob={onCancelJob} onRetryJob={onRetryJob} />
           ))}
           {!archiveArtifactRows.length && !archiveJobRows.length ? <div className="quiet-panel compact">{archiveSearching ? "No matching takes" : "Archive empty"}</div> : null}
         </div>
@@ -1766,8 +1832,18 @@ function SessionArtifactRow({
   );
 }
 
-function JobProgress({ job, compact = false }: { job: JobRecord; compact?: boolean }) {
+function JobProgress({
+  job,
+  compact = false,
+  onCancelJob,
+  onRetryJob,
+}: {
+  job: JobRecord;
+  compact?: boolean;
+} & JobActionHandlers) {
   const logLines = job.logs.slice(-12);
+  const canCancel = isJobActive(job) && Boolean(onCancelJob);
+  const canRetry = (job.status === "failed" || job.status === "cancelled") && Boolean(onRetryJob);
   return (
     <div className={`job-progress ${job.status} ${compact ? "compact" : ""}`}>
       <div className="job-progress-main">
@@ -1780,6 +1856,22 @@ function JobProgress({ job, compact = false }: { job: JobRecord; compact?: boole
         <span>{job.message ?? job.status}</span>
         <span>{formatJobElapsed(job)}</span>
       </div>
+      {canCancel || canRetry ? (
+        <div className="job-actions">
+          {canCancel ? (
+            <button type="button" onClick={() => onCancelJob?.(job)} title="Cancel job">
+              <X size={13} />
+              Cancel
+            </button>
+          ) : null}
+          {canRetry ? (
+            <button type="button" onClick={() => onRetryJob?.(job)} title="Retry job">
+              <Repeat size={13} />
+              Retry
+            </button>
+          ) : null}
+        </div>
+      ) : null}
       {!compact && (job.error || logLines.length) ? (
         <details className="job-log-drawer">
           <summary>

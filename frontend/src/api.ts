@@ -87,6 +87,16 @@ export interface ArtifactAnnotationPayload {
   metadata?: Record<string, unknown> | null;
 }
 
+export interface RecipeForkPayload {
+  inputs?: Record<string, string> | null;
+  params?: Record<string, unknown> | null;
+  backend?: "mlx" | "torch_mps" | "torch_cpu" | "cpu" | null;
+  model?: string | null;
+  seed?: number | null;
+  notes?: string | null;
+  session_id?: string | null;
+}
+
 export interface ArtifactListOptions {
   kind?: ArtifactKind;
   sessionId?: string | null;
@@ -138,7 +148,12 @@ export function createApi(baseUrl: string) {
     audioPeaks: (artifactId: string, bins = 96) =>
       request<AudioPeaksResponse>(`/artifacts/${encodeURIComponent(artifactId)}/peaks?bins=${bins}`),
     jobs: () => request<JobRecord[]>("/jobs"),
-    job: (jobId: string) => request<JobRecord>(`/jobs/${jobId}`),
+    job: (jobId: string) => request<JobRecord>(`/jobs/${encodeURIComponent(jobId)}`),
+    cancelJob: (jobId: string) => request<JobRecord>(`/jobs/${encodeURIComponent(jobId)}/cancel`, jsonPost({})),
+    retryJob: (jobId: string) => request<JobRecord>(`/jobs/${encodeURIComponent(jobId)}/retry`, jsonPost({})),
+    replayRecipe: (recipeId: string) => request<JobRecord>(`/recipes/${encodeURIComponent(recipeId)}/replay`, jsonPost({})),
+    forkRecipe: (recipeId: string, payload: RecipeForkPayload = {}) =>
+      request<JobRecord>(`/recipes/${encodeURIComponent(recipeId)}/fork`, jsonPost(payload)),
     importAudio: async (file: File, label?: string, sessionId?: string | null) => {
       const data = new FormData();
       data.append("file", file);

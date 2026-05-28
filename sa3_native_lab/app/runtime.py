@@ -525,6 +525,14 @@ class RuntimeDispatcher:
         )
         assert process.stdout is not None
         for line in process.stdout:
+            if context.cancelled():
+                process.terminate()
+                context.log("cancel requested; terminating subprocess")
+                try:
+                    return process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    return process.wait()
             clean = line.rstrip()
             _update_subprocess_progress(context, clean)
             context.log(clean)

@@ -62,6 +62,42 @@ test("tRPC workbench.load aggregates Python runtime calls", async () => {
   assert.equal(state.counts.scaffoldModes, 1);
 });
 
+test("tRPC jobs and recipes procedures call Python lifecycle endpoints", async () => {
+  const calls: { path: string; method: string; body: unknown }[] = [];
+  const fakeFetch: typeof fetch = async (url, init) => {
+    const path = new URL(String(url)).pathname;
+    const body = init?.body ? JSON.parse(String(init.body)) : null;
+    calls.push({ path, method: init?.method ?? "GET", body });
+    if (path === "/jobs/job_running/cancel") {
+      return Response.json(jobRecord("job_running", "cancelled", "sess_active", now));
+    }
+    if (path === "/jobs/job_failed/retry") {
+      return Response.json(jobRecord("job_retry", "queued", "sess_active", now));
+    }
+    if (path === "/recipes/recipe_1/replay") {
+      return Response.json(jobRecord("job_replay", "queued", "sess_active", now));
+    }
+    if (path === "/recipes/recipe_1/fork") {
+      return Response.json(jobRecord("job_fork", "queued", "sess_active", now));
+    }
+    return Response.json({ detail: "not found" }, { status: 404 });
+  };
+
+  const caller = appRouter.createCaller({ baseUrl: "http://python.test", fetchImpl: fakeFetch });
+
+  assert.equal((await caller.jobs.cancel({ jobId: "job_running" })).status, "cancelled");
+  assert.equal((await caller.jobs.retry({ jobId: "job_failed" })).job_id, "job_retry");
+  assert.equal((await caller.recipes.replay({ recipeId: "recipe_1" })).job_id, "job_replay");
+  assert.equal((await caller.recipes.fork({ recipeId: "recipe_1", params: { shift_frames: 2 } })).job_id, "job_fork");
+  assert.deepEqual(calls.map((call) => [call.method, call.path]), [
+    ["POST", "/jobs/job_running/cancel"],
+    ["POST", "/jobs/job_failed/retry"],
+    ["POST", "/recipes/recipe_1/replay"],
+    ["POST", "/recipes/recipe_1/fork"],
+  ]);
+  assert.deepEqual(calls[3]?.body, { params: { shift_frames: 2 } });
+});
+
 function snapshot(overrides: Partial<WorkbenchSnapshot> = {}): WorkbenchSnapshot {
   return {
     health: healthResponse(),

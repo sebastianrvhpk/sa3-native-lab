@@ -623,7 +623,7 @@ dd {
 
 .specimen-actions {
   display: grid;
-  grid-template-columns: repeat(3, 40px);
+  grid-template-columns: repeat(4, 40px);
   gap: 8px;
   align-items: center;
   justify-content: end;
@@ -1431,6 +1431,32 @@ audio {
   border-radius: 8px;
   padding: 8px;
   background: rgb(255 255 255 / 0.42);
+}
+
+.job-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.job-actions button {
+  width: auto;
+  min-height: 28px;
+  padding: 0 8px;
+  border-radius: 6px;
+  box-shadow: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  color: var(--ink);
+  background: rgb(255 255 255 / 0.56);
+}
+
+.job-progress.cancelled .job-actions button,
+.job-progress.failed .job-actions button {
+  background: linear-gradient(135deg, rgb(234 74 162 / 0.16), rgb(201 238 72 / 0.16)), rgb(255 255 255 / 0.62);
 }
 
 .job-log-drawer {

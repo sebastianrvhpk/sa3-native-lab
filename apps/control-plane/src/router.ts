@@ -15,6 +15,24 @@ const archiveSearchInputSchema = z.object({
   sessionId: z.string().nullable().optional(),
 });
 
+const jobIdInputSchema = z.object({
+  jobId: z.string().min(1),
+});
+
+const recipeIdInputSchema = z.object({
+  recipeId: z.string().min(1),
+});
+
+const recipeForkInputSchema = recipeIdInputSchema.extend({
+  inputs: z.record(z.string(), z.string()).nullable().optional(),
+  params: z.record(z.string(), z.unknown()).nullable().optional(),
+  backend: z.enum(["mlx", "torch_mps", "torch_cpu", "cpu"]).nullable().optional(),
+  model: z.string().nullable().optional(),
+  seed: z.number().int().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  session_id: z.string().nullable().optional(),
+});
+
 const annotateInputSchema = z.object({
   artifactId: z.string().min(1),
   label: z.string().nullable().optional(),
@@ -31,6 +49,19 @@ export const appRouter = t.router({
         const { apiBase: baseUrl = ctx.baseUrl, ...workbenchInput } = input;
         return loadWorkbenchState(createPythonClient({ ...ctx, baseUrl }), workbenchInput);
       }),
+  }),
+  jobs: t.router({
+    list: t.procedure.query(({ ctx }) => createPythonClient(ctx).jobs()),
+    get: t.procedure.input(jobIdInputSchema).query(({ ctx, input }) => createPythonClient(ctx).job(input.jobId)),
+    cancel: t.procedure.input(jobIdInputSchema).mutation(({ ctx, input }) => createPythonClient(ctx).cancelJob(input.jobId)),
+    retry: t.procedure.input(jobIdInputSchema).mutation(({ ctx, input }) => createPythonClient(ctx).retryJob(input.jobId)),
+  }),
+  recipes: t.router({
+    replay: t.procedure.input(recipeIdInputSchema).mutation(({ ctx, input }) => createPythonClient(ctx).replayRecipe(input.recipeId)),
+    fork: t.procedure.input(recipeForkInputSchema).mutation(({ ctx, input }) => {
+      const { recipeId, ...payload } = input;
+      return createPythonClient(ctx).forkRecipe(recipeId, payload);
+    }),
   }),
   archive: t.router({
     search: t.procedure.input(archiveSearchInputSchema).query(({ ctx, input }) =>
