@@ -49,6 +49,14 @@ import { ForkRecipePanel } from "./forkRecipePanel";
 import { JobProgress, type JobActionHandlers } from "./jobProgress";
 import { isJobActive, shortOperatorName } from "./jobUtils";
 import { ListeningDecisionBadge } from "./listeningDecision";
+import {
+  createOperatorPreset,
+  deleteOperatorPreset,
+  loadOperatorPresets,
+  persistOperatorPresets,
+  upsertOperatorPreset,
+  type OperatorPreset,
+} from "./operatorPresets";
 import { RecipeFields } from "./RecipeFields";
 import { FamilyDetailPanel, ResultFamilyPanel } from "./resultFamilies";
 import {
@@ -790,6 +798,9 @@ export function App() {
   const [operator, setOperator] = useState<LatentOperatorMode>("latent.cyclic_roll");
   const [operatorForm, setOperatorForm] = useState<Record<string, RecipeValue>>(() => defaultOperatorForm("latent.cyclic_roll"));
   const [donorArtifactId, setDonorArtifactId] = useState("");
+  const [operatorPresets, setOperatorPresets] = useState<OperatorPreset[]>(() => loadOperatorPresets());
+  const [operatorPresetName, setOperatorPresetName] = useState("");
+  const [selectedOperatorPresetId, setSelectedOperatorPresetId] = useState("");
   const [experimentMode, setExperimentMode] = useState<ExperimentMode>("experiment.audio_style_vectors");
   const [experimentForm, setExperimentForm] = useState<Record<string, RecipeValue>>(() => defaultExperimentForm("experiment.audio_style_vectors"));
   const [liveJobsById, setLiveJobsById] = useState<Record<string, JobRecord>>({});
@@ -841,6 +852,7 @@ export function App() {
   const activeExperimentSpec = specMap.get(baseExperiment.value);
   const activeOperatorConfig = useMemo(() => withOperatorSpecFields(baseOperatorConfig, activeOperatorSpec), [baseOperatorConfig, activeOperatorSpec]);
   const activeExperiment = useMemo(() => withOperatorSpecFields(baseExperiment, activeExperimentSpec), [baseExperiment, activeExperimentSpec]);
+  const activeOperatorPresets = useMemo(() => operatorPresets.filter((preset) => preset.operator === operator), [operatorPresets, operator]);
   const generationNeedsSource = generationMode !== "generate.text_to_audio";
   const generationSource = selectedArtifact?.kind === "audio" ? selectedArtifact : null;
   const canGenerate = !generationNeedsSource || Boolean(generationSource);
@@ -869,6 +881,13 @@ export function App() {
   useEffect(() => {
     setOperatorForm((current) => fillMissingFieldDefaults(activeOperatorConfig, current));
   }, [activeOperatorConfig]);
+
+  useEffect(() => {
+    if (!selectedOperatorPresetId) return;
+    if (activeOperatorPresets.some((preset) => preset.id === selectedOperatorPresetId)) return;
+    setSelectedOperatorPresetId("");
+    setOperatorPresetName("");
+  }, [activeOperatorPresets, selectedOperatorPresetId]);
 
   useEffect(() => {
     setExperimentForm((current) => fillMissingFieldDefaults(activeExperiment, current));
@@ -1137,10 +1156,52 @@ export function App() {
     setOperatorForm((current) => ({ ...current, [key]: value }));
   };
 
+  const updateOperatorPresets = (next: OperatorPreset[]) => {
+    persistOperatorPresets(next);
+    setOperatorPresets(next);
+  };
+
+  const saveOperatorPreset = () => {
+    const existing = operatorPresets.find((preset) => preset.id === selectedOperatorPresetId);
+    const preset = createOperatorPreset({
+      id: existing?.id,
+      createdAt: existing?.createdAt,
+      name: operatorPresetName.trim() || existing?.name || `${activeOperatorConfig.label} sketch`,
+      operator,
+      form: operatorForm,
+      donorArtifactId: donorArtifactId || null,
+    });
+    updateOperatorPresets(upsertOperatorPreset(operatorPresets, preset));
+    setSelectedOperatorPresetId(preset.id);
+    setOperatorPresetName(preset.name);
+  };
+
+  const applyOperatorPreset = (presetId: string) => {
+    const preset = operatorPresets.find((item) => item.id === presetId);
+    if (!preset || !isLatentOperatorMode(preset.operator)) return;
+    setOperator(preset.operator);
+    setOperatorForm({
+      ...defaultOperatorForm(preset.operator),
+      ...preset.form,
+    });
+    setDonorArtifactId(preset.donorArtifactId ?? "");
+    setSelectedOperatorPresetId(preset.id);
+    setOperatorPresetName(preset.name);
+  };
+
+  const removeOperatorPreset = () => {
+    if (!selectedOperatorPresetId) return;
+    updateOperatorPresets(deleteOperatorPreset(operatorPresets, selectedOperatorPresetId));
+    setSelectedOperatorPresetId("");
+    setOperatorPresetName("");
+  };
+
   const selectOperatorMode = (mode: LatentOperatorMode) => {
     setOperator(mode);
     setOperatorForm(defaultOperatorForm(mode));
     setDonorArtifactId("");
+    setSelectedOperatorPresetId("");
+    setOperatorPresetName("");
   };
 
   const selectExperimentMode = (mode: ExperimentMode) => {
@@ -1435,6 +1496,15 @@ export function App() {
                 <span className={`recipe-chip ${activeOperatorConfig.maturity}`}>{activeOperatorConfig.maturity}</span>
               </div>
               <SpecCoverage spec={activeOperatorSpec} controlledKeys={fieldKeys(activeOperatorConfig)} />
+              <OperatorPresetRack
+                presets={activeOperatorPresets}
+                selectedPresetId={selectedOperatorPresetId}
+                presetName={operatorPresetName}
+                onSelectPreset={applyOperatorPreset}
+                onChangePresetName={setOperatorPresetName}
+                onSavePreset={saveOperatorPreset}
+                onDeletePreset={removeOperatorPreset}
+              />
               {operatorUsesDonor(activeOperatorConfig, operatorForm) ? (
                 <label className="control-cell donor-cell">
                   Donor latent
@@ -2350,6 +2420,56 @@ function LineageThread({ artifact, sources }: { artifact: ArtifactRecord; source
   );
 }
 
+function OperatorPresetRack({
+  presets,
+  selectedPresetId,
+  presetName,
+  onSelectPreset,
+  onChangePresetName,
+  onSavePreset,
+  onDeletePreset,
+}: {
+  presets: OperatorPreset[];
+  selectedPresetId: string;
+  presetName: string;
+  onSelectPreset: (presetId: string) => void;
+  onChangePresetName: (name: string) => void;
+  onSavePreset: () => void;
+  onDeletePreset: () => void;
+}) {
+  return (
+    <div className="operator-preset-rack" aria-label="Operator presets">
+      <label>
+        Preset
+        <select value={selectedPresetId} onChange={(event) => onSelectPreset(event.target.value)}>
+          <option value="">New preset</option>
+          {presets.map((preset) => (
+            <option key={preset.id} value={preset.id}>
+              {preset.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        Name
+        <input
+          value={presetName}
+          onChange={(event) => onChangePresetName(event.target.value)}
+          placeholder={presets.length ? "save current params" : "name this setting"}
+        />
+      </label>
+      <button type="button" onClick={onSavePreset} title="Save current operator parameters">
+        <Plus aria-hidden="true" size={13} />
+        Save
+      </button>
+      <button type="button" onClick={onDeletePreset} disabled={!selectedPresetId} title="Delete selected operator preset">
+        <X aria-hidden="true" size={13} />
+        Delete
+      </button>
+    </div>
+  );
+}
+
 function SpecCoverage({ spec, controlledKeys }: { spec: OperatorSpec | undefined; controlledKeys: readonly string[] }) {
   const params = specParamKeys(spec);
   const missing = missingParamKeys(spec, controlledKeys);
@@ -2398,6 +2518,10 @@ function defaultOperatorForm(mode: LatentOperatorMode): Record<string, RecipeVal
   const form = defaultFieldForm(config);
   if (!form.backend) form.backend = config.defaultBackend;
   return form;
+}
+
+function isLatentOperatorMode(value: string): value is LatentOperatorMode {
+  return operatorCatalog.some((item) => item.value === value);
 }
 
 function isExperimentMode(value: string): value is ExperimentMode {
