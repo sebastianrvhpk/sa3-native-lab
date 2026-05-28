@@ -71,6 +71,7 @@ export const appRouter = t.router({
       for await (const event of pollJobEvents(client, {
         jobId: input.jobId,
         intervalMs: input.intervalMs,
+        lastEventId: input.lastEventId,
         signal,
       })) {
         yield tracked(`${input.jobId}:${event.sequence}`, event);

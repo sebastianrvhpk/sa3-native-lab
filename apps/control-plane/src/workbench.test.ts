@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import type { ArtifactRecord, HealthResponse, JobRecord, NotebookMode, OperatorSpec, SessionRecord } from "./contracts.js";
-import { pollJobEvents } from "./jobEvents.js";
+import { parseTrackedSequence, pollJobEvents } from "./jobEvents.js";
 import { appRouter } from "./router.js";
 import { shapeWorkbenchState, type WorkbenchSnapshot } from "./workbench.js";
 
@@ -120,6 +120,37 @@ test("pollJobEvents emits changed snapshots until terminal state", async () => {
   assert.deepEqual(events.map((event) => event.type), ["snapshot", "snapshot"]);
   assert.deepEqual(events.map((event) => event.type === "snapshot" ? event.job.status : "error"), ["running", "succeeded"]);
   assert.deepEqual(events.map((event) => event.sequence), [1, 2]);
+  assert.deepEqual(events.map((event) => event.diagnostics.eventSource), ["python-job-snapshot-poll", "python-job-snapshot-poll"]);
+  assert.deepEqual(events.map((event) => event.diagnostics.pollIntervalMs), [1, 1]);
+  assert.deepEqual(events.map((event) => event.type === "snapshot" ? event.diagnostics.logTail.length : 0), [0, 0]);
+});
+
+test("pollJobEvents emits heartbeats and resumes monotonic ids", async () => {
+  let calls = 0;
+  const client = {
+    job: async (jobId: string) => {
+      calls += 1;
+      if (calls < 3) return { ...jobRecord(jobId, "running", "sess_active", now), progress: 0.25, logs: ["loading"] };
+      return { ...jobRecord(jobId, "succeeded", "sess_active", now), progress: 1, logs: ["loading", "done"] };
+    },
+  };
+
+  const events = [];
+  for await (const event of pollJobEvents(client, { jobId: "job_running", intervalMs: 1, heartbeatEveryMs: 1, lastEventId: "job_running:7" })) {
+    events.push(event);
+  }
+
+  assert.deepEqual(events.map((event) => event.type), ["snapshot", "heartbeat", "snapshot"]);
+  assert.deepEqual(events.map((event) => event.sequence), [8, 9, 10]);
+  assert.equal(events[0]?.diagnostics.resumedFromSequence, 7);
+  assert.equal(events[1]?.type === "heartbeat" ? events[1].diagnostics.unchangedPolls : 0, 1);
+  assert.deepEqual(events[2]?.diagnostics.logTail, ["loading", "done"]);
+});
+
+test("parseTrackedSequence accepts only ids for the same job", () => {
+  assert.equal(parseTrackedSequence("job_a", "job_a:12"), 12);
+  assert.equal(parseTrackedSequence("job_a", "job_b:12"), null);
+  assert.equal(parseTrackedSequence("job_a", "job_a:not-a-number"), null);
 });
 
 test("tRPC system readiness calls Python readiness endpoint", async () => {
