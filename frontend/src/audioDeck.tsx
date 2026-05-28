@@ -6,6 +6,11 @@ import { createApi } from "./api";
 import { artifactName, formatDuration, formatPlaybackTime } from "./artifactUtils";
 import type { ArtifactRecord } from "./types";
 
+interface LoopRegion {
+  start: number;
+  end: number;
+}
+
 export function AudioDeck({ artifact, apiBase, compact = false }: { artifact: ArtifactRecord; apiBase: string; compact?: boolean }) {
   const api = useMemo(() => createApi(apiBase), [apiBase]);
   const binCount = compact ? 36 : 128;
@@ -21,19 +26,28 @@ export function AudioDeck({ artifact, apiBase, compact = false }: { artifact: Ar
   const [duration, setDuration] = useState(artifact.audio?.duration_seconds ?? 0);
   const [volume, setVolume] = useState(0.92);
   const [loop, setLoop] = useState(false);
+  const [loopRegion, setLoopRegion] = useState<LoopRegion | null>(null);
+  const [playbackRate, setPlaybackRate] = useState(1);
   const fileUrl = `${apiBase}/artifacts/${artifact.artifact_id}/file`;
   const displayDuration = duration || artifact.audio?.duration_seconds || 0;
   const progress = displayDuration > 0 ? currentTime / displayDuration : 0;
+  const loopStartFraction = displayDuration && loopRegion ? loopRegion.start / displayDuration : 0;
+  const loopEndFraction = displayDuration && loopRegion ? loopRegion.end / displayDuration : 1;
 
   useEffect(() => {
     setPlaying(false);
     setCurrentTime(0);
     setDuration(artifact.audio?.duration_seconds ?? 0);
+    setLoopRegion(null);
   }, [artifact.artifact_id, artifact.audio?.duration_seconds]);
 
   useEffect(() => {
     if (audioRef.current) audioRef.current.volume = volume;
   }, [volume]);
+
+  useEffect(() => {
+    if (audioRef.current) audioRef.current.playbackRate = playbackRate;
+  }, [playbackRate]);
 
   const seekTo = (fraction: number) => {
     const audio = audioRef.current;
@@ -48,6 +62,20 @@ export function AudioDeck({ artifact, apiBase, compact = false }: { artifact: Ar
     const targetDuration = duration || artifact.audio?.duration_seconds || audioRef.current?.duration || 0;
     if (!targetDuration) return;
     seekTo((currentTime + seconds) / targetDuration);
+  };
+
+  const setRegionEdge = (edge: "start" | "end") => {
+    const targetDuration = duration || artifact.audio?.duration_seconds || audioRef.current?.duration || 0;
+    if (!targetDuration) return;
+    const fallbackStart = loopRegion?.start ?? 0;
+    const fallbackEnd = loopRegion?.end ?? targetDuration;
+    const next = clampLoopRegion(
+      edge === "start" ? currentTime : fallbackStart,
+      edge === "end" ? currentTime : fallbackEnd,
+      targetDuration,
+    );
+    setLoopRegion(next);
+    setLoop(true);
   };
 
   const togglePlay = async () => {
@@ -75,7 +103,13 @@ export function AudioDeck({ artifact, apiBase, compact = false }: { artifact: Ar
           const loadedDuration = event.currentTarget.duration;
           if (Number.isFinite(loadedDuration)) setDuration(loadedDuration);
         }}
-        onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime)}
+        onTimeUpdate={(event) => {
+          const audio = event.currentTarget;
+          if (loop && loopRegion && audio.currentTime >= loopRegion.end) {
+            audio.currentTime = loopRegion.start;
+          }
+          setCurrentTime(audio.currentTime);
+        }}
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
         onEnded={() => setPlaying(false)}
@@ -99,6 +133,9 @@ export function AudioDeck({ artifact, apiBase, compact = false }: { artifact: Ar
         progress={progress}
         loading={peaks.isLoading}
         compact={compact}
+        loopActive={loop && Boolean(loopRegion)}
+        loopStart={loopStartFraction}
+        loopEnd={loopEndFraction}
         onSeek={seekTo}
       />
       {!compact ? (
@@ -109,9 +146,30 @@ export function AudioDeck({ artifact, apiBase, compact = false }: { artifact: Ar
           <button type="button" className="deck-icon" onClick={() => seekBy(2)} title="Forward 2 seconds">
             <SkipForward size={16} />
           </button>
+          <button type="button" className="deck-chip" onClick={() => setRegionEdge("start")} title="Set loop start">
+            In
+          </button>
+          <button type="button" className="deck-chip" onClick={() => setRegionEdge("end")} title="Set loop end">
+            Out
+          </button>
+          {loopRegion ? (
+            <button type="button" className="deck-chip" onClick={() => setLoopRegion(null)} title="Clear loop region">
+              {formatLoopRegion(loopRegion)}
+            </button>
+          ) : null}
           <label className="deck-volume">
             Volume
             <input type="range" min={0} max={1} step={0.01} value={volume} onChange={(event) => setVolume(Number(event.target.value))} />
+          </label>
+          <label className="deck-volume rate">
+            Rate
+            <select value={playbackRate} onChange={(event) => setPlaybackRate(Number(event.target.value))}>
+              {[0.5, 0.75, 1, 1.25, 1.5].map((rate) => (
+                <option key={rate} value={rate}>
+                  {rate}x
+                </option>
+              ))}
+            </select>
           </label>
         </div>
       ) : null}
@@ -142,12 +200,18 @@ function PlayableWave({
   progress,
   loading,
   compact,
+  loopActive,
+  loopStart,
+  loopEnd,
   onSeek,
 }: {
   peaks: number[];
   progress: number;
   loading?: boolean;
   compact?: boolean;
+  loopActive?: boolean;
+  loopStart?: number;
+  loopEnd?: number;
   onSeek: (fraction: number) => void;
 }) {
   const maxPeak = Math.max(...peaks, 0.0001);
@@ -173,8 +237,15 @@ function PlayableWave({
         if (event.key === "Home") onSeek(0);
         if (event.key === "End") onSeek(1);
       }}
-      style={{ "--play-progress": `${progressPercent}%` } as CSSProperties}
+      style={
+        {
+          "--play-progress": `${progressPercent}%`,
+          "--loop-start": `${clamp(loopStart ?? 0, 0, 1) * 100}%`,
+          "--loop-end": `${clamp(loopEnd ?? 1, 0, 1) * 100}%`,
+        } as CSSProperties
+      }
     >
+      {loopActive ? <b aria-hidden="true" /> : null}
       {peaks.map((peak, index) => {
         const played = peaks.length <= 1 ? false : index / (peaks.length - 1) <= progress;
         return (
@@ -208,6 +279,21 @@ function placeholderPeaks(seed: string, count: number) {
     value = (value * 1664525 + 1013904223 + index) >>> 0;
     return 0.18 + (value % 72) / 100;
   });
+}
+
+export function clampLoopRegion(start: number, end: number, duration: number): LoopRegion {
+  const boundedDuration = Math.max(0, duration);
+  if (!boundedDuration) return { start: 0, end: 0 };
+  const safeStart = clamp(Number.isFinite(start) ? start : 0, 0, boundedDuration);
+  const safeEnd = clamp(Number.isFinite(end) ? end : boundedDuration, 0, boundedDuration);
+  if (safeEnd - safeStart >= 0.05) return { start: safeStart, end: safeEnd };
+  const widenedEnd = clamp(safeStart + 0.5, 0, boundedDuration);
+  if (widenedEnd - safeStart >= 0.05) return { start: safeStart, end: widenedEnd };
+  return { start: Math.max(0, boundedDuration - 0.5), end: boundedDuration };
+}
+
+export function formatLoopRegion(region: LoopRegion) {
+  return `${formatPlaybackTime(region.start)}-${formatPlaybackTime(region.end)}`;
 }
 
 function clamp(value: number, min: number, max: number) {
