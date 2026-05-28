@@ -42,6 +42,7 @@ import {
 } from "./artifactFilters";
 import { ArtifactBadge, ArtifactIcon } from "./artifactDisplay";
 import { artifactMeta, artifactName, artifactShape, formatDuration, sortNewest, sortNewestJobs } from "./artifactUtils";
+import { auditionStackRows } from "./auditionStack";
 import { AudioDeck, TinyWave } from "./audioDeck";
 import { BundleField, type PromptCandidateGenerationRequest } from "./bundleInspector";
 import { createControlPlaneClient, DEFAULT_CONTROL_PLANE_URL, type ResultFamily, type WorkbenchState } from "./controlPlane";
@@ -1691,6 +1692,13 @@ export function App() {
             onRetryJob={(job) => retryJobMutation.mutate(job.job_id)}
           />
           <ComparePanel a={compareA} b={compareB} apiBase={apiBase} />
+          <AuditionStackPanel
+            artifacts={sessionArtifacts}
+            selectedId={selectedArtifact?.artifact_id ?? null}
+            apiBase={apiBase}
+            onSelect={selectArtifact}
+            onCompare={setCompare}
+          />
           <div className="mini-counts">
             <span><FileAudio size={15} /> {audioArtifacts.length}</span>
             <span><Braces size={15} /> {latentArtifacts.length}</span>
@@ -1782,6 +1790,52 @@ function PromptSearchPresetRack({
           ))}
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function AuditionStackPanel({
+  artifacts,
+  selectedId,
+  apiBase,
+  onSelect,
+  onCompare,
+}: {
+  artifacts: ArtifactRecord[];
+  selectedId: string | null;
+  apiBase: string;
+  onSelect: (artifactId: string) => void;
+  onCompare: (slot: "a" | "b", artifactId: string | null) => void;
+}) {
+  const rows = auditionStackRows(artifacts, 5);
+  if (!rows.length) return null;
+  return (
+    <div className="audition-stack" aria-label="Session audition stack">
+      <div className="audition-stack-head">
+        <div>
+          <span className="eyebrow">Audition</span>
+          <strong>{rows.length} recent takes</strong>
+        </div>
+        <Waves size={18} />
+      </div>
+      {rows.map((row) => {
+        const artifact = artifacts.find((item) => item.artifact_id === row.artifactId);
+        if (!artifact) return null;
+        return (
+          <article key={row.artifactId} className={selectedId === row.artifactId ? "selected" : ""}>
+            <button type="button" onClick={() => onSelect(row.artifactId)} title={row.prompt ?? row.label}>
+              <span>{row.label}</span>
+              <small>{row.origin} · {row.meta}</small>
+              <ListeningDecisionBadge artifact={artifact} />
+            </button>
+            <AudioDeck artifact={artifact} apiBase={apiBase} compact />
+            <div className="audition-stack-actions">
+              <button type="button" onClick={() => onCompare("a", row.artifactId)} title="Send take to comparison slot A">A</button>
+              <button type="button" onClick={() => onCompare("b", row.artifactId)} title="Send take to comparison slot B">B</button>
+            </div>
+          </article>
+        );
+      })}
     </div>
   );
 }

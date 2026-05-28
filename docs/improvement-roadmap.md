@@ -43,7 +43,13 @@ For the broader stack direction and promotion triggers, see
 
 ## P1: Exploration Speed
 
-1. Deepen result-family views for sweeps.
+1. Playback composer.
+   The result rail now has a first recent-audition stack for session audio:
+   recent takes can be selected, played compactly, inspected with their
+   listening decision badge, and routed directly into A/B slots. Next playback
+   work should add marker/loop editing and explicit playlist sequencing.
+
+2. Deepen result-family views for sweeps.
    Recipe families now appear with metrics, a detail panel, per-result playback,
    explicit A/B promotion, replay, fork actions, and a compact sweep metric
    table with sort controls, best-candidate marking, and durable
@@ -64,21 +70,21 @@ For the broader stack direction and promotion triggers, see
    from previous generated takes, so Mode 2/3 prompt exploration is no longer
    only a raw parameter form.
 
-2. Presets for Operator Studio.
+3. Presets for Operator Studio.
    Browser-local named presets now exist for blur, DSP, graft, renoise, and
    cyclic roll. They can be saved, updated, selected, and deleted per operator
    mode. Selected presets show parameter and donor-latent diffs with a revert
    action. Next, promote useful presets into backend recipe history before
    adding a heavier database-backed preset library.
 
-3. Artifact filtering and tagging.
+4. Artifact filtering and tagging.
    Labels, tags, notes, keeper/maybe/reject listening decisions, archive search,
    archive-and-new session cleanup, and typed local recovery filters are now
    implemented. The filter pass covers decision, kind, model, operator, result
    family, source lineage, text, and tag. Next recovery work should add date and
    job status filters only if actual archive volume makes them useful.
 
-4. Better bundle readers.
+5. Better bundle readers.
    Bundle file inventory, JSON previews, memory-result reuse, and first-pass
    typed readers now exist. The backend now parses JSON/NPZ bundle summaries
    and promotes metric scalars plus plot/image files into reader rows. Bundle
