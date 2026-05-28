@@ -110,9 +110,9 @@ function RecipeFieldControl({
 }: RecipeFieldControlProps) {
   if (field.type === "checkbox") {
     return (
-      <AriaCheckbox className="field-checkbox aria-checkbox" title={field.description} isSelected={Boolean(value)} onChange={onChange}>
+      <AriaCheckbox className="field-checkbox aria-checkbox" isSelected={Boolean(value)} onChange={onChange}>
         <span className="checkbox-box" />
-        <span>{field.label}</span>
+        <span title={field.description}>{field.label}</span>
         <FieldError error={error} />
       </AriaCheckbox>
     );
@@ -138,7 +138,6 @@ function RecipeFieldControl({
     return (
       <AriaNumberField
         className="control-cell"
-        title={field.description}
         minValue={field.min}
         maxValue={field.max}
         step={field.step}
@@ -146,7 +145,7 @@ function RecipeFieldControl({
         onChange={(next) => onChange(Number.isFinite(next) ? next : "")}
       >
         <AriaLabel>{field.label}</AriaLabel>
-        <AriaInput />
+        <AriaInput title={field.description} />
         <FieldError error={error} />
       </AriaNumberField>
     );
@@ -157,14 +156,13 @@ function RecipeFieldControl({
     return (
       <AriaSlider
         className="control-cell range-field aria-range-field"
-        title={field.description}
         minValue={field.min}
         maxValue={field.max}
         step={field.step ?? 0.01}
         value={numericValue}
         onChange={(next) => onChange(Array.isArray(next) ? next[0] : next)}
       >
-        <span>
+        <span title={field.description}>
           <AriaLabel>{field.label}</AriaLabel>
           <strong>{formatControlNumber(numericValue)}</strong>
         </span>
@@ -191,9 +189,9 @@ function RecipeFieldControl({
     const selectedCandidate =
       selectedArtifact && (!field.artifactKinds?.length || field.artifactKinds.includes(selectedArtifact.kind)) ? selectedArtifact : null;
     return (
-      <AriaTextField className="control-cell path-field" title={field.description} value={String(value ?? "")} onChange={onChange}>
+      <AriaTextField className="control-cell path-field" value={String(value ?? "")} onChange={onChange}>
         <AriaLabel>{field.label}</AriaLabel>
-        <AriaInput placeholder={field.placeholder} />
+        <AriaInput placeholder={field.placeholder} title={field.description} />
         <div className="path-actions">
           <select value="" onChange={(event) => event.target.value && onChange(event.target.value)}>
             <option value="">Artifacts</option>
@@ -218,9 +216,9 @@ function RecipeFieldControl({
   }
 
   return (
-    <AriaTextField className="control-cell" title={field.description} value={String(value ?? "")} onChange={onChange}>
+    <AriaTextField className="control-cell" value={String(value ?? "")} onChange={onChange}>
       <AriaLabel>{field.label}</AriaLabel>
-      <AriaInput placeholder={field.placeholder} />
+      <AriaInput placeholder={field.placeholder} title={field.description} />
       <FieldError error={error} />
     </AriaTextField>
   );

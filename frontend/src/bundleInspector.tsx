@@ -676,7 +676,7 @@ function formatArrayShapes(arrays: Record<string, unknown> | null) {
 
 function formatDomainValue(value: unknown) {
   if (Array.isArray(value)) return value.join(", ");
-  if (typeof value === "number") return formatMaybeNumber(value);
+  if (typeof value === "number") return String(formatMaybeNumber(value));
   return String(value);
 }
 
