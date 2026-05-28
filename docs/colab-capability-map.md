@@ -18,7 +18,7 @@ smoke tests, but they are not the app default.
 | SAME encode/decode | SAME adapter scripts and tests | `/latents/encode`, `/latents/decode` | implemented |
 | Latent blur/DSP/graft/renoise/roll | `latent_audio_primitives` wrappers | `/operators/run`, Operator Studio | implemented with native parameter controls |
 | Real waveform peaks | audio artifacts via `soundfile` | `/artifacts/{id}/peaks` | implemented |
-| Artifact annotation/search | `ArtifactStore.annotate_artifact`, `/artifacts?q=&tags=` | Specimen annotation panel, archive search | implemented |
+| Artifact annotation/search | `ArtifactStore.annotate_artifact`, `/artifacts?q=&tags=` | Specimen annotation panel, session/archive filters by decision, tag, kind, model, operator, family, text, and lineage | implemented |
 | Latent memory query | `LatentMemoryIndex`, `memory.query` | `/experiments/run`, Recipe Studio | implemented for local latent artifacts |
 | Audio style vectors | `scripts/extract_audio_style_vectors.py` | `/experiments/run`, Recipe Studio | script-job adapter with native controls |
 | Positive style profile | `scripts/build_positive_audio_style_profile.py` | `/experiments/run`, Recipe Studio | script-job adapter with native controls |
@@ -58,9 +58,10 @@ than notebook snippets: cyclic roll, blur, DSP, graft, and renoise all map to
 their executable request params, with donor-latent selection shown only when the
 chosen mode needs a donor.
 
-The session archive now supports label, notes, and tag annotation plus local
-archive search. Latent memory query is promoted from concept to recipe: selecting
-a latent artifact can produce a `memory_query.json` bundle ranked by cosine or
+The session archive now supports label, notes, tag annotation, listening
+decisions, and local recovery filters. Latent memory query is promoted from
+concept to recipe: selecting a latent artifact can produce a `memory_query.json`
+bundle ranked by cosine or
 Euclidean summary distance against other local latent artifacts. Those local
 memory hits are now actionable in the bundle preview: select the artifact, place
 audio hits in A/B, or reuse latent hits as donor latents.

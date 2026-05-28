@@ -67,8 +67,9 @@ cancellation, retry, the latest backend message, and recovery hints for common
 failures such as gated Hugging Face access, missing MLX setup, path mistakes,
 subprocess exits, and memory pressure. Selected artifacts can be labeled,
 tagged, annotated, marked keeper/maybe/rejected from listening surfaces,
-replayed from their recipe, inspected by kind, and searched later from the
-archive. A session can be archived into the background while a
+replayed from their recipe, inspected by kind, and recovered later with filters
+for decision, kind, model, operator, result family, tag, text, and source
+lineage. A session can be archived into the background while a
 fresh session starts cleanly. Result families can be inspected as a compact
 branch surface with source references, per-artifact playback, A/B assignment,
 sortable alpha-sweep promotion controls, job progress, replay, and fork
@@ -184,7 +185,8 @@ Confirmed in the current codebase:
   lineage, inline playback, A/B assignment, and saved listening decisions. CLAP
   remains queued behind the same explicit scorer field.
 - Artifact annotation and archive search are implemented for labels, notes,
-  tags, and durable keeper/maybe/reject listening decisions.
+  tags, durable keeper/maybe/reject listening decisions, artifact kind, model,
+  operator, result family, and source lineage.
 - tRPC workbench, readiness, job lifecycle, recipe replay/fork, artifact
   inspection, result-family procedures, and job-event subscriptions are
   implemented behind the control-plane launch flag.

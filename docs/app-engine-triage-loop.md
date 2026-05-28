@@ -50,6 +50,7 @@ source audio / prompt
 | P1 | Alpha-sweep family promotion | `FamilyDetailPanel` alpha variant band with explicit A/B promotion, sortable metric table, best-candidate marking, and sibling sweep comparison | Promote | frontend tests/build |
 | P1 | Prompt-candidate generation bench | Prompt-search bundle reader + text generation lineage metadata + grouped prompt-candidate result families, inline playback, A/B assignment, and durable keeper/maybe/reject listening decisions | Promote | frontend tests/build, control-plane family test |
 | P1 | Session cleanup | archive-and-new session action plus searchable archive drawer | Promote | API/client tests, frontend build |
+| P1 | Decision-aware artifact recovery | shared artifact filter model + session/archive filters for decision, kind, model, operator, family, source lineage, text, and tag | Promote | frontend filter tests/build, Playwright smoke |
 | P1 | Kind-specific artifact vitals | specimen inspector rows for audio, latent, and bundle artifacts | Promote first slice | frontend build |
 | P2 | Memory atlas and retrieval | `LatentMemoryIndex` + `memory.query` + memory-hit reuse actions | Promote first slice | nearest-neighbor runtime test, frontend smoke |
 | P2 | SAME geometry audit | `geometry_report` + `experiment.geometry_audit` + bundle summary reader | Promote first slice | runtime test, frontend tests |
@@ -68,14 +69,14 @@ source audio / prompt
 
 ## Immediate Next Queue
 
-1. Add archive and session filters for listening decisions, family source, model,
-   operator, and artifact kind so keepers can be recovered without reading the
-   full job stream.
+1. Add descriptor deltas for prompt-search targets versus generated takes, then
+   relate those deltas to keeper/maybe/reject notes.
 2. Add richer domain-specific inspectors for style profiles, vectors, prompt
    search, soft prompts, memory collections, sweeps, geometry audits, and
    training outputs.
-3. Add descriptor deltas for prompt-search targets versus generated takes, then
-   relate those deltas to keeper/maybe/reject notes.
+3. Promote the artifact recovery filters into tRPC/control-plane procedures
+   when archive volume or remote persistence makes client-side filtering too
+   heavy.
 4. Add CLAP or hybrid scorer only after the SA3 flow prompt-candidate bench has
    enough generated/listened examples to justify another scoring objective.
 5. Add control-head recipe adapters for Mode 12 and labelled-probe extensions

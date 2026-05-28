@@ -46,8 +46,9 @@ For the broader stack direction and promotion triggers, see
    table with sort controls, best-candidate marking, and durable
    keeper/maybe/reject listening decisions on playable artifacts. Sibling
    alpha-sweep families are now compared in the family detail panel when they
-   share a vector bundle or prompt. Next they need richer cross-run descriptor
-   deltas and filters that surface the saved decisions across the archive.
+   share a vector bundle or prompt. Session/archive filters now surface saved
+   decisions by decision, kind, model, operator, family, tag, text, and source
+   lineage. Next they need richer cross-run descriptor deltas.
 
 2. Presets for Operator Studio.
    Store named parameter sets for blur, DSP, graft, renoise, and cyclic roll.
@@ -56,9 +57,10 @@ For the broader stack direction and promotion triggers, see
 
 3. Artifact filtering and tagging.
    Labels, tags, notes, keeper/maybe/reject listening decisions, archive search,
-   and archive-and-new session cleanup are now implemented. Next filters should
-   cover decision, kind, model, operator, date, status, result family, and source
-   lineage.
+   archive-and-new session cleanup, and typed local recovery filters are now
+   implemented. The filter pass covers decision, kind, model, operator, result
+   family, source lineage, text, and tag. Next recovery work should add date and
+   job status filters only if actual archive volume makes them useful.
 
 4. Better bundle readers.
    Bundle file inventory, JSON previews, memory-result reuse, and first-pass
@@ -97,9 +99,10 @@ For the broader stack direction and promotion triggers, see
    succeeded locally on short target audio. Prompt candidates can now launch
    MLX text-to-audio jobs with lineage back to the search bundle; generated
    takes are grouped under the prompt-search family and can be played, sent to
-   A/B beside the candidate, or marked keeper/maybe/rejected with notes. The
-   next research step is descriptor deltas and layer/alpha comparisons that can
-   be correlated with those saved listening decisions. CLAP or hybrid scoring
+   A/B beside the candidate, marked keeper/maybe/rejected with notes, and
+   recovered later through decision/model/operator/family filters. The next
+   research step is descriptor deltas and layer/alpha comparisons that can be
+   correlated with those saved listening decisions. CLAP or hybrid scoring
    belongs after that comparison workflow has real usage.
 
 5. Geometry and control probes.

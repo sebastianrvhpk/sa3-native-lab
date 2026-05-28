@@ -250,10 +250,11 @@ polling plus durable live job replay, job phase labels, cancellation/retry,
 recipe replay/fork editing, recipe diff/reset controls, archive-and-new session
 cleanup, result-family grouping with detail playback, sortable alpha-sweep
 variant promotion and metric tables, durable keeper/maybe/reject listening
-decisions, memory-query result reuse, bundle-to-recipe actions, backend-parsed
-typed bundle inspectors, inline bundle plot previews, readiness checks,
-artifact selection, kind-specific artifact vitals, real waveform peaks, region
-looping, download, and A/B audio playback.
+decisions, session/archive recovery filters for decisions, kind, model,
+operator, family, tag, text, and lineage, memory-query result reuse,
+bundle-to-recipe actions, backend-parsed typed bundle inspectors, inline bundle
+plot previews, readiness checks, artifact selection, kind-specific artifact
+vitals, real waveform peaks, region looping, download, and A/B audio playback.
 
 ### Notebook Parity Check
 
