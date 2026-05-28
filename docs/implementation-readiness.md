@@ -45,6 +45,13 @@ field, an artifact relationship, or an explicitly documented future capability.
 - Backend `ui_fields` already reduce parameter drift by exposing defaults,
   bounds, options, required flags, advanced flags, and artifact-kind hints to
   the frontend.
+- Generate and SAME encode/decode now use the same schema-driven RecipeFields
+  control path as the rest of the instrument, with tested payload builders for
+  text generation, audio-to-audio, inpaint, latent encode, and latent decode.
+- Job records persist explicit phases and the frontend lands on successful
+  output artifacts when artifact IDs arrive, reducing the silent-run feel.
+- The specimen lineage thread is data-backed by artifacts, jobs, result
+  families, and A/B assignment instead of decorative routing.
 - Prompt search is no longer only a script adapter: it has a native recipe path,
   scorer metadata, generated takes, lineage, descriptor deltas, listening
   decisions, decision summaries, and first-pass prompt memory.
@@ -116,8 +123,10 @@ that every experiment can be trusted, replayed, compared, and reused.
 ### What Is Still Missing
 
 - A comprehensive Colab parity test matrix.
-- Contract tests proving that every backend `ui_field` used by a mode reaches
-  the frontend form with the correct default, validation, and payload key.
+- Broader contract tests proving that every backend `ui_field` used by every
+  mode reaches the frontend form with the correct default, validation, and
+  payload key. The generation and SAME payload builders now have focused tests,
+  but full mode coverage is still incomplete.
 - Component tests for all mode-specific recipe panels once they become more
   domain-specific.
 - Integration tests for session/archive/replay flows as first-class workflows.
@@ -147,8 +156,9 @@ that every experiment can be trusted, replayed, compared, and reused.
 ### Risk Areas
 
 - Frontend field schemas are still partly duplicated in TypeScript. Backend
-  `ui_fields` are reducing drift, but static catalogs still carry layout,
-  labels, and some parameter assumptions.
+  `ui_fields` now drive Generate, SAME, Operator Studio, and Recipe Studio
+  defaults/options/bounds, but static catalogs still carry layout, labels, and
+  some parameter assumptions.
 - `RuntimeDispatcher` still owns too many responsibilities and should continue
   splitting into runtime-specific adapters as capability count grows.
 - Script-backed experiment modes are durable and useful, but some still need
@@ -181,6 +191,9 @@ instead of invisible friction.
    reachable, defaults known, output artifacts typed, provenance stored, replay
    or fork available, and test coverage present.
 3. Continue migrating parameter truth into backend specs and shared contracts.
+   This pass expanded script adapter specs and moved Generate/SAME forms onto
+   spec-derived fields; the remaining work is full mode-by-mode coverage and
+   richer type-specific readers.
 4. Ensure every run stores model, backend, seed, duration, scorer/operator,
    source IDs, params, logs, and output artifact IDs.
 
@@ -190,6 +203,8 @@ instead of invisible friction.
    credentials.
 2. Make progress stages legible for every long-running path: queued,
    preflight, model setup, scoring/sampling, decoding, writing, indexing, done.
+   Job records now persist `phase`; continue adding exact phases to newly
+   migrated script paths as they become native.
 3. Add runtime-cost notes where Medium/MPS paths can be slow or memory-heavy.
 4. Keep readiness checks honest for HF auth, weights, cache space, MLX setup,
    SAME-L access, and optional extras.
@@ -201,7 +216,9 @@ instead of invisible friction.
 2. Reduce queue clutter by making active session, archive, generated families,
    and reusable outputs distinct surfaces.
 3. Make "new session", "archive session", "recover result", "fork run", and
-   "promote artifact" feel like native creative actions.
+   "promote artifact" feel like native creative actions. Successful jobs now
+   land on their newest artifact, but session/workspace recovery still needs a
+   clearer product model.
 4. Move useful archive/search actions through tRPC when client-side filtering
    stops being enough.
 
@@ -233,7 +250,9 @@ instead of invisible friction.
 2. Add latent region and channel controls where operators manipulate time,
    channel, masks, or donor regions.
 3. Add real lineage graph views only when graph edges correspond to actual
-   recipe/source/output relationships.
+   recipe/source/output relationships. The current specimen thread already uses
+   real artifact/job/family/A-B state; React Flow should wait until users need
+   a larger interactive graph.
 4. Add labelled probes and control-head recipes after the core parity and
    playback loop are more stable.
 

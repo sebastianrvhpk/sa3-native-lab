@@ -61,7 +61,11 @@ JSON/NPZ outputs, metric scalars, plot/image discovery, and inline image plot
 rendering in addition to file inventory. Reusable bundles can populate Recipe
 Studio fields for vectors, directions, profiles, memory folders, soft prompts,
 and LoRA checkpoints. Operator specs also carry backend-derived `ui_fields`,
-which React merges into the hand-shaped instrument forms.
+which React merges into the hand-shaped instrument forms. Generate and SAME
+encode/decode now use the same schema-driven form path, so their payloads are
+built from field contracts rather than separate hard-coded controls.
+Successful job events can also land the React workbench on the newest produced
+artifact when the Python worker reports artifact IDs.
 
 The local runner can launch the full path:
 
@@ -115,6 +119,8 @@ Future responsibilities:
    the durable journal replay contract.
 2. Promote archive annotation/search mutations to the normal UI path.
 3. Move more bounded fork and recipe forms onto backend-derived `ui_fields`.
+   Generate, SAME, Operator Studio, and Recipe Studio already use this path;
+   the next remaining form surface is fork/replay editing.
 4. Promote family detail and memory-result actions into tRPC procedures where
    they need server-side shaping beyond `workbench.load`.
 5. Add richer family-specific inspectors for sweeps, memory query bundles, and

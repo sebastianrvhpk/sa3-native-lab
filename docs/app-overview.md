@@ -60,16 +60,23 @@ Important endpoints:
 The React app in `frontend/` is the working interface. It supports artifact
 selection, waveform inspection, audio playback, region looping, playback-rate
 checks, A/B comparison, MLX generation, SAME encode/decode, latent-operator
-runs, Recipe Studio, Mode Atlas, and job polling. The bench also has a Run
-Monitor that surfaces active jobs, percent progress, derived phase labels,
-artifact counts, live event snapshots, heartbeat diagnostics, elapsed time,
-cancellation, retry, the latest backend message, and recovery hints for common
-failures such as gated Hugging Face access, missing MLX setup, path mistakes,
-subprocess exits, and memory pressure. Selected artifacts can be labeled,
-tagged, annotated, marked keeper/maybe/rejected from listening surfaces,
-replayed from their recipe, inspected by kind, and recovered later with filters
-for decision, kind, model, operator, result family, tag, text, and source
-lineage. A session can be archived into the background while a
+runs, Recipe Studio, Mode Atlas, and job polling. Generate and SAME controls are
+now native schema-driven forms: the backend `/operators/specs` contract supplies
+defaults, bounds, select options, required flags, and advanced flags, while the
+frontend form model builds typed generation and encode/decode payloads. This
+keeps everyday parameters such as duration, seed, model, decoder, init noise,
+inpaint range, SAME chunking, prompts, and notes visible without maintaining a
+separate hand-written payload surface. The bench also has a Run Monitor that
+surfaces active jobs, percent progress, persisted phase labels, artifact counts,
+live event snapshots, heartbeat diagnostics, elapsed time, cancellation, retry,
+the latest backend message, and recovery hints for common failures such as gated
+Hugging Face access, missing MLX setup, path mistakes, subprocess exits, and
+memory pressure. Successful jobs automatically land the workbench on their
+newest produced artifact when the runtime reports artifact IDs. Selected
+artifacts can be labeled, tagged, annotated, marked keeper/maybe/rejected from
+listening surfaces, replayed from their recipe, inspected by kind, and recovered
+later with filters for decision, kind, model, operator, result family, tag,
+text, and source lineage. A session can be archived into the background while a
 fresh session starts cleanly. Result families can be inspected as a compact
 branch surface with source references, per-artifact playback, A/B assignment,
 sortable alpha-sweep promotion controls, job progress, replay, and fork
@@ -132,7 +139,10 @@ Artifacts are stored under `.sa3_lab/` by default. The app currently supports:
   prompts, pre-encoded datasets, and training outputs.
 
 Every run records a `Recipe` and `JobRecord` so results can be traced back to
-operator, backend, inputs, params, model, seed, logs, and source artifacts.
+operator, backend, inputs, params, model, seed, logs, phase, and source
+artifacts. The specimen lineage thread is data-backed: it can show real source
+artifacts, the recipe/job that produced the current artifact, the result family
+it belongs to, and whether the artifact is currently assigned to an A/B slot.
 Artifacts can also carry user labels, notes, and tags for archive search.
 Bundle artifacts can be inspected through the API and UI to reveal their file
 inventory, embedded audio children, backend-parsed JSON/NPZ summaries, parsed
@@ -213,14 +223,15 @@ Confirmed in the current codebase:
   editor with diffs and resets, result-family detail playback, memory-result
   reuse actions, alpha-sweep variant promotion with a compact metric table,
   metric sorting, best-candidate marking, bundle-to-recipe reuse actions, job
-  phase labels, job recovery hints,
+  phase labels, artifact landing after successful jobs, job recovery hints,
   backend-derived operator field metadata, backend-parsed typed bundle
   inspectors, bundle metrics, inline plot/image previews, and kind-specific
   artifact vitals, embedded bundle-audio playback and promotion, prompt-search
   scorer controls, candidate-family bundle reading, durable listening decision
   controls, prompt-search decision summaries, prompt memory, Operator Studio
   local presets with visible diffs, bundle workflow signals, sibling sweep
-  comparison, and the first native geometry-audit recipe.
+  comparison, data-backed specimen lineage threads, and the first native
+  geometry-audit recipe.
 - Core app surfaces are now split into focused modules for audio playback,
   artifact display, job progress, result families, recipe forks, and bundle
   inspection.

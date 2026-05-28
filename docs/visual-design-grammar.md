@@ -28,8 +28,8 @@ play something real.
 | Paper grain and folds | Research notebook / local lab surface | Global page background and panel texture. |
 | Gradient cells | Parameterized controls, operators, presets, bundle affordances | Recipe fields, operator controls, prompt-search tools, bundle workflow chips. |
 | Dark bordered modules | Executable surfaces or inspectable artifact groups | Operator Studio, Recipe Studio, specimen surface, audition stack, result families. |
-| Thin grey lines | Real lineage, source relationships, or low-priority lab-surface flow | `LineageThread` and subtle non-interactive workbench background only. |
-| Nodes / dots | Artifact/source/decision branch points | Lineage rows, decision memory, prompt history, A/B routes. |
+| Thin grey lines | Real lineage, source relationships, or low-priority lab-surface flow | `LineageThread` nodes backed by source artifacts, recipe/job, current artifact, result family, and A/B slot; subtle non-interactive workbench background only. |
+| Nodes / dots | Artifact/source/decision branch points | Data-backed lineage rows, decision memory, prompt history, A/B routes. |
 | Transport wheel | Playback or macro execution control | AudioDeck play button only for now. |
 | Rainbow waveform lane | Perceptual listening axis | AudioDeck waveform and compact audition playback. |
 | Grid clusters | Mode/operator families or dense parameter sets | RecipeFields, Operator Studio, prompt search presets. |
@@ -59,6 +59,9 @@ play something real.
 - Prompt-search preset/vocabulary/axis cells write directly to recipe params.
 - Audition-stack rows select real audio artifacts and can route them into A/B.
 - Bundle action cells should only appear when the bundle contains reusable data.
+- Current lineage threads must only render nodes that exist in app state:
+  source artifacts, producing recipe/job, current artifact, result family, or
+  A/B assignment.
 - Future drag/routing interactions must create or inspect real recipe/source
   relationships, not just move decorative nodes.
 
@@ -99,3 +102,5 @@ Near-horizon additions should remain conditional:
 - Play and audition controls become more visually central.
 - Prompt, operator, and recipe controls feel like instrument modules rather
   than generic forms.
+- Strong visual routes can be audited against actual artifact/job/family/A-B
+  data.
