@@ -26,9 +26,10 @@ try {
   await expect(page.getByRole("button", { name: /Play|Pause/ }).first()).toBeVisible();
   await expect(page.getByRole("slider", { name: "Audio position" }).first()).toBeVisible();
   await expect(page.getByRole("button", { name: "New" })).toBeVisible();
+  await expect(page.getByRole("searchbox", { name: "Filter takes" })).toBeVisible();
   await expect(page.locator("summary", { hasText: "Archive" })).toBeVisible();
   await page.locator("summary", { hasText: "Archive" }).click();
-  await expect(page.getByRole("searchbox", { name: "Search archive" })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Filter kind" })).toBeVisible();
   console.log(JSON.stringify({ ok: true, title: await page.title(), url: page.url() }));
 } finally {
   await browser.close();

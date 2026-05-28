@@ -29,6 +29,17 @@ import {
 
 import modelImage from "../../stable-audio-3.png";
 import { createApi, type ArtifactAnnotationPayload, type ExperimentPayload, type RecipeForkPayload } from "./api";
+import {
+  artifactFilterOptions,
+  artifactFiltersActive,
+  emptyArtifactFilters,
+  filterArtifacts,
+  type ArtifactDecisionFilter,
+  type ArtifactFilterOption,
+  type ArtifactFilterState,
+  type ArtifactKindFilter,
+  type ArtifactLineageFilter,
+} from "./artifactFilters";
 import { ArtifactBadge, ArtifactIcon } from "./artifactDisplay";
 import { artifactMeta, artifactName, artifactShape, formatDuration, sortNewest, sortNewestJobs } from "./artifactUtils";
 import { AudioDeck, TinyWave } from "./audioDeck";
@@ -1555,6 +1566,7 @@ export function App() {
             archivedArtifacts={archiveArtifacts}
             jobs={sessionJobs}
             archivedJobs={archiveJobs}
+            families={resultFamilies}
             runningJobs={runningJobs}
             selectedId={selectedArtifact?.artifact_id ?? null}
             apiBase={apiBase}
@@ -1928,6 +1940,7 @@ function SessionTray({
   archivedArtifacts,
   jobs,
   archivedJobs,
+  families,
   runningJobs,
   selectedId,
   apiBase,
@@ -1945,6 +1958,7 @@ function SessionTray({
   archivedArtifacts: ArtifactRecord[];
   jobs: JobRecord[];
   archivedJobs: JobRecord[];
+  families: ResultFamily[];
   runningJobs: JobRecord[];
   selectedId: string | null;
   apiBase: string;
@@ -1956,16 +1970,17 @@ function SessionTray({
   onStartSession: () => void;
   onArchiveSession: () => void;
 } & JobActionHandlers) {
-  const [archiveQuery, setArchiveQuery] = useState("");
-  const [archiveTag, setArchiveTag] = useState("");
-  const sessionArtifacts = sortNewest(artifacts).slice(0, 8);
+  const [artifactFilters, setArtifactFilters] = useState<ArtifactFilterState>(emptyArtifactFilters);
+  const filterContext = useMemo(() => ({ jobs: [...jobs, ...archivedJobs], families }), [jobs, archivedJobs, families]);
+  const filterCorpus = useMemo(() => [...artifacts, ...archivedArtifacts], [artifacts, archivedArtifacts]);
+  const filterOptions = useMemo(() => artifactFilterOptions(filterCorpus, filterContext), [filterCorpus, filterContext]);
+  const filterActive = artifactFiltersActive(artifactFilters);
+  const filteredSessionArtifacts = useMemo(() => filterArtifacts(artifacts, artifactFilters, filterContext), [artifacts, artifactFilters, filterContext]);
+  const filteredArchiveArtifacts = useMemo(() => filterArtifacts(archivedArtifacts, artifactFilters, filterContext), [archivedArtifacts, artifactFilters, filterContext]);
+  const sessionArtifactRows = sortNewest(filteredSessionArtifacts).slice(0, 8);
   const sessionJobs = sortNewestJobs(jobs).slice(0, 4);
-  const activeArchiveTags = archiveTag ? [archiveTag] : [];
-  const archiveSearching = Boolean(archiveQuery.trim() || archiveTag);
-  const archiveTags = archiveTagOptions(archivedArtifacts);
-  const filteredArchiveArtifacts = archivedArtifacts.filter((artifact) => artifactMatchesSearch(artifact, archiveQuery, activeArchiveTags));
   const archiveArtifactRows = sortNewest(filteredArchiveArtifacts).slice(0, 10);
-  const archiveJobRows = archiveSearching ? [] : sortNewestJobs(archivedJobs).slice(0, 10);
+  const archiveJobRows = filterActive ? [] : sortNewestJobs(archivedJobs).slice(0, 10);
   const activeJobs = runningJobs.slice(0, 3);
 
   return (
@@ -2002,11 +2017,21 @@ function SessionTray({
         </div>
       ) : null}
 
+      <ArtifactFilterPanel
+        filters={artifactFilters}
+        options={filterOptions}
+        active={filterActive}
+        onChange={setArtifactFilters}
+      />
+
       <div className="session-block">
-        <span className="session-label">Takes</span>
-        {sessionArtifacts.length ? (
+        <span className="session-label">
+          Takes
+          {filterActive ? <i>{filteredSessionArtifacts.length}/{artifacts.length}</i> : null}
+        </span>
+        {sessionArtifactRows.length ? (
           <div className="session-artifacts">
-            {sessionArtifacts.map((artifact) => (
+            {sessionArtifactRows.map((artifact) => (
               <SessionArtifactRow
                 key={artifact.artifact_id}
                 artifact={artifact}
@@ -2017,7 +2042,7 @@ function SessionTray({
             ))}
           </div>
         ) : (
-          <div className="quiet-panel compact">Fresh session</div>
+          <div className="quiet-panel compact">{filterActive ? "No matching takes" : "Fresh session"}</div>
         )}
       </div>
 
@@ -2040,40 +2065,8 @@ function SessionTray({
         <summary>
           <Database size={15} />
           Archive
-          <span>{archiveSearching ? `${filteredArchiveArtifacts.length}/${archivedArtifacts.length}` : archivedArtifacts.length + archivedJobs.length}</span>
+          <span>{filterActive ? `${filteredArchiveArtifacts.length}/${archivedArtifacts.length}` : archivedArtifacts.length + archivedJobs.length}</span>
         </summary>
-        <div className="archive-search">
-          <label>
-            <Search size={14} />
-            <input
-              type="search"
-              aria-label="Search archive"
-              value={archiveQuery}
-              onChange={(event) => setArchiveQuery(event.target.value)}
-              placeholder="label, notes, tags"
-            />
-          </label>
-          {archiveTags.length ? (
-            <div className="archive-tags" aria-label="Archive tags">
-              {archiveTags.slice(0, 10).map((tag) => (
-                <button
-                  key={tag}
-                  type="button"
-                  aria-pressed={archiveTag === tag}
-                  className={archiveTag === tag ? "selected" : ""}
-                  onClick={() => setArchiveTag(archiveTag === tag ? "" : tag)}
-                >
-                  #{tag}
-                </button>
-              ))}
-            </div>
-          ) : null}
-          {archiveSearching ? (
-            <button type="button" className="archive-clear" aria-label="Clear archive search" onClick={() => { setArchiveQuery(""); setArchiveTag(""); }}>
-              <X size={14} />
-            </button>
-          ) : null}
-        </div>
         <div className="archive-list">
           {archiveArtifactRows.map((artifact) => (
             <SessionArtifactRow
@@ -2087,10 +2080,146 @@ function SessionTray({
           {archiveJobRows.map((job) => (
             <JobProgress key={job.job_id} job={job} compact onCancelJob={onCancelJob} onRetryJob={onRetryJob} />
           ))}
-          {!archiveArtifactRows.length && !archiveJobRows.length ? <div className="quiet-panel compact">{archiveSearching ? "No matching takes" : "Archive empty"}</div> : null}
+          {!archiveArtifactRows.length && !archiveJobRows.length ? <div className="quiet-panel compact">{filterActive ? "No matching takes" : "Archive empty"}</div> : null}
         </div>
       </details>
     </div>
+  );
+}
+
+const decisionFilters: { value: ArtifactDecisionFilter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "keeper", label: "Keep" },
+  { value: "maybe", label: "Maybe" },
+  { value: "rejected", label: "Reject" },
+  { value: "undecided", label: "Open" },
+];
+
+function ArtifactFilterPanel({
+  filters,
+  options,
+  active,
+  onChange,
+}: {
+  filters: ArtifactFilterState;
+  options: ReturnType<typeof artifactFilterOptions>;
+  active: boolean;
+  onChange: (filters: ArtifactFilterState) => void;
+}) {
+  const update = (patch: Partial<ArtifactFilterState>) => onChange({ ...filters, ...patch });
+  return (
+    <div className="artifact-filter-panel" aria-label="Take filters">
+      <div className="artifact-filter-head">
+        <span className="session-label">
+          <SlidersHorizontal size={13} />
+          Find takes
+        </span>
+        {active ? (
+          <button type="button" className="archive-clear" aria-label="Clear take filters" onClick={() => onChange(emptyArtifactFilters)}>
+            <X size={14} />
+          </button>
+        ) : null}
+      </div>
+      <label className="artifact-filter-search">
+        <Search size={14} />
+        <input
+          type="search"
+          aria-label="Filter takes"
+          value={filters.query}
+          onChange={(event) => update({ query: event.target.value })}
+          placeholder="label, notes, prompt, tags"
+        />
+      </label>
+      <div className="artifact-decision-filter" aria-label="Listening decision filters">
+        {decisionFilters.map((item) => (
+          <button
+            key={item.value}
+            type="button"
+            aria-pressed={filters.decision === item.value}
+            className={filters.decision === item.value ? `selected ${item.value}` : item.value}
+            onClick={() => update({ decision: item.value })}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+      <div className="artifact-filter-selects">
+        <FilterSelect
+          label="Kind"
+          value={filters.kind === "all" ? "" : filters.kind}
+          allLabel="all kinds"
+          options={options.kinds}
+          onChange={(value) => update({ kind: (value || "all") as ArtifactKindFilter })}
+        />
+        <FilterSelect
+          label="Model"
+          value={filters.model}
+          allLabel="any model"
+          options={options.models}
+          onChange={(model) => update({ model })}
+        />
+        <FilterSelect
+          label="Operator"
+          value={filters.operator}
+          allLabel="any operator"
+          options={options.operators.map((option) => ({ ...option, label: shortOperatorName(option.value as OperatorName) }))}
+          onChange={(operator) => update({ operator })}
+        />
+        <FilterSelect
+          label="Family"
+          value={filters.familyId}
+          allLabel="any family"
+          options={options.families}
+          onChange={(familyId) => update({ familyId })}
+        />
+        <FilterSelect
+          label="Lineage"
+          value={filters.lineage === "all" ? "" : filters.lineage}
+          allLabel="any lineage"
+          options={[
+            { value: "source", label: "source", count: 0 },
+            { value: "derived", label: "derived", count: 0 },
+            { value: "has_sources", label: "has source", count: 0 },
+          ]}
+          onChange={(lineage) => update({ lineage: (lineage || "all") as ArtifactLineageFilter })}
+        />
+        <FilterSelect
+          label="Tag"
+          value={filters.tag}
+          allLabel="any tag"
+          options={options.tags}
+          onChange={(tag) => update({ tag })}
+        />
+      </div>
+    </div>
+  );
+}
+
+function FilterSelect({
+  label,
+  value,
+  allLabel,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  allLabel: string;
+  options: ArtifactFilterOption[];
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label>
+      <span>{label}</span>
+      <select aria-label={`Filter ${label.toLowerCase()}`} value={value} onChange={(event) => onChange(event.target.value)}>
+        <option value="">{allLabel}</option>
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.count ? `${option.label} (${option.count})` : option.label}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 
@@ -2339,33 +2468,6 @@ function parseTags(value: string) {
       seen.add(key);
       return true;
     });
-}
-
-function archiveTagOptions(artifacts: ArtifactRecord[]) {
-  return Array.from(new Set(artifacts.flatMap((artifact) => artifact.tags))).sort((a, b) => a.localeCompare(b));
-}
-
-function artifactMatchesSearch(artifact: ArtifactRecord, query: string, tags: string[]) {
-  const recordTags = new Set(artifact.tags.map((tag) => tag.toLowerCase()));
-  if (tags.some((tag) => !recordTags.has(tag.toLowerCase()))) return false;
-  const needle = query.trim().toLowerCase();
-  if (!needle) return true;
-  return artifactSearchText(artifact).includes(needle);
-}
-
-function artifactSearchText(artifact: ArtifactRecord) {
-  return [
-    artifact.artifact_id,
-    artifact.kind,
-    artifact.label,
-    artifact.prompt,
-    artifact.notes,
-    artifact.file?.filename,
-    ...artifact.tags,
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
 }
 
 function formatSessionStamp(value: string) {
