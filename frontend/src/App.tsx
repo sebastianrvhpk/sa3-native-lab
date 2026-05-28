@@ -982,6 +982,15 @@ export function App() {
     setDonorArtifactId(artifactId);
   };
 
+  const useBundleInRecipe = (fieldKey: string, path: string, mode: string) => {
+    if (!isExperimentMode(mode)) return;
+    setExperimentMode(mode);
+    setExperimentForm({
+      ...defaultExperimentForm(mode),
+      [fieldKey]: path,
+    });
+  };
+
   return (
     <main className="app-shell">
       <header className="top-strip">
@@ -1046,6 +1055,8 @@ export function App() {
             onReplayRecipe={(recipeId) => replayRecipeMutation.mutate(recipeId)}
             onSelectArtifact={selectArtifact}
             onUseAsDonor={useArtifactAsDonor}
+            onUseInRecipe={useBundleInRecipe}
+            getArtifactPath={artifactPathForField}
           />
           <RunMonitor
             runningJobs={runningJobs}
@@ -1448,6 +1459,8 @@ function Specimen({
   onReplayRecipe,
   onSelectArtifact,
   onUseAsDonor,
+  onUseInRecipe,
+  getArtifactPath,
 }: {
   artifact: ArtifactRecord | null;
   artifacts: ArtifactRecord[];
@@ -1458,6 +1471,8 @@ function Specimen({
   onReplayRecipe: (recipeId: string) => void;
   onSelectArtifact: (artifactId: string | null) => void;
   onUseAsDonor: (artifactId: string) => void;
+  onUseInRecipe: (fieldKey: string, path: string, mode: string) => void;
+  getArtifactPath: (artifact: ArtifactRecord, fieldKey: string) => string;
 }) {
   if (!artifact) {
     return (
@@ -1485,6 +1500,8 @@ function Specimen({
             onCompare={onCompare}
             onSelectArtifact={onSelectArtifact}
             onUseAsDonor={onUseAsDonor}
+            onUseInRecipe={onUseInRecipe}
+            getArtifactPath={getArtifactPath}
           />
         )}
         <LineageThread artifact={artifact} sources={sourceArtifacts} />
@@ -1995,6 +2012,10 @@ function defaultOperatorForm(mode: LatentOperatorMode): Record<string, RecipeVal
   const form = defaultFieldForm(config);
   if (!form.backend) form.backend = config.defaultBackend;
   return form;
+}
+
+function isExperimentMode(value: string): value is ExperimentMode {
+  return experimentCatalog.some((item) => item.value === value);
 }
 
 function generationControlKeys(mode: GenerationMode): readonly string[] {

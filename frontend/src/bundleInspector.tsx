@@ -12,6 +12,8 @@ export function BundleField({
   onCompare,
   onSelectArtifact,
   onUseAsDonor,
+  onUseInRecipe,
+  getArtifactPath,
 }: {
   artifact: ArtifactRecord;
   artifacts: ArtifactRecord[];
@@ -19,6 +21,8 @@ export function BundleField({
   onCompare: (slot: "a" | "b", artifactId: string | null) => void;
   onSelectArtifact: (artifactId: string | null) => void;
   onUseAsDonor: (artifactId: string) => void;
+  onUseInRecipe: (fieldKey: string, path: string, mode: string) => void;
+  getArtifactPath: (artifact: ArtifactRecord, fieldKey: string) => string;
 }) {
   const api = useMemo(() => createApi(apiBase), [apiBase]);
   const inspection = useQuery({
@@ -42,6 +46,14 @@ export function BundleField({
           {inspection.isLoading ? "Inspecting..." : bundleFiles.length ? `${bundleFiles.length} files · ${formatBytes(totalBytes)}` : artifact.file ? formatBytes(artifact.file.byte_size) : "bundle"}
         </span>
         {inspection.data ? <BundleReaderPanel inspection={inspection.data} /> : null}
+        {inspection.data ? (
+          <BundleReuseActions
+            inspection={inspection.data}
+            artifact={artifact}
+            getArtifactPath={getArtifactPath}
+            onUseInRecipe={onUseInRecipe}
+          />
+        ) : null}
         {bundleFiles.length ? (
           <div className="bundle-file-list">
             {bundleFiles.slice(0, 4).map((file) => (
@@ -64,6 +76,65 @@ export function BundleField({
           />
         ) : null}
       </div>
+    </div>
+  );
+}
+
+export interface BundleReuseAction {
+  label: string;
+  fieldKey: string;
+  mode: string;
+}
+
+export function bundleReuseActions(inspection: Pick<ArtifactInspection, "artifact" | "bundle_summary">): BundleReuseAction[] {
+  const kind = typeof inspection.bundle_summary.kind === "string" ? inspection.bundle_summary.kind : "";
+  const operator = typeof inspection.artifact.metadata.operator === "string" ? inspection.artifact.metadata.operator : "";
+  const actions: BundleReuseAction[] = [];
+  if (kind === "profile" || operator.includes("style_profile")) {
+    actions.push({ label: "Use as profile", fieldKey: "profile_path", mode: "experiment.style_profile.generate" });
+    actions.push({ label: "Use memory", fieldKey: "target_memory_path", mode: "experiment.style_profile.build" });
+  }
+  if (kind === "vectors" || operator.includes("vectors") || operator.includes("direction")) {
+    actions.push({ label: "Sweep vectors", fieldKey: "vectors_path", mode: "experiment.alpha_sweep" });
+    actions.push({ label: "Use direction", fieldKey: "direction_path", mode: "experiment.style_direction.generate" });
+  }
+  if (kind === "soft-prompt" || operator.includes("soft_prompt")) {
+    actions.push({ label: "Use soft prompt", fieldKey: "soft_prompt_path", mode: "experiment.soft_prompt.generate" });
+  }
+  if (kind === "memory" || operator.includes("memory")) {
+    actions.push({ label: "Use as target memory", fieldKey: "target_memory_path", mode: "experiment.style_profile.build" });
+    actions.push({ label: "Use as reference", fieldKey: "reference_memory_path", mode: "experiment.style_profile.build" });
+  }
+  if (kind === "training" || operator.includes("lora")) {
+    actions.push({ label: "Use checkpoint", fieldKey: "lora_checkpoint", mode: "training.lora" });
+  }
+  return dedupeReuseActions(actions);
+}
+
+function BundleReuseActions({
+  inspection,
+  artifact,
+  getArtifactPath,
+  onUseInRecipe,
+}: {
+  inspection: ArtifactInspection;
+  artifact: ArtifactRecord;
+  getArtifactPath: (artifact: ArtifactRecord, fieldKey: string) => string;
+  onUseInRecipe: (fieldKey: string, path: string, mode: string) => void;
+}) {
+  const actions = bundleReuseActions(inspection);
+  if (!actions.length) return null;
+  return (
+    <div className="bundle-reuse-actions" aria-label="Bundle recipe actions">
+      {actions.map((action) => (
+        <button
+          key={`${action.mode}:${action.fieldKey}`}
+          type="button"
+          onClick={() => onUseInRecipe(action.fieldKey, getArtifactPath(artifact, action.fieldKey), action.mode)}
+        >
+          {action.label}
+        </button>
+      ))}
     </div>
   );
 }
@@ -375,4 +446,14 @@ function prettyBundleKey(key: string) {
 function isPlotPath(path: string) {
   const value = path.toLowerCase();
   return /\.(png|jpe?g|webp|svg|pdf)$/.test(value) || value.includes("plot") || value.includes("chart");
+}
+
+function dedupeReuseActions(actions: BundleReuseAction[]) {
+  const seen = new Set<string>();
+  return actions.filter((action) => {
+    const key = `${action.mode}:${action.fieldKey}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { summarizeBundle } from "./bundleInspector";
+import { bundleReuseActions, summarizeBundle } from "./bundleInspector";
 
 describe("bundle inspector summaries", () => {
   it("promotes sweep metrics and plot counts into reader rows", () => {
@@ -24,5 +24,19 @@ describe("bundle inspector summaries", () => {
     expect(summary.rows).toContainEqual(["metric score", "0.812"]);
     expect(summary.rows).toContainEqual(["plots", 1]);
     expect(summary.plotFiles).toEqual(["plot.png"]);
+  });
+
+  it("offers recipe actions for reusable vector bundles", () => {
+    expect(
+      bundleReuseActions({
+        artifact: {
+          metadata: { operator: "experiment.sa3_vectors.extract" },
+        } as never,
+        bundle_summary: { kind: "vectors" },
+      }),
+    ).toEqual([
+      { label: "Sweep vectors", fieldKey: "vectors_path", mode: "experiment.alpha_sweep" },
+      { label: "Use direction", fieldKey: "direction_path", mode: "experiment.style_direction.generate" },
+    ]);
   });
 });

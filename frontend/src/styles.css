@@ -565,6 +565,24 @@ label {
   white-space: nowrap;
 }
 
+.bundle-reuse-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.bundle-reuse-actions button {
+  width: auto;
+  min-height: 28px;
+  border-radius: 7px;
+  padding: 0 9px;
+  color: var(--ink);
+  background: linear-gradient(135deg, rgb(201 238 72 / 0.2), rgb(85 198 199 / 0.14)), rgb(255 255 255 / 0.55);
+  box-shadow: none;
+  font-size: 0.7rem;
+}
+
 .bundle-file-list i {
   display: grid;
   grid-template-columns: minmax(0, 1fr) max-content;
