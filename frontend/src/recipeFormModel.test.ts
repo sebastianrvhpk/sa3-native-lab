@@ -82,6 +82,19 @@ describe("recipe form model", () => {
     expect(validateRecipeField({ key: "input", label: "Input", type: "path", required: true }, "")).toBe("Input is required");
     expect(validateRecipeField({ key: "steps", label: "Steps", type: "number", min: 1 }, 0)).toBe("Steps must be at least 1");
     expect(validateRecipeField({ key: "steps", label: "Steps", type: "number", max: 5 }, 6)).toBe("Steps must be at most 5");
+    expect(validateRecipeField({ key: "steps", label: "Steps", type: "number", step: 1 }, 1.5)).toBe("Steps must be a whole number");
+    expect(
+      validateRecipeField(
+        {
+          key: "model",
+          label: "Model",
+          type: "select",
+          options: [{ value: "medium", label: "Medium" }],
+        },
+        "small",
+      ),
+    ).toBe("Model must be one of Medium");
+    expect(validateRecipeField({ key: "alphas", label: "Alphas", type: "text" }, "left right")).toBe("Alphas must include at least one number");
   });
 
   it("merges backend field metadata into existing recipe fields", () => {

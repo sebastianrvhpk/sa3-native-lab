@@ -93,12 +93,18 @@ export function withOperatorSpecFields<TConfig extends FieldConfig>(config: TCon
 
 export function validateRecipeField(field: RecipeField, value: RecipeValue | undefined): string | undefined {
   if (field.required && !stringValue(value)) return `${field.label} is required`;
+  if (field.type === "select" && stringValue(value) && field.options?.length) {
+    const allowed = new Set(field.options.map((option) => option.value));
+    if (!allowed.has(stringValue(value))) return `${field.label} must be one of ${field.options.map((option) => option.label).join(", ")}`;
+  }
   if ((field.type === "number" || field.type === "range") && stringValue(value)) {
     const numberValue = typeof value === "number" ? value : Number(value);
     if (!Number.isFinite(numberValue)) return `${field.label} must be a number`;
     if (field.min !== undefined && numberValue < field.min) return `${field.label} must be at least ${field.min}`;
     if (field.max !== undefined && numberValue > field.max) return `${field.label} must be at most ${field.max}`;
+    if (field.step === 1 && !Number.isInteger(numberValue)) return `${field.label} must be a whole number`;
   }
+  if (field.key === "alphas" && stringValue(value) && !parseNumberList(value).length) return `${field.label} must include at least one number`;
   return undefined;
 }
 
