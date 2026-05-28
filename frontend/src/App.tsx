@@ -86,6 +86,7 @@ type ExperimentMode =
   | "experiment.audio_residual_vectors.extract"
   | "experiment.alpha_sweep"
   | "experiment.geometry_audit"
+  | "experiment.prompt_search"
   | "experiment.soft_prompt.optimize"
   | "experiment.soft_prompt.generate"
   | "dataset.pre_encode"
@@ -97,7 +98,7 @@ type GenerationMode = "generate.text_to_audio" | "generate.audio_to_audio" | "ge
 interface ExperimentConfig {
   value: ExperimentMode;
   label: string;
-  family: "Style" | "Residual" | "Soft Prompt" | "Dataset" | "Geometry" | "Training";
+  family: "Style" | "Residual" | "Prompt" | "Soft Prompt" | "Dataset" | "Geometry" | "Training";
   maturity: "lab" | "probe" | "danger";
   backend: ExperimentPayload["backend"];
   modelDefault?: string;
@@ -139,6 +140,43 @@ const backendOptions = [
   { value: "torch_cpu", label: "torch_cpu" },
   { value: "cpu", label: "cpu" },
 ] as const;
+
+const promptSearchModeOptions = [
+  { value: "beam", label: "beam" },
+  { value: "greedy", label: "greedy" },
+  { value: "coordinate", label: "coordinate" },
+] as const;
+
+const promptSearchVocabulary = [
+  "warm",
+  "cold",
+  "bright",
+  "dark",
+  "muted",
+  "shimmering",
+  "granular",
+  "textured",
+  "pulsing",
+  "drifting",
+  "wide stereo",
+  "reverberant",
+  "ambient",
+  "cinematic",
+  "electronic",
+  "acoustic",
+  "percussive",
+  "sustained",
+  "metallic",
+  "soft",
+  "dense",
+  "sparse",
+  "loop",
+  "rhythm",
+  "tone",
+  "noise",
+  "gesture",
+  "texture",
+].join(", ");
 
 const operatorBackendOptions = [
   { value: "torch_mps", label: "torch_mps" },
@@ -486,6 +524,33 @@ const experimentCatalog: readonly ExperimentConfig[] = [
       ...generationFields(),
       { key: "layer", label: "Layer", type: "number", defaultValue: -1, step: 1, advanced: true },
       ...torchAdvancedFields(),
+    ],
+  },
+  {
+    value: "experiment.prompt_search",
+    label: "Prompt search",
+    family: "Prompt",
+    maturity: "probe",
+    backend: "cpu",
+    produces: ["bundle"],
+    selectedAudioFallback: "target_audio_path",
+    fields: [
+      { key: "target_audio_path", label: "Target audio", type: "artifact-path", artifactKinds: ["audio"] },
+      { key: "seed_prompt", label: "Seed prompt", type: "text", defaultValue: "audio texture" },
+      { key: "search_mode", label: "Search mode", type: "select", defaultValue: "beam", options: promptSearchModeOptions },
+      { key: "tokens_generated", label: "Tokens", type: "number", defaultValue: 4, min: 1, step: 1 },
+      { key: "beam_width", label: "Beam width", type: "number", defaultValue: 4, min: 1, step: 1 },
+      { key: "vocabulary", label: "Vocabulary", type: "text", defaultValue: promptSearchVocabulary, advanced: true },
+      { key: "branch_factor", label: "Branch factor", type: "number", defaultValue: 64, min: 0, step: 1, advanced: true },
+      { key: "runs", label: "Greedy runs", type: "number", defaultValue: 4, min: 1, step: 1, advanced: true },
+      { key: "rounds", label: "Coordinate rounds", type: "number", defaultValue: 2, min: 1, step: 1, advanced: true },
+      { key: "candidate_batch_size", label: "Batch size", type: "number", defaultValue: 0, min: 0, step: 1, advanced: true },
+      { key: "prefix", label: "Prefix", type: "text", advanced: true },
+      { key: "suffix", label: "Suffix", type: "text", advanced: true },
+      { key: "separator", label: "Separator", type: "text", defaultValue: " ", advanced: true },
+      { key: "modifier_axes", label: "Modifier axes", type: "text", placeholder: "bright|dark|warm; sparse|dense", advanced: true },
+      { key: "seed", label: "Seed", type: "number", defaultValue: 0, step: 1, advanced: true },
+      { key: "backend", label: "Backend", type: "select", defaultValue: "cpu", options: backendOptions, advanced: true },
     ],
   },
   {

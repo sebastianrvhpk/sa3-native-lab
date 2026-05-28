@@ -78,6 +78,35 @@ describe("recipe form model", () => {
     });
   });
 
+  it("uses selected audio as the prompt-search target when no explicit path is set", () => {
+    const config: ExperimentPayloadConfig<"experiment.prompt_search"> = {
+      value: "experiment.prompt_search",
+      backend: "cpu",
+      selectedAudioFallback: "target_audio_path",
+      fields: [
+        { key: "target_audio_path", label: "Target audio", type: "artifact-path", artifactKinds: ["audio"] },
+        { key: "search_mode", label: "Search mode", type: "select", defaultValue: "beam" },
+        { key: "tokens_generated", label: "Tokens", type: "number", defaultValue: 4 },
+      ],
+    };
+    const audio = artifact("audio");
+
+    expect(experimentReady(config, { target_audio_path: "", search_mode: "beam", tokens_generated: 4 }, audio)).toBe(true);
+    expect(
+      buildExperimentPayload({
+        config,
+        form: { target_audio_path: "", search_mode: "beam", tokens_generated: 4 },
+        selectedArtifact: audio,
+        sessionId: "sess_1",
+      }),
+    ).toMatchObject({
+      operator: "experiment.prompt_search",
+      backend: "cpu",
+      inputs: { source: audio.artifact_id },
+      params: { search_mode: "beam", tokens_generated: 4 },
+    });
+  });
+
   it("validates required and bounded fields", () => {
     expect(validateRecipeField({ key: "input", label: "Input", type: "path", required: true }, "")).toBe("Input is required");
     expect(validateRecipeField({ key: "steps", label: "Steps", type: "number", min: 1 }, 0)).toBe("Steps must be at least 1");

@@ -92,4 +92,45 @@ describe("bundle inspector summaries", () => {
       ],
     });
   });
+
+  it("summarizes prompt search bundles and reuses the candidate prompt", () => {
+    const summary = summarizeBundle(
+      {
+        kind: "prompt-search",
+        file_count: 1,
+        prompt_search: {
+          path: "prompt_search.json",
+          prompt: "warm granular loop",
+          score: 0.82,
+          search_mode: "beam",
+          scorer: "lexical_probe",
+          candidate_count: 12,
+        },
+      },
+      {},
+      [],
+    );
+
+    expect(summary.label).toBe("Prompt search");
+    expect(summary.rows).toContainEqual(["prompt", "warm granular loop"]);
+    expect(summary.rows).toContainEqual(["scorer", "lexical_probe"]);
+    expect(bundleDomainSections({ prompt_search: { path: "prompt_search.json", prompt: "warm granular loop", score: 0.82, search_mode: "beam", scorer: "lexical_probe" } })).toContainEqual({
+      title: "Prompt Search",
+      rows: [
+        ["prompt", "warm granular loop"],
+        ["score", "0.82"],
+        ["mode", "beam"],
+        ["scorer", "lexical_probe"],
+      ],
+      files: ["prompt_search.json"],
+    });
+    expect(
+      bundleReuseActions({
+        artifact: {
+          metadata: { operator: "experiment.prompt_search" },
+        } as never,
+        bundle_summary: { kind: "prompt-search", prompt_search: { prompt: "warm granular loop" } },
+      }),
+    ).toEqual([{ label: "Use prompt in sweep", fieldKey: "prompt", mode: "experiment.alpha_sweep", value: "warm granular loop" }]);
+  });
 });

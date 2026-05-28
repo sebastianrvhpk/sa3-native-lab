@@ -109,6 +109,7 @@ export interface BundleReuseAction {
   label: string;
   fieldKey: string;
   mode: string;
+  value?: string;
 }
 
 export function bundleReuseActions(inspection: Pick<ArtifactInspection, "artifact" | "bundle_summary">): BundleReuseAction[] {
@@ -125,6 +126,15 @@ export function bundleReuseActions(inspection: Pick<ArtifactInspection, "artifac
   }
   if (kind === "soft-prompt" || operator.includes("soft_prompt")) {
     actions.push({ label: "Use soft prompt", fieldKey: "soft_prompt_path", mode: "experiment.soft_prompt.generate" });
+  }
+  if (kind === "prompt-search" || operator.includes("prompt_search")) {
+    const prompt = objectValue(inspection.bundle_summary.prompt_search)?.prompt;
+    actions.push({
+      label: "Use prompt in sweep",
+      fieldKey: "prompt",
+      mode: "experiment.alpha_sweep",
+      value: typeof prompt === "string" ? prompt : undefined,
+    });
   }
   if (kind === "memory" || operator.includes("memory")) {
     actions.push({ label: "Use as target memory", fieldKey: "target_memory_path", mode: "experiment.style_profile.build" });
@@ -155,7 +165,7 @@ function BundleReuseActions({
         <button
           key={`${action.mode}:${action.fieldKey}`}
           type="button"
-          onClick={() => onUseInRecipe(action.fieldKey, getArtifactPath(artifact, action.fieldKey), action.mode)}
+          onClick={() => onUseInRecipe(action.fieldKey, action.value ?? getArtifactPath(artifact, action.fieldKey), action.mode)}
         >
           {action.label}
         </button>
@@ -272,6 +282,19 @@ export function bundleDomainSections(summary: Record<string, unknown> | undefine
       ],
     });
   }
+  const promptSearch = objectValue(summary.prompt_search);
+  if (promptSearch) {
+    sections.push({
+      title: "Prompt Search",
+      rows: [
+        ["prompt", promptSearch.prompt],
+        ["score", formatMaybeNumber(promptSearch.score)],
+        ["mode", promptSearch.search_mode],
+        ["scorer", promptSearch.scorer],
+      ],
+      files: arrayOfStrings([promptSearch.path]),
+    });
+  }
   const profile = objectValue(summary.profile);
   if (profile) {
     for (const item of arrayOfObjects(profile.profiles).slice(0, 3)) {
@@ -361,6 +384,11 @@ export function summarizeBundle(summary: Record<string, unknown> | undefined, pr
   if (geometry) {
     rows.unshift(["latents", geometry.latent_count], ["kept variance", formatMaybeNumber(geometry.kept_variance_fraction)]);
     rows.push(["components", geometry.n_components], ["dim", geometry.dim]);
+  }
+  const promptSearch = summary.prompt_search && typeof summary.prompt_search === "object" ? (summary.prompt_search as Record<string, unknown>) : null;
+  if (promptSearch) {
+    rows.unshift(["prompt", promptSearch.prompt], ["score", formatMaybeNumber(promptSearch.score)]);
+    rows.push(["mode", promptSearch.search_mode], ["scorer", promptSearch.scorer], ["candidates", promptSearch.candidate_count]);
   }
   const profile = summary.profile && typeof summary.profile === "object" ? (summary.profile as Record<string, unknown>) : null;
   const profiles = Array.isArray(profile?.profiles) ? profile.profiles : [];
@@ -465,6 +493,7 @@ function bundleKindLabel(kind: string) {
   if (kind === "profile") return "Style profile";
   if (kind === "vectors") return "Vector bundle";
   if (kind === "geometry") return "Geometry audit";
+  if (kind === "prompt-search") return "Prompt search";
   if (kind === "soft-prompt") return "Soft prompt";
   if (kind === "training") return "Training output";
   return "Bundle archive";
@@ -476,6 +505,7 @@ function bundleKindDescription(kind: string) {
   if (kind === "profile") return "Reusable latent/audio statistics for profile-guided generation";
   if (kind === "vectors") return "Residual or style direction vectors with parsed layers and shapes";
   if (kind === "geometry") return "Local latent geometry summary for saved SAME artifacts";
+  if (kind === "prompt-search") return "Hard-token prompt candidates from the local prompt-search probe";
   if (kind === "soft-prompt") return "Optimized conditioning tensors for prompt continuation";
   if (kind === "training") return "Adapter checkpoints, logs, and long-running training outputs";
   return "Script output files preserved as a replayable artifact";
@@ -653,6 +683,18 @@ function classifyBundle(preview: Record<string, unknown>, files: BundleFileEntry
         ["files", files.length],
       ],
       plotFiles: files.map((file) => file.path).filter(isPlotPath),
+    };
+  }
+  if (operator.includes("prompt_search") || hasFile("prompt_search.json")) {
+    return {
+      kind: "prompt-search",
+      label: "Prompt search",
+      description: "Hard-token prompt candidates from the local prompt-search probe",
+      rows: [
+        ["operator", operator],
+        ["files", files.length],
+      ],
+      plotFiles: [],
     };
   }
   if (operator.includes("soft_prompt") || hasFile("soft_prompt.pt")) {
