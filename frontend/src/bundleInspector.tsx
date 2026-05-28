@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { createApi } from "./api";
 import { artifactMeta, artifactName, formatBytes } from "./artifactUtils";
-import type { ArtifactInspection, ArtifactRecord, BundleFileEntry } from "./types";
+import type { ArtifactInspection, ArtifactRecord, BundleAudioEntry, BundleFileEntry } from "./types";
 
 export function BundleField({
   artifact,
@@ -143,6 +143,7 @@ function BundleReaderPanel({ inspection, apiBase }: { inspection: ArtifactInspec
   const descriptor = summarizeBundle(inspection.bundle_summary, inspection.bundle_preview, inspection.bundle_files);
   const rows = descriptor.rows.filter(([, value]) => value !== undefined && value !== null && value !== "");
   const plotFiles = descriptor.plotFiles ?? [];
+  const domainSections = bundleDomainSections(inspection.bundle_summary);
   const api = createApi(apiBase);
   return (
     <div className={`bundle-kind-panel ${descriptor.kind}`}>
@@ -164,8 +165,98 @@ function BundleReaderPanel({ inspection, apiBase }: { inspection: ArtifactInspec
         </div>
       ) : null}
       {plotFiles.length ? <PlotPreviewShell files={plotFiles} artifactId={inspection.artifact.artifact_id} getFileUrl={api.bundleFileUrl} /> : null}
+      {domainSections.length ? <BundleDomainCards sections={domainSections} /> : null}
+      <BundleAudioChildren artifactId={inspection.artifact.artifact_id} entries={inspection.bundle_audio_files} getFileUrl={api.bundleFileUrl} />
     </div>
   );
+}
+
+export interface BundleDomainSection {
+  title: string;
+  rows: [string, unknown][];
+  files?: string[];
+}
+
+export function bundleDomainSections(summary: Record<string, unknown> | undefined): BundleDomainSection[] {
+  if (!summary || !Object.keys(summary).length) return [];
+  const sections: BundleDomainSection[] = [];
+  const sweep = objectValue(summary.sweep);
+  if (sweep) {
+    sections.push({
+      title: "Sweep",
+      rows: [
+        ["variants", sweep.count],
+        ["alphas", Array.isArray(sweep.alphas) ? sweep.alphas.join(", ") : undefined],
+        ["range", sweep.alpha_min !== undefined && sweep.alpha_max !== undefined ? `${sweep.alpha_min} to ${sweep.alpha_max}` : undefined],
+      ],
+      files: sweepOutputFiles(sweep),
+    });
+  }
+  const memory = objectValue(summary.memory);
+  if (memory) {
+    sections.push({
+      title: "Memory",
+      rows: [
+        ["metric", memory.metric],
+        ["hits", memory.result_count],
+        ["candidates", memory.candidate_count],
+        ["source", memory.source_artifact_id],
+      ],
+    });
+  }
+  const vectors = objectValue(summary.vectors);
+  if (vectors) {
+    sections.push({
+      title: "Vectors",
+      rows: [
+        ["best layer", vectors.best_layer],
+        ["accuracy", formatMaybeNumber(vectors.probe_accuracy)],
+        ["examples", vectors.example_count],
+        ["layers", Array.isArray(vectors.layers) ? vectors.layers.join(", ") : vectors.layers],
+      ],
+    });
+  }
+  const profile = objectValue(summary.profile);
+  if (profile) {
+    for (const item of arrayOfObjects(profile.profiles).slice(0, 3)) {
+      sections.push({
+        title: String(item.name || item.path || "Profile"),
+        rows: [
+          ["path", item.path],
+          ["dim", item.dim],
+          ["items", item.item_count],
+          ["arrays", formatArrayShapes(objectValue(item.arrays))],
+        ],
+      });
+    }
+  }
+  for (const item of arrayOfObjects(summary.npz_files).slice(0, 4)) {
+    sections.push({
+      title: String(item.path || "NPZ"),
+      rows: [
+        ["kind", objectValue(item.scalars)?.kind],
+        ["keys", Array.isArray(item.keys) ? item.keys.slice(0, 6).join(", ") : undefined],
+        ["arrays", formatArrayShapes(objectValue(item.arrays))],
+      ],
+    });
+  }
+  const softPrompt = objectValue(summary.soft_prompt);
+  if (softPrompt) {
+    sections.push({
+      title: "Soft Prompt",
+      rows: [["tensors", Array.isArray(softPrompt.tensor_files) ? softPrompt.tensor_files.length : undefined]],
+      files: arrayOfStrings(softPrompt.tensor_files),
+    });
+  }
+  const training = objectValue(summary.training);
+  if (training) {
+    sections.push({
+      title: "Training",
+      rows: [["checkpoints", Array.isArray(training.checkpoint_files) ? training.checkpoint_files.length : undefined]],
+      files: arrayOfStrings(training.checkpoint_files),
+    });
+  }
+  return sections.filter((section) => section.rows.some(([, value]) => value !== undefined && value !== null && value !== "") || section.files?.length);
 }
 
 export function summarizeBundle(summary: Record<string, unknown> | undefined, preview: Record<string, unknown>, files: BundleFileEntry[]) {
@@ -225,6 +316,62 @@ export function summarizeBundle(summary: Record<string, unknown> | undefined, pr
     rows.unshift(["checkpoints", Array.isArray(training.checkpoint_files) ? training.checkpoint_files.length : undefined]);
   }
   return { kind, label, description, rows, plotFiles };
+}
+
+function BundleDomainCards({ sections }: { sections: BundleDomainSection[] }) {
+  return (
+    <div className="bundle-domain-grid" aria-label="Bundle native inspectors">
+      {sections.slice(0, 6).map((section) => (
+        <article key={`${section.title}:${section.files?.join("|") ?? ""}`}>
+          <strong>{section.title}</strong>
+          <div>
+            {section.rows
+              .filter(([, value]) => value !== undefined && value !== null && value !== "")
+              .slice(0, 4)
+              .map(([label, value]) => (
+                <i key={label}>
+                  {label}
+                  <small>{formatDomainValue(value)}</small>
+                </i>
+              ))}
+          </div>
+          {section.files?.length ? <span>{section.files.slice(0, 3).join(" · ")}</span> : null}
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function BundleAudioChildren({
+  artifactId,
+  entries,
+  getFileUrl,
+}: {
+  artifactId: string;
+  entries: BundleAudioEntry[];
+  getFileUrl: (artifactId: string, path: string) => string;
+}) {
+  if (!entries.length) return null;
+  return (
+    <div className="bundle-audio-children" aria-label="Bundle audio children">
+      <strong>Audio in bundle</strong>
+      {entries.slice(0, 5).map((entry) => {
+        const url = getFileUrl(artifactId, entry.path);
+        return (
+          <article key={entry.path}>
+            <div>
+              <span>{entry.path}</span>
+              <small>{bundleAudioMeta(entry)}</small>
+            </div>
+            <audio controls preload="none" src={url} />
+            <a href={url} target="_blank" rel="noreferrer" download>
+              Open
+            </a>
+          </article>
+        );
+      })}
+    </div>
+  );
 }
 
 function bundleKindLabel(kind: string) {
@@ -468,6 +615,48 @@ function isPlotPath(path: string) {
 
 function isInlineImagePath(path: string) {
   return /\.(png|jpe?g|webp|svg)$/i.test(path);
+}
+
+function objectValue(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
+}
+
+function arrayOfObjects(value: unknown): Record<string, unknown>[] {
+  return Array.isArray(value) ? value.filter((item): item is Record<string, unknown> => Boolean(objectValue(item))) : [];
+}
+
+function arrayOfStrings(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
+
+function sweepOutputFiles(sweep: Record<string, unknown>): string[] {
+  return arrayOfObjects(sweep.outputs)
+    .flatMap((item) => [item.audio_path, item.latent_path])
+    .filter((item): item is string => typeof item === "string" && item.length > 0);
+}
+
+function formatArrayShapes(arrays: Record<string, unknown> | null) {
+  if (!arrays) return undefined;
+  return Object.entries(arrays)
+    .slice(0, 4)
+    .map(([key, value]) => `${key} ${Array.isArray(value) ? value.join("x") : String(value)}`)
+    .join(", ");
+}
+
+function formatDomainValue(value: unknown) {
+  if (Array.isArray(value)) return value.join(", ");
+  if (typeof value === "number") return formatMaybeNumber(value);
+  return String(value);
+}
+
+function bundleAudioMeta(entry: BundleAudioEntry) {
+  const parts = [
+    entry.duration_seconds !== undefined && entry.duration_seconds !== null ? `${formatMaybeNumber(entry.duration_seconds)}s` : null,
+    entry.sample_rate ? `${entry.sample_rate} Hz` : null,
+    entry.channels ? `${entry.channels} ch` : null,
+    formatBytes(entry.byte_size),
+  ].filter(Boolean);
+  return parts.join(" · ");
 }
 
 function dedupeReuseActions(actions: BundleReuseAction[]) {

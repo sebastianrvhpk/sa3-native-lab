@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { bundleReuseActions, summarizeBundle } from "./bundleInspector";
+import { bundleDomainSections, bundleReuseActions, summarizeBundle } from "./bundleInspector";
 
 describe("bundle inspector summaries", () => {
   it("promotes sweep metrics and plot counts into reader rows", () => {
@@ -38,5 +38,33 @@ describe("bundle inspector summaries", () => {
       { label: "Sweep vectors", fieldKey: "vectors_path", mode: "experiment.alpha_sweep" },
       { label: "Use direction", fieldKey: "direction_path", mode: "experiment.style_direction.generate" },
     ]);
+  });
+
+  it("builds native domain sections for reusable bundle payloads", () => {
+    const sections = bundleDomainSections({
+      kind: "vectors",
+      vectors: { best_layer: 4, probe_accuracy: 0.81234, layers: [2, 4, 8] },
+      npz_files: [
+        {
+          path: "direction.npz",
+          keys: ["direction", "kind"],
+          scalars: { kind: "LatentStyleDirection" },
+          arrays: { direction: [64, 128] },
+        },
+      ],
+      soft_prompt: { tensor_files: ["soft_prompt.pt"] },
+    });
+
+    expect(sections).toContainEqual({
+      title: "Vectors",
+      rows: [
+        ["best layer", 4],
+        ["accuracy", "0.812"],
+        ["examples", undefined],
+        ["layers", "2, 4, 8"],
+      ],
+    });
+    expect(sections.find((section) => section.title === "direction.npz")?.rows).toContainEqual(["arrays", "direction 64x128"]);
+    expect(sections.find((section) => section.title === "Soft Prompt")?.files).toEqual(["soft_prompt.pt"]);
   });
 });
