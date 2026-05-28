@@ -28,7 +28,15 @@ import {
 } from "lucide-react";
 
 import modelImage from "../../stable-audio-3.png";
-import { createApi, type ArtifactAnnotationPayload, type ExperimentPayload, type RecipeForkPayload } from "./api";
+import {
+  createApi,
+  type ArtifactAnnotationPayload,
+  type AudioToAudioPayload,
+  type ExperimentPayload,
+  type GenerateTextPayload,
+  type InpaintPayload,
+  type RecipeForkPayload,
+} from "./api";
 import {
   artifactFilterOptions,
   artifactFiltersActive,
@@ -78,17 +86,23 @@ import { RecipeFields } from "./RecipeFields";
 import { FamilyDetailPanel, ResultFamilyPanel } from "./resultFamilies";
 import {
   buildExperimentPayload,
+  buildGenerationPayload,
+  buildLatentDecodePayload,
+  buildLatentEncodePayload,
   buildOperatorParams,
   defaultFieldForm,
+  defaultDecoderForGenerationModel,
   experimentReady,
   fieldKeys,
   fillMissingFieldDefaults,
+  generationReady,
   operatorBackend,
   operatorReady,
   operatorSeed,
   operatorUsesDonor,
   withOperatorSpecFields,
   type FieldConfig,
+  type GenerationMode,
   type RecipeField,
   type RecipeValue,
 } from "./recipeFormModel";
@@ -130,8 +144,6 @@ type ExperimentMode =
   | "memory.query"
   | "training.lora";
 
-type GenerationMode = "generate.text_to_audio" | "generate.audio_to_audio" | "generate.inpaint";
-
 interface ExperimentConfig {
   value: ExperimentMode;
   label: string;
@@ -159,6 +171,11 @@ interface OperatorConfig extends FieldConfig {
   maturity: "lab" | "probe";
   defaultBackend: "torch_cpu" | "torch_mps";
   requiresDonor?: boolean;
+}
+
+interface GenerationConfig extends FieldConfig {
+  value: GenerationMode;
+  label: string;
 }
 
 const sameModelOptions = [
@@ -765,6 +782,69 @@ const inpaintControlKeys = [...audioToAudioControlKeys, "inpaint_start_seconds",
 const sameEncodeControlKeys = ["model", "chunked", "chunk_size", "overlap", "prompt", "notes"];
 const sameDecodeControlKeys = ["model", "chunked", "chunk_size", "overlap", "notes"];
 
+const generationCatalog: readonly GenerationConfig[] = [
+  {
+    value: "generate.text_to_audio",
+    label: "Text",
+    fields: [
+      { key: "prompt", label: "Prompt", type: "text", defaultValue: "short soft percussive click", required: true },
+      { key: "model", label: "Model", type: "select", defaultValue: "medium", options: audioModels.map(({ value, label }) => ({ value, label })) },
+      { key: "duration_seconds", label: "Seconds", type: "number", defaultValue: 5, min: 0.5, max: 120, step: 0.5 },
+      { key: "steps", label: "Steps", type: "number", defaultValue: 8, min: 1, max: 256, step: 1 },
+      { key: "seed", label: "Seed", type: "number", defaultValue: 7, step: 1 },
+      { key: "cfg_scale", label: "CFG", type: "number", defaultValue: 1, min: 0, step: 0.1 },
+      { key: "apg_scale", label: "APG", type: "number", defaultValue: 1, min: 0, step: 0.1 },
+      { key: "negative_prompt", label: "Negative prompt", type: "text", placeholder: "optional", advanced: true },
+      { key: "decoder", label: "Decoder", type: "select", defaultValue: "same-l", options: sameModelOptions, advanced: true },
+    ],
+  },
+  {
+    value: "generate.audio_to_audio",
+    label: "A2A",
+    fields: [
+      { key: "prompt", label: "Prompt", type: "text", defaultValue: "short soft percussive click", required: true },
+      { key: "model", label: "Model", type: "select", defaultValue: "medium", options: audioModels.map(({ value, label }) => ({ value, label })) },
+      { key: "duration_seconds", label: "Seconds", type: "number", defaultValue: 5, min: 0.5, max: 120, step: 0.5 },
+      { key: "steps", label: "Steps", type: "number", defaultValue: 8, min: 1, max: 256, step: 1 },
+      { key: "init_noise_level", label: "Init noise", type: "number", defaultValue: 0.7, min: 0, max: 1, step: 0.05 },
+      { key: "seed", label: "Seed", type: "number", defaultValue: 7, step: 1 },
+      { key: "cfg_scale", label: "CFG", type: "number", defaultValue: 1, min: 0, step: 0.1 },
+      { key: "apg_scale", label: "APG", type: "number", defaultValue: 1, min: 0, step: 0.1 },
+      { key: "negative_prompt", label: "Negative prompt", type: "text", placeholder: "optional", advanced: true },
+      { key: "decoder", label: "Decoder", type: "select", defaultValue: "same-l", options: sameModelOptions, advanced: true },
+    ],
+  },
+  {
+    value: "generate.inpaint",
+    label: "Inpaint",
+    fields: [
+      { key: "prompt", label: "Prompt", type: "text", defaultValue: "short soft percussive click", required: true },
+      { key: "model", label: "Model", type: "select", defaultValue: "medium", options: audioModels.map(({ value, label }) => ({ value, label })) },
+      { key: "duration_seconds", label: "Seconds", type: "number", defaultValue: 5, min: 0.5, max: 120, step: 0.5 },
+      { key: "steps", label: "Steps", type: "number", defaultValue: 8, min: 1, max: 256, step: 1 },
+      { key: "init_noise_level", label: "Init noise", type: "number", defaultValue: 0.7, min: 0, max: 1, step: 0.05 },
+      { key: "inpaint_start_seconds", label: "Inpaint start", type: "number", defaultValue: 0, min: 0, step: 0.1 },
+      { key: "inpaint_end_seconds", label: "Inpaint end", type: "number", defaultValue: 2, min: 0.1, step: 0.1 },
+      { key: "seed", label: "Seed", type: "number", defaultValue: 7, step: 1 },
+      { key: "cfg_scale", label: "CFG", type: "number", defaultValue: 1, min: 0, step: 0.1 },
+      { key: "apg_scale", label: "APG", type: "number", defaultValue: 1, min: 0, step: 0.1 },
+      { key: "negative_prompt", label: "Negative prompt", type: "text", placeholder: "optional", advanced: true },
+      { key: "decoder", label: "Decoder", type: "select", defaultValue: "same-l", options: sameModelOptions, advanced: true },
+    ],
+  },
+];
+
+const sameConfig: FieldConfig = {
+  fields: [
+    { key: "model", label: "SAME model", type: "select", defaultValue: "same-l", options: sameModelOptions },
+    { key: "chunked", label: "Chunked encode/decode", type: "checkbox", defaultValue: false },
+    { key: "chunk_size", label: "Chunk size", type: "number", defaultValue: 128, min: 1, step: 1, advanced: true },
+    { key: "overlap", label: "Overlap", type: "number", defaultValue: 32, min: 0, step: 1, advanced: true },
+    { key: "prompt", label: "Encode prompt", type: "text", placeholder: "optional", advanced: true },
+    { key: "notes", label: "Notes", type: "text", placeholder: "optional", advanced: true },
+  ],
+};
+
 export function App() {
   const queryClient = useQueryClient();
   const { apiBase, setApiBase, selectedArtifactId, selectArtifact, sessionId, sessionStartedAt, setSession, compare, setCompare } = useBenchStore();
@@ -793,25 +873,9 @@ export function App() {
     refetchInterval: 1500,
   });
 
-  const [prompt, setPrompt] = useState("short soft percussive click");
   const [generationMode, setGenerationMode] = useState<GenerationMode>("generate.text_to_audio");
-  const [negativePrompt, setNegativePrompt] = useState("");
-  const [duration, setDuration] = useState(5);
-  const [steps, setSteps] = useState(8);
-  const [seed, setSeed] = useState(7);
-  const [cfgScale, setCfgScale] = useState(1);
-  const [apgScale, setApgScale] = useState(1);
-  const [initNoiseLevel, setInitNoiseLevel] = useState(0.7);
-  const [inpaintStart, setInpaintStart] = useState(0);
-  const [inpaintEnd, setInpaintEnd] = useState(2);
-  const [audioModel, setAudioModel] = useState<(typeof audioModels)[number]["value"]>("medium");
-  const [audioDecoder, setAudioDecoder] = useState<"same-s" | "same-l">("same-l");
-  const [sameModel, setSameModel] = useState<"same-s" | "same-l">("same-l");
-  const [sameChunked, setSameChunked] = useState(false);
-  const [sameChunkSize, setSameChunkSize] = useState(128);
-  const [sameOverlap, setSameOverlap] = useState(32);
-  const [samePrompt, setSamePrompt] = useState("");
-  const [sameNotes, setSameNotes] = useState("");
+  const [generationForm, setGenerationForm] = useState<Record<string, RecipeValue>>(() => defaultGenerationForm("generate.text_to_audio"));
+  const [sameForm, setSameForm] = useState<Record<string, RecipeValue>>(() => defaultFieldForm(sameConfig));
   const [operator, setOperator] = useState<LatentOperatorMode>("latent.cyclic_roll");
   const [operatorForm, setOperatorForm] = useState<Record<string, RecipeValue>>(() => defaultOperatorForm("latent.cyclic_roll"));
   const [donorArtifactId, setDonorArtifactId] = useState("");
@@ -867,6 +931,15 @@ export function App() {
   const sameDecodeSpec = specMap.get("latent.decode");
   const activeOperatorSpec = specMap.get(operator);
   const activeExperimentSpec = specMap.get(baseExperiment.value);
+  const activeGenerationBase = generationCatalog.find((item) => item.value === generationMode) ?? generationCatalog[0];
+  const activeGenerationConfig = useMemo(
+    () => withOperatorSpecFields(activeGenerationBase, filteredOperatorSpec(activeGenerateSpec, generationControlKeys(generationMode))),
+    [activeGenerateSpec, activeGenerationBase, generationMode],
+  );
+  const activeSameConfig = useMemo(
+    () => withOperatorSpecFields(sameConfig, filteredOperatorSpec(sameEncodeSpec, sameEncodeControlKeys)),
+    [sameEncodeSpec],
+  );
   const activeOperatorConfig = useMemo(() => withOperatorSpecFields(baseOperatorConfig, activeOperatorSpec), [baseOperatorConfig, activeOperatorSpec]);
   const activeExperiment = useMemo(() => withOperatorSpecFields(baseExperiment, activeExperimentSpec), [baseExperiment, activeExperimentSpec]);
   const activeOperatorPresets = useMemo(() => operatorPresets.filter((preset) => preset.operator === operator), [operatorPresets, operator]);
@@ -880,7 +953,7 @@ export function App() {
   );
   const generationNeedsSource = generationMode !== "generate.text_to_audio";
   const generationSource = selectedArtifact?.kind === "audio" ? selectedArtifact : null;
-  const canGenerate = !generationNeedsSource || Boolean(generationSource);
+  const canGenerate = generationReady({ form: generationForm, needsSource: generationNeedsSource, sourceArtifact: generationSource });
   const canRunOperator = operatorReady(activeOperatorConfig, operatorForm, selectedArtifact, donorArtifactId);
   const generateJob = activeJobForOperator(runningJobs, generationMode);
   const encodeJob = activeJobForOperator(runningJobs, "latent.encode");
@@ -906,6 +979,14 @@ export function App() {
   useEffect(() => {
     setOperatorForm((current) => fillMissingFieldDefaults(activeOperatorConfig, current));
   }, [activeOperatorConfig]);
+
+  useEffect(() => {
+    setGenerationForm((current) => fillMissingFieldDefaults(activeGenerationConfig, current));
+  }, [activeGenerationConfig]);
+
+  useEffect(() => {
+    setSameForm((current) => fillMissingFieldDefaults(activeSameConfig, current));
+  }, [activeSameConfig]);
 
   useEffect(() => {
     if (!selectedOperatorPresetId) return;
@@ -1041,58 +1122,30 @@ export function App() {
 
   const generate = useMutation({
     mutationFn: () => {
-      const selected = audioModels.find((item) => item.value === audioModel)!;
-      const basePayload = {
-        prompt,
-        negative_prompt: negativePrompt.trim() || null,
-        duration_seconds: duration,
-        steps,
-        seed,
-        cfg_scale: cfgScale,
-        apg_scale: apgScale,
-        model: selected.value,
-        decoder: audioDecoder,
-        backend: "mlx",
-        session_id: activeSessionId,
-      } as const;
+      const payload = buildGenerationPayload({
+        mode: generationMode,
+        form: generationForm,
+        sourceArtifact: generationSource,
+        sessionId: activeSessionId,
+      });
       if (generationMode === "generate.audio_to_audio") {
-        if (!generationSource) throw new Error("Audio-to-audio requires a selected audio artifact.");
-        return api.generateAudioToAudio({
-          ...basePayload,
-          source_artifact_id: generationSource.artifact_id,
-          init_noise_level: initNoiseLevel,
-        });
+        return api.generateAudioToAudio(payload as AudioToAudioPayload);
       }
       if (generationMode === "generate.inpaint") {
-        if (!generationSource) throw new Error("Inpaint requires a selected audio artifact.");
-        return api.generateInpaint({
-          ...basePayload,
-          source_artifact_id: generationSource.artifact_id,
-          init_noise_level: initNoiseLevel,
-          inpaint_start_seconds: inpaintStart,
-          inpaint_end_seconds: inpaintEnd,
-        });
+        return api.generateInpaint(payload as InpaintPayload);
       }
-      return api.generateText(basePayload);
+      return api.generateText(payload as GenerateTextPayload);
     },
     onSuccess: invalidate,
   });
 
   const generatePromptCandidate = useMutation({
     mutationFn: (candidate: PromptCandidateGenerationRequest) => {
-      const selected = audioModels.find((item) => item.value === audioModel)!;
-      return api.generateText({
-        prompt: candidate.prompt,
-        negative_prompt: negativePrompt.trim() || null,
-        duration_seconds: duration,
-        steps,
-        seed,
-        cfg_scale: cfgScale,
-        apg_scale: apgScale,
-        model: selected.value,
-        decoder: audioDecoder,
-        backend: "mlx",
-        source_artifact_id: candidate.bundleArtifactId,
+      const payload = buildGenerationPayload({
+        mode: "generate.text_to_audio",
+        form: generationForm,
+        promptOverride: candidate.prompt,
+        sourceArtifactId: candidate.bundleArtifactId,
         notes: `Prompt candidate ${candidate.rank ? `#${candidate.rank} ` : ""}from prompt-search bundle ${candidate.bundleArtifactId}`,
         metadata: {
           generation_origin: "prompt_search_candidate",
@@ -1105,40 +1158,22 @@ export function App() {
           prompt_search_model: candidate.searchModel ?? null,
           prompt_search_duration_seconds: candidate.searchDurationSeconds ?? null,
         },
-        session_id: activeSessionId,
+        sessionId: activeSessionId,
       });
+      return api.generateText(payload as GenerateTextPayload);
     },
     onSuccess: invalidate,
   });
 
   const encode = useMutation({
     mutationFn: (artifact: ArtifactRecord) =>
-      api.encodeLatent({
-        source_artifact_id: artifact.artifact_id,
-        model: sameModel,
-        backend: "torch_mps",
-        chunked: sameChunked,
-        chunk_size: sameChunkSize,
-        overlap: sameOverlap,
-        prompt: samePrompt.trim() || null,
-        notes: sameNotes.trim() || null,
-        session_id: activeSessionId,
-      }),
+      api.encodeLatent(buildLatentEncodePayload({ form: sameForm, artifact, sessionId: activeSessionId })),
     onSuccess: invalidate,
   });
 
   const decode = useMutation({
     mutationFn: (artifact: ArtifactRecord) =>
-      api.decodeLatent({
-        source_artifact_id: artifact.artifact_id,
-        model: sameModel,
-        backend: "torch_mps",
-        chunked: sameChunked,
-        chunk_size: sameChunkSize,
-        overlap: sameOverlap,
-        notes: sameNotes.trim() || null,
-        session_id: activeSessionId,
-      }),
+      api.decodeLatent(buildLatentDecodePayload({ form: sameForm, artifact, sessionId: activeSessionId })),
     onSuccess: invalidate,
   });
 
@@ -1152,7 +1187,7 @@ export function App() {
           ...(donorArtifactId && operatorUsesDonor(activeOperatorConfig, operatorForm) ? { donor: donorArtifactId } : {}),
         },
         params: buildOperatorParams(activeOperatorConfig, operatorForm),
-        seed: operatorSeed(operatorForm, seed),
+        seed: operatorSeed(operatorForm, generationSeedFallback(generationForm)),
         session_id: activeSessionId,
       }),
     onSuccess: invalidate,
@@ -1175,6 +1210,18 @@ export function App() {
 
   const setExperimentField = (key: string, value: RecipeValue) => {
     setExperimentForm((current) => ({ ...current, [key]: value }));
+  };
+
+  const setGenerationField = (key: string, value: RecipeValue) => {
+    setGenerationForm((current) => {
+      const next = { ...current, [key]: value };
+      if (key === "model") next.decoder = defaultDecoderForGenerationModel(value);
+      return next;
+    });
+  };
+
+  const setSameField = (key: string, value: RecipeValue) => {
+    setSameForm((current) => ({ ...current, [key]: value }));
   };
 
   const setOperatorField = (key: string, value: RecipeValue) => {
@@ -1256,7 +1303,7 @@ export function App() {
 
   const usePromptCandidate = (candidatePrompt: string) => {
     setGenerationMode("generate.text_to_audio");
-    setPrompt(candidatePrompt);
+    setGenerationForm((current) => ({ ...current, prompt: candidatePrompt }));
   };
 
   const runPromptCandidate = (candidate: PromptCandidateGenerationRequest) => {
@@ -1355,81 +1402,15 @@ export function App() {
                   </button>
                 ))}
               </div>
-              <label className="control-cell">
-                Prompt
-                <input value={prompt} onChange={(event) => setPrompt(event.target.value)} />
-              </label>
-              <label className="control-cell">
-                Negative prompt
-                <input value={negativePrompt} onChange={(event) => setNegativePrompt(event.target.value)} placeholder="optional" />
-              </label>
-              <div className="generation-grid">
-                <label className="control-cell">
-                  Model
-                  <select
-                    value={audioModel}
-                    onChange={(event) => {
-                      const value = event.target.value as typeof audioModel;
-                      setAudioModel(value);
-                      setAudioDecoder(audioModels.find((item) => item.value === value)?.decoder ?? "same-l");
-                    }}
-                  >
-                    {audioModels.map((item) => (
-                      <option key={item.value} value={item.value}>
-                        {item.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="control-cell">
-                  Decoder
-                  <select value={audioDecoder} onChange={(event) => setAudioDecoder(event.target.value as typeof audioDecoder)}>
-                    {sameModelOptions.map((item) => (
-                      <option key={item.value} value={item.value}>
-                        {item.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="control-cell">
-                  Seconds
-                  <input type="number" min={0.5} max={120} step={0.5} value={duration} onChange={(event) => setDuration(Number(event.target.value))} />
-                </label>
-                <label className="control-cell">
-                  Steps
-                  <input type="number" min={1} max={64} value={steps} onChange={(event) => setSteps(Number(event.target.value))} />
-                </label>
-                <label className="control-cell">
-                  Seed
-                  <input type="number" step={1} value={seed} onChange={(event) => setSeed(Number(event.target.value))} />
-                </label>
-                <label className="control-cell">
-                  CFG
-                  <input type="number" min={0} step={0.1} value={cfgScale} onChange={(event) => setCfgScale(Number(event.target.value))} />
-                </label>
-                <label className="control-cell">
-                  APG
-                  <input type="number" min={0} step={0.1} value={apgScale} onChange={(event) => setApgScale(Number(event.target.value))} />
-                </label>
-                {generationNeedsSource ? (
-                  <label className="control-cell">
-                    Init noise
-                    <input type="number" min={0} max={1} step={0.05} value={initNoiseLevel} onChange={(event) => setInitNoiseLevel(Number(event.target.value))} />
-                  </label>
-                ) : null}
-                {generationMode === "generate.inpaint" ? (
-                  <>
-                    <label className="control-cell">
-                      Inpaint start
-                      <input type="number" min={0} step={0.1} value={inpaintStart} onChange={(event) => setInpaintStart(Number(event.target.value))} />
-                    </label>
-                    <label className="control-cell">
-                      Inpaint end
-                      <input type="number" min={0.1} step={0.1} value={inpaintEnd} onChange={(event) => setInpaintEnd(Number(event.target.value))} />
-                    </label>
-                  </>
-                ) : null}
-              </div>
+              <RecipeFields
+                config={activeGenerationConfig}
+                form={generationForm}
+                artifacts={allArtifacts}
+                selectedArtifact={selectedArtifact}
+                onChange={setGenerationField}
+                getArtifactLabel={artifactName}
+                getArtifactPath={artifactPathForField}
+              />
               {generationNeedsSource && !generationSource ? <div className="quiet-panel compact">Select an audio artifact to use this mode.</div> : null}
               <button className="primary-action" onClick={() => generate.mutate()} disabled={!canGenerate || generate.isPending || Boolean(generateJob)}>
                 {generate.isPending || generateJob ? <LoaderCircle className="spin" size={18} /> : <Play size={18} />}
@@ -1448,42 +1429,15 @@ export function App() {
                 <span>SAME</span>
               </div>
               <SpecCoveragePair specs={[sameEncodeSpec, sameDecodeSpec]} controlledKeys={[sameEncodeControlKeys, sameDecodeControlKeys]} />
-              <div className="segmented">
-                <button className={sameModel === "same-s" ? "active" : ""} onClick={() => setSameModel("same-s")}>
-                  same-s
-                </button>
-                <button className={sameModel === "same-l" ? "active" : ""} onClick={() => setSameModel("same-l")}>
-                  same-l
-                </button>
-              </div>
-              <details className="recipe-advanced same-advanced" open>
-                <summary>
-                  <SlidersHorizontal size={15} />
-                  Parameters
-                </summary>
-                <div className="recipe-fields advanced same-fields">
-                  <label className="field-checkbox">
-                    <input type="checkbox" checked={sameChunked} onChange={(event) => setSameChunked(event.target.checked)} />
-                    <span>Chunked encode/decode</span>
-                  </label>
-                  <label className="control-cell">
-                    Chunk size
-                    <input type="number" min={1} step={1} value={sameChunkSize} onChange={(event) => setSameChunkSize(Number(event.target.value))} />
-                  </label>
-                  <label className="control-cell">
-                    Overlap
-                    <input type="number" min={0} step={1} value={sameOverlap} onChange={(event) => setSameOverlap(Number(event.target.value))} />
-                  </label>
-                  <label className="control-cell">
-                    Encode prompt
-                    <input value={samePrompt} onChange={(event) => setSamePrompt(event.target.value)} placeholder="optional" />
-                  </label>
-                  <label className="control-cell">
-                    Notes
-                    <input value={sameNotes} onChange={(event) => setSameNotes(event.target.value)} placeholder="optional" />
-                  </label>
-                </div>
-              </details>
+              <RecipeFields
+                config={activeSameConfig}
+                form={sameForm}
+                artifacts={allArtifacts}
+                selectedArtifact={selectedArtifact}
+                onChange={setSameField}
+                getArtifactLabel={artifactName}
+                getArtifactPath={artifactPathForField}
+              />
               <div className="two-actions">
                 <button disabled={!selectedArtifact || selectedArtifact.kind !== "audio" || encode.isPending || Boolean(encodeJob)} onClick={() => selectedArtifact && encode.mutate(selectedArtifact)}>
                   {encode.isPending || encodeJob ? <LoaderCircle className="spin" size={17} /> : <Box size={17} />}
@@ -2736,6 +2690,11 @@ function defaultOperatorForm(mode: LatentOperatorMode): Record<string, RecipeVal
   return form;
 }
 
+function defaultGenerationForm(mode: GenerationMode): Record<string, RecipeValue> {
+  const config = generationCatalog.find((item) => item.value === mode) ?? generationCatalog[0];
+  return defaultFieldForm(config);
+}
+
 function isLatentOperatorMode(value: string): value is LatentOperatorMode {
   return operatorCatalog.some((item) => item.value === value);
 }
@@ -2757,6 +2716,20 @@ function specParamKeys(spec: OperatorSpec | undefined): string[] {
 function missingParamKeys(spec: OperatorSpec | undefined, controlledKeys: readonly string[]): string[] {
   const controlled = new Set(controlledKeys);
   return specParamKeys(spec).filter((key) => !controlled.has(key));
+}
+
+function filteredOperatorSpec(spec: OperatorSpec | undefined, fieldKeysToKeep: readonly string[]): OperatorSpec | undefined {
+  if (!spec) return undefined;
+  const allowed = new Set(fieldKeysToKeep);
+  return {
+    ...spec,
+    ui_fields: spec.ui_fields.filter((field) => allowed.has(field.key)),
+  };
+}
+
+function generationSeedFallback(form: Record<string, RecipeValue>) {
+  const seed = typeof form.seed === "number" ? form.seed : Number(form.seed);
+  return Number.isFinite(seed) ? seed : 7;
 }
 
 function findActiveSession(sessions: SessionRecord[], sessionId: string | null): SessionRecord | null {

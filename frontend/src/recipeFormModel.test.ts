@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildGenerationPayload,
   buildExperimentPayload,
+  buildLatentDecodePayload,
+  buildLatentEncodePayload,
   buildOperatorParams,
   defaultFieldForm,
   experimentReady,
   fillMissingFieldDefaults,
+  generationReady,
   operatorUsesDonor,
   validateRecipeField,
   withOperatorSpecFields,
@@ -75,6 +79,106 @@ describe("recipe form model", () => {
       inputs: { source: latent.artifact_id },
       session_id: "sess_1",
       params: { top_k: 5 },
+    });
+  });
+
+  it("builds generation payloads from schema form values", () => {
+    const audio = artifact("audio");
+    const form = {
+      prompt: "rubbery bass gesture",
+      negative_prompt: "",
+      duration_seconds: 6.5,
+      steps: 12,
+      seed: 99,
+      cfg_scale: 1.4,
+      apg_scale: 0.8,
+      model: "medium",
+      decoder: "same-l",
+      init_noise_level: 0.35,
+      inpaint_start_seconds: 1,
+      inpaint_end_seconds: 3,
+    };
+
+    expect(generationReady({ form, needsSource: true, sourceArtifact: audio })).toBe(true);
+    expect(buildGenerationPayload({ mode: "generate.audio_to_audio", form, sourceArtifact: audio, sessionId: "sess_1" })).toMatchObject({
+      prompt: "rubbery bass gesture",
+      negative_prompt: null,
+      duration_seconds: 6.5,
+      steps: 12,
+      seed: 99,
+      cfg_scale: 1.4,
+      apg_scale: 0.8,
+      model: "medium",
+      decoder: "same-l",
+      backend: "mlx",
+      source_artifact_id: audio.artifact_id,
+      init_noise_level: 0.35,
+      session_id: "sess_1",
+    });
+    expect(buildGenerationPayload({ mode: "generate.inpaint", form, sourceArtifact: audio })).toMatchObject({
+      inpaint_start_seconds: 1,
+      inpaint_end_seconds: 3,
+    });
+  });
+
+  it("builds prompt-candidate generations without losing lineage metadata", () => {
+    const payload = buildGenerationPayload({
+      mode: "generate.text_to_audio",
+      form: {
+        prompt: "base",
+        duration_seconds: 8,
+        steps: 8,
+        model: "sm-music",
+        decoder: "same-s",
+      },
+      promptOverride: "candidate prompt",
+      sourceArtifactId: "art_prompt_bundle",
+      notes: "Prompt candidate #1",
+      metadata: { generation_origin: "prompt_search_candidate" },
+    });
+
+    expect(payload).toMatchObject({
+      prompt: "candidate prompt",
+      model: "sm-music",
+      decoder: "same-s",
+      source_artifact_id: "art_prompt_bundle",
+      notes: "Prompt candidate #1",
+      metadata: { generation_origin: "prompt_search_candidate" },
+    });
+  });
+
+  it("builds SAME encode and decode payloads from one native form", () => {
+    const audio = artifact("audio");
+    const latent = artifact("latent");
+    const form = {
+      model: "same-l",
+      backend: "torch_mps",
+      chunked: true,
+      chunk_size: 96,
+      overlap: 24,
+      prompt: "source descriptor",
+      notes: "",
+    };
+
+    expect(buildLatentEncodePayload({ form, artifact: audio, sessionId: "sess_1" })).toEqual({
+      source_artifact_id: audio.artifact_id,
+      model: "same-l",
+      backend: "torch_mps",
+      chunked: true,
+      chunk_size: 96,
+      overlap: 24,
+      prompt: "source descriptor",
+      notes: null,
+      session_id: "sess_1",
+    });
+    expect(buildLatentDecodePayload({ form, artifact: latent })).toMatchObject({
+      source_artifact_id: latent.artifact_id,
+      model: "same-l",
+      backend: "torch_mps",
+      chunked: true,
+      chunk_size: 96,
+      overlap: 24,
+      notes: null,
     });
   });
 

@@ -1,6 +1,13 @@
 import { z } from "zod";
 
-import type { ExperimentPayload } from "./api";
+import type {
+  AudioToAudioPayload,
+  ExperimentPayload,
+  GenerateTextPayload,
+  InpaintPayload,
+  LatentDecodePayload,
+  LatentEncodePayload,
+} from "./api";
 import type { ArtifactKind, ArtifactRecord, OperatorFieldSpec, OperatorSpec } from "./types";
 
 export const recipeValueSchema = z.union([z.string(), z.number(), z.boolean()]);
@@ -42,6 +49,9 @@ export interface OperatorPayloadConfig<TMode extends string = string> extends Fi
   defaultBackend: "torch_cpu" | "torch_mps";
   requiresDonor?: boolean;
 }
+
+export type GenerationMode = "generate.text_to_audio" | "generate.audio_to_audio" | "generate.inpaint";
+export type GenerationPayload = GenerateTextPayload | AudioToAudioPayload | InpaintPayload;
 
 export function defaultFieldForm(config: FieldConfig): Record<string, RecipeValue> {
   const form: Record<string, RecipeValue> = {};
@@ -167,6 +177,124 @@ export function buildExperimentPayload({
     seed,
     session_id: sessionId,
     params,
+  };
+}
+
+export function generationReady({
+  form,
+  needsSource,
+  sourceArtifact,
+}: {
+  form: Record<string, RecipeValue>;
+  needsSource: boolean;
+  sourceArtifact: ArtifactRecord | null;
+}) {
+  if (!stringValue(form.prompt)) return false;
+  if (needsSource && sourceArtifact?.kind !== "audio") return false;
+  const duration = numberValue(form.duration_seconds, 0);
+  const steps = numberValue(form.steps, 0);
+  if (duration <= 0 || steps < 1) return false;
+  const inpaintEnd = numberValue(form.inpaint_end_seconds, 0);
+  const inpaintStart = numberValue(form.inpaint_start_seconds, 0);
+  if (inpaintEnd && inpaintStart >= inpaintEnd) return false;
+  if (inpaintEnd && inpaintEnd > duration) return false;
+  return true;
+}
+
+export function buildGenerationPayload({
+  mode,
+  form,
+  sourceArtifact,
+  sessionId,
+  promptOverride,
+  sourceArtifactId,
+  notes,
+  metadata,
+}: {
+  mode: GenerationMode;
+  form: Record<string, RecipeValue>;
+  sourceArtifact?: ArtifactRecord | null;
+  sessionId?: string | null;
+  promptOverride?: string;
+  sourceArtifactId?: string | null;
+  notes?: string | null;
+  metadata?: Record<string, unknown> | null;
+}): GenerationPayload {
+  const base: GenerateTextPayload = {
+    prompt: promptOverride ?? stringValue(form.prompt),
+    negative_prompt: optionalString(form.negative_prompt),
+    duration_seconds: numberValue(form.duration_seconds, 30),
+    steps: Math.max(1, Math.trunc(numberValue(form.steps, 8))),
+    seed: optionalInteger(form.seed),
+    cfg_scale: numberValue(form.cfg_scale, 1),
+    apg_scale: numberValue(form.apg_scale, 1),
+    model: generationModelValue(form.model),
+    decoder: sameModelValue(form.decoder, defaultDecoderForGenerationModel(form.model)),
+    backend: "mlx",
+    session_id: sessionId,
+    notes,
+    metadata,
+  };
+  if (sourceArtifactId) {
+    base.source_artifact_id = sourceArtifactId;
+  }
+  if (mode === "generate.audio_to_audio" || mode === "generate.inpaint") {
+    if (sourceArtifact?.kind !== "audio") throw new Error("Generation mode requires a selected audio artifact.");
+    const audioPayload: AudioToAudioPayload = {
+      ...base,
+      source_artifact_id: sourceArtifact.artifact_id,
+      init_noise_level: numberValue(form.init_noise_level, 0.7),
+    };
+    if (mode === "generate.audio_to_audio") return audioPayload;
+    return {
+      ...audioPayload,
+      inpaint_start_seconds: numberValue(form.inpaint_start_seconds, 0),
+      inpaint_end_seconds: numberValue(form.inpaint_end_seconds, 2),
+    };
+  }
+  return base;
+}
+
+export function buildLatentEncodePayload({
+  form,
+  artifact,
+  sessionId,
+}: {
+  form: Record<string, RecipeValue>;
+  artifact: ArtifactRecord;
+  sessionId?: string | null;
+}): LatentEncodePayload {
+  return {
+    source_artifact_id: artifact.artifact_id,
+    model: sameModelValue(form.model, "same-l"),
+    backend: torchBackendValue(form.backend),
+    chunked: Boolean(form.chunked),
+    chunk_size: Math.max(1, Math.trunc(numberValue(form.chunk_size, 128))),
+    overlap: Math.max(0, Math.trunc(numberValue(form.overlap, 32))),
+    prompt: optionalString(form.prompt),
+    notes: optionalString(form.notes),
+    session_id: sessionId,
+  };
+}
+
+export function buildLatentDecodePayload({
+  form,
+  artifact,
+  sessionId,
+}: {
+  form: Record<string, RecipeValue>;
+  artifact: ArtifactRecord;
+  sessionId?: string | null;
+}): LatentDecodePayload {
+  return {
+    source_artifact_id: artifact.artifact_id,
+    model: sameModelValue(form.model, "same-l"),
+    backend: torchBackendValue(form.backend),
+    chunked: Boolean(form.chunked),
+    chunk_size: Math.max(1, Math.trunc(numberValue(form.chunk_size, 128))),
+    overlap: Math.max(0, Math.trunc(numberValue(form.overlap, 32))),
+    notes: optionalString(form.notes),
+    session_id: sessionId,
   };
 }
 
@@ -302,4 +430,40 @@ function nullToUndefined(value: number | null | undefined): number | undefined {
 
 function isArtifactKind(value: string): value is ArtifactKind {
   return value === "audio" || value === "latent" || value === "bundle" || value === "recipe" || value === "text";
+}
+
+function optionalString(value: RecipeValue | undefined) {
+  const normalized = stringValue(value);
+  return normalized ? normalized : null;
+}
+
+function numberValue(value: RecipeValue | undefined, fallback: number) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  const parsed = Number(stringValue(value));
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function optionalInteger(value: RecipeValue | undefined) {
+  const parsed = numberValue(value, Number.NaN);
+  return Number.isFinite(parsed) ? Math.trunc(parsed) : null;
+}
+
+export function defaultDecoderForGenerationModel(value: RecipeValue | undefined): GenerateTextPayload["decoder"] {
+  return generationModelValue(value) === "medium" ? "same-l" : "same-s";
+}
+
+function generationModelValue(value: RecipeValue | undefined): GenerateTextPayload["model"] {
+  const normalized = stringValue(value);
+  if (normalized === "sm-music" || normalized === "sm-sfx" || normalized === "medium") return normalized;
+  return "medium";
+}
+
+function sameModelValue(value: RecipeValue | undefined, fallback: GenerateTextPayload["decoder"] = "same-l"): "same-s" | "same-l" {
+  const normalized = stringValue(value);
+  if (normalized === "same-s" || normalized === "same-l") return normalized;
+  return fallback;
+}
+
+function torchBackendValue(value: RecipeValue | undefined): "torch_mps" | "torch_cpu" {
+  return stringValue(value) === "torch_cpu" ? "torch_cpu" : "torch_mps";
 }
