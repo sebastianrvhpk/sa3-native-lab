@@ -71,6 +71,7 @@ export function BundleField({
 function BundleReaderPanel({ inspection }: { inspection: ArtifactInspection }) {
   const descriptor = summarizeBundle(inspection.bundle_summary, inspection.bundle_preview, inspection.bundle_files);
   const rows = descriptor.rows.filter(([, value]) => value !== undefined && value !== null && value !== "");
+  const plotFiles = descriptor.plotFiles ?? [];
   return (
     <div className={`bundle-kind-panel ${descriptor.kind}`}>
       <div>
@@ -90,6 +91,7 @@ function BundleReaderPanel({ inspection }: { inspection: ArtifactInspection }) {
           })}
         </div>
       ) : null}
+      {plotFiles.length ? <PlotPreviewShell files={plotFiles} /> : null}
     </div>
   );
 }
@@ -123,6 +125,7 @@ export function summarizeBundle(summary: Record<string, unknown> | undefined, pr
     );
   }
   const plots = summary.plots && typeof summary.plots === "object" ? (summary.plots as Record<string, unknown>) : null;
+  const plotFiles = Array.isArray(plots?.files) ? plots.files.filter((file): file is string => typeof file === "string") : [];
   if (plots) {
     rows.push(["plots", plots.count]);
   }
@@ -149,7 +152,7 @@ export function summarizeBundle(summary: Record<string, unknown> | undefined, pr
   if (training) {
     rows.unshift(["checkpoints", Array.isArray(training.checkpoint_files) ? training.checkpoint_files.length : undefined]);
   }
-  return { kind, label, description, rows };
+  return { kind, label, description, rows, plotFiles };
 }
 
 function bundleKindLabel(kind: string) {
@@ -247,6 +250,19 @@ function BundlePreview({
   );
 }
 
+function PlotPreviewShell({ files }: { files: readonly string[] }) {
+  return (
+    <div className="bundle-plot-shell" aria-label="Bundle plot files">
+      <strong>Plot preview</strong>
+      <div>
+        {files.slice(0, 4).map((file) => (
+          <span key={file}>{file}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function classifyBundle(preview: Record<string, unknown>, files: BundleFileEntry[]) {
   const operator = typeof preview.operator === "string" ? preview.operator : "";
   const fileNames = files.map((file) => file.path.toLowerCase());
@@ -262,6 +278,7 @@ function classifyBundle(preview: Record<string, unknown>, files: BundleFileEntry
         ["candidates", preview.candidate_count],
         ["hits", preview.result_count],
       ],
+      plotFiles: [],
     };
   }
   if (operator.includes("alpha_sweep") || hasFile("metrics.json")) {
@@ -274,6 +291,7 @@ function classifyBundle(preview: Record<string, unknown>, files: BundleFileEntry
         ["files", files.length],
         ["metrics", hasFile("metrics.json") ? "present" : "pending"],
       ],
+      plotFiles: files.map((file) => file.path).filter(isPlotPath),
     };
   }
   if (operator.includes("style_profile") || operator.includes("positive_style_profile") || hasFile("profile.npz")) {
@@ -286,6 +304,7 @@ function classifyBundle(preview: Record<string, unknown>, files: BundleFileEntry
         ["memory", hasFile("memory") ? "included" : "none"],
         ["files", files.length],
       ],
+      plotFiles: files.map((file) => file.path).filter(isPlotPath),
     };
   }
   if (operator.includes("vectors") || operator.includes("direction") || hasFile("direction.npz") || hasFile("vectors")) {
@@ -298,6 +317,7 @@ function classifyBundle(preview: Record<string, unknown>, files: BundleFileEntry
         ["npz", fileNames.filter((name) => name.endsWith(".npz")).length],
         ["files", files.length],
       ],
+      plotFiles: files.map((file) => file.path).filter(isPlotPath),
     };
   }
   if (operator.includes("soft_prompt") || hasFile("soft_prompt.pt")) {
@@ -309,6 +329,7 @@ function classifyBundle(preview: Record<string, unknown>, files: BundleFileEntry
         ["tensor", hasFile("soft_prompt.pt") ? "soft_prompt.pt" : "not found"],
         ["files", files.length],
       ],
+      plotFiles: files.map((file) => file.path).filter(isPlotPath),
     };
   }
   if (operator.includes("lora") || hasFile("checkpoint") || hasFile("adapter")) {
@@ -320,6 +341,7 @@ function classifyBundle(preview: Record<string, unknown>, files: BundleFileEntry
         ["operator", operator],
         ["files", files.length],
       ],
+      plotFiles: files.map((file) => file.path).filter(isPlotPath),
     };
   }
   return {
@@ -330,6 +352,7 @@ function classifyBundle(preview: Record<string, unknown>, files: BundleFileEntry
       ["operator", operator],
       ["files", files.length],
     ],
+    plotFiles: files.map((file) => file.path).filter(isPlotPath),
   };
 }
 
@@ -347,4 +370,9 @@ function formatMaybeNumber(value: unknown) {
 
 function prettyBundleKey(key: string) {
   return key.replaceAll("_", " ");
+}
+
+function isPlotPath(path: string) {
+  const value = path.toLowerCase();
+  return /\.(png|jpe?g|webp|svg|pdf)$/.test(value) || value.includes("plot") || value.includes("chart");
 }

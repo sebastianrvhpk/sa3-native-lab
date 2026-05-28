@@ -233,6 +233,33 @@ function SweepFamilyBand({
           </article>
         ))}
       </div>
+      <SweepMetricTable entries={entries} onSelect={onSelect} />
+    </div>
+  );
+}
+
+function SweepMetricTable({ entries, onSelect }: { entries: SweepEntry[]; onSelect: (artifactId: string | null) => void }) {
+  const metricKeys = sweepMetricKeys(entries);
+  return (
+    <div className="sweep-metric-table" aria-label="Alpha sweep metric table">
+      <div className="sweep-metric-row header">
+        <span>alpha</span>
+        <span>artifact</span>
+        {metricKeys.map((key) => (
+          <span key={key}>{prettyParamName(key)}</span>
+        ))}
+        <span>duration</span>
+      </div>
+      {entries.map((entry) => (
+        <button key={entry.artifact.artifact_id} type="button" className="sweep-metric-row" onClick={() => onSelect(entry.artifact.artifact_id)}>
+          <span>{entry.alpha === null ? "n/a" : formatAlpha(entry.alpha)}</span>
+          <span>{artifactName(entry.artifact)}</span>
+          {metricKeys.map((key) => (
+            <span key={key}>{formatMetricValue(entry.metrics[key])}</span>
+          ))}
+          <span>{entry.artifact.audio ? `${formatMetricValue(entry.artifact.audio.duration_seconds)}s` : "n/a"}</span>
+        </button>
+      ))}
     </div>
   );
 }
@@ -261,6 +288,7 @@ interface SweepEntry {
   artifact: ArtifactRecord;
   alpha: number | null;
   label: string;
+  metrics: Record<string, number | string>;
 }
 
 function buildSweepEntries(family: ResultFamily, artifacts: ArtifactRecord[]): SweepEntry[] {
@@ -274,6 +302,7 @@ function buildSweepEntries(family: ResultFamily, artifacts: ArtifactRecord[]): S
         artifact,
         alpha,
         label: alpha === null ? sweepLabel(artifact, index) : `alpha ${formatAlpha(alpha)}`,
+        metrics: artifactSweepMetrics(artifact),
       };
     })
     .sort((left, right) => {
@@ -282,6 +311,36 @@ function buildSweepEntries(family: ResultFamily, artifacts: ArtifactRecord[]): S
       if (right.alpha === null) return -1;
       return left.alpha - right.alpha;
     });
+}
+
+function artifactSweepMetrics(artifact: ArtifactRecord): Record<string, number | string> {
+  const metrics: Record<string, number | string> = {};
+  for (const [key, value] of Object.entries(artifact.metadata)) {
+    if (key === "alpha" || key === "operator" || key === "backend" || key === "script_output_path") continue;
+    if (typeof value === "number" && Number.isFinite(value)) metrics[key] = value;
+    if (typeof value === "string" && value.length <= 32 && /^-?\d+(?:\.\d+)?$/.test(value)) metrics[key] = Number(value);
+  }
+  return metrics;
+}
+
+function sweepMetricKeys(entries: SweepEntry[]): string[] {
+  const priority = ["score", "loss", "distance", "duration", "return_code"];
+  const keys = [...new Set(entries.flatMap((entry) => Object.keys(entry.metrics)))];
+  return keys
+    .sort((left, right) => {
+      const leftIndex = priority.indexOf(left);
+      const rightIndex = priority.indexOf(right);
+      if (leftIndex !== -1 || rightIndex !== -1) return (leftIndex === -1 ? 999 : leftIndex) - (rightIndex === -1 ? 999 : rightIndex);
+      return left.localeCompare(right);
+    })
+    .slice(0, 3);
+}
+
+function formatMetricValue(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value.toFixed(Math.abs(value) >= 10 ? 1 : 3).replace(/\.?0+$/, "");
+  }
+  return value === undefined || value === null || value === "" ? "n/a" : String(value);
 }
 
 function parseAlphaList(value: unknown): number[] {

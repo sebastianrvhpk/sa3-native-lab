@@ -15,8 +15,8 @@ describe("FamilyDetailPanel", () => {
     const onForkRecipe = vi.fn();
     const family = sweepFamily();
     const artifacts = [
-      audioArtifact("art_pos", "alpha_pos4p00.wav", "2026-05-27T15:02:00.000Z"),
-      audioArtifact("art_neg", "alpha_neg4p00.wav", "2026-05-27T15:01:00.000Z"),
+      audioArtifact("art_pos", "alpha_pos4p00.wav", "2026-05-27T15:02:00.000Z", { score: 0.91 }),
+      audioArtifact("art_neg", "alpha_neg4p00.wav", "2026-05-27T15:01:00.000Z", { score: 0.32 }),
     ];
 
     render(
@@ -36,8 +36,10 @@ describe("FamilyDetailPanel", () => {
     );
 
     expect(screen.getByLabelText("Alpha sweep variants")).toBeInTheDocument();
+    expect(screen.getByLabelText("Alpha sweep metric table")).toBeInTheDocument();
     expect(screen.getByText("alpha -4")).toBeInTheDocument();
     expect(screen.getByText("alpha +4")).toBeInTheDocument();
+    expect(screen.getByText("0.32")).toBeInTheDocument();
 
     const negativeVariant = screen.getByText("alpha -4").closest("article");
     expect(negativeVariant).not.toBeNull();
@@ -80,7 +82,7 @@ function sweepFamily(): ResultFamily {
   };
 }
 
-function audioArtifact(artifactId: string, filename: string, createdAt: string): ArtifactRecord {
+function audioArtifact(artifactId: string, filename: string, createdAt: string, metadata: Record<string, unknown> = {}): ArtifactRecord {
   return {
     artifact_id: artifactId,
     kind: "audio",
@@ -94,7 +96,7 @@ function audioArtifact(artifactId: string, filename: string, createdAt: string):
     prompt: "glass rhythm",
     notes: null,
     tags: [],
-    metadata: {},
+    metadata,
     session_id: "sess_1",
     created_at: createdAt,
   };

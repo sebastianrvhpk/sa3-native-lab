@@ -23,5 +23,6 @@ describe("bundle inspector summaries", () => {
     expect(summary.kind).toBe("sweep");
     expect(summary.rows).toContainEqual(["metric score", "0.812"]);
     expect(summary.rows).toContainEqual(["plots", 1]);
+    expect(summary.plotFiles).toEqual(["plot.png"]);
   });
 });

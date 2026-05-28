@@ -530,6 +530,41 @@ label {
   background: linear-gradient(135deg, rgb(201 238 72 / 0.17), rgb(85 198 199 / 0.12)), rgb(255 255 255 / 0.42);
 }
 
+.bundle-plot-shell {
+  grid-column: 1 / -1;
+  border: 1px dashed rgb(45 51 52 / 0.22);
+  border-radius: 7px;
+  padding: 7px;
+  display: grid;
+  gap: 5px;
+  background:
+    linear-gradient(135deg, rgb(65 108 199 / 0.12), rgb(234 74 162 / 0.1)),
+    rgb(255 255 255 / 0.36);
+}
+
+.bundle-plot-shell strong {
+  font-size: 0.72rem;
+}
+
+.bundle-plot-shell div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.bundle-plot-shell span {
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  padding: 3px 7px;
+  font-size: 0.68rem;
+  color: var(--muted);
+  background: rgb(255 255 255 / 0.48);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .bundle-file-list i {
   display: grid;
   grid-template-columns: minmax(0, 1fr) max-content;
@@ -2265,6 +2300,46 @@ audio {
 
 .sweep-actions button:last-child {
   border-right: 0;
+}
+
+.sweep-metric-table {
+  border: 1px solid var(--line-soft);
+  border-radius: 7px;
+  overflow: hidden;
+  background: rgb(255 255 255 / 0.42);
+}
+
+.sweep-metric-row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) repeat(4, minmax(54px, max-content));
+  align-items: center;
+  gap: 7px;
+  border: 0;
+  border-bottom: 1px solid var(--line-soft);
+  border-radius: 0;
+  padding: 6px 7px;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  font-size: 0.68rem;
+}
+
+.sweep-metric-row:last-child {
+  border-bottom: 0;
+}
+
+.sweep-metric-row.header {
+  color: var(--muted);
+  font-weight: 740;
+  background: rgb(255 255 255 / 0.36);
+}
+
+.sweep-metric-row span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .family-artifact {
