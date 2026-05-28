@@ -234,6 +234,10 @@ def test_job_manager_persists_success(tmp_path):
     assert finished.artifact_ids == ["art_test"]
     assert finished.metrics["ok"] is True
     assert (tmp_path / f"{record.job_id}.json").exists()
+    events = manager.event_history(record.job_id)
+    assert [event.job.status for event in events] == [JobStatus.QUEUED, JobStatus.RUNNING, JobStatus.SUCCEEDED]
+    assert [event.sequence for event in events] == [1, 2, 3]
+    assert (tmp_path / "events" / f"{record.job_id}.jsonl").exists()
 
 
 def test_job_manager_cancels_running_job(tmp_path):
@@ -385,6 +389,10 @@ def test_fastapi_surface_imports_and_runs_latent_job(tmp_path):
     assert finished["status"] == "succeeded"
     assert finished["recipe"]["session_id"] == session_id
     assert len(finished["artifact_ids"]) == 1
+    history = client.get(f"/jobs/{finished['job_id']}/events/history")
+    assert history.status_code == 200
+    assert history.json()[-1]["job"]["status"] == "succeeded"
+    assert history.json()[-1]["sequence"] >= 1
     recipe = client.get(f"/recipes/{finished['recipe']['recipe_id']}")
     assert recipe.status_code == 200
     assert recipe.json()["operator"] == "latent.cyclic_roll"

@@ -3,6 +3,7 @@ import type {
   ArtifactKind,
   ArtifactRecord,
   HealthResponse,
+  JobJournalEvent,
   JobRecord,
   NotebookMode,
   OperatorSpec,
@@ -75,6 +76,10 @@ export function createPythonClient({ baseUrl, fetchImpl = fetch }: PythonClientO
     inspectArtifact: (artifactId: string) => request<ArtifactInspection>(`/artifacts/${encodeURIComponent(artifactId)}/inspect`),
     jobs: () => request<JobRecord[]>("/jobs"),
     job: (jobId: string) => request<JobRecord>(`/jobs/${encodeURIComponent(jobId)}`),
+    jobEventHistory: (jobId: string, after = 0, limit = 100) => {
+      const params = new URLSearchParams({ after: String(after), limit: String(limit) });
+      return request<JobJournalEvent[]>(`/jobs/${encodeURIComponent(jobId)}/events/history?${params.toString()}`);
+    },
     cancelJob: (jobId: string) => request<JobRecord>(`/jobs/${encodeURIComponent(jobId)}/cancel`, jsonPatchOrPost("POST", {})),
     retryJob: (jobId: string) => request<JobRecord>(`/jobs/${encodeURIComponent(jobId)}/retry`, jsonPatchOrPost("POST", {})),
     replayRecipe: (recipeId: string) => request<JobRecord>(`/recipes/${encodeURIComponent(recipeId)}/replay`, jsonPatchOrPost("POST", {})),

@@ -147,6 +147,32 @@ test("pollJobEvents emits heartbeats and resumes monotonic ids", async () => {
   assert.deepEqual(events[2]?.diagnostics.logTail, ["loading", "done"]);
 });
 
+test("pollJobEvents replays durable journal events before polling", async () => {
+  let livePolls = 0;
+  const running = { ...jobRecord("job_running", "running", "sess_active", now), progress: 0.25, logs: ["loading"] };
+  const done = { ...jobRecord("job_running", "succeeded", "sess_active", now), progress: 1, logs: ["loading", "done"] };
+  const client = {
+    jobEventHistory: async (_jobId: string, after = 0) => [
+      { sequence: after + 1, type: "snapshot" as const, created_at: now, job: running },
+      { sequence: after + 2, type: "snapshot" as const, created_at: now, job: done },
+    ],
+    job: async () => {
+      livePolls += 1;
+      return done;
+    },
+  };
+
+  const events = [];
+  for await (const event of pollJobEvents(client, { jobId: "job_running", intervalMs: 1, lastEventId: "job_running:3" })) {
+    events.push(event);
+  }
+
+  assert.equal(livePolls, 0);
+  assert.deepEqual(events.map((event) => event.sequence), [4, 5]);
+  assert.deepEqual(events.map((event) => event.diagnostics.eventSource), ["python-job-journal", "python-job-journal"]);
+  assert.equal(events[0]?.diagnostics.resumedFromSequence, 3);
+});
+
 test("parseTrackedSequence accepts only ids for the same job", () => {
   assert.equal(parseTrackedSequence("job_a", "job_a:12"), 12);
   assert.equal(parseTrackedSequence("job_a", "job_b:12"), null);

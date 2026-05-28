@@ -21,6 +21,7 @@ from .contracts import (
     InpaintRequest,
     JobErrorEvent,
     JobEvent,
+    JobJournalEvent,
     JobStatus,
     JobRecord,
     LatentDecodeRequest,
@@ -325,6 +326,13 @@ def create_app(
     def get_job(job_id: str) -> JobRecord:
         try:
             return jobs.get(job_id)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=f"job not found: {job_id}") from exc
+
+    @app.get("/jobs/{job_id}/events/history", response_model=list[JobJournalEvent])
+    def job_event_history(job_id: str, after: int = 0, limit: int = 100) -> list[JobJournalEvent]:
+        try:
+            return jobs.event_history(job_id, after_sequence=after, limit=limit)
         except KeyError as exc:
             raise HTTPException(status_code=404, detail=f"job not found: {job_id}") from exc
 

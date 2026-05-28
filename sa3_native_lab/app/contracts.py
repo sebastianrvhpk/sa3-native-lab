@@ -218,6 +218,13 @@ class JobErrorEvent(ContractModel):
     error: str
 
 
+class JobJournalEvent(ContractModel):
+    sequence: int
+    type: JobEventType = JobEventType.SNAPSHOT
+    created_at: datetime = Field(default_factory=utc_now)
+    job: JobRecord
+
+
 class ModelStatus(ContractModel):
     backend: BackendName
     available: bool

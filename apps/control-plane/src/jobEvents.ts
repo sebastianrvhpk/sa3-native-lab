@@ -1,5 +1,7 @@
-import type { JobRecord } from "./contracts.js";
+import type { JobJournalEvent, JobRecord } from "./contracts.js";
 import type { PythonClient } from "./pythonClient.js";
+
+type JobEventClient = Pick<PythonClient, "job"> & Partial<Pick<PythonClient, "jobEventHistory">>;
 
 export type ControlPlaneJobEvent =
   | {
@@ -41,7 +43,7 @@ export interface PollJobEventsOptions {
 }
 
 export interface JobEventDiagnostics {
-  eventSource: "python-job-snapshot-poll";
+  eventSource: "python-job-journal" | "python-job-snapshot-poll";
   pollIntervalMs: number;
   logTail: string[];
   lastEventId?: string | null;
@@ -49,7 +51,7 @@ export interface JobEventDiagnostics {
 }
 
 export async function* pollJobEvents(
-  client: Pick<PythonClient, "job">,
+  client: JobEventClient,
   { jobId, intervalMs = 1000, heartbeatEveryMs = 10000, lastEventId = null, signal }: PollJobEventsOptions,
 ): AsyncGenerator<ControlPlaneJobEvent> {
   let lastSignature = "";
@@ -57,6 +59,16 @@ export async function* pollJobEvents(
   const resumedFromSequence = sequence > 0 ? sequence : null;
   let lastHeartbeatAt = Date.now();
   let unchangedPolls = 0;
+  const replayed = await replayJournal(client, { jobId, afterSequence: sequence, intervalMs, lastEventId, resumedFromSequence, signal });
+  for (const event of replayed.events) {
+    yield event;
+  }
+  if (replayed.lastEvent) {
+    sequence = replayed.lastEvent.sequence;
+    lastSignature = jobSnapshotSignature(replayed.lastEvent.job);
+    lastHeartbeatAt = Date.now();
+    if (!isJobActive(replayed.lastEvent.job)) return;
+  }
 
   while (!signal?.aborted) {
     try {
@@ -120,6 +132,48 @@ export async function* pollJobEvents(
 
     await delay(intervalMs, signal);
   }
+}
+
+async function replayJournal(
+  client: JobEventClient,
+  {
+    jobId,
+    afterSequence,
+    intervalMs,
+    lastEventId,
+    resumedFromSequence,
+    signal,
+  }: {
+    jobId: string;
+    afterSequence: number;
+    intervalMs: number;
+    lastEventId?: string | null;
+    resumedFromSequence?: number | null;
+    signal?: AbortSignal;
+  },
+): Promise<{ events: ControlPlaneJobEvent[]; lastEvent: JobJournalEvent | null }> {
+  if (signal?.aborted || !client.jobEventHistory) return { events: [], lastEvent: null };
+  let history: JobJournalEvent[] = [];
+  try {
+    history = await client.jobEventHistory(jobId, afterSequence, 1000);
+  } catch {
+    return { events: [], lastEvent: null };
+  }
+  const events = history.map((event) => ({
+    type: "snapshot" as const,
+    source: "control-plane" as const,
+    sequence: event.sequence,
+    receivedAt: event.created_at,
+    diagnostics: {
+      eventSource: "python-job-journal" as const,
+      pollIntervalMs: intervalMs,
+      logTail: event.job.logs.slice(-6),
+      lastEventId,
+      resumedFromSequence,
+    },
+    job: event.job,
+  }));
+  return { events, lastEvent: history.at(-1) ?? null };
 }
 
 function jobEventDiagnostics(

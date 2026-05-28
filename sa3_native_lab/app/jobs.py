@@ -9,7 +9,7 @@ from pathlib import Path
 from threading import Lock
 from typing import Any
 
-from .contracts import JobRecord, JobStatus, Recipe
+from .contracts import JobJournalEvent, JobRecord, JobStatus, Recipe
 from .ids import utc_now
 
 
@@ -46,10 +46,13 @@ class JobManager:
     def __init__(self, jobs_dir: str | Path, *, max_workers: int = 1) -> None:
         self.jobs_dir = Path(jobs_dir)
         self.jobs_dir.mkdir(parents=True, exist_ok=True)
+        self.events_dir = self.jobs_dir / "events"
+        self.events_dir.mkdir(parents=True, exist_ok=True)
         self._executor = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="sa3-job")
         self._lock = Lock()
         self._records: dict[str, JobRecord] = {}
         self._futures: dict[str, Future[None]] = {}
+        self._event_sequences: dict[str, int] = {}
         self._load_existing_jobs()
 
     def submit(self, recipe: Recipe, handler: JobHandler) -> JobRecord:
@@ -71,6 +74,14 @@ class JobManager:
     def list(self) -> list[JobRecord]:
         with self._lock:
             return sorted(self._records.values(), key=lambda item: item.created_at, reverse=True)
+
+    def event_history(self, job_id: str, *, after_sequence: int = 0, limit: int = 100) -> list[JobJournalEvent]:
+        with self._lock:
+            if job_id not in self._records and not self._event_path(job_id).exists():
+                raise KeyError(job_id)
+            events = self._read_events(job_id)
+        bounded_limit = max(1, min(limit, 1000))
+        return [event for event in events if event.sequence > after_sequence][:bounded_limit]
 
     def update(self, job_id: str, **changes: Any) -> JobRecord:
         with self._lock:
@@ -158,7 +169,9 @@ class JobManager:
                 with path.open("r", encoding="utf-8") as handle:
                     payload = json.load(handle)
                 record = JobRecord.model_validate(payload)
+                was_interrupted = False
                 if record.status in {JobStatus.QUEUED, JobStatus.RUNNING}:
+                    was_interrupted = True
                     record = record.model_copy(
                         update={
                             "status": JobStatus.FAILED,
@@ -168,6 +181,9 @@ class JobManager:
                         }
                     )
                 self._records[record.job_id] = record
+                self._event_sequences[record.job_id] = self._read_last_event_sequence(record.job_id)
+                if was_interrupted:
+                    self._persist(record)
             except Exception:
                 continue
 
@@ -175,3 +191,40 @@ class JobManager:
         path = self.jobs_dir / f"{record.job_id}.json"
         with path.open("w", encoding="utf-8") as handle:
             json.dump(record.model_dump(mode="json"), handle, indent=2, sort_keys=True)
+        self._append_event(record)
+
+    def _append_event(self, record: JobRecord) -> JobJournalEvent:
+        sequence = self._event_sequences.get(record.job_id)
+        if sequence is None:
+            sequence = self._read_last_event_sequence(record.job_id)
+        sequence += 1
+        event = JobJournalEvent(sequence=sequence, job=record)
+        self._event_sequences[record.job_id] = sequence
+        path = self._event_path(record.job_id)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(event.model_dump(mode="json"), sort_keys=True))
+            handle.write("\n")
+        return event
+
+    def _read_events(self, job_id: str) -> list[JobJournalEvent]:
+        path = self._event_path(job_id)
+        if not path.exists():
+            return []
+        events: list[JobJournalEvent] = []
+        with path.open("r", encoding="utf-8") as handle:
+            for line in handle:
+                try:
+                    events.append(JobJournalEvent.model_validate(json.loads(line)))
+                except Exception:
+                    continue
+        return events
+
+    def _read_last_event_sequence(self, job_id: str) -> int:
+        sequence = 0
+        for event in self._read_events(job_id):
+            sequence = max(sequence, event.sequence)
+        return sequence
+
+    def _event_path(self, job_id: str) -> Path:
+        return self.events_dir / f"{job_id}.jsonl"

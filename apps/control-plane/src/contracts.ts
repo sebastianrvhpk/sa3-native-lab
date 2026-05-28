@@ -125,6 +125,13 @@ export interface JobRecord {
 
 export type JobEvent = { type: "snapshot"; job: JobRecord } | { type: "error"; error: string };
 
+export interface JobJournalEvent {
+  sequence: number;
+  type: "snapshot";
+  created_at: string;
+  job: JobRecord;
+}
+
 export interface RecipeForkPayload {
   inputs?: Record<string, string> | null;
   params?: Record<string, unknown> | null;
