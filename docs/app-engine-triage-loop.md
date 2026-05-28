@@ -49,6 +49,7 @@ source audio / prompt
 | P1 | Typed bundle readers | backend `bundle_summary` parser + `BundleField` readers for memory/profile/vector/sweep/soft-prompt/training outputs, metrics, plot discovery, inline plot rendering, and recipe-input reuse | Promote | API tests, frontend tests/build |
 | P1 | Alpha-sweep family promotion | `FamilyDetailPanel` alpha variant band with explicit A/B promotion, sortable metric table, best-candidate marking, and sibling sweep comparison | Promote | frontend tests/build |
 | P1 | Prompt-candidate generation bench | Prompt-search bundle reader + text generation lineage metadata + grouped prompt-candidate result families, inline playback, A/B assignment, and durable keeper/maybe/reject listening decisions | Promote | frontend tests/build, control-plane family test |
+| P1 | Prompt take descriptor deltas | `/artifacts/{target}/descriptor-comparison/{take}` + prompt-search generated-take delta strip | Promote first slice | storage/API tests, frontend tests/build |
 | P1 | Session cleanup | archive-and-new session action plus searchable archive drawer | Promote | API/client tests, frontend build |
 | P1 | Decision-aware artifact recovery | shared artifact filter model + session/archive filters for decision, kind, model, operator, family, source lineage, text, and tag | Promote | frontend filter tests/build, Playwright smoke |
 | P1 | Kind-specific artifact vitals | specimen inspector rows for audio, latent, and bundle artifacts | Promote first slice | frontend build |
@@ -69,8 +70,8 @@ source audio / prompt
 
 ## Immediate Next Queue
 
-1. Add descriptor deltas for prompt-search targets versus generated takes, then
-   relate those deltas to keeper/maybe/reject notes.
+1. Relate prompt-search descriptor deltas to keeper/maybe/reject notes and add
+   sweep/layer comparisons where the artifact families have enough examples.
 2. Add richer domain-specific inspectors for style profiles, vectors, prompt
    search, soft prompts, memory collections, sweeps, geometry audits, and
    training outputs.

@@ -18,6 +18,7 @@ smoke tests, but they are not the app default.
 | SAME encode/decode | SAME adapter scripts and tests | `/latents/encode`, `/latents/decode` | implemented |
 | Latent blur/DSP/graft/renoise/roll | `latent_audio_primitives` wrappers | `/operators/run`, Operator Studio | implemented with native parameter controls |
 | Real waveform peaks | audio artifacts via `soundfile` | `/artifacts/{id}/peaks` | implemented |
+| Audio descriptor comparison | `latent_audio_primitives.audio_descriptors` | `/artifacts/{target}/descriptor-comparison/{take}`, prompt-search take delta strip | implemented first slice |
 | Artifact annotation/search | `ArtifactStore.annotate_artifact`, `/artifacts?q=&tags=` | Specimen annotation panel, session/archive filters by decision, tag, kind, model, operator, family, text, and lineage | implemented |
 | Latent memory query | `LatentMemoryIndex`, `memory.query` | `/experiments/run`, Recipe Studio | implemented for local latent artifacts |
 | Audio style vectors | `scripts/extract_audio_style_vectors.py` | `/experiments/run`, Recipe Studio | script-job adapter with native controls |
@@ -72,13 +73,15 @@ stores `prompt_search.json`, and exposes the resulting prompt back into Recipe
 Studio. It keeps `lexical_probe` as a cheap fallback and adds `sa3_flow_probe`
 for Medium-backed flow-loss scoring against a target audio latent. This is still
 marked as a probe until the real Medium/MPS path has short-audio listening
-validation, runtime-cost notes, and better candidate comparison. CLAP or hybrid
-scoring remains a future adapter behind the same `scorer` field.
+validation, runtime-cost notes, and richer candidate comparison. The first
+candidate-comparison slice now shows target-vs-take descriptor deltas for
+generated prompt-search takes. CLAP or hybrid scoring remains a future adapter
+behind the same `scorer` field.
 
 ## Next Promotion Targets
 
-1. Validate `sa3_flow_probe` on real Medium/MPS prompt-search runs and document
-   the usable score-sample/timestep settings.
+1. Correlate prompt-search descriptor deltas with keeper/maybe/reject decisions
+   and document the useful Medium/MPS score-sample/timestep settings.
 2. Add CLAP or hybrid prompt scoring only after the SA3 flow probe has a good
    comparison workflow.
 3. Control-head recipes for Mode 12 and the labelled-probe part of Mode 15.

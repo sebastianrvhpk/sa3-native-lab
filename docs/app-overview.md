@@ -145,7 +145,9 @@ candidate prompts as a small listening bench: a candidate can be used as the
 main generation prompt, sent to an alpha sweep, or rendered as MLX audio with
 lineage back to the bundle. Generated candidate takes appear inline beside the
 prompt, can be played immediately, assigned to A/B comparison slots, and marked
-keeper/maybe/rejected with optional listening notes.
+keeper/maybe/rejected with optional listening notes. They also show compact
+descriptor deltas against the prompt-search target audio for level, brightness,
+spectral motion, noise/flatness, and stereo width.
 Jobs and artifacts with the same recipe are grouped as result families in the
 right rail with run metrics when the job reports them; prompt-candidate
 generations are grouped under their search bundle instead of scattering as
@@ -182,8 +184,9 @@ Confirmed in the current codebase:
   target audio artifact. It supports `lexical_probe` for cheap deterministic
   wiring and `sa3_flow_probe` for an optional Medium-backed flow-loss objective.
   Prompt-search candidates can be rendered as generated audio takes with
-  lineage, inline playback, A/B assignment, and saved listening decisions. CLAP
-  remains queued behind the same explicit scorer field.
+  lineage, inline playback, A/B assignment, target-vs-take descriptor deltas,
+  and saved listening decisions. CLAP remains queued behind the same explicit
+  scorer field.
 - Artifact annotation and archive search are implemented for labels, notes,
   tags, durable keeper/maybe/reject listening decisions, artifact kind, model,
   operator, result family, and source lineage.
@@ -210,8 +213,9 @@ Still partial:
 
 - Some Colab modes are mapped but not yet first-class native interactions.
   Prompt-search modes now have a native recipe path and an SA3 flow-loss scorer,
-  but richer descriptor deltas and comparison reports are still needed before
-  calling Mode 2/3/5 parity complete.
+  plus first-pass target/take descriptor deltas. Mode 2/3/5 parity still needs
+  richer layer/alpha comparison reports and better correlation with listening
+  decisions.
 - Type-specific readers for profiles, vectors, soft prompts, training outputs,
   sweeps, memory collections, and geometry audits now receive backend-parsed
   summaries, first-pass metrics/plot discovery, embedded image/audio rendering,

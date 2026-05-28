@@ -48,7 +48,8 @@ For the broader stack direction and promotion triggers, see
    alpha-sweep families are now compared in the family detail panel when they
    share a vector bundle or prompt. Session/archive filters now surface saved
    decisions by decision, kind, model, operator, family, tag, text, and source
-   lineage. Next they need richer cross-run descriptor deltas.
+   lineage. Prompt-search takes now expose first-pass target-vs-take descriptor
+   deltas; next they need richer cross-run and sweep-family comparisons.
 
 2. Presets for Operator Studio.
    Store named parameter sets for blur, DSP, graft, renoise, and cyclic roll.
@@ -72,9 +73,10 @@ For the broader stack direction and promotion triggers, see
    bundle-file endpoint. Embedded bundle audio can now be promoted into normal
    audio artifacts. Prompt-search bundles now show scorer metadata, compact
    candidate families, inline generated takes, A/B assignment for candidate
-   audio, and saved listening decisions with notes. Next, vector/profile/
-   soft-prompt/sweep/geometry/prompt search bundles should expose richer
-   domain-specific controls without making the user inspect zip contents.
+   audio, target/take descriptor deltas, and saved listening decisions with
+   notes. Next, vector/profile/soft-prompt/sweep/geometry/prompt search bundles
+   should expose richer domain-specific controls without making the user inspect
+   zip contents.
 
 ## P2: Research Cognition
 
@@ -100,10 +102,11 @@ For the broader stack direction and promotion triggers, see
    MLX text-to-audio jobs with lineage back to the search bundle; generated
    takes are grouped under the prompt-search family and can be played, sent to
    A/B beside the candidate, marked keeper/maybe/rejected with notes, and
+   compared to the target through lightweight descriptor deltas. They can also be
    recovered later through decision/model/operator/family filters. The next
-   research step is descriptor deltas and layer/alpha comparisons that can be
-   correlated with those saved listening decisions. CLAP or hybrid scoring
-   belongs after that comparison workflow has real usage.
+   research step is correlating descriptor deltas with saved listening decisions
+   and adding layer/alpha comparisons. CLAP or hybrid scoring belongs after that
+   comparison workflow has real usage.
 
 5. Geometry and control probes.
    `experiment.geometry_audit` now produces a local latent geometry report
