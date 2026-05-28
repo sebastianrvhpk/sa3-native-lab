@@ -49,6 +49,20 @@ export interface PromptDecisionCorrelationRow {
   rawDelta: Record<string, number>;
 }
 
+export interface PromptDecisionMemoryRow {
+  prompt: string;
+  total: number;
+  listened: number;
+  keeper: number;
+  maybe: number;
+  rejected: number;
+  undecided: number;
+  bundleIds: string[];
+  latestArtifactId: string;
+  latestAt: string;
+  latestNote?: string | null;
+}
+
 const DESCRIPTOR_DELTA_KEYS = [
   { key: "rms_dbfs", label: "level" },
   { key: "spectral_centroid_hz", label: "bright" },
@@ -84,6 +98,7 @@ export function PromptSearchCandidatePanel({
   if (!candidates.length) return null;
   const allGeneratedTakes = promptCandidateGeneratedArtifacts(artifact.artifact_id, artifacts);
   const targetArtifact = promptSearchTargetArtifact(artifact, artifacts);
+  const decisionMemory = promptDecisionMemoryRows(artifacts);
   return (
     <div className="prompt-candidate-panel" aria-label="Prompt search candidates">
       <div className="prompt-candidate-head">
@@ -94,6 +109,7 @@ export function PromptSearchCandidatePanel({
         </span>
       </div>
       <PromptDecisionCorrelation apiBase={apiBase} target={targetArtifact} takes={allGeneratedTakes} />
+      <PromptDecisionMemory rows={decisionMemory} currentBundleId={artifact.artifact_id} />
       {candidates.map((candidate) => {
         const generated = promptCandidateGeneratedArtifacts(artifact.artifact_id, artifacts, candidate.prompt);
         return (
@@ -144,6 +160,29 @@ export function PromptSearchCandidatePanel({
         );
       })}
     </div>
+  );
+}
+
+function PromptDecisionMemory({ rows, currentBundleId }: { rows: PromptDecisionMemoryRow[]; currentBundleId: string }) {
+  const visibleRows = rows.filter((row) => row.listened > 0 || row.total > 1).slice(0, 5);
+  if (!visibleRows.length) return null;
+  return (
+    <section className="prompt-decision-memory" aria-label="Prompt search decision memory">
+      <div>
+        <strong>Prompt memory</strong>
+        <span>{visibleRows.reduce((total, row) => total + row.listened, 0)} listened</span>
+      </div>
+      {visibleRows.map((row) => {
+        const current = row.bundleIds.includes(currentBundleId);
+        return (
+          <article key={row.prompt} className={current ? "current" : ""}>
+            <strong>{row.prompt}</strong>
+            <span>{row.keeper} keeper · {row.maybe} maybe · {row.rejected} reject</span>
+            <small>{row.latestNote || `${row.total} take${row.total === 1 ? "" : "s"} across ${row.bundleIds.length} run${row.bundleIds.length === 1 ? "" : "s"}`}</small>
+          </article>
+        );
+      })}
+    </section>
   );
 }
 
@@ -355,6 +394,49 @@ export function promptDecisionSummary(rows: PromptDecisionCorrelationRow[]): { l
   return summary;
 }
 
+export function promptDecisionMemoryRows(artifacts: ArtifactRecord[]): PromptDecisionMemoryRow[] {
+  const rowsByPrompt = new Map<string, PromptDecisionMemoryRow>();
+  for (const take of sortNewest(artifacts)) {
+    if (!isPromptGeneratedTake(take)) continue;
+    const prompt = take.prompt?.trim();
+    if (!prompt) continue;
+    const decision = listeningDecision(take);
+    const bundleId = promptSearchBundleId(take);
+    const existing = rowsByPrompt.get(prompt) ?? {
+      prompt,
+      total: 0,
+      listened: 0,
+      keeper: 0,
+      maybe: 0,
+      rejected: 0,
+      undecided: 0,
+      bundleIds: [],
+      latestArtifactId: take.artifact_id,
+      latestAt: take.created_at,
+      latestNote: null,
+    };
+    existing.total += 1;
+    if (decision) existing.listened += 1;
+    if (decision === "keeper") existing.keeper += 1;
+    if (decision === "maybe") existing.maybe += 1;
+    if (decision === "rejected") existing.rejected += 1;
+    if (!decision) existing.undecided += 1;
+    if (bundleId && !existing.bundleIds.includes(bundleId)) existing.bundleIds.push(bundleId);
+    if (Date.parse(take.created_at) >= Date.parse(existing.latestAt)) {
+      existing.latestArtifactId = take.artifact_id;
+      existing.latestAt = take.created_at;
+      existing.latestNote = listeningDecisionNote(take);
+    }
+    rowsByPrompt.set(prompt, existing);
+  }
+  return [...rowsByPrompt.values()].sort((a, b) =>
+    b.keeper - a.keeper
+    || b.listened - a.listened
+    || b.total - a.total
+    || Date.parse(b.latestAt) - Date.parse(a.latestAt),
+  );
+}
+
 export function promptCandidateMeta(candidate: { rank?: number; source?: string; score?: unknown }) {
   const parts = [
     candidate.rank !== undefined ? `#${candidate.rank}` : "",
@@ -362,6 +444,15 @@ export function promptCandidateMeta(candidate: { rank?: number; source?: string;
     candidate.score !== undefined ? formatMaybeNumber(candidate.score) : "",
   ].filter(Boolean);
   return parts.join(" · ");
+}
+
+function isPromptGeneratedTake(artifact: ArtifactRecord): boolean {
+  return artifact.kind === "audio" && artifact.metadata.generation_origin === "prompt_search_candidate";
+}
+
+function promptSearchBundleId(artifact: ArtifactRecord): string | null {
+  if (typeof artifact.metadata.prompt_search_bundle_id === "string") return artifact.metadata.prompt_search_bundle_id;
+  return artifact.source_artifact_ids.find((sourceId) => sourceId.startsWith("art_")) ?? null;
 }
 
 function promptCandidateGenerationRequest(

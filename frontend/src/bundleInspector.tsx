@@ -16,6 +16,7 @@ import type { ArtifactInspection, ArtifactRecord, BundleAudioEntry, BundleFileEn
 export {
   audioDescriptorDeltaRows,
   promptCandidateGeneratedArtifacts,
+  promptDecisionMemoryRows,
   promptDecisionCorrelationRows,
   promptDecisionSummary,
   promptSearchCandidates,
@@ -24,6 +25,7 @@ export {
   type PromptCandidateAction,
   type PromptCandidateGenerationRequest,
   type PromptDecisionCorrelationRow,
+  type PromptDecisionMemoryRow,
 } from "./promptSearchInspector";
 
 export function BundleField({

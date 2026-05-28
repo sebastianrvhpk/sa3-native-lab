@@ -7,6 +7,7 @@ import {
   bundleWorkflowHints,
   promptCandidateGeneratedArtifacts,
   promptDecisionCorrelationRows,
+  promptDecisionMemoryRows,
   promptDecisionSummary,
   promptSearchTargetArtifact,
   promptSearchCandidates,
@@ -336,5 +337,66 @@ describe("bundle inspector summaries", () => {
       { label: "keeper bright", value: "+220 Hz", tone: "up" },
       { label: "keeper level", value: "+1.3 dB", tone: "up" },
     ]));
+  });
+
+  it("groups prompt-candidate decisions across search runs", () => {
+    const rows = promptDecisionMemoryRows([
+      {
+        artifact_id: "art_take_a",
+        kind: "audio",
+        prompt: "warm granular loop",
+        source_artifact_ids: ["art_bundle_a"],
+        metadata: {
+          generation_origin: "prompt_search_candidate",
+          prompt_search_bundle_id: "art_bundle_a",
+          listening_decision: "keeper",
+          listening_decision_note: "best texture",
+        },
+        tags: [],
+        path: "/tmp/a.wav",
+        created_at: "2026-05-28T15:00:00.000Z",
+      },
+      {
+        artifact_id: "art_take_b",
+        kind: "audio",
+        prompt: "warm granular loop",
+        source_artifact_ids: ["art_bundle_b"],
+        metadata: {
+          generation_origin: "prompt_search_candidate",
+          prompt_search_bundle_id: "art_bundle_b",
+          listening_decision: "maybe",
+          listening_decision_note: "good but soft",
+        },
+        tags: [],
+        path: "/tmp/b.wav",
+        created_at: "2026-05-28T15:05:00.000Z",
+      },
+      {
+        artifact_id: "art_take_c",
+        kind: "audio",
+        prompt: "cold click",
+        source_artifact_ids: ["art_bundle_c"],
+        metadata: {
+          generation_origin: "prompt_search_candidate",
+          listening_decision: "rejected",
+        },
+        tags: [],
+        path: "/tmp/c.wav",
+        created_at: "2026-05-28T15:07:00.000Z",
+      },
+    ] as never);
+
+    expect(rows[0]).toEqual(expect.objectContaining({
+      prompt: "warm granular loop",
+      total: 2,
+      listened: 2,
+      keeper: 1,
+      maybe: 1,
+      rejected: 0,
+      bundleIds: ["art_bundle_b", "art_bundle_a"],
+      latestArtifactId: "art_take_b",
+      latestNote: "good but soft",
+    }));
+    expect(rows[1]).toEqual(expect.objectContaining({ prompt: "cold click", rejected: 1 }));
   });
 });
