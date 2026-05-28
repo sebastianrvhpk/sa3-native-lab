@@ -143,12 +143,34 @@ export interface ModelStatus {
   details: Record<string, unknown>;
 }
 
+export interface OperatorFieldOption {
+  value: string;
+  label?: string | null;
+}
+
+export interface OperatorFieldSpec {
+  key: string;
+  label: string;
+  type: string;
+  default?: unknown;
+  required: boolean;
+  advanced: boolean;
+  min?: number | null;
+  max?: number | null;
+  step?: number | null;
+  options: OperatorFieldOption[];
+  artifact_kinds: ArtifactKind[];
+  placeholder?: string | null;
+  description?: string | null;
+}
+
 export interface OperatorSpec {
   name: OperatorName;
   maturity: string;
   backends: BackendName[];
   inputs: string[];
   params: Record<string, unknown>;
+  ui_fields: OperatorFieldSpec[];
   produces: ArtifactKind[];
   status: string;
 }

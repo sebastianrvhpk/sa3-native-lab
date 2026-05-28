@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import type { ExperimentPayload } from "./api";
-import type { ArtifactRecord } from "./types";
+import type { ArtifactKind, ArtifactRecord, OperatorFieldSpec, OperatorSpec } from "./types";
 
 export const recipeValueSchema = z.union([z.string(), z.number(), z.boolean()]);
 
@@ -60,6 +60,35 @@ export function defaultFieldForm(config: FieldConfig): Record<string, RecipeValu
 
 export function fieldKeys(config: FieldConfig): string[] {
   return config.fields.map((field) => field.key).filter((key) => key !== "backend");
+}
+
+export function fillMissingFieldDefaults(config: FieldConfig, form: Record<string, RecipeValue>): Record<string, RecipeValue> {
+  const defaults = defaultFieldForm(config);
+  let next = form;
+  for (const [key, value] of Object.entries(defaults)) {
+    if (next[key] !== undefined) continue;
+    if (next === form) next = { ...form };
+    next[key] = value;
+  }
+  return next;
+}
+
+export function withOperatorSpecFields<TConfig extends FieldConfig>(config: TConfig, spec?: OperatorSpec): TConfig {
+  if (!spec?.ui_fields.length) return config;
+  const byKey = new Map(spec.ui_fields.map((field) => [field.key, field]));
+  const seen = new Set<string>();
+  const fields: RecipeField[] = config.fields.map((field) => {
+    seen.add(field.key);
+    const specField = byKey.get(field.key);
+    return specField ? mergeRecipeField(field, specField) : field;
+  });
+
+  for (const specField of spec.ui_fields) {
+    if (seen.has(specField.key)) continue;
+    fields.push(recipeFieldFromSpec(specField));
+  }
+
+  return { ...config, fields } as TConfig;
 }
 
 export function validateRecipeField(field: RecipeField, value: RecipeValue | undefined): string | undefined {
@@ -195,4 +224,65 @@ export function parseNumberList(value: RecipeValue) {
     .split(/[,\s]+/)
     .map((item) => Number(item))
     .filter((item) => Number.isFinite(item));
+}
+
+function mergeRecipeField(field: RecipeField, specField: OperatorFieldSpec): RecipeField {
+  const converted = recipeFieldFromSpec(specField);
+  return {
+    ...field,
+    defaultValue: field.defaultValue ?? converted.defaultValue,
+    required: Boolean(field.required || converted.required),
+    advanced: Boolean(field.advanced || converted.advanced),
+    min: converted.min ?? field.min,
+    max: converted.max ?? field.max,
+    step: converted.step ?? field.step,
+    options: converted.options?.length ? converted.options : field.options,
+    artifactKinds: field.artifactKinds ?? converted.artifactKinds,
+    placeholder: field.placeholder ?? converted.placeholder,
+  };
+}
+
+function recipeFieldFromSpec(field: OperatorFieldSpec): RecipeField {
+  return {
+    key: field.key,
+    label: field.label,
+    type: recipeFieldTypeFromSpec(field.type),
+    defaultValue: recipeValueFromUnknown(field.default),
+    required: field.required,
+    advanced: field.advanced,
+    min: nullToUndefined(field.min),
+    max: nullToUndefined(field.max),
+    step: nullToUndefined(field.step),
+    options: field.options.map((option) => ({ value: option.value, label: option.label ?? option.value })),
+    artifactKinds: field.artifact_kinds.filter(isArtifactKind),
+    placeholder: field.placeholder ?? undefined,
+  };
+}
+
+function recipeFieldTypeFromSpec(type: string): RecipeFieldType {
+  if (
+    type === "text" ||
+    type === "number" ||
+    type === "range" ||
+    type === "select" ||
+    type === "checkbox" ||
+    type === "path" ||
+    type === "artifact-path"
+  ) {
+    return type;
+  }
+  return "text";
+}
+
+function recipeValueFromUnknown(value: unknown): RecipeValue | undefined {
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return value;
+  return undefined;
+}
+
+function nullToUndefined(value: number | null | undefined): number | undefined {
+  return value ?? undefined;
+}
+
+function isArtifactKind(value: string): value is ArtifactKind {
+  return value === "audio" || value === "latent" || value === "bundle" || value === "recipe" || value === "text";
 }

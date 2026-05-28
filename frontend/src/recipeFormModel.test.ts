@@ -5,12 +5,14 @@ import {
   buildOperatorParams,
   defaultFieldForm,
   experimentReady,
+  fillMissingFieldDefaults,
   operatorUsesDonor,
   validateRecipeField,
+  withOperatorSpecFields,
   type ExperimentPayloadConfig,
   type OperatorPayloadConfig,
 } from "./recipeFormModel";
-import type { ArtifactRecord } from "./types";
+import type { ArtifactRecord, OperatorSpec } from "./types";
 
 describe("recipe form model", () => {
   it("builds default values from field metadata", () => {
@@ -81,6 +83,81 @@ describe("recipe form model", () => {
     expect(validateRecipeField({ key: "steps", label: "Steps", type: "number", min: 1 }, 0)).toBe("Steps must be at least 1");
     expect(validateRecipeField({ key: "steps", label: "Steps", type: "number", max: 5 }, 6)).toBe("Steps must be at most 5");
   });
+
+  it("merges backend field metadata into existing recipe fields", () => {
+    const config = withOperatorSpecFields(
+      {
+        value: "experiment.alpha_sweep",
+        backend: "torch_mps",
+        fields: [{ key: "alphas", label: "Alpha values", type: "text", defaultValue: "-4,0,4" }],
+      } satisfies ExperimentPayloadConfig<"experiment.alpha_sweep">,
+      operatorSpec("experiment.alpha_sweep", [
+        {
+          key: "alphas",
+          label: "Alphas",
+          type: "text",
+          default: "-8,-4,0,4,8",
+          required: true,
+          advanced: false,
+          min: null,
+          max: null,
+          step: null,
+          options: [],
+          artifact_kinds: [],
+          placeholder: "-8,-4,0,4,8",
+          description: null,
+        },
+      ]),
+    );
+
+    expect(config.fields[0]).toMatchObject({
+      key: "alphas",
+      label: "Alpha values",
+      defaultValue: "-4,0,4",
+      required: true,
+      placeholder: "-8,-4,0,4,8",
+    });
+  });
+
+  it("appends missing backend fields and backfills form defaults", () => {
+    const config = withOperatorSpecFields(
+      {
+        value: "memory.query",
+        backend: "cpu",
+        fields: [{ key: "top_k", label: "Top K", type: "number", defaultValue: 3 }],
+      } satisfies ExperimentPayloadConfig<"memory.query">,
+      operatorSpec("memory.query", [
+        {
+          key: "metric",
+          label: "Metric",
+          type: "select",
+          default: "cosine",
+          required: false,
+          advanced: false,
+          min: null,
+          max: null,
+          step: null,
+          options: [
+            { value: "cosine", label: "Cosine" },
+            { value: "euclidean", label: "Euclidean" },
+          ],
+          artifact_kinds: [],
+          placeholder: null,
+          description: null,
+        },
+      ]),
+    );
+
+    expect(config.fields.find((field) => field.key === "metric")).toMatchObject({
+      type: "select",
+      defaultValue: "cosine",
+      options: [
+        { value: "cosine", label: "Cosine" },
+        { value: "euclidean", label: "Euclidean" },
+      ],
+    });
+    expect(fillMissingFieldDefaults(config, { top_k: 3 })).toEqual({ top_k: 3, metric: "cosine" });
+  });
 });
 
 function artifact(kind: ArtifactRecord["kind"]): ArtifactRecord {
@@ -100,5 +177,18 @@ function artifact(kind: ArtifactRecord["kind"]): ArtifactRecord {
     metadata: {},
     session_id: "sess_1",
     created_at: "2026-05-27T10:00:00.000Z",
+  };
+}
+
+function operatorSpec(name: OperatorSpec["name"], uiFields: OperatorSpec["ui_fields"]): OperatorSpec {
+  return {
+    name,
+    maturity: "lab",
+    backends: ["torch_mps"],
+    inputs: [],
+    params: Object.fromEntries(uiFields.map((field) => [field.key, field.type])),
+    ui_fields: uiFields,
+    produces: ["bundle"],
+    status: "implemented",
   };
 }

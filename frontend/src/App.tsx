@@ -44,10 +44,12 @@ import {
   defaultFieldForm,
   experimentReady,
   fieldKeys,
+  fillMissingFieldDefaults,
   operatorBackend,
   operatorReady,
   operatorSeed,
   operatorUsesDonor,
+  withOperatorSpecFields,
   type FieldConfig,
   type RecipeField,
   type RecipeValue,
@@ -692,8 +694,8 @@ export function App() {
   const latestJobs = workbenchState?.latestJob ? [workbenchState.latestJob, ...allJobs.filter((job) => job.job_id !== workbenchState.latestJob?.job_id)].slice(0, 8) : allJobs.slice(0, 8);
   const compareA = allArtifacts.find((item) => item.artifact_id === compare.a) ?? null;
   const compareB = allArtifacts.find((item) => item.artifact_id === compare.b) ?? null;
-  const activeExperiment = experimentCatalog.find((item) => item.value === experimentMode) ?? experimentCatalog[0];
-  const activeOperatorConfig = operatorCatalog.find((item) => item.value === operator) ?? operatorCatalog[0];
+  const baseExperiment = experimentCatalog.find((item) => item.value === experimentMode) ?? experimentCatalog[0];
+  const baseOperatorConfig = operatorCatalog.find((item) => item.value === operator) ?? operatorCatalog[0];
   const operatorSpecRows = workbenchState?.operatorSpecs ?? operatorSpecs.data ?? [];
   const modeAtlasRows = workbenchState?.modeAtlas ?? modeAtlas.data ?? [];
   const healthData = workbenchState?.health ?? health.data;
@@ -703,7 +705,9 @@ export function App() {
   const sameEncodeSpec = specMap.get("latent.encode");
   const sameDecodeSpec = specMap.get("latent.decode");
   const activeOperatorSpec = specMap.get(operator);
-  const activeExperimentSpec = specMap.get(activeExperiment.value);
+  const activeExperimentSpec = specMap.get(baseExperiment.value);
+  const activeOperatorConfig = useMemo(() => withOperatorSpecFields(baseOperatorConfig, activeOperatorSpec), [baseOperatorConfig, activeOperatorSpec]);
+  const activeExperiment = useMemo(() => withOperatorSpecFields(baseExperiment, activeExperimentSpec), [baseExperiment, activeExperimentSpec]);
   const generationNeedsSource = generationMode !== "generate.text_to_audio";
   const generationSource = selectedArtifact?.kind === "audio" ? selectedArtifact : null;
   const canGenerate = !generationNeedsSource || Boolean(generationSource);
@@ -728,6 +732,14 @@ export function App() {
     const latestActive = allSessions.find((session) => session.status === "active") ?? allSessions[0];
     setSession(latestActive.session_id, latestActive.created_at);
   }, [sessionId, allSessions, setSession]);
+
+  useEffect(() => {
+    setOperatorForm((current) => fillMissingFieldDefaults(activeOperatorConfig, current));
+  }, [activeOperatorConfig]);
+
+  useEffect(() => {
+    setExperimentForm((current) => fillMissingFieldDefaults(activeExperiment, current));
+  }, [activeExperiment]);
 
   useEffect(() => {
     if (!sessionResultFamilies.length) {

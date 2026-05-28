@@ -333,6 +333,7 @@ function operatorSpec(name: OperatorSpec["name"]): OperatorSpec {
     backends: ["mlx"],
     inputs: [],
     params: { prompt: "str" },
+    ui_fields: [],
     produces: ["audio"],
     status: "implemented",
   };
