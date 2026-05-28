@@ -31,6 +31,7 @@ smoke tests, but they are not the app default.
 | Residual alpha sweep | `scripts/run_sa3_alpha_sweep.py` | `/experiments/run`, Recipe Studio | script-job adapter with native controls |
 | Soft prompt optimize/generate | `scripts/optimize_sa3_soft_prompt.py`, `scripts/generate_sa3_with_soft_prompt.py` | `/experiments/run`, Recipe Studio | script-job adapter with native controls |
 | Dataset pre-encode | `scripts/pre_encode_dataset.py` | `/experiments/run`, Recipe Studio | script-job adapter with native controls |
+| SAME geometry audit | `latent_audio_primitives.geometry.geometry_report` | `/experiments/run`, Recipe Studio | implemented for local latent artifacts |
 | LoRA training | `scripts/train_lora.py` | `/experiments/run`, Recipe Studio | script-job adapter with native controls; long-running |
 | Colab mode inventory | `colab/sa3_same_native_experimental_modes.ipynb` | `/colab/modes`, Mode Atlas | typed parity/status map |
 
@@ -65,9 +66,9 @@ audio hits in A/B, or reuse latent hits as donor latents.
 
 ## Next Promotion Targets
 
-1. Sweep-specific family metric tables and sibling recipe comparison.
-2. Deeper profile/vector/memory/sweep bundle plots and reuse actions.
-3. Prompt-search recipes for Colab Modes 2/3/5.
-4. Geometry/control-head recipes for Modes 12/15.
-5. Operator presets and operator-studio recipe diffs for repeatable latent explorations.
-6. Long-job controls for LoRA training: pause/cancel is not yet implemented.
+1. Prompt-search recipes for Colab Modes 2/3/5; helpers exist, but the app still
+   needs a model-backed scorer adapter.
+2. Control-head recipes for Mode 12 and the labelled-probe part of Mode 15.
+3. Operator presets and operator-studio recipe diffs for repeatable latent explorations.
+4. Richer memory/dataset browsing, including preview audio for non-local children.
+5. Long-job controls for LoRA training: pause/cancel is not yet implemented.

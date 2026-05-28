@@ -47,10 +47,11 @@ source audio / prompt
 | P1 | Fork-with-edited-params UI | recipe-derived fork editor with diff/reset controls | Promote | frontend tests/build |
 | P1 | Bundle inspection and result families | `/artifacts/{id}/inspect` + `families.load` + result rail/detail panel | Promote | API tests, control-plane tests, frontend tests |
 | P1 | Typed bundle readers | backend `bundle_summary` parser + `BundleField` readers for memory/profile/vector/sweep/soft-prompt/training outputs, metrics, plot discovery, inline plot rendering, and recipe-input reuse | Promote | API tests, frontend tests/build |
-| P1 | Alpha-sweep family promotion | `FamilyDetailPanel` alpha variant band with explicit A/B promotion, sortable metric table, and best-candidate marking | Promote | frontend tests/build |
+| P1 | Alpha-sweep family promotion | `FamilyDetailPanel` alpha variant band with explicit A/B promotion, sortable metric table, best-candidate marking, and sibling sweep comparison | Promote | frontend tests/build |
 | P1 | Session cleanup | archive-and-new session action plus searchable archive drawer | Promote | API/client tests, frontend build |
 | P1 | Kind-specific artifact vitals | specimen inspector rows for audio, latent, and bundle artifacts | Promote first slice | frontend build |
 | P2 | Memory atlas and retrieval | `LatentMemoryIndex` + `memory.query` + memory-hit reuse actions | Promote first slice | nearest-neighbor runtime test, frontend smoke |
+| P2 | SAME geometry audit | `geometry_report` + `experiment.geometry_audit` + bundle summary reader | Promote first slice | runtime test, frontend tests |
 | P2 | Residual steering and prompt search | existing scripts/experiments | Defer | model-backed recipe tests |
 
 ## Acceptance Tests Per Pass
@@ -65,15 +66,15 @@ source audio / prompt
 ## Immediate Next Queue
 
 1. Add richer domain-specific inspectors for style profiles, vectors, soft
-   prompts, memory collections, sweeps, and training outputs.
-2. Add recipe comparison across sibling sweep runs.
-3. Add generated-audio child discovery inside script bundles.
+   prompts, memory collections, sweeps, geometry audits, and training outputs.
+2. Add prompt-search recipe adapters for Colab Modes 2/3/5 once the model-backed
+   scorer contract is ready.
+3. Add control-head recipe adapters for Mode 12 and labelled-probe extensions
+   for Mode 15.
 4. Continue shrinking frontend field drift until backend `ui_fields` can drive
    most controls without losing the instrument-specific layout.
-5. Add prompt-search recipe adapters for Colab Modes 2/3/5.
-6. Add geometry/control-head recipe adapters for Colab Modes 12/15.
-7. Add parameter presets and recipe diffing for Operator Studio.
-8. Promote MLX generation from subprocess-only to a resident worker when repeated
+5. Add parameter presets and recipe diffing for Operator Studio.
+6. Promote MLX generation from subprocess-only to a resident worker when repeated
    generation needs lower overhead.
-9. Add deeper visual lineage for multi-step artifact families once recipe jobs
+7. Add deeper visual lineage for multi-step artifact families once recipe jobs
    are populated enough to make the routing real.

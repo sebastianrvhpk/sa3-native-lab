@@ -102,7 +102,8 @@ selection appears only for graft or DSP modes that need a donor.
 
 Recipe Studio wraps the notebook/script experiments as background recipes. It
 covers style vectors, style profiles, residual vectors, alpha sweeps, soft
-prompts, dataset pre-encoding, local latent-memory query, and LoRA training.
+prompts, dataset pre-encoding, local latent-memory query, local SAME geometry
+audit, and LoRA training.
 
 Operator and recipe controls are partly hand-shaped for playability and partly
 derived from backend `ui_fields` emitted by `/operators/specs`. The frontend
@@ -126,17 +127,19 @@ Every run records a `Recipe` and `JobRecord` so results can be traced back to
 operator, backend, inputs, params, model, seed, logs, and source artifacts.
 Artifacts can also carry user labels, notes, and tags for archive search.
 Bundle artifacts can be inspected through the API and UI to reveal their file
-inventory, backend-parsed JSON/NPZ summaries, parsed preview metadata, recipe,
-source artifacts, and child artifacts. Sweep and script bundles now promote
-`metrics.json` values and plot/image files into the reader summary, and image
-plots can render inline through the bundle-file endpoint instead of staying
-buried in zip contents. Reusable bundle types expose native
+inventory, embedded audio children, backend-parsed JSON/NPZ summaries, parsed
+preview metadata, recipe, source artifacts, and child artifacts. Sweep and
+script bundles now promote `metrics.json` values, plot/image files, geometry
+reports, and embedded WAV/FLAC/etc children into the reader summary; image plots
+render inline and bundle-contained audio can be played through the bundle-file
+endpoint instead of staying buried in zip contents. Reusable bundle types expose native
 Recipe Studio actions such as use as profile, sweep vectors, use direction, use
 soft prompt, use memory, and use checkpoint. Jobs and artifacts with the same
 recipe are grouped as result families in the right rail with run metrics when
 the job reports them. Memory query bundle previews expose ranked hits that can
 be selected, placed in A/B when audio, or reused as latent donors when the hit
-is a latent artifact.
+is a latent artifact. Alpha sweep families can also compare sibling sweep runs
+that share a vector bundle or prompt.
 
 ## Runtime Assumptions
 
@@ -160,6 +163,8 @@ Confirmed in the current codebase:
 - Script-backed Colab experiments are reachable from Recipe Studio.
 - Local latent-memory query is reachable as a CPU recipe over stored latent
   artifacts.
+- Local SAME geometry audit is reachable as a CPU recipe over stored latent
+  artifacts, producing a report bundle with variance and summary metrics.
 - Artifact annotation and archive search are implemented for labels, notes, and
   tags.
 - tRPC workbench, readiness, job lifecycle, recipe replay/fork, artifact
@@ -173,7 +178,8 @@ Confirmed in the current codebase:
   phase labels, job recovery hints,
   backend-derived operator field metadata, backend-parsed typed bundle
   inspectors, bundle metrics, inline plot/image previews, and kind-specific
-  artifact vitals.
+  artifact vitals, embedded bundle-audio playback, sibling sweep comparison,
+  and the first native geometry-audit recipe.
 - Core app surfaces are now split into focused modules for audio playback,
   artifact display, job progress, result families, recipe forks, and bundle
   inspection.
@@ -183,17 +189,17 @@ Still partial:
 
 - Some Colab modes are mapped but not yet first-class native interactions.
 - Type-specific readers for profiles, vectors, soft prompts, training outputs,
-  sweeps, and memory collections now receive backend-parsed summaries,
-  first-pass metrics/plot discovery, embedded image plot rendering, and
-  recipe-input actions, but still need richer domain-specific controls for each
-  bundle type.
+  sweeps, memory collections, and geometry audits now receive backend-parsed
+  summaries, first-pass metrics/plot discovery, embedded image/audio rendering,
+  and recipe-input actions, but still need richer domain-specific controls for
+  each bundle type.
 - Memory-query bundles expose preview rows and donor/A-B reuse actions, but
   still need richer dataset browsing, preview audio for non-local children, and
   style-reference promotion.
 - Multi-output sweeps have family grouping, metrics, direct playback, explicit
   A/B promotion controls, recipe fork deltas, inspected metric summaries, best
-  candidate marking, sort controls, and a compact alpha/metric table, but still
-  need sibling recipe comparison across separate sweep runs.
+  candidate marking, sort controls, a compact alpha/metric table, and sibling
+  recipe comparison across separate sweep runs.
 - Live job events now reach React through the control plane when that path is
   enabled; the bridge replays Python's durable job journal and can later switch
   its live source to Python WebSocket without changing the UI contract.

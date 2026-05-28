@@ -41,8 +41,10 @@ For the broader stack direction and promotion triggers, see
 1. Deepen result-family views for sweeps.
    Recipe families now appear with metrics, a detail panel, per-result playback,
    explicit A/B promotion, replay, fork actions, and a compact sweep metric
-   table with sort controls and best-candidate marking. Next they need sibling
-   recipe comparison across separate sweep runs.
+   table with sort controls and best-candidate marking. Sibling alpha-sweep
+   families are now compared in the family detail panel when they share a vector
+   bundle or prompt. Next they need richer cross-run promotion notes and saved
+   A/B decisions.
 
 2. Presets for Operator Studio.
    Store named parameter sets for blur, DSP, graft, renoise, and cyclic roll.
@@ -60,8 +62,8 @@ For the broader stack direction and promotion triggers, see
    and promotes metric scalars plus plot/image files into reader rows. Bundle
    cards can now route profiles, vectors, directions, soft prompts, memory
    folders, and LoRA checkpoints into Recipe Studio, and discovered image plots
-   render inline through the bundle-file endpoint. Next, vector/profile/
-   soft-prompt/sweep bundles should expose generated audio children and richer
+   plus embedded audio files render through the bundle-file endpoint. Next,
+   vector/profile/soft-prompt/sweep/geometry bundles should expose richer
    domain-specific controls without making the user inspect zip contents.
 
 ## P2: Research Cognition
@@ -83,6 +85,11 @@ For the broader stack direction and promotion triggers, see
 4. Prompt/residual comparison bench.
    Residual steering and prompt-search runs need descriptor deltas, layer/alpha
    comparisons, and generated audio grids.
+
+5. Geometry and control probes.
+   `experiment.geometry_audit` now produces a local latent geometry report
+   bundle from saved SAME latents. The next research step is labelled
+   observability/control probes rather than a decorative node graph.
 
 ## P3: Interface Polish
 
@@ -131,10 +138,11 @@ For the broader stack direction and promotion triggers, see
 6. Add typed artifact inspectors.
    Bundle summaries now parse JSON/NPZ metadata, metric scalars, and plot/image
    file discovery in the backend, and reusable bundles can populate Recipe
-   Studio fields. The specimen panel now shows kind-specific vitals for audio,
+   Studio fields. Bundle-contained audio children and geometry reports are now
+   also surfaced. The specimen panel shows kind-specific vitals for audio,
    latent, and bundle artifacts. Next each bundle kind should grow a dedicated
    inspector component with richer actions: vector bundle, profile, soft prompt,
-   training output, sweep, and memory collection.
+   training output, sweep, memory collection, and geometry audit.
 
 7. Continue extracting app surfaces from `App.tsx`.
    Audio playback, artifact display, job progress, result families, recipe

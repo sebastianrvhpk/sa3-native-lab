@@ -307,6 +307,7 @@ The research layer focuses on:
 - audioscope-style SA3 residual steering
 - audio-derived residual vectors
 - continuation/inpainting as composition
+- local SAME geometry audit over saved latents
 - LatCH-style control heads
 
 ## Research Docs
