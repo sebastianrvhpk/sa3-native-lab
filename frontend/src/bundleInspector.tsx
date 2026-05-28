@@ -8,6 +8,7 @@ import { artifactMeta, artifactName, formatBytes } from "./artifactUtils";
 import {
   PromptSearchCandidatePanel,
   promptCandidateMeta,
+  promptSearchCandidates,
   type PromptCandidateGenerationRequest,
 } from "./promptSearchInspector";
 import type { ArtifactInspection, ArtifactRecord, BundleAudioEntry, BundleFileEntry } from "./types";
@@ -237,6 +238,7 @@ function BundleReaderPanel({
   const rows = descriptor.rows.filter(([, value]) => value !== undefined && value !== null && value !== "");
   const plotFiles = descriptor.plotFiles ?? [];
   const domainSections = bundleDomainSections(inspection.bundle_summary);
+  const workflowHints = bundleWorkflowHints(inspection);
   const api = createApi(apiBase);
   return (
     <div className={`bundle-kind-panel ${descriptor.kind}`}>
@@ -244,6 +246,7 @@ function BundleReaderPanel({
         <strong>{descriptor.label}</strong>
         <span>{descriptor.description}</span>
       </div>
+      {workflowHints.length ? <BundleWorkflowStrip hints={workflowHints} /> : null}
       {rows.length ? (
         <div className="bundle-kind-rows">
           {rows.slice(0, 6).map(([label, value]) => {
@@ -288,6 +291,68 @@ export interface BundleDomainSection {
   rows: [string, unknown][];
   files?: string[];
   items?: { label: string; meta?: string }[];
+}
+
+export interface BundleWorkflowHint {
+  label: string;
+  value: string;
+  tone: "reuse" | "listen" | "evidence" | "lineage" | "probe";
+}
+
+export function bundleWorkflowHints(inspection: Pick<ArtifactInspection, "artifact" | "bundle_summary" | "bundle_preview" | "bundle_files" | "bundle_audio_files" | "sources" | "children">): BundleWorkflowHint[] {
+  const summary = inspection.bundle_summary ?? {};
+  const hints: BundleWorkflowHint[] = [];
+  const add = (label: string, value: unknown, tone: BundleWorkflowHint["tone"]) => {
+    const formatted = formatWorkflowValue(value);
+    if (!formatted) return;
+    hints.push({ label, value: formatted, tone });
+  };
+  const actions = bundleReuseActions({ artifact: inspection.artifact, bundle_summary: summary });
+  add("recipe actions", actions.length, "reuse");
+  const childAudio = inspection.children.filter((artifact) => artifact.kind === "audio").length;
+  add("playable audio", inspection.bundle_audio_files.length + childAudio, "listen");
+  add("lineage", inspection.sources.length || inspection.children.length ? `${inspection.sources.length}/${inspection.children.length}` : "", "lineage");
+  add("plots", bundlePlotFiles(summary, inspection.bundle_files).length, "evidence");
+  add("metrics", metricValueCount(summary), "evidence");
+  const kind = typeof summary.kind === "string" ? summary.kind : "";
+  const promptSearch = objectValue(summary.prompt_search);
+  const memory = objectValue(summary.memory);
+  const sweep = objectValue(summary.sweep);
+  const vectors = objectValue(summary.vectors);
+  const geometry = objectValue(summary.geometry);
+  const profile = objectValue(summary.profile);
+  const softPrompt = objectValue(summary.soft_prompt);
+  const training = objectValue(summary.training);
+  if (kind === "prompt-search" || promptSearch) {
+    add("candidates", promptSearch?.candidate_count ?? promptSearchCandidates(summary).length, "probe");
+    add("scorer", promptSearch?.scorer, "probe");
+  }
+  if (kind === "memory" || memory) {
+    add("memory hits", memory?.result_count ?? inspection.bundle_preview.result_count, "probe");
+    add("metric", memory?.metric ?? inspection.bundle_preview.metric, "probe");
+  }
+  if (kind === "sweep" || sweep) {
+    add("variants", sweep?.count, "probe");
+    add("alpha range", sweep?.alpha_min !== undefined && sweep?.alpha_max !== undefined ? `${sweep.alpha_min}..${sweep.alpha_max}` : "", "probe");
+  }
+  if (kind === "vectors" || vectors) {
+    add("layers", Array.isArray(vectors?.layers) ? vectors?.layers.length : vectors?.best_layer, "probe");
+    add("accuracy", vectors?.probe_accuracy, "evidence");
+  }
+  if (kind === "geometry" || geometry) {
+    add("latents", geometry?.latent_count, "probe");
+    add("variance", geometry?.kept_variance_fraction, "evidence");
+  }
+  if (kind === "profile" || profile) {
+    add("profiles", arrayOfObjects(profile?.profiles).length, "reuse");
+  }
+  if (kind === "soft-prompt" || softPrompt) {
+    add("tensors", arrayOfStrings(softPrompt?.tensor_files).length, "reuse");
+  }
+  if (kind === "training" || training) {
+    add("checkpoints", arrayOfStrings(training?.checkpoint_files).length, "reuse");
+  }
+  return dedupeWorkflowHints(hints).slice(0, 8);
 }
 
 export function bundleDomainSections(summary: Record<string, unknown> | undefined): BundleDomainSection[] {
@@ -480,6 +545,19 @@ export function summarizeBundle(summary: Record<string, unknown> | undefined, pr
     rows.unshift(["checkpoints", Array.isArray(training.checkpoint_files) ? training.checkpoint_files.length : undefined]);
   }
   return { kind, label, description, rows, plotFiles };
+}
+
+function BundleWorkflowStrip({ hints }: { hints: BundleWorkflowHint[] }) {
+  return (
+    <div className="bundle-workflow-strip" aria-label="Bundle workflow signals">
+      {hints.map((hint) => (
+        <i key={`${hint.label}:${hint.value}`} className={hint.tone}>
+          <span>{hint.label}</span>
+          <strong>{hint.value}</strong>
+        </i>
+      ))}
+    </div>
+  );
 }
 
 function BundleDomainCards({ sections }: { sections: BundleDomainSection[] }) {
@@ -884,6 +962,39 @@ function formatDomainValue(value: unknown) {
   if (Array.isArray(value)) return value.join(", ");
   if (typeof value === "number") return String(formatMaybeNumber(value));
   return String(value);
+}
+
+function bundlePlotFiles(summary: Record<string, unknown>, files: BundleFileEntry[]): string[] {
+  const plots = objectValue(summary.plots);
+  const summaryFiles = arrayOfStrings(plots?.files);
+  if (summaryFiles.length) return summaryFiles;
+  return files.map((file) => file.path).filter(isPlotPath);
+}
+
+function metricValueCount(summary: Record<string, unknown>): number {
+  const metrics = objectValue(summary.metrics);
+  const values = objectValue(metrics?.values);
+  return values ? Object.keys(values).length : 0;
+}
+
+function formatWorkflowValue(value: unknown): string {
+  if (value === undefined || value === null || value === "") return "";
+  if (typeof value === "number") {
+    if (!Number.isFinite(value) || value <= 0) return "";
+    return String(formatMaybeNumber(value));
+  }
+  if (typeof value === "boolean") return value ? "yes" : "no";
+  return String(value);
+}
+
+function dedupeWorkflowHints(hints: BundleWorkflowHint[]) {
+  const seen = new Set<string>();
+  return hints.filter((hint) => {
+    const key = `${hint.label}:${hint.value}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function bundleAudioMeta(entry: BundleAudioEntry) {

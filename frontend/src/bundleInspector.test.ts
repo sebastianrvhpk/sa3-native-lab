@@ -4,6 +4,7 @@ import {
   audioDescriptorDeltaRows,
   bundleDomainSections,
   bundleReuseActions,
+  bundleWorkflowHints,
   promptCandidateGeneratedArtifacts,
   promptDecisionCorrelationRows,
   promptDecisionSummary,
@@ -76,6 +77,40 @@ describe("bundle inspector summaries", () => {
     });
     expect(sections.find((section) => section.title === "direction.npz")?.rows).toContainEqual(["arrays", "direction 64x128"]);
     expect(sections.find((section) => section.title === "Soft Prompt")?.files).toEqual(["soft_prompt.pt"]);
+  });
+
+  it("summarizes bundle workflow signals from real bundle metadata", () => {
+    const hints = bundleWorkflowHints({
+      artifact: {
+        metadata: { operator: "experiment.prompt_search" },
+      } as never,
+      bundle_summary: {
+        kind: "prompt-search",
+        metrics: { values: { score: 0.82, loss: 0.18 } },
+        plots: { files: ["decision_plot.png"] },
+        prompt_search: {
+          prompt: "warm granular loop",
+          scorer: "sa3_flow_probe",
+          candidate_count: 12,
+          families: [{ rank: 1, prompt: "warm granular loop", score: 0.82, source: "selected" }],
+        },
+      },
+      bundle_preview: {},
+      bundle_files: [],
+      bundle_audio_files: [{ path: "take.wav", byte_size: 1024 }] as never,
+      sources: [{ artifact_id: "art_target" }] as never,
+      children: [{ artifact_id: "art_take", kind: "audio" }] as never,
+    });
+
+    expect(hints).toEqual(expect.arrayContaining([
+      { label: "recipe actions", value: "1", tone: "reuse" },
+      { label: "playable audio", value: "2", tone: "listen" },
+      { label: "lineage", value: "1/1", tone: "lineage" },
+      { label: "plots", value: "1", tone: "evidence" },
+      { label: "metrics", value: "2", tone: "evidence" },
+      { label: "candidates", value: "12", tone: "probe" },
+      { label: "scorer", value: "sa3_flow_probe", tone: "probe" },
+    ]));
   });
 
   it("summarizes geometry audit bundles", () => {

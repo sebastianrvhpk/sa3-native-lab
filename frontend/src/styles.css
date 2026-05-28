@@ -530,6 +530,52 @@ label {
   background: linear-gradient(135deg, rgb(201 238 72 / 0.17), rgb(85 198 199 / 0.12)), rgb(255 255 255 / 0.42);
 }
 
+.bundle-workflow-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 5px;
+}
+
+.bundle-workflow-strip i {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  border: 1px solid rgb(45 51 52 / 0.16);
+  border-radius: 7px;
+  padding: 5px 6px;
+  background: rgb(255 255 255 / 0.38);
+  font-style: normal;
+}
+
+.bundle-workflow-strip i.reuse {
+  background: linear-gradient(135deg, rgb(201 238 72 / 0.2), rgb(85 198 199 / 0.12)), rgb(255 255 255 / 0.44);
+}
+
+.bundle-workflow-strip i.listen {
+  background: linear-gradient(135deg, rgb(234 74 162 / 0.14), rgb(65 108 199 / 0.13)), rgb(255 255 255 / 0.44);
+}
+
+.bundle-workflow-strip i.probe {
+  background: linear-gradient(135deg, rgb(143 91 210 / 0.17), rgb(243 168 60 / 0.12)), rgb(255 255 255 / 0.44);
+}
+
+.bundle-workflow-strip span,
+.bundle-workflow-strip strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bundle-workflow-strip span {
+  color: var(--quiet);
+  font-size: 0.62rem;
+}
+
+.bundle-workflow-strip strong {
+  color: var(--ink);
+  font-size: 0.7rem;
+}
+
 .bundle-plot-shell {
   grid-column: 1 / -1;
   border: 1px dashed rgb(45 51 52 / 0.22);
