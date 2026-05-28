@@ -262,11 +262,11 @@ is complete when:
 - Tests cover the contract and at least one important UI/state transform.
 - Docs update the capability map and triage queue.
 
-## Recommended Next Study Artifact
+## Active Study Artifact
 
-The next non-implementation artifact should be a detailed notebook parity
-matrix. It should be built from the actual Colab notebook and script surfaces,
-with one row per cell/section/function:
+The detailed notebook parity matrix now lives in
+`docs/colab-parity-matrix.md`. It is the gate for the next no-stop
+implementation loop and tracks:
 
 - notebook section
 - local evidence path
@@ -278,7 +278,9 @@ with one row per cell/section/function:
 - provenance fields
 - missing UI controls
 - missing tests
-- status: implemented, partial, scaffolded, missing, deferred
+- status: native, recipe, partial, scaffold, or deferred
 - next action
 
-That matrix should become the gate for the next no-stop implementation loop.
+The next implementation slice should keep that matrix synchronized with
+`/colab/modes`, then promote the highest-leverage partial modes: prompt-search
+comparison, playback-composer behavior, and session/workspace organization.

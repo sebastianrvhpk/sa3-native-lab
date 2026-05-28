@@ -4,6 +4,9 @@ This map tracks the migration from notebook/script experiments into typed app
 contracts. It is intentionally evidence-based: every row should point at a local
 execution surface and the app surface that now owns it or still needs it.
 
+For the more granular section-by-section parity gate, see
+`docs/colab-parity-matrix.md`.
+
 ## Current Coverage
 
 Default app exploration targets SA3 `medium` and SAME `same-l`, matching the

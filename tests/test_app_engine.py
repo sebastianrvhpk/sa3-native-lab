@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import time
 from io import BytesIO
 from io import StringIO
@@ -30,6 +31,7 @@ from sa3_native_lab.app.contracts import (  # noqa: E402
     SessionUpdateRequest,
     TextGenerateRequest,
 )
+from sa3_native_lab.app.colab_modes import list_colab_modes  # noqa: E402
 from sa3_native_lab.app.jobs import JobManager, JobResult  # noqa: E402
 from sa3_native_lab.app.runtime import RuntimeDispatcher, _download_sa3_model_files_with_progress  # noqa: E402
 from sa3_native_lab.app.storage import ArtifactStore  # noqa: E402
@@ -387,6 +389,33 @@ def test_operator_specs_cover_typed_request_params(tmp_path):
     assert prompt_ui_fields["tokens_generated"].default == 4
     assert prompt_ui_fields["score_samples"].default == 1
     assert specs[OperatorName.EXPERIMENT_PROMPT_SEARCH].backends == [BackendName.CPU, BackendName.TORCH_MPS, BackendName.TORCH_CPU]
+
+
+def test_colab_mode_map_covers_notebook_sections():
+    notebook_path = Path(__file__).resolve().parents[1] / "colab" / "sa3_same_native_experimental_modes.ipynb"
+    notebook = json.loads(notebook_path.read_text())
+    markdown = "\n".join("".join(cell.get("source", [])) for cell in notebook["cells"] if cell.get("cell_type") == "markdown")
+
+    notebook_mode_ids = set(re.findall(r"^## Mode ([0-9]+[a-z]?)(?:\.|\s)", markdown, flags=re.MULTILINE))
+    if "## Mode 0c Annotation Retrieval" in markdown:
+        notebook_mode_ids.add("0c-search")
+    if "## Flow Sign Diagnostic" in markdown:
+        notebook_mode_ids.add("flow-sign")
+    if "## Combined Experiment:" in markdown:
+        notebook_mode_ids.add("combined")
+
+    app_mode_ids = {mode.mode_id for mode in list_colab_modes()}
+
+    assert notebook_mode_ids <= app_mode_ids
+
+
+def test_colab_mode_operators_reference_known_app_surfaces(tmp_path):
+    specs = {spec.name for spec in RuntimeDispatcher(ArtifactStore(tmp_path / "lab"), repo_root=tmp_path).operator_specs()}
+    non_runtime_operators = {OperatorName.ANNOTATE}
+
+    for mode in list_colab_modes():
+        for operator in mode.operators:
+            assert operator in specs or operator in non_runtime_operators, f"{mode.mode_id} references unmapped operator {operator}"
 
 
 def test_sessions_persist_and_attach_artifacts(tmp_path):
