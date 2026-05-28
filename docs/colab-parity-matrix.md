@@ -58,8 +58,8 @@ meaning is real.
 | flow-sign | Flow sign diagnostic | Prompt-search scorer and docs mention velocity convention | scaffold | target audio, prompts, convention, timesteps/logSNR | Loss comparison JSON | Native diagnostic recipe and result panel | Diagnostic runtime tests missing | Add after prompt-search comparison path matures |
 | 1 | Audio to soft prompt | `experiment.soft_prompt.optimize` | recipe | target audio, seed prompt, opt steps, duration, lr, reg, train keys, seed, velocity, model/backend | Soft-prompt bundle, recipe, logs | Better loss-curve and generated-test panel | Script adapter tests only partial | Add soft-prompt inspector with loss summary |
 | 1b | Generate with soft prompt | `experiment.soft_prompt.generate` | recipe | soft prompt path, model, steps, CFG, seed, backend | Audio artifact, recipe, soft-prompt lineage | Batch seeds and compare stack | Batch generation tests missing | Add multi-seed UI after player/take stack |
-| 2 | Audio to babble / hard prompt | `experiment.prompt_search` covers hard-token search | partial | target audio, vocabulary, search mode, scorer, tokens, beam, samples, seed, t/logSNR | Prompt-search bundle, prompt candidates, generated takes, run-comparison rows | Hard-token preset and scorer-cost guidance exist; vocabulary inspector is still shallow | Prompt-search helper, run-comparison, preset, and scorer-note tests exist | Add vocabulary/history inspector |
-| 3 | Audio to readable prompt | `experiment.prompt_search` with modifier axes | partial | target audio, modifier axes, search rounds, scorer, prefix/suffix | Prompt JSON bundle, generated takes, run-comparison rows | Readable-prompt preset and scorer-cost guidance exist; axes editor and score explanation are still shallow | Preset/run-comparison/scorer-note tests exist; modifier-axis editor tests missing | Add axes editor |
+| 2 | Audio to babble / hard prompt | `experiment.prompt_search` covers hard-token search | partial | target audio, vocabulary, search mode, scorer, tokens, beam, samples, seed, t/logSNR | Prompt-search bundle, prompt candidates, generated takes, run-comparison rows | Hard-token preset, scorer-cost guidance, vocabulary sets, and prompt history exist; vocabulary editing is still preset-based | Prompt-search helper, run-comparison, preset, scorer-note, vocabulary, and history tests exist | Add custom vocabulary save/share later |
+| 3 | Audio to readable prompt | `experiment.prompt_search` with modifier axes | partial | target audio, modifier axes, search rounds, scorer, prefix/suffix | Prompt JSON bundle, generated takes, run-comparison rows | Readable-prompt preset, scorer-cost guidance, axis sets, and prompt history exist; axes editing is still preset-based | Preset/run-comparison/scorer-note/axis tests exist | Add custom axis save/share later |
 | 4 | Dataset to soft prompt | `dataset.pre_encode` plus soft-prompt optimizer | partial | data dir, SAME model, chunking, target aggregation, opt params | Encoded dataset bundle and soft-prompt bundle | Batch dataset optimizer as one native workflow | Dataset-to-soft-prompt integration missing | Add composed recipe after dataset browser |
 | 5 | Dataset to prompt family | Memory query pieces exist; clustered prompt-family recipe missing | scaffold | encoded memory, clusters, prompts per cluster, soft prompt settings | Cluster manifest and prompt/soft-prompt families | Cluster browser and prompt family generator | Missing | Add after memory/dataset browser is richer |
 | 6 | SAME latent style profile | positive profile, build profile, generate profile | recipe | input/memory paths, reference path, name, alpha, prompt, generation fields | Profile bundle and audio artifact | Profile-specific inspector and profile-vs-reference comparison | Bundle tests shallow for profile semantics | Add profile inspector controls |
@@ -79,9 +79,10 @@ meaning is real.
 1. Keep this matrix synchronized with `/colab/modes`.
 2. Add a contract test proving the runtime mode atlas still covers the notebook
    mode headings and only references known app operators.
-3. Add richer prompt-search vocabulary/history and modifier-axis editing next.
-   Mode 2/3 presets, scorer-cost notes, and generated-take run-comparison rows
-   now exist.
+3. Move to playback-composer behavior next. Mode 2/3 presets, scorer-cost
+   notes, generated-take run-comparison rows, vocabulary sets, axis sets, and
+   prompt history now exist; custom save/share for vocabulary and axes can wait
+   until backend preset history exists.
 4. Add playback-composer scope after parameter parity, because Modes 0, 1b,
    8, 9, 11, and combined chains all need faster listening decisions.
 5. Add session/workspace/archive modeling before Postgres so the persistence

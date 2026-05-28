@@ -1,4 +1,5 @@
 import type { RecipeValue } from "./recipeFormModel";
+import type { ArtifactRecord } from "./types";
 
 export interface PromptSearchPreset {
   id: string;
@@ -15,6 +16,30 @@ export interface PromptSearchScorerNote {
   cost: string;
   guidance: string;
   maturity: "ready" | "probe" | "queued";
+}
+
+export interface PromptSearchVocabularySet {
+  id: string;
+  label: string;
+  focus: string;
+  terms: string;
+}
+
+export interface PromptSearchAxisSet {
+  id: string;
+  label: string;
+  focus: string;
+  axes: string;
+}
+
+export interface PromptSearchHistoryRow {
+  prompt: string;
+  total: number;
+  keeper: number;
+  maybe: number;
+  rejected: number;
+  latestAt: string;
+  latestNote?: string | null;
 }
 
 export const promptSearchPresets: readonly PromptSearchPreset[] = [
@@ -107,6 +132,42 @@ export const promptSearchScorerNotes: readonly PromptSearchScorerNote[] = [
   },
 ];
 
+export const promptSearchVocabularySets: readonly PromptSearchVocabularySet[] = [
+  {
+    id: "texture-color",
+    label: "Texture color",
+    focus: "timbre",
+    terms: "warm, cold, bright, dark, muted, glassy, metallic, soft, harsh, noisy, clean, saturated, airy, dusty, crystalline",
+  },
+  {
+    id: "motion-rhythm",
+    label: "Motion rhythm",
+    focus: "movement",
+    terms: "pulsing, drifting, swelling, stuttering, rolling, granular, shimmering, percussive, sustained, sparse, dense, syncopated, looping, fractured",
+  },
+  {
+    id: "space-scene",
+    label: "Space scene",
+    focus: "place",
+    terms: "wide stereo, narrow, distant, intimate, reverberant, dry, cinematic, ambient, underwater, industrial, acoustic, electronic, cavernous",
+  },
+];
+
+export const promptSearchAxisSets: readonly PromptSearchAxisSet[] = [
+  {
+    id: "readable-timbre",
+    label: "Readable timbre",
+    focus: "Mode 3",
+    axes: "bright|dark|warm|cold; clean|noisy|glassy|metallic; soft|harsh|muted|saturated",
+  },
+  {
+    id: "readable-motion",
+    label: "Readable motion",
+    focus: "Mode 3",
+    axes: "sparse|dense|percussive|sustained; pulsing|drifting|swelling|stuttering; steady|fractured|looping|syncopated",
+  },
+];
+
 export function promptSearchPresetById(presetId: string): PromptSearchPreset | undefined {
   return promptSearchPresets.find((preset) => preset.id === presetId);
 }
@@ -122,4 +183,65 @@ export function applyPromptSearchPreset(
 ): Record<string, RecipeValue> {
   const preset = promptSearchPresetById(presetId);
   return preset ? { ...form, ...preset.fields } : form;
+}
+
+export function applyPromptSearchVocabularySet(
+  form: Record<string, RecipeValue>,
+  setId: string,
+): Record<string, RecipeValue> {
+  const set = promptSearchVocabularySets.find((item) => item.id === setId);
+  return set ? { ...form, vocabulary: set.terms } : form;
+}
+
+export function applyPromptSearchAxisSet(
+  form: Record<string, RecipeValue>,
+  setId: string,
+): Record<string, RecipeValue> {
+  const set = promptSearchAxisSets.find((item) => item.id === setId);
+  return set ? { ...form, modifier_axes: set.axes, search_mode: "coordinate" } : form;
+}
+
+export function promptSearchHistoryRows(artifacts: readonly ArtifactRecord[]): PromptSearchHistoryRow[] {
+  const rows = new Map<string, PromptSearchHistoryRow>();
+  for (const artifact of artifacts) {
+    if (!isPromptSearchTake(artifact)) continue;
+    const prompt = artifact.prompt?.trim();
+    if (!prompt) continue;
+    const decision = artifact.metadata.listening_decision;
+    const existing = rows.get(prompt) ?? {
+      prompt,
+      total: 0,
+      keeper: 0,
+      maybe: 0,
+      rejected: 0,
+      latestAt: artifact.created_at,
+      latestNote: null,
+    };
+    existing.total += 1;
+    if (decision === "keeper") existing.keeper += 1;
+    if (decision === "maybe") existing.maybe += 1;
+    if (decision === "rejected") existing.rejected += 1;
+    if (Date.parse(artifact.created_at) >= Date.parse(existing.latestAt)) {
+      existing.latestAt = artifact.created_at;
+      existing.latestNote = promptSearchTakeNote(artifact);
+    }
+    rows.set(prompt, existing);
+  }
+  return [...rows.values()].sort((a, b) =>
+    b.keeper - a.keeper
+    || b.maybe - a.maybe
+    || b.total - a.total
+    || Date.parse(b.latestAt) - Date.parse(a.latestAt),
+  );
+}
+
+function isPromptSearchTake(artifact: ArtifactRecord): boolean {
+  return artifact.kind === "audio" && artifact.metadata.generation_origin === "prompt_search_candidate";
+}
+
+function promptSearchTakeNote(artifact: ArtifactRecord): string | null {
+  if (typeof artifact.metadata.listening_decision_note === "string" && artifact.metadata.listening_decision_note.trim()) {
+    return artifact.metadata.listening_decision_note.trim();
+  }
+  return artifact.notes?.trim() || null;
 }

@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { applyPromptSearchPreset, promptSearchPresetById, promptSearchScorerNote } from "./promptSearchPresets";
+import {
+  applyPromptSearchAxisSet,
+  applyPromptSearchPreset,
+  applyPromptSearchVocabularySet,
+  promptSearchHistoryRows,
+  promptSearchPresetById,
+  promptSearchScorerNote,
+} from "./promptSearchPresets";
 
 describe("prompt search presets", () => {
   it("applies the Mode 2 hard-token defaults without replacing target input", () => {
@@ -45,5 +52,67 @@ describe("prompt search presets", () => {
       scorer: "lexical_probe",
       cost: "fast CPU",
     });
+  });
+
+  it("applies vocabulary and axis sets to prompt-search params", () => {
+    expect(applyPromptSearchVocabularySet({ vocabulary: "old" }, "texture-color")).toMatchObject({
+      vocabulary: expect.stringContaining("glassy"),
+    });
+    expect(applyPromptSearchAxisSet({ search_mode: "beam" }, "readable-motion")).toMatchObject({
+      search_mode: "coordinate",
+      modifier_axes: expect.stringContaining("pulsing|drifting"),
+    });
+  });
+
+  it("builds prompt history rows from generated prompt-search takes", () => {
+    const rows = promptSearchHistoryRows([
+      {
+        artifact_id: "art_take_a",
+        kind: "audio",
+        prompt: "warm glass loop",
+        source_artifact_ids: ["art_bundle_a"],
+        metadata: {
+          generation_origin: "prompt_search_candidate",
+          listening_decision: "keeper",
+          listening_decision_note: "best so far",
+        },
+        tags: [],
+        path: "/tmp/a.wav",
+        created_at: "2026-05-28T15:00:00.000Z",
+      },
+      {
+        artifact_id: "art_take_b",
+        kind: "audio",
+        prompt: "warm glass loop",
+        source_artifact_ids: ["art_bundle_b"],
+        metadata: {
+          generation_origin: "prompt_search_candidate",
+          listening_decision: "maybe",
+        },
+        tags: [],
+        path: "/tmp/b.wav",
+        created_at: "2026-05-28T15:05:00.000Z",
+      },
+      {
+        artifact_id: "art_manual",
+        kind: "audio",
+        prompt: "manual",
+        source_artifact_ids: [],
+        metadata: {},
+        tags: [],
+        path: "/tmp/manual.wav",
+        created_at: "2026-05-28T15:10:00.000Z",
+      },
+    ] as never);
+
+    expect(rows).toEqual([
+      expect.objectContaining({
+        prompt: "warm glass loop",
+        total: 2,
+        keeper: 1,
+        maybe: 1,
+        rejected: 0,
+      }),
+    ]);
   });
 });
