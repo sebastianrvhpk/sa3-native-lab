@@ -79,7 +79,7 @@ function BundleReaderPanel({ inspection }: { inspection: ArtifactInspection }) {
       </div>
       {rows.length ? (
         <div className="bundle-kind-rows">
-          {rows.slice(0, 4).map(([label, value]) => {
+          {rows.slice(0, 6).map(([label, value]) => {
             const rowLabel = String(label);
             return (
               <i key={rowLabel}>
@@ -94,7 +94,7 @@ function BundleReaderPanel({ inspection }: { inspection: ArtifactInspection }) {
   );
 }
 
-function summarizeBundle(summary: Record<string, unknown> | undefined, preview: Record<string, unknown>, files: BundleFileEntry[]) {
+export function summarizeBundle(summary: Record<string, unknown> | undefined, preview: Record<string, unknown>, files: BundleFileEntry[]) {
   if (!summary || !Object.keys(summary).length) {
     return classifyBundle(preview, files);
   }
@@ -112,6 +112,19 @@ function summarizeBundle(summary: Record<string, unknown> | undefined, preview: 
   if (sweep) {
     rows.unshift(["alphas", Array.isArray(sweep.alphas) ? sweep.alphas.join(", ") : sweep.count]);
     rows.push(["range", sweep.alpha_min !== undefined && sweep.alpha_max !== undefined ? `${sweep.alpha_min} to ${sweep.alpha_max}` : undefined]);
+  }
+  const metrics = summary.metrics && typeof summary.metrics === "object" ? (summary.metrics as Record<string, unknown>) : null;
+  const metricValues = metrics?.values && typeof metrics.values === "object" ? (metrics.values as Record<string, unknown>) : null;
+  if (metricValues) {
+    rows.push(
+      ...Object.entries(metricValues)
+        .slice(0, 3)
+        .map(([key, value]) => [`metric ${prettyBundleKey(key)}`, formatMaybeNumber(value)] as [string, unknown]),
+    );
+  }
+  const plots = summary.plots && typeof summary.plots === "object" ? (summary.plots as Record<string, unknown>) : null;
+  if (plots) {
+    rows.push(["plots", plots.count]);
   }
   const memory = summary.memory && typeof summary.memory === "object" ? (summary.memory as Record<string, unknown>) : null;
   if (memory) {
@@ -330,4 +343,8 @@ function formatBundleScore(item: Record<string, unknown>) {
 
 function formatMaybeNumber(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? value.toFixed(3).replace(/\.?0+$/, "") : value;
+}
+
+function prettyBundleKey(key: string) {
+  return key.replaceAll("_", " ");
 }

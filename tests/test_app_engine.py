@@ -440,6 +440,7 @@ def test_fastapi_inspects_bundle_artifact(tmp_path):
     output_dir = tmp_path / "bundle"
     output_dir.mkdir()
     (output_dir / "metrics.json").write_text('{"score": 0.8}\n', encoding="utf-8")
+    (output_dir / "plot.png").write_bytes(b"plot")
     recipe = Recipe(operator=OperatorName.EXPERIMENT_ALPHA_SWEEP, backend=BackendName.TORCH_CPU)
     record = app.state.store.finalize_bundle_path(artifact_id="art_bundle", path=output_dir, recipe=recipe)
 
@@ -453,6 +454,8 @@ def test_fastapi_inspects_bundle_artifact(tmp_path):
     assert "bundle_preview" in payload
     assert payload["bundle_summary"]["kind"] == "sweep"
     assert payload["bundle_summary"]["json_files"][0]["path"] == "metrics.json"
+    assert payload["bundle_summary"]["metrics"]["values"]["score"] == 0.8
+    assert payload["bundle_summary"]["plots"]["count"] == 1
 
 
 def test_runtime_same_encode_decode_with_fake_adapter(tmp_path):

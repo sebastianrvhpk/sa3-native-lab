@@ -565,6 +565,12 @@ def _bundle_summary(record: ArtifactRecord, files: list[BundleFileEntry]) -> dic
     if npz_summaries:
         summary["npz_files"] = npz_summaries
 
+    metric_summary = _metric_summary(json_payloads)
+    if metric_summary:
+        summary["metrics"] = metric_summary
+    plot_files = _plot_files(files)
+    if plot_files:
+        summary["plots"] = {"count": len(plot_files), "files": plot_files[:8]}
     sweep = _sweep_summary(json_payloads)
     if sweep:
         summary["sweep"] = sweep
@@ -711,6 +717,34 @@ def _sweep_summary(json_payloads: list[tuple[str, Any]]) -> dict[str, Any] | Non
             ],
         }
     return None
+
+
+def _metric_summary(json_payloads: list[tuple[str, Any]]) -> dict[str, Any] | None:
+    metric_files: list[str] = []
+    values: dict[str, Any] = {}
+    for path, payload in json_payloads:
+        lower_path = path.lower()
+        if not isinstance(payload, dict):
+            continue
+        looks_like_metrics = lower_path.endswith("metrics.json") or lower_path.endswith("report.json")
+        if not looks_like_metrics and not any(key in payload for key in ("score", "loss", "accuracy", "probe_accuracy")):
+            continue
+        metric_files.append(path)
+        for key, value in payload.items():
+            if isinstance(value, (int, float, str)) and not isinstance(value, bool):
+                values.setdefault(str(key), value)
+    if not metric_files and not values:
+        return None
+    return {"files": metric_files[:8], "values": values}
+
+
+def _plot_files(files: list[BundleFileEntry]) -> list[str]:
+    image_suffixes = {".png", ".jpg", ".jpeg", ".webp", ".svg", ".pdf"}
+    return [
+        entry.path
+        for entry in files
+        if Path(entry.path.lower()).suffix in image_suffixes or "plot" in entry.path.lower() or "chart" in entry.path.lower()
+    ]
 
 
 def _memory_summary(json_payloads: list[tuple[str, Any]]) -> dict[str, Any] | None:
