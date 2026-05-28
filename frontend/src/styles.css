@@ -1732,6 +1732,38 @@ audio {
   text-transform: uppercase;
 }
 
+.fork-core-grid label.changed,
+.fork-param.changed,
+.fork-notes.changed {
+  color: var(--ink);
+}
+
+.fork-field-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.fork-field-head > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fork-reset {
+  width: auto;
+  min-height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  box-shadow: none;
+  background: rgb(255 255 255 / 0.54);
+  color: var(--muted);
+  font-size: 0.62rem;
+  text-transform: none;
+}
+
 .fork-core-grid input,
 .fork-core-grid select,
 .fork-param input,
@@ -1747,6 +1779,57 @@ audio {
   letter-spacing: 0;
   outline: none;
   padding: 7px;
+}
+
+.recipe-diff-summary {
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  padding: 8px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  gap: 8px;
+  align-items: center;
+  background: linear-gradient(135deg, rgb(201 238 72 / 0.16), rgb(85 198 199 / 0.12)), rgb(255 255 255 / 0.46);
+}
+
+.recipe-diff-summary.idle {
+  display: block;
+  color: var(--muted);
+  font-size: 0.72rem;
+  background: rgb(255 255 255 / 0.34);
+}
+
+.recipe-diff-summary div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.recipe-diff-summary strong,
+.recipe-diff-summary span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recipe-diff-summary strong {
+  color: var(--ink);
+  font-size: 0.72rem;
+}
+
+.recipe-diff-summary span {
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
+.recipe-diff-summary button {
+  width: auto;
+  min-height: 28px;
+  padding: 0 8px;
+  border-radius: 6px;
+  box-shadow: none;
+  background: rgb(255 255 255 / 0.58);
+  font-size: 0.68rem;
 }
 
 .fork-param.checkbox {
