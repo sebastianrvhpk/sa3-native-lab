@@ -670,6 +670,9 @@ def _bundle_summary(record: ArtifactRecord, files: list[BundleFileEntry]) -> dic
     vector_summary = _vector_summary(json_payloads, npz_summaries)
     if vector_summary:
         summary["vectors"] = vector_summary
+    geometry = _geometry_summary(json_payloads)
+    if geometry:
+        summary["geometry"] = geometry
     profile_summary = _profile_summary(npz_summaries)
     if profile_summary:
         summary["profile"] = profile_summary
@@ -753,6 +756,8 @@ def _classify_bundle_kind(
     operator = str(record.metadata.get("operator") or "")
     if operator == "memory.query" or any(isinstance(payload, dict) and "results" in payload for _, payload in json_payloads):
         return "memory"
+    if "geometry" in operator or any(name.endswith("geometry_report.json") for name, _ in json_payloads):
+        return "geometry"
     if "alpha_sweep" in operator or any(name.endswith("sweep.json") for name, _ in json_payloads):
         return "sweep"
     npz_kinds = {_string_value(summary.get("scalars", {}).get("kind")) for summary in npz_summaries}
@@ -872,6 +877,26 @@ def _vector_summary(json_payloads: list[tuple[str, Any]], npz_summaries: list[di
     ]
     if vector_npz:
         return {"npz_files": vector_npz}
+    return None
+
+
+def _geometry_summary(json_payloads: list[tuple[str, Any]]) -> dict[str, Any] | None:
+    for path, payload in json_payloads:
+        if not path.endswith("geometry_report.json") or not isinstance(payload, dict):
+            continue
+        report = payload.get("report")
+        if not isinstance(report, dict):
+            report = {}
+        return {
+            "path": path,
+            "latent_count": payload.get("latent_count"),
+            "candidate_count": payload.get("candidate_count"),
+            "n_components": payload.get("n_components"),
+            "kept_variance_fraction": report.get("kept_variance_fraction"),
+            "summary_std_mean": report.get("summary_std_mean"),
+            "frame_count": report.get("frame_count"),
+            "dim": report.get("dim"),
+        }
     return None
 
 

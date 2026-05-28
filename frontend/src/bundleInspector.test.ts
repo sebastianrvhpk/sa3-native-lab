@@ -67,4 +67,29 @@ describe("bundle inspector summaries", () => {
     expect(sections.find((section) => section.title === "direction.npz")?.rows).toContainEqual(["arrays", "direction 64x128"]);
     expect(sections.find((section) => section.title === "Soft Prompt")?.files).toEqual(["soft_prompt.pt"]);
   });
+
+  it("summarizes geometry audit bundles", () => {
+    const summary = summarizeBundle(
+      {
+        kind: "geometry",
+        file_count: 1,
+        total_bytes: 512,
+        geometry: { latent_count: 4, n_components: 3, kept_variance_fraction: 0.934, dim: 64 },
+      },
+      {},
+      [],
+    );
+
+    expect(summary.label).toBe("Geometry audit");
+    expect(summary.rows).toContainEqual(["kept variance", "0.934"]);
+    expect(bundleDomainSections({ geometry: { latent_count: 4, n_components: 3, kept_variance_fraction: 0.934 } })).toContainEqual({
+      title: "Geometry",
+      rows: [
+        ["latents", 4],
+        ["components", 3],
+        ["kept variance", "0.934"],
+        ["summary std", undefined],
+      ],
+    });
+  });
 });

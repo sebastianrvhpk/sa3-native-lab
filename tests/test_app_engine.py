@@ -109,6 +109,37 @@ def test_runtime_memory_query_returns_nearest_latent_artifacts(tmp_path):
     assert inspection.bundle_summary["memory"]["results"][0]["artifact_id"] == near.artifact_id
 
 
+def test_runtime_geometry_audit_returns_report_bundle(tmp_path):
+    store = ArtifactStore(tmp_path / "lab")
+    session = store.create_session(SessionCreateRequest(name="geometry"))
+    source = store.store_latent_array(np.zeros((8, 3), dtype=np.float32), latent_rate=2.0, session_id=session.session_id)
+    store.store_latent_array(np.ones((8, 3), dtype=np.float32), latent_rate=2.0, session_id=session.session_id)
+    store.store_latent_array(np.ones((8, 2), dtype=np.float32), latent_rate=2.0, session_id=session.session_id)
+    runtime = RuntimeDispatcher(store, repo_root=tmp_path)
+    jobs = JobManager(store.jobs_dir)
+    recipe = Recipe(
+        operator=OperatorName.EXPERIMENT_GEOMETRY_AUDIT,
+        backend=BackendName.CPU,
+        inputs={"source": source.artifact_id},
+        params={"n_components": 2},
+        session_id=session.session_id,
+    )
+
+    record = jobs.submit(recipe, runtime.handler_for_recipe(recipe))
+    finished = _wait_for_job(jobs, record.job_id)
+    artifact = store.get_artifact(finished.artifact_ids[0])
+    payload = json.loads(artifact.path.read_text(encoding="utf-8"))
+    inspection = store.inspect_artifact(artifact.artifact_id)
+
+    assert finished.status == JobStatus.SUCCEEDED
+    assert payload["operator"] == "experiment.geometry_audit"
+    assert payload["latent_count"] == 2
+    assert payload["report"]["dim"] == 3.0
+    assert finished.metrics["latent_count"] == 2
+    assert inspection.bundle_summary["kind"] == "geometry"
+    assert inspection.bundle_summary["geometry"]["latent_count"] == 2
+
+
 def test_audio_peaks_are_derived_from_audio_file(tmp_path):
     store = ArtifactStore(tmp_path)
     audio_path = tmp_path / "shape.wav"
@@ -176,6 +207,10 @@ def test_operator_specs_cover_typed_request_params(tmp_path):
 
     memory_ui_fields = {field.key: field for field in specs[OperatorName.MEMORY_QUERY].ui_fields}
     assert [option.value for option in memory_ui_fields["metric"].options] == ["cosine", "euclidean"]
+
+    geometry_ui_fields = {field.key: field for field in specs[OperatorName.EXPERIMENT_GEOMETRY_AUDIT].ui_fields}
+    assert geometry_ui_fields["n_components"].default == 8
+    assert geometry_ui_fields["n_components"].description == "Number of principal components to keep in the geometry audit."
 
 
 def test_sessions_persist_and_attach_artifacts(tmp_path):

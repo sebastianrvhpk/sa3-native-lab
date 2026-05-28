@@ -12,6 +12,7 @@ from typing import Any
 
 import numpy as np
 
+from latent_audio_primitives.geometry import geometry_report
 from latent_audio_primitives.index import LatentMemoryIndex
 from latent_audio_primitives.latent_blur import LatentBlurSpec, apply_latent_blur
 from latent_audio_primitives.latent_dsp import LatentDSPSpec, apply_latent_dsp
@@ -93,6 +94,7 @@ FIELD_HINTS: dict[str, dict[str, Any]] = {
     "layer": {"type": "number", "default": -1, "step": 1, "advanced": True},
     "layers": {"type": "text", "advanced": True, "placeholder": "blank or 1,4,8"},
     "limit": {"type": "number", "default": 0, "min": 0, "step": 1, "advanced": True},
+    "n_components": {"type": "number", "default": 8, "min": 1, "step": 1, "description": "Number of principal components to keep in the geometry audit."},
     "num_pairs": {"type": "number", "default": 2, "min": 1, "step": 1},
     "axis": {"type": "text", "default": "valence", "required": True},
     "baseline": {"type": "select", "default": "prompt", "options": ["prompt", "negative_audio"]},
@@ -500,6 +502,15 @@ class RuntimeDispatcher:
                 status="script adapter",
             ),
             OperatorSpec(
+                name=OperatorName.EXPERIMENT_GEOMETRY_AUDIT,
+                maturity="probe",
+                backends=[BackendName.CPU],
+                inputs=["source?"],
+                params={"n_components": "int", "limit": "int"},
+                produces=[ArtifactKind.BUNDLE],
+                status="implemented for local latent artifacts",
+            ),
+            OperatorSpec(
                 name=OperatorName.EXPERIMENT_SOFT_PROMPT_OPTIMIZE,
                 maturity="probe",
                 backends=[BackendName.TORCH_MPS, BackendName.TORCH_CPU],
@@ -585,6 +596,8 @@ class RuntimeDispatcher:
             return lambda context: self._run_same_decode(recipe, context)
         if recipe.operator == OperatorName.MEMORY_QUERY:
             return lambda context: self._run_memory_query(recipe, context)
+        if recipe.operator == OperatorName.EXPERIMENT_GEOMETRY_AUDIT:
+            return lambda context: self._run_geometry_audit(recipe, context)
         if recipe.operator in SCRIPT_EXPERIMENT_OPERATORS:
             return lambda context: self._run_script_experiment(recipe, context)
         raise ValueError(f"operator is not implemented yet: {recipe.operator}")
@@ -970,6 +983,76 @@ class RuntimeDispatcher:
         return JobResult(
             artifact_ids=[artifact.artifact_id],
             metrics={"result_count": len(results), "candidate_count": len(candidates), "metric": metric},
+        )
+
+    def _run_geometry_audit(self, recipe: Recipe, context: JobContext) -> JobResult:
+        params = dict(recipe.params)
+        n_components = max(1, int(params.get("n_components", 8)))
+        limit = max(0, int(params.get("limit", 0)))
+        source_id = recipe.inputs.get("source")
+        source = self.store.get_artifact(source_id) if source_id else None
+        if source is not None and source.latent is None:
+            raise ValueError(f"source artifact {source_id} does not have latent metadata")
+
+        records = self.store.list_artifacts(kind=ArtifactKind.LATENT, session_id=recipe.session_id)
+        if not records:
+            records = self.store.list_artifacts(kind=ArtifactKind.LATENT)
+        if source is not None:
+            records = [source, *[record for record in records if record.artifact_id != source.artifact_id]]
+        if limit:
+            records = records[:limit]
+
+        items: list[LatentItem] = []
+        anchor_dim = source.latent.shape[1] if source and source.latent else None
+        for record in records:
+            if record.latent is None:
+                continue
+            if anchor_dim is not None and record.latent.shape[1] != anchor_dim:
+                continue
+            latent = self.store.load_latent_array(record.artifact_id)
+            if anchor_dim is None:
+                anchor_dim = latent.shape[1]
+            if latent.shape[1] != anchor_dim:
+                continue
+            items.append(_latent_record_to_item(record, latent))
+
+        if not items:
+            raise ValueError("geometry audit requires at least one local latent artifact")
+
+        context.set_progress(0.45, f"auditing {len(items)} latent artifacts")
+        report = geometry_report(items, n_components=n_components)
+        output_id, output_path = self.store.reserve_artifact_path(filename="geometry_report.json")
+        payload = {
+            "operator": _operator_value(recipe.operator),
+            "source_artifact_id": source_id,
+            "latent_count": len(items),
+            "candidate_count": len(records),
+            "n_components": n_components,
+            "artifacts": [item.shallow_metadata() for item in items],
+            "report": report,
+        }
+        output_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        context.set_progress(0.85, "saving geometry audit")
+        artifact = self.store.finalize_bundle_path(
+            artifact_id=output_id,
+            path=output_path,
+            recipe=recipe,
+            source_artifact_ids=[source_id] if source_id else [],
+            label="geometry audit",
+            metadata={
+                "operator": _operator_value(recipe.operator),
+                "latent_count": len(items),
+                "n_components": n_components,
+                "kept_variance_fraction": report.get("kept_variance_fraction"),
+            },
+        )
+        return JobResult(
+            artifact_ids=[artifact.artifact_id],
+            metrics={
+                "latent_count": len(items),
+                "n_components": n_components,
+                "kept_variance_fraction": report.get("kept_variance_fraction"),
+            },
         )
 
     def _run_script_experiment(self, recipe: Recipe, context: JobContext) -> JobResult:

@@ -216,6 +216,18 @@ export function bundleDomainSections(summary: Record<string, unknown> | undefine
       ],
     });
   }
+  const geometry = objectValue(summary.geometry);
+  if (geometry) {
+    sections.push({
+      title: "Geometry",
+      rows: [
+        ["latents", geometry.latent_count],
+        ["components", geometry.n_components],
+        ["kept variance", formatMaybeNumber(geometry.kept_variance_fraction)],
+        ["summary std", formatMaybeNumber(geometry.summary_std_mean)],
+      ],
+    });
+  }
   const profile = objectValue(summary.profile);
   if (profile) {
     for (const item of arrayOfObjects(profile.profiles).slice(0, 3)) {
@@ -301,6 +313,11 @@ export function summarizeBundle(summary: Record<string, unknown> | undefined, pr
   if (vectors) {
     rows.unshift(["best layer", vectors.best_layer], ["accuracy", formatMaybeNumber(vectors.probe_accuracy)]);
   }
+  const geometry = summary.geometry && typeof summary.geometry === "object" ? (summary.geometry as Record<string, unknown>) : null;
+  if (geometry) {
+    rows.unshift(["latents", geometry.latent_count], ["kept variance", formatMaybeNumber(geometry.kept_variance_fraction)]);
+    rows.push(["components", geometry.n_components], ["dim", geometry.dim]);
+  }
   const profile = summary.profile && typeof summary.profile === "object" ? (summary.profile as Record<string, unknown>) : null;
   const profiles = Array.isArray(profile?.profiles) ? profile.profiles : [];
   const firstProfile = profiles[0] && typeof profiles[0] === "object" ? (profiles[0] as Record<string, unknown>) : null;
@@ -379,6 +396,7 @@ function bundleKindLabel(kind: string) {
   if (kind === "sweep") return "Sweep results";
   if (kind === "profile") return "Style profile";
   if (kind === "vectors") return "Vector bundle";
+  if (kind === "geometry") return "Geometry audit";
   if (kind === "soft-prompt") return "Soft prompt";
   if (kind === "training") return "Training output";
   return "Bundle archive";
@@ -389,6 +407,7 @@ function bundleKindDescription(kind: string) {
   if (kind === "sweep") return "Parameter branch outputs with alpha and artifact metadata";
   if (kind === "profile") return "Reusable latent/audio statistics for profile-guided generation";
   if (kind === "vectors") return "Residual or style direction vectors with parsed layers and shapes";
+  if (kind === "geometry") return "Local latent geometry summary for saved SAME artifacts";
   if (kind === "soft-prompt") return "Optimized conditioning tensors for prompt continuation";
   if (kind === "training") return "Adapter checkpoints, logs, and long-running training outputs";
   return "Script output files preserved as a replayable artifact";
@@ -551,6 +570,18 @@ function classifyBundle(preview: Record<string, unknown>, files: BundleFileEntry
       rows: [
         ["operator", operator],
         ["npz", fileNames.filter((name) => name.endsWith(".npz")).length],
+        ["files", files.length],
+      ],
+      plotFiles: files.map((file) => file.path).filter(isPlotPath),
+    };
+  }
+  if (operator.includes("geometry") || hasFile("geometry_report.json")) {
+    return {
+      kind: "geometry",
+      label: "Geometry audit",
+      description: "Local latent geometry summary for saved SAME artifacts",
+      rows: [
+        ["operator", operator],
         ["files", files.length],
       ],
       plotFiles: files.map((file) => file.path).filter(isPlotPath),

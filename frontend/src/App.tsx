@@ -85,6 +85,7 @@ type ExperimentMode =
   | "experiment.sa3_vectors.extract"
   | "experiment.audio_residual_vectors.extract"
   | "experiment.alpha_sweep"
+  | "experiment.geometry_audit"
   | "experiment.soft_prompt.optimize"
   | "experiment.soft_prompt.generate"
   | "dataset.pre_encode"
@@ -96,7 +97,7 @@ type GenerationMode = "generate.text_to_audio" | "generate.audio_to_audio" | "ge
 interface ExperimentConfig {
   value: ExperimentMode;
   label: string;
-  family: "Style" | "Residual" | "Soft Prompt" | "Dataset" | "Training";
+  family: "Style" | "Residual" | "Soft Prompt" | "Dataset" | "Geometry" | "Training";
   maturity: "lab" | "probe" | "danger";
   backend: ExperimentPayload["backend"];
   modelDefault?: string;
@@ -557,6 +558,19 @@ const experimentCatalog: readonly ExperimentConfig[] = [
       { key: "top_k", label: "Top K", type: "number", defaultValue: 5, min: 1, step: 1 },
       { key: "metric", label: "Metric", type: "select", defaultValue: "cosine", options: [{ value: "cosine", label: "cosine" }, { value: "euclidean", label: "euclidean" }] },
       { key: "exclude_self", label: "Exclude selected", type: "checkbox", defaultValue: true },
+    ],
+  },
+  {
+    value: "experiment.geometry_audit",
+    label: "Geometry audit",
+    family: "Geometry",
+    maturity: "probe",
+    backend: "cpu",
+    produces: ["bundle"],
+    selectedLatentFallback: true,
+    fields: [
+      { key: "n_components", label: "Components", type: "number", defaultValue: 8, min: 1, step: 1 },
+      { key: "limit", label: "Limit", type: "number", defaultValue: 0, min: 0, step: 1, advanced: true },
     ],
   },
   {
