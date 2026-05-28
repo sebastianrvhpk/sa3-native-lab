@@ -3,6 +3,9 @@
 This roadmap is a code-grounded triage queue for turning the current Colab
 migration into a stronger local research app.
 
+For the consolidated current-state, engineering-health, test-posture, and
+definition-of-done document, see `docs/implementation-readiness.md`.
+
 For the broader stack direction and promotion triggers, see
 `docs/architecture-horizon.md`.
 
