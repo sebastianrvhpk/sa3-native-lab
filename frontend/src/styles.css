@@ -939,6 +939,81 @@ label {
   font-size: 0.63rem;
 }
 
+.prompt-run-comparison {
+  display: grid;
+  gap: 6px;
+  border: 1px solid rgb(45 51 52 / 0.16);
+  border-radius: 8px;
+  padding: 7px;
+  background:
+    linear-gradient(125deg, rgb(85 198 199 / 0.13), rgb(234 159 53 / 0.12), rgb(143 91 210 / 0.08)),
+    rgb(255 255 255 / 0.44);
+}
+
+.prompt-run-comparison > div,
+.prompt-run-comparison article > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.prompt-run-comparison > div strong,
+.prompt-run-comparison > div span,
+.prompt-run-comparison article strong,
+.prompt-run-comparison article span,
+.prompt-run-comparison article small,
+.prompt-run-comparison article p {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.prompt-run-comparison > div strong {
+  color: var(--ink);
+  font-size: 0.72rem;
+}
+
+.prompt-run-comparison > div span {
+  color: var(--muted);
+  font-size: 0.66rem;
+}
+
+.prompt-run-comparison article {
+  display: grid;
+  gap: 3px;
+  border: 1px solid rgb(45 51 52 / 0.13);
+  border-radius: 7px;
+  padding: 6px 7px;
+  background: rgb(255 255 255 / 0.4);
+  min-width: 0;
+}
+
+.prompt-run-comparison article.current {
+  background:
+    linear-gradient(135deg, rgb(201 238 72 / 0.12), rgb(85 198 199 / 0.12)),
+    rgb(255 255 255 / 0.5);
+}
+
+.prompt-run-comparison article strong {
+  color: var(--ink);
+  font-size: 0.68rem;
+}
+
+.prompt-run-comparison article span {
+  color: #2f6c64;
+  font-size: 0.62rem;
+  font-weight: 680;
+}
+
+.prompt-run-comparison article small,
+.prompt-run-comparison article p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.62rem;
+}
+
 .prompt-candidate-panel article {
   display: grid;
   grid-template-columns: minmax(0, 1fr) max-content;

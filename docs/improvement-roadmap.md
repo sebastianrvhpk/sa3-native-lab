@@ -54,7 +54,9 @@ For the broader stack direction and promotion triggers, see
    lineage. Prompt-search takes now expose first-pass target-vs-take descriptor
    deltas plus a decision-study summary over keeper/maybe/reject annotations;
    prompt memory now groups generated prompt-candidate decisions across runs.
-   Next they need richer sweep-family and layer/alpha comparisons.
+   Prompt-search bundles also compare generated takes across search runs by
+   scorer, mode, model, duration, prompt variety, and listening decisions. Next
+   they need richer sweep-family and layer/alpha comparisons.
 
 2. Presets for Operator Studio.
    Browser-local named presets now exist for blur, DSP, graft, renoise, and

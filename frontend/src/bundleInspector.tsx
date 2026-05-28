@@ -19,6 +19,7 @@ export {
   promptDecisionMemoryRows,
   promptDecisionCorrelationRows,
   promptDecisionSummary,
+  promptSearchRunComparisonRows,
   promptSearchCandidates,
   promptSearchTargetArtifact,
   type DescriptorDeltaRow,
@@ -26,6 +27,7 @@ export {
   type PromptCandidateGenerationRequest,
   type PromptDecisionCorrelationRow,
   type PromptDecisionMemoryRow,
+  type PromptSearchRunComparisonRow,
 } from "./promptSearchInspector";
 
 export function BundleField({

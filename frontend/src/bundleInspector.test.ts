@@ -11,6 +11,7 @@ import {
   promptDecisionSummary,
   promptSearchTargetArtifact,
   promptSearchCandidates,
+  promptSearchRunComparisonRows,
   summarizeBundle,
 } from "./bundleInspector";
 
@@ -398,5 +399,101 @@ describe("bundle inspector summaries", () => {
       latestNote: "good but soft",
     }));
     expect(rows[1]).toEqual(expect.objectContaining({ prompt: "cold click", rejected: 1 }));
+  });
+
+  it("compares prompt-search generated takes across runs", () => {
+    const currentBundle = {
+      artifact_id: "art_bundle_a",
+      kind: "bundle",
+      source_artifact_ids: ["art_target"],
+      metadata: { operator: "experiment.prompt_search" },
+      tags: [],
+      path: "/tmp/prompt-a.zip",
+      file: { filename: "prompt-a.zip", byte_size: 10 },
+      created_at: "2026-05-28T14:00:00.000Z",
+    };
+    const rows = promptSearchRunComparisonRows(
+      currentBundle as never,
+      [
+        currentBundle,
+        {
+          artifact_id: "art_bundle_b",
+          kind: "bundle",
+          source_artifact_ids: ["art_target"],
+          metadata: { operator: "experiment.prompt_search" },
+          tags: [],
+          path: "/tmp/prompt-b.zip",
+          file: { filename: "prompt-b.zip", byte_size: 10 },
+          created_at: "2026-05-28T14:05:00.000Z",
+        },
+        {
+          artifact_id: "art_take_a",
+          kind: "audio",
+          prompt: "warm granular loop",
+          source_artifact_ids: ["art_bundle_a"],
+          metadata: {
+            generation_origin: "prompt_search_candidate",
+            prompt_search_bundle_id: "art_bundle_a",
+            prompt_search_scorer: "sa3_flow_probe",
+            prompt_search_mode: "beam",
+            prompt_search_model: "medium",
+            prompt_search_duration_seconds: 8,
+            listening_decision: "keeper",
+          },
+          tags: [],
+          path: "/tmp/take-a.wav",
+          created_at: "2026-05-28T15:00:00.000Z",
+        },
+        {
+          artifact_id: "art_take_b",
+          kind: "audio",
+          prompt: "warm granular loop shimmer",
+          source_artifact_ids: ["art_bundle_b"],
+          metadata: {
+            generation_origin: "prompt_search_candidate",
+            prompt_search_bundle_id: "art_bundle_b",
+            prompt_search_scorer: "lexical_probe",
+            prompt_search_mode: "greedy",
+            prompt_search_model: "medium",
+            listening_decision: "maybe",
+          },
+          tags: [],
+          path: "/tmp/take-b.wav",
+          created_at: "2026-05-28T15:05:00.000Z",
+        },
+      ] as never,
+      {
+        prompt_search: {
+          prompt: "warm granular loop",
+          scorer: "sa3_flow_probe",
+          search_mode: "beam",
+          model: "medium",
+          duration_seconds: 8,
+        },
+      },
+    );
+
+    expect(rows[0]).toEqual(expect.objectContaining({
+      bundleId: "art_bundle_a",
+      current: true,
+      label: "prompt-a.zip",
+      totalTakes: 1,
+      keeper: 1,
+      scorer: "sa3_flow_probe",
+      searchMode: "beam",
+      model: "medium",
+      durationSeconds: 8,
+      promptCount: 1,
+      prompts: ["warm granular loop"],
+    }));
+    expect(rows[1]).toEqual(expect.objectContaining({
+      bundleId: "art_bundle_b",
+      current: false,
+      totalTakes: 1,
+      maybe: 1,
+      scorer: "lexical_probe",
+      searchMode: "greedy",
+      prompts: ["warm granular loop shimmer"],
+    }));
   });
 });

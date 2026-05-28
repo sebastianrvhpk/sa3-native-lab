@@ -63,6 +63,27 @@ export interface PromptDecisionMemoryRow {
   latestNote?: string | null;
 }
 
+export interface PromptSearchRunComparisonRow {
+  bundleId: string;
+  label: string;
+  current: boolean;
+  totalTakes: number;
+  listened: number;
+  keeper: number;
+  maybe: number;
+  rejected: number;
+  undecided: number;
+  promptCount: number;
+  prompts: string[];
+  scorer?: string;
+  searchMode?: string;
+  model?: string;
+  durationSeconds?: number;
+  latestAt: string;
+  latestArtifactId?: string;
+  latestNote?: string | null;
+}
+
 const DESCRIPTOR_DELTA_KEYS = [
   { key: "rms_dbfs", label: "level" },
   { key: "spectral_centroid_hz", label: "bright" },
@@ -99,6 +120,7 @@ export function PromptSearchCandidatePanel({
   const allGeneratedTakes = promptCandidateGeneratedArtifacts(artifact.artifact_id, artifacts);
   const targetArtifact = promptSearchTargetArtifact(artifact, artifacts);
   const decisionMemory = promptDecisionMemoryRows(artifacts);
+  const runComparisons = promptSearchRunComparisonRows(artifact, artifacts, summary);
   return (
     <div className="prompt-candidate-panel" aria-label="Prompt search candidates">
       <div className="prompt-candidate-head">
@@ -110,6 +132,7 @@ export function PromptSearchCandidatePanel({
       </div>
       <PromptDecisionCorrelation apiBase={apiBase} target={targetArtifact} takes={allGeneratedTakes} />
       <PromptDecisionMemory rows={decisionMemory} currentBundleId={artifact.artifact_id} />
+      <PromptSearchRunComparison rows={runComparisons} />
       {candidates.map((candidate) => {
         const generated = promptCandidateGeneratedArtifacts(artifact.artifact_id, artifacts, candidate.prompt);
         return (
@@ -160,6 +183,31 @@ export function PromptSearchCandidatePanel({
         );
       })}
     </div>
+  );
+}
+
+function PromptSearchRunComparison({ rows }: { rows: PromptSearchRunComparisonRow[] }) {
+  const visibleRows = rows.filter((row) => row.totalTakes > 0 || row.current).slice(0, 6);
+  if (!visibleRows.length) return null;
+  const totalRuns = visibleRows.length;
+  const totalTakes = visibleRows.reduce((total, row) => total + row.totalTakes, 0);
+  return (
+    <section className="prompt-run-comparison" aria-label="Prompt search run comparison">
+      <div>
+        <strong>Run comparison</strong>
+        <span>{totalRuns} run{totalRuns === 1 ? "" : "s"} · {totalTakes} take{totalTakes === 1 ? "" : "s"}</span>
+      </div>
+      {visibleRows.map((row) => (
+        <article key={row.bundleId} className={row.current ? "current" : ""}>
+          <div>
+            <strong>{row.label}</strong>
+            <span>{row.keeper}K · {row.maybe}M · {row.rejected}R</span>
+          </div>
+          <small>{promptRunMeta(row)}</small>
+          <p>{row.prompts.slice(0, 2).join(" / ") || "no generated prompts yet"}</p>
+        </article>
+      ))}
+    </section>
   );
 }
 
@@ -437,6 +485,92 @@ export function promptDecisionMemoryRows(artifacts: ArtifactRecord[]): PromptDec
   );
 }
 
+export function promptSearchRunComparisonRows(
+  currentBundle: ArtifactRecord,
+  artifacts: ArtifactRecord[],
+  summary?: Record<string, unknown>,
+): PromptSearchRunComparisonRow[] {
+  const bundles = new Map<string, ArtifactRecord>();
+  for (const artifact of artifacts) {
+    if (artifact.kind === "bundle") bundles.set(artifact.artifact_id, artifact);
+  }
+  bundles.set(currentBundle.artifact_id, currentBundle);
+
+  const rowsByBundle = new Map<string, PromptSearchRunComparisonRow>();
+  const ensureRow = (bundleId: string): PromptSearchRunComparisonRow => {
+    const existing = rowsByBundle.get(bundleId);
+    if (existing) return existing;
+    const bundle = bundles.get(bundleId);
+    const row: PromptSearchRunComparisonRow = {
+      bundleId,
+      label: bundle ? artifactName(bundle) : `prompt run ${shortArtifactId(bundleId)}`,
+      current: bundleId === currentBundle.artifact_id,
+      totalTakes: 0,
+      listened: 0,
+      keeper: 0,
+      maybe: 0,
+      rejected: 0,
+      undecided: 0,
+      promptCount: 0,
+      prompts: [],
+      latestAt: bundle?.created_at ?? "",
+      latestArtifactId: undefined,
+      latestNote: null,
+    };
+    rowsByBundle.set(bundleId, row);
+    return row;
+  };
+
+  const currentRow = ensureRow(currentBundle.artifact_id);
+  const promptSearch = objectValue(summary?.prompt_search);
+  if (promptSearch) {
+    currentRow.scorer = currentRow.scorer ?? stringValue(promptSearch.scorer);
+    currentRow.searchMode = currentRow.searchMode ?? stringValue(promptSearch.search_mode);
+    currentRow.model = currentRow.model ?? stringValue(promptSearch.model);
+    currentRow.durationSeconds = currentRow.durationSeconds ?? numberValue(promptSearch.duration_seconds);
+    const selectedPrompt = stringValue(promptSearch.prompt);
+    if (selectedPrompt && !currentRow.prompts.includes(selectedPrompt)) currentRow.prompts.push(selectedPrompt);
+  }
+
+  for (const take of sortNewest(artifacts)) {
+    if (!isPromptGeneratedTake(take)) continue;
+    const bundleId = promptSearchBundleId(take);
+    if (!bundleId) continue;
+    const row = ensureRow(bundleId);
+    const decision = listeningDecision(take);
+    const prompt = take.prompt?.trim();
+    row.totalTakes += 1;
+    if (decision) row.listened += 1;
+    if (decision === "keeper") row.keeper += 1;
+    if (decision === "maybe") row.maybe += 1;
+    if (decision === "rejected") row.rejected += 1;
+    if (!decision) row.undecided += 1;
+    if (prompt && !row.prompts.includes(prompt)) row.prompts.push(prompt);
+    row.promptCount = row.prompts.length;
+    row.scorer = row.scorer ?? stringValue(take.metadata.prompt_search_scorer);
+    row.searchMode = row.searchMode ?? stringValue(take.metadata.prompt_search_mode);
+    row.model = row.model ?? stringValue(take.metadata.prompt_search_model);
+    row.durationSeconds = row.durationSeconds ?? numberValue(take.metadata.prompt_search_duration_seconds);
+    if (!row.latestAt || Date.parse(take.created_at) >= Date.parse(row.latestAt)) {
+      row.latestAt = take.created_at;
+      row.latestArtifactId = take.artifact_id;
+      row.latestNote = listeningDecisionNote(take);
+    }
+  }
+
+  for (const row of rowsByBundle.values()) {
+    row.promptCount = row.prompts.length;
+  }
+
+  return [...rowsByBundle.values()].sort((a, b) =>
+    Number(b.current) - Number(a.current)
+    || b.keeper - a.keeper
+    || b.listened - a.listened
+    || b.totalTakes - a.totalTakes
+    || Date.parse(b.latestAt || "1970-01-01") - Date.parse(a.latestAt || "1970-01-01"),
+  );
+}
+
 export function promptCandidateMeta(candidate: { rank?: number; source?: string; score?: unknown }) {
   const parts = [
     candidate.rank !== undefined ? `#${candidate.rank}` : "",
@@ -506,6 +640,22 @@ function descriptorDeltaTone(key: string, value: number): DescriptorDeltaRow["to
 function formatMaybeNumber(value: unknown) {
   if (typeof value !== "number" || !Number.isFinite(value)) return value === undefined ? "" : String(value);
   return Number.isInteger(value) ? String(value) : value.toFixed(3).replace(/0+$/, "").replace(/\.$/, "");
+}
+
+function promptRunMeta(row: PromptSearchRunComparisonRow): string {
+  const parts = [
+    row.searchMode,
+    row.scorer,
+    row.model,
+    row.durationSeconds !== undefined ? `${formatMaybeNumber(row.durationSeconds)}s` : "",
+    row.promptCount ? `${row.promptCount} prompt${row.promptCount === 1 ? "" : "s"}` : "",
+    row.listened ? `${row.listened}/${row.totalTakes} listened` : `${row.totalTakes} take${row.totalTakes === 1 ? "" : "s"}`,
+  ].filter(Boolean);
+  return parts.join(" · ");
+}
+
+function shortArtifactId(value: string): string {
+  return value.length <= 8 ? value : value.slice(-8);
 }
 
 function objectValue(value: unknown): Record<string, unknown> | null {
