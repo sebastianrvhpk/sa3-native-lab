@@ -171,6 +171,42 @@ describe("recipe form model", () => {
     });
     expect(fillMissingFieldDefaults(config, { top_k: 3 })).toEqual({ top_k: 3, metric: "cosine" });
   });
+
+  it("lets backend specs promote generic path fields into artifact pickers", () => {
+    const config = withOperatorSpecFields(
+      {
+        value: "experiment.alpha_sweep",
+        backend: "torch_mps",
+        fields: [{ key: "vectors_path", label: "Vectors", type: "path" }],
+      } satisfies ExperimentPayloadConfig<"experiment.alpha_sweep">,
+      operatorSpec("experiment.alpha_sweep", [
+        {
+          key: "vectors_path",
+          label: "Vectors Path",
+          type: "artifact-path",
+          default: undefined,
+          required: true,
+          advanced: false,
+          min: null,
+          max: null,
+          step: null,
+          options: [],
+          artifact_kinds: ["bundle"],
+          placeholder: null,
+          description: "Bundle artifact containing reusable steering vectors.",
+        },
+      ]),
+    );
+
+    expect(config.fields[0]).toMatchObject({
+      key: "vectors_path",
+      label: "Vectors",
+      type: "artifact-path",
+      required: true,
+      artifactKinds: ["bundle"],
+      description: "Bundle artifact containing reusable steering vectors.",
+    });
+  });
 });
 
 function artifact(kind: ArtifactRecord["kind"]): ArtifactRecord {

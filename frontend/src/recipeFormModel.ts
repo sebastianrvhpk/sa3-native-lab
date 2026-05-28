@@ -21,6 +21,7 @@ export interface RecipeField {
   options?: readonly { value: string; label: string }[];
   artifactKinds?: readonly ArtifactRecord["kind"][];
   placeholder?: string;
+  description?: string;
 }
 
 export interface FieldConfig {
@@ -243,8 +244,10 @@ function mergeRecipeField(field: RecipeField, specField: OperatorFieldSpec): Rec
     max: converted.max ?? field.max,
     step: converted.step ?? field.step,
     options: converted.options?.length ? converted.options : field.options,
-    artifactKinds: field.artifactKinds ?? converted.artifactKinds,
+    artifactKinds: converted.artifactKinds?.length ? converted.artifactKinds : field.artifactKinds,
     placeholder: field.placeholder ?? converted.placeholder,
+    description: field.description ?? converted.description,
+    type: convergedFieldType(field, converted),
   };
 }
 
@@ -262,7 +265,15 @@ function recipeFieldFromSpec(field: OperatorFieldSpec): RecipeField {
     options: field.options.map((option) => ({ value: option.value, label: option.label ?? option.value })),
     artifactKinds: field.artifact_kinds.filter(isArtifactKind),
     placeholder: field.placeholder ?? undefined,
+    description: field.description ?? undefined,
   };
+}
+
+function convergedFieldType(field: RecipeField, converted: RecipeField): RecipeFieldType {
+  if (converted.type === "artifact-path") return "artifact-path";
+  if (field.type === "text" && converted.type !== "text") return converted.type;
+  if (field.type === "path" && converted.type === "select") return converted.type;
+  return field.type;
 }
 
 function recipeFieldTypeFromSpec(type: string): RecipeFieldType {

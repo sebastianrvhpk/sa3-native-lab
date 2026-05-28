@@ -110,7 +110,7 @@ function RecipeFieldControl({
 }: RecipeFieldControlProps) {
   if (field.type === "checkbox") {
     return (
-      <AriaCheckbox className="field-checkbox aria-checkbox" isSelected={Boolean(value)} onChange={onChange}>
+      <AriaCheckbox className="field-checkbox aria-checkbox" title={field.description} isSelected={Boolean(value)} onChange={onChange}>
         <span className="checkbox-box" />
         <span>{field.label}</span>
         <FieldError error={error} />
@@ -120,7 +120,7 @@ function RecipeFieldControl({
 
   if (field.type === "select") {
     return (
-      <label className="control-cell">
+      <label className="control-cell" title={field.description}>
         {field.label}
         <select value={String(value ?? "")} onChange={(event) => onChange(event.target.value)}>
           {field.options?.map((option) => (
@@ -138,6 +138,7 @@ function RecipeFieldControl({
     return (
       <AriaNumberField
         className="control-cell"
+        title={field.description}
         minValue={field.min}
         maxValue={field.max}
         step={field.step}
@@ -156,6 +157,7 @@ function RecipeFieldControl({
     return (
       <AriaSlider
         className="control-cell range-field aria-range-field"
+        title={field.description}
         minValue={field.min}
         maxValue={field.max}
         step={field.step ?? 0.01}
@@ -189,7 +191,7 @@ function RecipeFieldControl({
     const selectedCandidate =
       selectedArtifact && (!field.artifactKinds?.length || field.artifactKinds.includes(selectedArtifact.kind)) ? selectedArtifact : null;
     return (
-      <AriaTextField className="control-cell path-field" value={String(value ?? "")} onChange={onChange}>
+      <AriaTextField className="control-cell path-field" title={field.description} value={String(value ?? "")} onChange={onChange}>
         <AriaLabel>{field.label}</AriaLabel>
         <AriaInput placeholder={field.placeholder} />
         <div className="path-actions">
@@ -216,7 +218,7 @@ function RecipeFieldControl({
   }
 
   return (
-    <AriaTextField className="control-cell" value={String(value ?? "")} onChange={onChange}>
+    <AriaTextField className="control-cell" title={field.description} value={String(value ?? "")} onChange={onChange}>
       <AriaLabel>{field.label}</AriaLabel>
       <AriaInput placeholder={field.placeholder} />
       <FieldError error={error} />
