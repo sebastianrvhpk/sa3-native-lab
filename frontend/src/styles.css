@@ -842,6 +842,42 @@ dd {
   justify-content: end;
 }
 
+.artifact-vitals {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  padding: 9px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgb(255 255 255 / 0.56), rgb(85 198 199 / 0.08)),
+    rgb(255 255 255 / 0.36);
+}
+
+.artifact-vitals span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.artifact-vitals small,
+.artifact-vitals strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.artifact-vitals small {
+  color: var(--quiet);
+  font-size: 0.62rem;
+  text-transform: uppercase;
+}
+
+.artifact-vitals strong {
+  color: var(--ink);
+  font-size: 0.76rem;
+}
+
 .annotation-panel {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -2331,6 +2367,28 @@ audio {
   font-size: 0.74rem;
 }
 
+.sweep-sort-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.sweep-sort-controls button {
+  width: auto;
+  min-height: 26px;
+  padding: 0 8px;
+  border-radius: 999px;
+  box-shadow: none;
+  background: rgb(255 255 255 / 0.5);
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
+.sweep-sort-controls button.active {
+  color: var(--ink);
+  background: linear-gradient(135deg, rgb(201 238 72 / 0.24), rgb(85 198 199 / 0.16));
+}
+
 .sweep-family-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
@@ -2342,6 +2400,13 @@ audio {
   border-radius: 7px;
   background: rgb(255 255 255 / 0.48);
   overflow: hidden;
+}
+
+.sweep-family-grid article.promoted,
+.sweep-metric-row.promoted {
+  background:
+    linear-gradient(135deg, rgb(201 238 72 / 0.2), rgb(85 198 199 / 0.13), rgb(234 74 162 / 0.08)),
+    rgb(255 255 255 / 0.58);
 }
 
 .sweep-main {
@@ -2372,6 +2437,17 @@ audio {
 .sweep-main small {
   color: var(--muted);
   font-size: 0.66rem;
+}
+
+.sweep-main i {
+  justify-self: start;
+  border: 1px solid rgb(45 51 52 / 0.16);
+  border-radius: 999px;
+  padding: 1px 6px;
+  color: var(--green);
+  background: rgb(201 238 72 / 0.16);
+  font-size: 0.62rem;
+  font-style: normal;
 }
 
 .sweep-actions {
@@ -2405,7 +2481,7 @@ audio {
 .sweep-metric-row {
   width: 100%;
   display: grid;
-  grid-template-columns: 52px minmax(0, 1fr) repeat(4, minmax(54px, max-content));
+  grid-template-columns: 52px minmax(0, 1fr) repeat(3, minmax(54px, max-content)) minmax(58px, max-content) minmax(64px, max-content);
   align-items: center;
   gap: 7px;
   border: 0;
@@ -2433,6 +2509,36 @@ audio {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.sweep-metric-row > button {
+  min-width: 0;
+  min-height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sweep-table-actions {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.sweep-table-actions button {
+  width: 26px;
+  min-height: 24px;
+  padding: 0;
+  border-radius: 5px;
+  box-shadow: none;
+  font-size: 0.66rem;
+  background: rgb(255 255 255 / 0.56);
 }
 
 .family-artifact {

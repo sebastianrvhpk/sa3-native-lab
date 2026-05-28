@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { Gauge, GitFork, Repeat, Search } from "lucide-react";
 
 import { ArtifactIcon } from "./artifactDisplay";
@@ -206,18 +207,37 @@ function SweepFamilyBand({
   onCompare: (slot: "a" | "b", artifactId: string | null) => void;
   onForkRecipe: () => void;
 }) {
+  const metricKeys = sweepMetricKeys(entries);
+  const primaryMetric = metricKeys[0] ?? null;
+  const [sortKey, setSortKey] = useState<SweepSortKey>("alpha");
+  const sortedEntries = useMemo(() => sortSweepEntries(entries, sortKey, primaryMetric), [entries, sortKey, primaryMetric]);
+  const bestArtifactId = primaryMetric ? bestSweepEntry(entries, primaryMetric)?.artifact.artifact_id ?? null : null;
   return (
     <div className="sweep-family-band" aria-label="Alpha sweep variants">
       <div className="sweep-family-head">
         <span>Alpha Sweep</span>
         <strong>{entries.length} variants</strong>
       </div>
+      <div className="sweep-sort-controls" aria-label="Sort sweep variants">
+        <button type="button" className={sortKey === "alpha" ? "active" : ""} onClick={() => setSortKey("alpha")}>
+          alpha
+        </button>
+        {primaryMetric ? (
+          <button type="button" className={sortKey === "metric" ? "active" : ""} onClick={() => setSortKey("metric")}>
+            {prettyParamName(primaryMetric)}
+          </button>
+        ) : null}
+        <button type="button" className={sortKey === "duration" ? "active" : ""} onClick={() => setSortKey("duration")}>
+          duration
+        </button>
+      </div>
       <div className="sweep-family-grid">
-        {entries.map((entry) => (
-          <article key={entry.artifact.artifact_id}>
+        {sortedEntries.map((entry) => (
+          <article key={entry.artifact.artifact_id} className={entry.artifact.artifact_id === bestArtifactId ? "promoted" : ""}>
             <button type="button" className="sweep-main" onClick={() => onSelect(entry.artifact.artifact_id)} title={artifactName(entry.artifact)}>
               <span>{entry.label}</span>
               <small>{artifactMeta(entry.artifact)}</small>
+              {entry.artifact.artifact_id === bestArtifactId ? <i>best</i> : null}
             </button>
             <div className="sweep-actions">
               <button type="button" onClick={() => onCompare("a", entry.artifact.artifact_id)} title="Promote this sweep variant to A">
@@ -233,12 +253,22 @@ function SweepFamilyBand({
           </article>
         ))}
       </div>
-      <SweepMetricTable entries={entries} onSelect={onSelect} />
+      <SweepMetricTable entries={sortedEntries} bestArtifactId={bestArtifactId} onSelect={onSelect} onCompare={onCompare} />
     </div>
   );
 }
 
-function SweepMetricTable({ entries, onSelect }: { entries: SweepEntry[]; onSelect: (artifactId: string | null) => void }) {
+function SweepMetricTable({
+  entries,
+  bestArtifactId,
+  onSelect,
+  onCompare,
+}: {
+  entries: SweepEntry[];
+  bestArtifactId: string | null;
+  onSelect: (artifactId: string | null) => void;
+  onCompare: (slot: "a" | "b", artifactId: string | null) => void;
+}) {
   const metricKeys = sweepMetricKeys(entries);
   return (
     <div className="sweep-metric-table" aria-label="Alpha sweep metric table">
@@ -249,16 +279,27 @@ function SweepMetricTable({ entries, onSelect }: { entries: SweepEntry[]; onSele
           <span key={key}>{prettyParamName(key)}</span>
         ))}
         <span>duration</span>
+        <span>promote</span>
       </div>
       {entries.map((entry) => (
-        <button key={entry.artifact.artifact_id} type="button" className="sweep-metric-row" onClick={() => onSelect(entry.artifact.artifact_id)}>
+        <div key={entry.artifact.artifact_id} className={`sweep-metric-row ${entry.artifact.artifact_id === bestArtifactId ? "promoted" : ""}`}>
           <span>{entry.alpha === null ? "n/a" : formatAlpha(entry.alpha)}</span>
-          <span>{artifactName(entry.artifact)}</span>
+          <button type="button" onClick={() => onSelect(entry.artifact.artifact_id)} title="Select sweep artifact">
+            {artifactName(entry.artifact)}
+          </button>
           {metricKeys.map((key) => (
             <span key={key}>{formatMetricValue(entry.metrics[key])}</span>
           ))}
           <span>{entry.artifact.audio ? `${formatMetricValue(entry.artifact.audio.duration_seconds)}s` : "n/a"}</span>
-        </button>
+          <span className="sweep-table-actions">
+            <button type="button" onClick={() => onCompare("a", entry.artifact.artifact_id)} title="Promote to A">
+              A
+            </button>
+            <button type="button" onClick={() => onCompare("b", entry.artifact.artifact_id)} title="Promote to B">
+              B
+            </button>
+          </span>
+        </div>
       ))}
     </div>
   );
@@ -291,6 +332,8 @@ interface SweepEntry {
   metrics: Record<string, number | string>;
 }
 
+type SweepSortKey = "alpha" | "metric" | "duration";
+
 function buildSweepEntries(family: ResultFamily, artifacts: ArtifactRecord[]): SweepEntry[] {
   if (family.operator !== "experiment.alpha_sweep") return [];
   const recipeAlphas = parseAlphaList(family.recipe.params.alphas);
@@ -311,6 +354,43 @@ function buildSweepEntries(family: ResultFamily, artifacts: ArtifactRecord[]): S
       if (right.alpha === null) return -1;
       return left.alpha - right.alpha;
     });
+}
+
+function sortSweepEntries(entries: SweepEntry[], sortKey: SweepSortKey, metricKey: string | null): SweepEntry[] {
+  return [...entries].sort((left, right) => {
+    if (sortKey === "metric" && metricKey) {
+      return compareMetricValues(left.metrics[metricKey], right.metrics[metricKey], metricHigherIsBetter(metricKey));
+    }
+    if (sortKey === "duration") {
+      return (right.artifact.audio?.duration_seconds ?? -1) - (left.artifact.audio?.duration_seconds ?? -1);
+    }
+    return compareAlpha(left, right);
+  });
+}
+
+function bestSweepEntry(entries: SweepEntry[], metricKey: string): SweepEntry | null {
+  const sorted = sortSweepEntries(entries.filter((entry) => entry.metrics[metricKey] !== undefined), "metric", metricKey);
+  return sorted[0] ?? null;
+}
+
+function compareMetricValues(left: unknown, right: unknown, higherIsBetter: boolean) {
+  const leftNumber = typeof left === "number" && Number.isFinite(left) ? left : null;
+  const rightNumber = typeof right === "number" && Number.isFinite(right) ? right : null;
+  if (leftNumber === null && rightNumber === null) return 0;
+  if (leftNumber === null) return 1;
+  if (rightNumber === null) return -1;
+  return higherIsBetter ? rightNumber - leftNumber : leftNumber - rightNumber;
+}
+
+function metricHigherIsBetter(key: string) {
+  return !/(loss|distance|error|wer|mae|mse|rmse)/i.test(key);
+}
+
+function compareAlpha(left: SweepEntry, right: SweepEntry) {
+  if (left.alpha === null && right.alpha === null) return left.artifact.created_at.localeCompare(right.artifact.created_at);
+  if (left.alpha === null) return 1;
+  if (right.alpha === null) return -1;
+  return left.alpha - right.alpha;
 }
 
 function artifactSweepMetrics(artifact: ArtifactRecord): Record<string, number | string> {

@@ -40,11 +40,16 @@ describe("FamilyDetailPanel", () => {
     expect(screen.getByText("alpha -4")).toBeInTheDocument();
     expect(screen.getByText("alpha +4")).toBeInTheDocument();
     expect(screen.getByText("0.32")).toBeInTheDocument();
+    expect(screen.getByText("best")).toBeInTheDocument();
 
     const negativeVariant = screen.getByText("alpha -4").closest("article");
     expect(negativeVariant).not.toBeNull();
     await user.click(within(negativeVariant as HTMLElement).getByRole("button", { name: "A" }));
     await user.click(within(negativeVariant as HTMLElement).getByTitle("Fork the sweep recipe"));
+    await user.click(within(screen.getByLabelText("Sort sweep variants")).getByRole("button", { name: "score" }));
+
+    const tableRows = within(screen.getByLabelText("Alpha sweep metric table")).getAllByTitle("Select sweep artifact");
+    expect(tableRows[0]).toHaveTextContent("alpha_pos4p00");
 
     expect(onCompare).toHaveBeenCalledWith("a", "art_neg");
     expect(onForkRecipe).toHaveBeenCalledWith(family.recipe);

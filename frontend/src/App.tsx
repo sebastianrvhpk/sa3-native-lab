@@ -30,7 +30,7 @@ import {
 import modelImage from "../../stable-audio-3.png";
 import { createApi, type ArtifactAnnotationPayload, type ExperimentPayload, type RecipeForkPayload } from "./api";
 import { ArtifactBadge, ArtifactIcon } from "./artifactDisplay";
-import { artifactMeta, artifactName, artifactShape, sortNewest, sortNewestJobs } from "./artifactUtils";
+import { artifactMeta, artifactName, artifactShape, formatDuration, sortNewest, sortNewestJobs } from "./artifactUtils";
 import { AudioDeck, TinyWave } from "./audioDeck";
 import { BundleField } from "./bundleInspector";
 import { createControlPlaneClient, DEFAULT_CONTROL_PLANE_URL, type ResultFamily, type WorkbenchState } from "./controlPlane";
@@ -1561,10 +1561,60 @@ function Specimen({
             <Download size={17} />
           </a>
         </div>
+        <ArtifactVitals artifact={artifact} />
         <ArtifactAnnotationPanel artifact={artifact} saving={annotating} onSave={onAnnotate} />
       </div>
     </div>
   );
+}
+
+function ArtifactVitals({ artifact }: { artifact: ArtifactRecord }) {
+  const rows = artifactVitalRows(artifact);
+  if (!rows.length) return null;
+  return (
+    <div className={`artifact-vitals ${artifact.kind}`} aria-label="Artifact inspector">
+      {rows.map(([label, value]) => (
+        <span key={label}>
+          <small>{label}</small>
+          <strong>{value}</strong>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function artifactVitalRows(artifact: ArtifactRecord): [string, string][] {
+  if (artifact.kind === "audio" && artifact.audio) {
+    return [
+      ["duration", artifact.audio.duration_seconds ? formatDuration(artifact.audio.duration_seconds) : "unknown"],
+      ["rate", `${artifact.audio.sample_rate} Hz`],
+      ["channels", String(artifact.audio.channels)],
+      ["frames", artifact.audio.frames.toLocaleString()],
+    ];
+  }
+  if (artifact.kind === "latent" && artifact.latent) {
+    return [
+      ["shape", artifact.latent.shape.join(" x ")],
+      ["latent rate", `${artifact.latent.latent_rate.toFixed(2)} Hz`],
+      ["duration", artifact.latent.duration_seconds ? formatDuration(artifact.latent.duration_seconds) : "unknown"],
+      ["layout", artifact.latent.channel_first ? "channel-first" : "time-first"],
+    ];
+  }
+  if (artifact.kind === "bundle") {
+    const operator = typeof artifact.metadata.operator === "string" ? artifact.metadata.operator : "bundle";
+    const resultCount = typeof artifact.metadata.result_count === "number" ? String(artifact.metadata.result_count) : null;
+    return [
+      ["kind", "bundle"],
+      ["size", artifact.file ? artifactMeta(artifact).replace(" bundle", "") : "unknown"],
+      ["operator", shortOperatorName(operator as OperatorName)],
+      ["results", resultCount ?? "inspect"],
+    ];
+  }
+  return [
+    ["kind", artifact.kind],
+    ["sources", String(artifact.source_artifact_ids.length)],
+    ["recipe", artifact.recipe_id ?? "source"],
+  ];
 }
 
 function ArtifactAnnotationPanel({
