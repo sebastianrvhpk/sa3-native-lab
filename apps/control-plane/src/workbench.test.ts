@@ -167,7 +167,7 @@ test("pollJobEvents emits heartbeats and resumes monotonic ids", async () => {
   };
 
   const events = [];
-  for await (const event of pollJobEvents(client, { jobId: "job_running", intervalMs: 1, heartbeatEveryMs: 1, lastEventId: "job_running:7" })) {
+  for await (const event of pollJobEvents(client, { jobId: "job_running", intervalMs: 10, heartbeatEveryMs: 1, lastEventId: "job_running:7" })) {
     events.push(event);
   }
 
