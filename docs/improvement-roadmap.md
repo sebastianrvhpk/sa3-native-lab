@@ -8,27 +8,28 @@ For the broader stack direction and promotion triggers, see
 
 ## P0: Trust And Runability
 
-1. Add typed job-event streaming.
-   Cancellation and retry now exist. The next trust step is a typed stream for
-   progress, stderr tails, cancellation acknowledgement, and reconnect/resume.
+1. Harden live job-event transport.
+   Typed Python WebSocket events now update the UI. The next trust step is
+   reconnect/resume semantics, stderr tails, and a tRPC subscription bridge.
 
 2. Improve error surfacing.
    Job failures should show command, stderr tail, missing file paths, model
    auth hints, and suggested next action instead of only a failed status.
 
-3. Add explicit environment readiness checks.
-   The API should report Hugging Face auth, Medium MLX weights, SAME-L weights,
-   PyTorch MPS availability, and missing optional extras as actionable checks.
+3. Deepen environment readiness checks.
+   `/readiness` now reports artifact root, HF auth, Medium MLX weights, SAME-L
+   access, and backend availability. Next checks should cover exact HF license
+   acceptance, disk space, model cache paths, and optional extras.
 
-4. Add fork-with-changes forms.
-   Recipe replay/fork endpoints exist. The UI still needs "copy params from
-   artifact", edit them inline, and submit the changed recipe as a new branch.
+4. Tighten fork-with-changes forms.
+   The UI can fork recipe params, backend, model, seed, and notes. Next it
+   should derive bounds from operator specs and show recipe deltas before submit.
 
 ## P1: Exploration Speed
 
 1. Deepen result-family views for sweeps.
-   Recipe families now appear as grouped records. Next they need per-result
-   playback, A/B promotion, metrics, and recipe deltas.
+   Recipe families now appear with metrics and latest artifacts. Next they need
+   per-result playback, A/B promotion, metric tables, and recipe deltas.
 
 2. Presets for Operator Studio.
    Store named parameter sets for blur, DSP, graft, renoise, and cyclic roll.
@@ -40,9 +41,9 @@ For the broader stack direction and promotion triggers, see
    should cover kind, model, operator, date, status, and source lineage.
 
 4. Better bundle readers.
-   Bundle file inventory now exists. Vector/profile/soft-prompt bundles should
-   also expose metadata, dimensions, plots, generated audio children, and reuse
-   actions without making the user inspect zip contents.
+   Bundle file inventory and JSON previews now exist. Vector/profile/soft-prompt
+   bundles should also expose dimensions, plots, generated audio children, and
+   reuse actions without making the user inspect zip contents.
 
 ## P2: Research Cognition
 
@@ -82,8 +83,8 @@ For the broader stack direction and promotion triggers, see
 
 1. Move more app-shaped actions into tRPC.
    `workbench.load`, job lifecycle, recipe replay/fork, artifact inspection, and
-   family reads now exist. Next should be live job events, richer fork forms,
-   and archive mutations as the normal UI path. Keep the Python worker as the
+   family reads now exist. Next should be a job-event subscription bridge and
+   archive mutations as the normal UI path. Keep the Python worker as the
    model/runtime owner.
 
 2. Generate frontend schemas from backend operator specs.

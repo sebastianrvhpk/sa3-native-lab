@@ -37,6 +37,7 @@ SAME encode/decode, latent operators, and Colab-style script adapters.
 Important endpoints:
 
 - `GET /health`
+- `GET /readiness`
 - `GET /operators/specs`
 - `GET /colab/modes`
 - `GET /artifacts/{artifact_id}/inspect`
@@ -57,17 +58,18 @@ The React app in `frontend/` is the working interface. It supports artifact
 selection, waveform inspection, audio playback, A/B comparison, MLX generation,
 SAME encode/decode, latent-operator runs, Recipe Studio, Mode Atlas, and job
 polling. The bench also has a Run Monitor that surfaces active jobs, percent
-progress, elapsed time, cancellation, retry, and the latest backend message near
-the controls that started the work. Selected artifacts can be labeled, tagged,
-annotated, replayed from their recipe, and searched later from the archive.
+progress, live event snapshots, elapsed time, cancellation, retry, and the
+latest backend message near the controls that started the work. Selected
+artifacts can be labeled, tagged, annotated, replayed from their recipe, and
+searched later from the archive.
 
 Read-heavy workbench state can now be loaded through the TypeScript tRPC
 control plane. This is enabled by setting `VITE_SA3_CONTROL_PLANE_URL` or by
 running `uv run sa3-lab dev --with-control-plane`. The control plane currently
-shapes sessions, artifacts, jobs, result families, health, operator specs, and
-mode atlas data. It also exposes job lifecycle, recipe replay/fork, artifact
-inspection, family loading, and archive procedures while the Python worker keeps
-owning model execution and artifact file IO.
+shapes sessions, artifacts, jobs, result families, health, readiness, operator
+specs, and mode atlas data. It also exposes job lifecycle, recipe replay/fork,
+artifact inspection, family loading, and archive procedures while the Python
+worker keeps owning model execution and artifact file IO.
 
 ### Operator Studio
 
@@ -101,8 +103,9 @@ Every run records a `Recipe` and `JobRecord` so results can be traced back to
 operator, backend, inputs, params, model, seed, logs, and source artifacts.
 Artifacts can also carry user labels, notes, and tags for archive search.
 Bundle artifacts can be inspected through the API and UI to reveal their file
-inventory, recipe, source artifacts, and child artifacts. Jobs and artifacts
-with the same recipe are grouped as result families in the right rail.
+inventory, parsed preview metadata, recipe, source artifacts, and child
+artifacts. Jobs and artifacts with the same recipe are grouped as result
+families in the right rail with run metrics when the job reports them.
 
 ## Runtime Assumptions
 
@@ -110,6 +113,8 @@ with the same recipe are grouped as result families in the right rail.
 - The PyTorch path uses `torch_mps` where possible and falls back where code
   supports CPU.
 - Hugging Face auth is needed for gated Stability AI weights.
+- `/readiness` reports artifact-root writability, backend availability, HF auth,
+  Medium MLX weight presence, and SAME-L download readiness.
 - Long jobs such as LoRA training are submitted as background jobs and can be
   cancelled from the app, although true resumable multi-step workflows are still
   future work.
@@ -126,19 +131,21 @@ Confirmed in the current codebase:
   artifacts.
 - Artifact annotation and archive search are implemented for labels, notes, and
   tags.
-- tRPC workbench, job lifecycle, recipe replay/fork, artifact inspection, and
-  result-family procedures are implemented behind the control-plane launch flag.
+- tRPC workbench, readiness, job lifecycle, recipe replay/fork, artifact
+  inspection, and result-family procedures are implemented behind the
+  control-plane launch flag.
+- The frontend has live job-event snapshots, a readiness panel, a recipe fork
+  editor, result-family metrics, and bundle previews.
 - The frontend builds and the Python test suite passes locally.
 
 Still partial:
 
 - Some Colab modes are mapped but not yet first-class native interactions.
-- Bundle artifacts now expose file inventory, but type-specific readers for
-  profiles, vectors, soft prompts, training outputs, and memory query results
-  are still needed.
-- Memory-query results are real artifacts, but need a richer inspector and reuse
-  flow.
-- Multi-output sweeps have a first family grouping, but still need per-result
-  playback, metric tables, and recipe deltas.
-- tRPC does not yet own live job-event streaming or fork-with-edited-params
-  forms in the frontend.
+- Type-specific readers for profiles, vectors, soft prompts, training outputs,
+  and memory collections are still shallow.
+- Memory-query bundles expose preview rows, but still need preview playback and
+  reuse as donors/style references.
+- Multi-output sweeps have family grouping and metrics, but still need
+  per-result playback, promotion, and recipe deltas.
+- Live job events currently come from the Python WebSocket path; tRPC does not
+  yet own subscription transport.

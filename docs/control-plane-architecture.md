@@ -28,6 +28,7 @@ Python runtime data and shapes it into the state the instrument actually needs:
 - sessions and active session
 - session artifacts and archive artifacts
 - session jobs, archive jobs, running jobs, latest job
+- result families and latest family metrics
 - mode atlas and operator specs
 - selected artifact fallback
 - artifact/job/mode counts
@@ -37,11 +38,12 @@ readiness logic out of React and into a testable app contract.
 
 The React frontend now has a feature-flagged tRPC client. When
 `VITE_SA3_CONTROL_PLANE_URL` is set, read-heavy workbench state comes from
-`workbench.load`. Job lifecycle, recipe replay/fork, artifact inspection, and
-family reads are also exposed as app-shaped tRPC procedures. Model execution
-and artifact file IO still belong to the Python worker. When the env var is
-absent, the frontend falls back to the existing direct Python read queries and
-Python mutations.
+`workbench.load`. System readiness, job lifecycle, recipe replay/fork, artifact
+inspection, and family reads are also exposed as app-shaped tRPC procedures.
+Model execution and artifact file IO still belong to the Python worker. Live
+job snapshots currently use the Python WebSocket endpoint directly. When the env
+var is absent, the frontend falls back to the existing direct Python read
+queries and Python mutations.
 
 The local runner can launch the full path:
 
@@ -53,10 +55,11 @@ uv run sa3-lab dev --with-control-plane
 
 | Router | Procedure | Purpose |
 | --- | --- | --- |
+| `system` | `readiness` | Report app/runtime readiness checks from the Python worker. |
 | `workbench` | `load` | Build UI-ready workbench state from Python runtime records. |
 | `jobs` | `list`, `get`, `cancel`, `retry` | App-level lifecycle actions over Python background jobs. |
 | `recipes` | `replay`, `fork` | Re-run or branch a persisted recipe without rebuilding payloads in React. |
-| `artifacts` | `inspect` | Fetch artifact, recipe, sources, children, and bundle file inventory. |
+| `artifacts` | `inspect` | Fetch artifact, recipe, sources, children, bundle file inventory, and safe previews. |
 | `families` | `load` | Return grouped recipe result families for the active workbench scope. |
 | `archive` | `search` | Search artifact annotations through the runtime worker. |
 | `archive` | `annotateAndSearch` | Update annotations, then return the refreshed matching archive slice. |
@@ -90,9 +93,9 @@ Future responsibilities:
 
 ## Next Control-Plane Queue
 
-1. Add typed job-event streaming for progress/log deltas and reconnect.
+1. Add a tRPC subscription bridge for job-event snapshots and reconnect.
 2. Promote archive annotation/search mutations to the normal UI path.
-3. Add fork-with-edited-params forms that call `recipes.fork`.
+3. Add bounded fork forms derived from operator specs.
 4. Add family-specific inspectors for sweeps, memory query bundles, and style
    profile bundles.
 5. Evaluate Postgres only after these procedures stabilize.

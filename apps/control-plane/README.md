@@ -34,6 +34,7 @@ job filtering, result-family grouping, and readiness summaries.
 
 The control plane also exposes:
 
+- `system.readiness`
 - `jobs.list/get/cancel/retry`
 - `recipes.replay/fork`
 - `artifacts.inspect`

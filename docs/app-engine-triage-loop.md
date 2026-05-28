@@ -38,6 +38,9 @@ source audio / prompt
 | P1 | Colab mode parity/status inventory | `/colab/modes` + Mode Atlas | Keep as triage map | API test, frontend build |
 | P1 | App-shaped tRPC workbench reads | `apps/control-plane` + feature-flagged frontend client | Promote carefully | control-plane tests, frontend build, `sa3-lab dev --with-control-plane` |
 | P1 | Typed recipe replay/fork, retry, cancellation | Python API + tRPC job/recipe routers + React actions | Promote | API tests, control-plane tests, frontend build |
+| P1 | Live job event snapshots | `/jobs/{id}/events` + React Query/live cache merge | Promote first slice | websocket API test, frontend build |
+| P1 | Runtime readiness checks | `/readiness` + `system.readiness` + readiness panel | Promote | API tests, control-plane tests, frontend tests |
+| P1 | Fork-with-edited-params UI | recipe-derived fork editor in result rail | Promote first slice | frontend tests/build |
 | P1 | Bundle inspection and result families | `/artifacts/{id}/inspect` + `families.load` + result rail | Promote first slice | API tests, control-plane tests, frontend tests |
 | P2 | Memory atlas and retrieval | `LatentMemoryIndex` + `memory.query` | Promote first slice | nearest-neighbor runtime test, frontend smoke |
 | P2 | Residual steering and prompt search | existing scripts/experiments | Defer | model-backed recipe tests |
@@ -53,9 +56,10 @@ source audio / prompt
 
 ## Immediate Next Queue
 
-1. Add typed job-event streaming so logs/progress update without polling.
-2. Add fork-with-changes forms from existing artifact recipes, not only replay.
-3. Add memory result inspectors and preview/reuse flows for query bundles.
+1. Add tRPC subscription transport or a small app-level event bridge over the
+   Python WebSocket stream.
+2. Add memory result preview/reuse flows for query bundles.
+3. Add per-result playback, promotion, and recipe deltas for sweep families.
 4. Add prompt-search recipe adapters for Colab Modes 2/3/5.
 5. Add geometry/control-head recipe adapters for Colab Modes 12/15.
 6. Add parameter presets and recipe diffing for Operator Studio.
