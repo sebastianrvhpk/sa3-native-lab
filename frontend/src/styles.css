@@ -1628,16 +1628,48 @@ audio {
 .job-progress-main,
 .job-progress-meta {
   display: grid;
-  grid-template-columns: 18px minmax(0, 1fr) max-content;
+  grid-template-columns: 18px minmax(0, 1fr) max-content max-content;
   align-items: center;
   gap: 8px;
 }
 
 .job-progress-main strong,
+.job-phase,
 .job-progress-meta span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.job-phase {
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  min-height: 22px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 8px;
+  color: var(--muted);
+  background: rgb(255 255 255 / 0.46);
+  font-size: 0.68rem;
+  font-style: normal;
+  font-weight: 680;
+}
+
+.job-phase.model {
+  color: var(--blue);
+  background: linear-gradient(135deg, rgb(85 198 199 / 0.18), rgb(143 91 210 / 0.12));
+}
+
+.job-phase.io,
+.job-phase.done {
+  color: var(--green);
+  background: linear-gradient(135deg, rgb(201 238 72 / 0.22), rgb(85 198 199 / 0.12));
+}
+
+.job-phase.failed,
+.job-phase.cancelled {
+  color: #7d2617;
+  background: rgb(245 145 96 / 0.16);
 }
 
 .job-progress-main em {
@@ -1648,7 +1680,7 @@ audio {
 }
 
 .job-progress-meta {
-  grid-template-columns: minmax(0, 1fr) max-content;
+  grid-template-columns: minmax(0, 1fr) max-content max-content;
   color: var(--muted);
   font-size: 0.74rem;
 }

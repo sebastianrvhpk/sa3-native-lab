@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { jobRecoveryHints } from "./jobProgress";
+import { jobPhase, jobRecoveryHints } from "./jobProgress";
 import type { JobRecord } from "./types";
 
 describe("job recovery hints", () => {
@@ -21,6 +21,17 @@ describe("job recovery hints", () => {
     expect(jobRecoveryHints(job({ status: "cancelled" }))).toEqual([
       { title: "Cancelled", detail: "The recipe is preserved; retry it when the current inputs are ready." },
     ]);
+  });
+
+  it("derives a readable running phase from the latest event text", () => {
+    expect(jobPhase(job({ status: "running", message: "sampling step 4/8", logs: ["loading model", "sampling step 4/8"] }))).toEqual({
+      label: "generating",
+      tone: "model",
+    });
+    expect(jobPhase(job({ status: "running", message: "writing bundle artifact" }))).toEqual({
+      label: "saving",
+      tone: "io",
+    });
   });
 });
 

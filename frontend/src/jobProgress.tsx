@@ -13,6 +13,11 @@ export interface JobRecoveryHint {
   detail: string;
 }
 
+export interface JobPhase {
+  label: string;
+  tone: "queued" | "running" | "io" | "model" | "done" | "failed" | "cancelled";
+}
+
 export function JobProgress({
   job,
   compact = false,
@@ -27,16 +32,19 @@ export function JobProgress({
   const canCancel = isJobActive(job) && Boolean(onCancelJob);
   const canRetry = (job.status === "failed" || job.status === "cancelled") && Boolean(onRetryJob);
   const statusMessage = job.message ?? latestUsefulLog(job) ?? job.status;
+  const phase = jobPhase(job);
   return (
     <div className={`job-progress ${job.status} ${compact ? "compact" : ""}`}>
       <div className="job-progress-main">
         <span>{isJobActive(job) ? <LoaderCircle className="spin" size={15} /> : <Gauge size={15} />}</span>
         <strong>{shortOperatorName(job.recipe.operator)}</strong>
+        <span className={`job-phase ${phase.tone}`}>{phase.label}</span>
         <em>{progressPercent(job)}%</em>
       </div>
       <ProgressTrack job={job} />
       <div className="job-progress-meta">
         <span>{statusMessage}</span>
+        <span>{artifactCountLabel(job)}</span>
         <span>{formatJobElapsed(job)}</span>
       </div>
       {compact && hints.length ? <RecoveryHints hints={hints.slice(0, 1)} /> : null}
@@ -71,6 +79,31 @@ export function JobProgress({
   );
 }
 
+export function jobPhase(job: JobRecord): JobPhase {
+  if (job.status === "queued") return { label: "queued", tone: "queued" };
+  if (job.status === "succeeded") return { label: "done", tone: "done" };
+  if (job.status === "failed") return { label: "failed", tone: "failed" };
+  if (job.status === "cancelled") return { label: "cancelled", tone: "cancelled" };
+
+  const text = [job.message, latestUsefulLog(job), ...job.logs.slice(-4)].filter(Boolean).join("\n").toLowerCase();
+  if (/(sample|sampling|generate|generating|denoise|step)/.test(text)) {
+    return { label: "generating", tone: "model" };
+  }
+  if (/(encode|embedding|latent|pre-encode|pre encode)/.test(text)) {
+    return { label: "encoding", tone: "model" };
+  }
+  if (/(decode|vocoder|same)/.test(text)) {
+    return { label: "decoding", tone: "model" };
+  }
+  if (/(download|weight|checkpoint|loading|load model|tokenizer|hugging ?face)/.test(text)) {
+    return { label: "loading", tone: "model" };
+  }
+  if (/(save|saving|write|writing|bundle|artifact|export)/.test(text)) {
+    return { label: "saving", tone: "io" };
+  }
+  return { label: "running", tone: "running" };
+}
+
 export function jobRecoveryHints(job: JobRecord): JobRecoveryHint[] {
   if (job.status === "cancelled") {
     return [{ title: "Cancelled", detail: "The recipe is preserved; retry it when the current inputs are ready." }];
@@ -98,6 +131,11 @@ export function jobRecoveryHints(job: JobRecord): JobRecoveryHint[] {
     hints.push({ title: "Review log tail", detail: "The recipe and parameters were saved; inspect the final log lines, then retry after correcting inputs." });
   }
   return dedupeHints(hints);
+}
+
+function artifactCountLabel(job: JobRecord) {
+  if (!job.artifact_ids.length) return "no artifacts yet";
+  return `${job.artifact_ids.length} artifact${job.artifact_ids.length === 1 ? "" : "s"}`;
 }
 
 function ProgressTrack({ job }: { job: JobRecord }) {
