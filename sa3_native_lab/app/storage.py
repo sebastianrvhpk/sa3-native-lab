@@ -11,11 +11,14 @@ from typing import Any, BinaryIO
 
 import numpy as np
 
+from latent_audio_primitives.audio_descriptors import audio_descriptor_report, descriptor_delta
+
 from .contracts import (
     ArtifactAnnotationRequest,
     ArtifactInspection,
     ArtifactKind,
     ArtifactRecord,
+    AudioDescriptorComparison,
     AudioMetadata,
     AudioPeaksResponse,
     BackendName,
@@ -413,6 +416,28 @@ class ArtifactStore:
             duration_seconds=float(frames / sample_rate) if sample_rate else 0.0,
             peaks=peaks,
         )
+
+    def audio_descriptor_comparison(self, target_artifact_id: str, take_artifact_id: str) -> AudioDescriptorComparison:
+        target, target_audio, target_sample_rate = self._read_audio_artifact(target_artifact_id)
+        take, take_audio, take_sample_rate = self._read_audio_artifact(take_artifact_id)
+        target_report = audio_descriptor_report(target_audio, target_sample_rate)
+        take_report = audio_descriptor_report(take_audio, take_sample_rate)
+        return AudioDescriptorComparison(
+            target_artifact_id=target.artifact_id,
+            take_artifact_id=take.artifact_id,
+            target=target_report,
+            take=take_report,
+            delta=descriptor_delta(target_report, take_report),
+        )
+
+    def _read_audio_artifact(self, artifact_id: str) -> tuple[ArtifactRecord, np.ndarray, int]:
+        record = self.get_artifact(artifact_id)
+        if record.kind != ArtifactKind.AUDIO or record.audio is None:
+            raise ValueError(f"artifact {artifact_id} is not an audio artifact")
+        import soundfile as sf
+
+        audio, sample_rate = sf.read(str(record.path), dtype="float32", always_2d=True)
+        return record, audio, int(sample_rate)
 
     def bundle_file(self, artifact_id: str, inner_path: str) -> tuple[bytes, str | None, str]:
         record = self.get_artifact(artifact_id)

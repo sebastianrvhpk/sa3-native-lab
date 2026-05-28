@@ -305,6 +305,27 @@ def test_audio_peaks_are_derived_from_audio_file(tmp_path):
     np.testing.assert_allclose(peaks.peaks, [0.25, 0.75, 1.0, 0.25], atol=1e-6)
 
 
+def test_audio_descriptor_comparison_reports_target_take_delta(tmp_path):
+    store = ArtifactStore(tmp_path)
+    sample_rate = 8000
+    timeline = np.arange(sample_rate, dtype=np.float32) / sample_rate
+    target_path = tmp_path / "low.wav"
+    take_path = tmp_path / "bright.wav"
+    sf.write(target_path, 0.3 * np.sin(2 * np.pi * 220 * timeline), sample_rate, subtype="FLOAT")
+    sf.write(take_path, 0.3 * np.sin(2 * np.pi * 1760 * timeline), sample_rate, subtype="FLOAT")
+    target = store.import_audio_file(target_path, label="target")
+    take = store.import_audio_file(take_path, label="take")
+
+    comparison = store.audio_descriptor_comparison(target.artifact_id, take.artifact_id)
+
+    assert comparison.target_artifact_id == target.artifact_id
+    assert comparison.take_artifact_id == take.artifact_id
+    assert comparison.target["duration_seconds"] == pytest.approx(1.0)
+    assert comparison.take["spectral_centroid_hz"] > comparison.target["spectral_centroid_hz"]
+    assert comparison.delta["spectral_centroid_hz"] > 1000
+    assert "rms_dbfs" in comparison.delta
+
+
 def test_app_defaults_target_medium_model_family():
     text_request = TextGenerateRequest()
     encode_request = LatentEncodeRequest(source_artifact_id="art_source")
@@ -640,6 +661,33 @@ def test_fastapi_allows_local_dev_port_origins(tmp_path):
 
     assert response.status_code == 200
     assert response.headers["access-control-allow-origin"] == "http://127.0.0.1:5174"
+
+
+def test_fastapi_compares_audio_descriptors(tmp_path):
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+
+    from sa3_native_lab.app.server import create_app
+
+    app = create_app(artifact_root=tmp_path / "lab", repo_root=tmp_path)
+    client = TestClient(app)
+    sample_rate = 8000
+    timeline = np.arange(sample_rate, dtype=np.float32) / sample_rate
+    low_path = tmp_path / "low.wav"
+    bright_path = tmp_path / "bright.wav"
+    sf.write(low_path, 0.3 * np.sin(2 * np.pi * 220 * timeline), sample_rate, subtype="FLOAT")
+    sf.write(bright_path, 0.3 * np.sin(2 * np.pi * 1760 * timeline), sample_rate, subtype="FLOAT")
+    target = app.state.store.import_audio_file(low_path)
+    take = app.state.store.import_audio_file(bright_path)
+
+    response = client.get(f"/artifacts/{target.artifact_id}/descriptor-comparison/{take.artifact_id}")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["target_artifact_id"] == target.artifact_id
+    assert payload["take_artifact_id"] == take.artifact_id
+    assert payload["delta"]["spectral_centroid_hz"] > 1000
+    assert payload["target"]["duration_seconds"] == pytest.approx(1.0)
 
 
 def test_fastapi_inspects_bundle_artifact(tmp_path):

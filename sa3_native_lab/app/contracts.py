@@ -97,6 +97,14 @@ class AudioPeaksResponse(ContractModel):
     peaks: list[float]
 
 
+class AudioDescriptorComparison(ContractModel):
+    target_artifact_id: str
+    take_artifact_id: str
+    target: dict[str, float]
+    take: dict[str, float]
+    delta: dict[str, float]
+
+
 class BundleFileEntry(ContractModel):
     path: str
     byte_size: int

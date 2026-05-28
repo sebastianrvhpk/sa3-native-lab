@@ -16,6 +16,7 @@ from .contracts import (
     ArtifactInspection,
     ArtifactKind,
     ArtifactRecord,
+    AudioDescriptorComparison,
     AudioPeaksResponse,
     AudioToAudioRequest,
     BundleAudioPromotionRequest,
@@ -183,6 +184,18 @@ def create_app(
             return store.audio_peaks(artifact_id, bins=bins)
         except KeyError as exc:
             raise HTTPException(status_code=404, detail=f"artifact not found: {artifact_id}") from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.get(
+        "/artifacts/{target_artifact_id}/descriptor-comparison/{take_artifact_id}",
+        response_model=AudioDescriptorComparison,
+    )
+    def compare_artifact_descriptors(target_artifact_id: str, take_artifact_id: str) -> AudioDescriptorComparison:
+        try:
+            return store.audio_descriptor_comparison(target_artifact_id, take_artifact_id)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=f"artifact not found: {exc.args[0]}") from exc
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
 
