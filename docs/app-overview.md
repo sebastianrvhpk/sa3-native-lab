@@ -169,10 +169,10 @@ Confirmed in the current codebase:
   artifacts.
 - Local SAME geometry audit is reachable as a CPU recipe over stored latent
   artifacts, producing a report bundle with variance and summary metrics.
-- Local prompt search is reachable as a CPU probe recipe over a selected or
-  explicit target audio artifact. It currently uses a deterministic
-  `lexical_probe` scorer so the interface, recipe, and bundle contract are real;
-  SA3/CLAP model-backed scoring remains the research upgrade.
+- Local prompt search is reachable as a recipe over a selected or explicit
+  target audio artifact. It supports `lexical_probe` for cheap deterministic
+  wiring and `sa3_flow_probe` for an optional Medium-backed flow-loss objective.
+  CLAP remains queued behind the same explicit scorer field.
 - Artifact annotation and archive search are implemented for labels, notes, and
   tags.
 - tRPC workbench, readiness, job lifecycle, recipe replay/fork, artifact
@@ -187,8 +187,8 @@ Confirmed in the current codebase:
   backend-derived operator field metadata, backend-parsed typed bundle
   inspectors, bundle metrics, inline plot/image previews, and kind-specific
   artifact vitals, embedded bundle-audio playback and promotion, prompt-search
-  bundle reading, sibling sweep comparison, and the first native geometry-audit
-  recipe.
+  scorer controls, candidate-family bundle reading, sibling sweep comparison,
+  and the first native geometry-audit recipe.
 - Core app surfaces are now split into focused modules for audio playback,
   artifact display, job progress, result families, recipe forks, and bundle
   inspection.
@@ -197,8 +197,9 @@ Confirmed in the current codebase:
 Still partial:
 
 - Some Colab modes are mapped but not yet first-class native interactions.
-  Prompt-search modes now have a native probe path, but the model-backed scorer
-  needed for true Colab Mode 2/3/5 parity is still pending.
+  Prompt-search modes now have a native recipe path and an SA3 flow-loss scorer,
+  but real Medium/MPS listening validation and candidate comparison UX are still
+  needed before calling Mode 2/3/5 parity complete.
 - Type-specific readers for profiles, vectors, soft prompts, training outputs,
   sweeps, memory collections, and geometry audits now receive backend-parsed
   summaries, first-pass metrics/plot discovery, embedded image/audio rendering,

@@ -64,9 +64,10 @@ For the broader stack direction and promotion triggers, see
    folders, prompt-search candidates, and LoRA checkpoints into Recipe Studio,
    and discovered image plots plus embedded audio files render through the
    bundle-file endpoint. Embedded bundle audio can now be promoted into normal
-   audio artifacts. Next, vector/profile/soft-prompt/sweep/geometry/prompt-search
-   bundles should expose richer domain-specific controls without making the user
-   inspect zip contents.
+   audio artifacts. Prompt-search bundles now show scorer metadata and compact
+   candidate families. Next, vector/profile/soft-prompt/sweep/geometry/prompt
+   search bundles should expose richer domain-specific controls without making
+   the user inspect zip contents.
 
 ## P2: Research Cognition
 
@@ -86,10 +87,11 @@ For the broader stack direction and promotion triggers, see
 
 4. Prompt/residual comparison bench.
    Prompt search now exists as `experiment.prompt_search` with beam, greedy, and
-   coordinate modes plus a clearly labelled `lexical_probe` scorer. The next
-   research step is replacing that probe with SA3/CLAP scoring, then pairing
-   prompt candidates with generated-audio grids, descriptor deltas, and
-   layer/alpha comparisons.
+   coordinate modes, `lexical_probe` fallback, and optional `sa3_flow_probe`
+   scoring over Medium flow losses. The next research step is validating that
+   scorer on real short target audio, then pairing prompt candidates with
+   generated-audio grids, descriptor deltas, and layer/alpha comparisons. CLAP
+   or hybrid scoring belongs after that comparison workflow exists.
 
 5. Geometry and control probes.
    `experiment.geometry_audit` now produces a local latent geometry report

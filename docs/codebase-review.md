@@ -40,7 +40,7 @@ and the next risks for turning the Colab experiments into a proper app.
   and alpha sweep families have sortable metrics, best-candidate marking, and
   A/B promotion from the table. Embedded bundle audio can be promoted into a
   first-class audio artifact, and prompt-search bundles are parsed into native
-  reader rows and prompt reuse actions.
+  scorer rows, candidate-family previews, and prompt reuse actions.
 
 ## Important Risks
 
@@ -58,10 +58,11 @@ and the next risks for turning the Colab experiments into a proper app.
   file discovery, inline image previews, typed UI readers, and recipe-input
   actions, but vector/profile/prompt-search/soft-prompt-specific inspectors are
   still shallow.
-- `experiment.prompt_search` is useful as an app contract and workflow probe,
-  but it currently uses a deterministic `lexical_probe` scorer. It should not be
-  presented as true audio-text inversion until the SA3/CLAP model-backed scorer
-  is implemented and validated.
+- `experiment.prompt_search` now has a deterministic `lexical_probe` fallback
+  and an optional `sa3_flow_probe` scorer. It should not be presented as mature
+  audio-text inversion until the real Medium/MPS scorer has listening
+  validation, cost notes, and a candidate comparison workflow. CLAP is still
+  queued rather than implemented.
 - Long-running jobs have cancel/retry, but not pause/resume, priority,
   resource-aware scheduling, or resident worker reuse.
 - Error messages are now transformed into first-pass recovery hints, but command

@@ -29,7 +29,7 @@ smoke tests, but they are not the app default.
 | Prompt residual vectors | `scripts/extract_sa3_vectors.py` | `/experiments/run`, Recipe Studio | script-job adapter with native controls |
 | Audio residual vectors | `scripts/extract_audio_residual_vectors.py` | `/experiments/run`, Recipe Studio | script-job adapter with native controls |
 | Residual alpha sweep | `scripts/run_sa3_alpha_sweep.py` | `/experiments/run`, Recipe Studio | script-job adapter with native controls |
-| Prompt search | `latent_audio_primitives.prompt_optimization` | `/experiments/run`, Recipe Studio | native CPU probe with `lexical_probe`; model-backed scorer pending |
+| Prompt search | `latent_audio_primitives.prompt_optimization`, `latent_audio_primitives.flow_prompt` | `/experiments/run`, Recipe Studio | native recipe with `lexical_probe` fallback and optional `sa3_flow_probe`; CLAP queued |
 | Soft prompt optimize/generate | `scripts/optimize_sa3_soft_prompt.py`, `scripts/generate_sa3_with_soft_prompt.py` | `/experiments/run`, Recipe Studio | script-job adapter with native controls |
 | Dataset pre-encode | `scripts/pre_encode_dataset.py` | `/experiments/run`, Recipe Studio | script-job adapter with native controls |
 | SAME geometry audit | `latent_audio_primitives.geometry.geometry_report` | `/experiments/run`, Recipe Studio | implemented for local latent artifacts |
@@ -65,18 +65,22 @@ Euclidean summary distance against other local latent artifacts. Those local
 memory hits are now actionable in the bundle preview: select the artifact, place
 audio hits in A/B, or reuse latent hits as donor latents.
 
-Prompt search is now promoted from helper-only code to a native CPU recipe:
+Prompt search is now promoted from helper-only code to a native recipe:
 `experiment.prompt_search` runs beam, greedy, or coordinate hard-token search,
 stores `prompt_search.json`, and exposes the resulting prompt back into Recipe
-Studio. This is intentionally marked as a probe because it uses a deterministic
-`lexical_probe` scorer today; true Colab Mode 2/3/5 parity still needs a
-model-backed SA3 flow-loss, CLAP, or hybrid scorer.
+Studio. It keeps `lexical_probe` as a cheap fallback and adds `sa3_flow_probe`
+for Medium-backed flow-loss scoring against a target audio latent. This is still
+marked as a probe until the real Medium/MPS path has short-audio listening
+validation, runtime-cost notes, and better candidate comparison. CLAP or hybrid
+scoring remains a future adapter behind the same `scorer` field.
 
 ## Next Promotion Targets
 
-1. Replace the prompt-search `lexical_probe` with a model-backed scorer adapter
-   for Colab Modes 2/3/5.
-2. Control-head recipes for Mode 12 and the labelled-probe part of Mode 15.
-3. Operator presets and operator-studio recipe diffs for repeatable latent explorations.
-4. Richer memory/dataset browsing, including preview audio for non-local children.
-5. Long-job controls for LoRA training: pause/cancel is not yet implemented.
+1. Validate `sa3_flow_probe` on real Medium/MPS prompt-search runs and document
+   the usable score-sample/timestep settings.
+2. Add CLAP or hybrid prompt scoring only after the SA3 flow probe has a good
+   comparison workflow.
+3. Control-head recipes for Mode 12 and the labelled-probe part of Mode 15.
+4. Operator presets and operator-studio recipe diffs for repeatable latent explorations.
+5. Richer memory/dataset browsing, including preview audio for non-local children.
+6. Long-job controls for LoRA training: pause/cancel is not yet implemented.
