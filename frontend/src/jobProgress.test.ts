@@ -32,6 +32,10 @@ describe("job recovery hints", () => {
       label: "saving",
       tone: "io",
     });
+    expect(jobPhase(job({ status: "running", message: "scoring 2 prompt candidate(s) with SA3 flow loss" }))).toEqual({
+      label: "generating",
+      tone: "model",
+    });
   });
 });
 

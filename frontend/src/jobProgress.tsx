@@ -86,7 +86,7 @@ export function jobPhase(job: JobRecord): JobPhase {
   if (job.status === "cancelled") return { label: "cancelled", tone: "cancelled" };
 
   const text = [job.message, latestUsefulLog(job), ...job.logs.slice(-4)].filter(Boolean).join("\n").toLowerCase();
-  if (/(sample|sampling|generate|generating|denoise|step)/.test(text)) {
+  if (/(sample|sampling|generate|generating|denoise|step|score|scoring|candidate)/.test(text)) {
     return { label: "generating", tone: "model" };
   }
   if (/(encode|embedding|latent|pre-encode|pre encode)/.test(text)) {
