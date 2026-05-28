@@ -39,12 +39,17 @@ Important endpoints:
 - `GET /health`
 - `GET /operators/specs`
 - `GET /colab/modes`
+- `GET /artifacts/{artifact_id}/inspect`
 - `POST /audio/import`
 - `POST /generate/text`
 - `POST /latents/encode`
 - `POST /latents/decode`
 - `POST /operators/run`
 - `POST /experiments/run`
+- `POST /jobs/{job_id}/cancel`
+- `POST /jobs/{job_id}/retry`
+- `POST /recipes/{recipe_id}/replay`
+- `POST /recipes/{recipe_id}/fork`
 
 ### Listening Bench
 
@@ -52,15 +57,17 @@ The React app in `frontend/` is the working interface. It supports artifact
 selection, waveform inspection, audio playback, A/B comparison, MLX generation,
 SAME encode/decode, latent-operator runs, Recipe Studio, Mode Atlas, and job
 polling. The bench also has a Run Monitor that surfaces active jobs, percent
-progress, elapsed time, and the latest backend message near the controls that
-started the work. Selected artifacts can be labeled, tagged, and annotated from
-the specimen panel, and the archive can search those labels, notes, and tags.
+progress, elapsed time, cancellation, retry, and the latest backend message near
+the controls that started the work. Selected artifacts can be labeled, tagged,
+annotated, replayed from their recipe, and searched later from the archive.
 
 Read-heavy workbench state can now be loaded through the TypeScript tRPC
 control plane. This is enabled by setting `VITE_SA3_CONTROL_PLANE_URL` or by
 running `uv run sa3-lab dev --with-control-plane`. The control plane currently
-shapes sessions, artifacts, jobs, health, operator specs, and mode atlas data;
-generation and model-running mutations still execute through the Python worker.
+shapes sessions, artifacts, jobs, result families, health, operator specs, and
+mode atlas data. It also exposes job lifecycle, recipe replay/fork, artifact
+inspection, family loading, and archive procedures while the Python worker keeps
+owning model execution and artifact file IO.
 
 ### Operator Studio
 
@@ -93,6 +100,9 @@ Artifacts are stored under `.sa3_lab/` by default. The app currently supports:
 Every run records a `Recipe` and `JobRecord` so results can be traced back to
 operator, backend, inputs, params, model, seed, logs, and source artifacts.
 Artifacts can also carry user labels, notes, and tags for archive search.
+Bundle artifacts can be inspected through the API and UI to reveal their file
+inventory, recipe, source artifacts, and child artifacts. Jobs and artifacts
+with the same recipe are grouped as result families in the right rail.
 
 ## Runtime Assumptions
 
@@ -100,8 +110,9 @@ Artifacts can also carry user labels, notes, and tags for archive search.
 - The PyTorch path uses `torch_mps` where possible and falls back where code
   supports CPU.
 - Hugging Face auth is needed for gated Stability AI weights.
-- Long jobs such as LoRA training are currently submitted as background jobs
-  but do not yet have pause/cancel controls.
+- Long jobs such as LoRA training are submitted as background jobs and can be
+  cancelled from the app, although true resumable multi-step workflows are still
+  future work.
 
 ## Current Status
 
@@ -115,16 +126,19 @@ Confirmed in the current codebase:
   artifacts.
 - Artifact annotation and archive search are implemented for labels, notes, and
   tags.
-- A first tRPC control-plane slice is implemented and can drive frontend
-  workbench reads behind an explicit launch flag.
+- tRPC workbench, job lifecycle, recipe replay/fork, artifact inspection, and
+  result-family procedures are implemented behind the control-plane launch flag.
 - The frontend builds and the Python test suite passes locally.
 
 Still partial:
 
 - Some Colab modes are mapped but not yet first-class native interactions.
-- Bundle artifacts need richer browsing instead of zip-only treatment.
+- Bundle artifacts now expose file inventory, but type-specific readers for
+  profiles, vectors, soft prompts, training outputs, and memory query results
+  are still needed.
 - Memory-query results are real artifacts, but need a richer inspector and reuse
   flow.
-- Multi-output sweeps need a dedicated result-family view.
-- tRPC is not yet the owner of mutations, recipe replay, job events, or result
-  families.
+- Multi-output sweeps have a first family grouping, but still need per-result
+  playback, metric tables, and recipe deltas.
+- tRPC does not yet own live job-event streaming or fork-with-edited-params
+  forms in the frontend.

@@ -8,31 +8,27 @@ For the broader stack direction and promotion triggers, see
 
 ## P0: Trust And Runability
 
-1. Add job cancellation and retry.
-   Long-running scripts and LoRA jobs need safe interruption, resumable logs,
-   and an obvious retry path from the UI.
+1. Add typed job-event streaming.
+   Cancellation and retry now exist. The next trust step is a typed stream for
+   progress, stderr tails, cancellation acknowledgement, and reconnect/resume.
 
-2. Promote job events to a typed control-plane contract.
-   Progress is visible today, but cancellation, retry, stderr tails, and
-   resumable logs need one app-level procedure instead of scattered polling.
+2. Improve error surfacing.
+   Job failures should show command, stderr tail, missing file paths, model
+   auth hints, and suggested next action instead of only a failed status.
 
 3. Add explicit environment readiness checks.
    The API should report Hugging Face auth, Medium MLX weights, SAME-L weights,
    PyTorch MPS availability, and missing optional extras as actionable checks.
 
-4. Add recipe replay.
-   Every artifact already records its recipe; the UI should expose "run again",
-   "fork with changes", and "copy params from artifact".
-
-5. Improve error surfacing.
-   Job failures should show command, stderr tail, missing file paths, model
-   auth hints, and suggested next action instead of only a failed status.
+4. Add fork-with-changes forms.
+   Recipe replay/fork endpoints exist. The UI still needs "copy params from
+   artifact", edit them inline, and submit the changed recipe as a new branch.
 
 ## P1: Exploration Speed
 
-1. Result-family view for sweeps.
-   Alpha sweeps and multi-output script jobs should appear as one grouped
-   family with per-result playback, A/B promotion, metrics, and recipe deltas.
+1. Deepen result-family views for sweeps.
+   Recipe families now appear as grouped records. Next they need per-result
+   playback, A/B promotion, metrics, and recipe deltas.
 
 2. Presets for Operator Studio.
    Store named parameter sets for blur, DSP, graft, renoise, and cyclic roll.
@@ -44,9 +40,9 @@ For the broader stack direction and promotion triggers, see
    should cover kind, model, operator, date, status, and source lineage.
 
 4. Better bundle readers.
-   Vector/profile/soft-prompt bundles should expose their metadata, dimensions,
-   plots, generated audio children, and file inventory without making the user
-   inspect zip contents.
+   Bundle file inventory now exists. Vector/profile/soft-prompt bundles should
+   also expose metadata, dimensions, plots, generated audio children, and reuse
+   actions without making the user inspect zip contents.
 
 ## P2: Research Cognition
 
@@ -84,19 +80,20 @@ For the broader stack direction and promotion triggers, see
 
 ## Architecture Improvements
 
-1. Move app-shaped reads and replay actions into tRPC.
-   `workbench.load` is the first slice. Next should be recipe replay,
-   result-family reads, archive mutations, and job-event actions. Keep the
-   Python worker as the model/runtime owner.
+1. Move more app-shaped actions into tRPC.
+   `workbench.load`, job lifecycle, recipe replay/fork, artifact inspection, and
+   family reads now exist. Next should be live job events, richer fork forms,
+   and archive mutations as the normal UI path. Keep the Python worker as the
+   model/runtime owner.
 
 2. Generate frontend schemas from backend operator specs.
    Operator/experiment field catalogs currently live in the frontend. A future
    typed schema endpoint would reduce drift between Python contracts and UI
    controls.
 
-3. Add Zod or equivalent frontend validation.
-   The UI should validate fields before submit using the same bounds and
-   required-ness as the backend.
+3. Keep Zod/TanStack Form validation converging.
+   The first typed form foundation exists. The next step is deriving more form
+   bounds and required-ness from backend operator specs to reduce drift.
 
 4. Add persistent worker processes.
    Repeated Medium generation would benefit from a resident MLX/PyTorch worker

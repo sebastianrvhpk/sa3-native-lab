@@ -37,9 +37,11 @@ readiness logic out of React and into a testable app contract.
 
 The React frontend now has a feature-flagged tRPC client. When
 `VITE_SA3_CONTROL_PLANE_URL` is set, read-heavy workbench state comes from
-`workbench.load`; mutations and model execution still go directly to the Python
-worker for now. When the env var is absent, the frontend falls back to the
-existing direct Python read queries.
+`workbench.load`. Job lifecycle, recipe replay/fork, artifact inspection, and
+family reads are also exposed as app-shaped tRPC procedures. Model execution
+and artifact file IO still belong to the Python worker. When the env var is
+absent, the frontend falls back to the existing direct Python read queries and
+Python mutations.
 
 The local runner can launch the full path:
 
@@ -52,6 +54,10 @@ uv run sa3-lab dev --with-control-plane
 | Router | Procedure | Purpose |
 | --- | --- | --- |
 | `workbench` | `load` | Build UI-ready workbench state from Python runtime records. |
+| `jobs` | `list`, `get`, `cancel`, `retry` | App-level lifecycle actions over Python background jobs. |
+| `recipes` | `replay`, `fork` | Re-run or branch a persisted recipe without rebuilding payloads in React. |
+| `artifacts` | `inspect` | Fetch artifact, recipe, sources, children, and bundle file inventory. |
+| `families` | `load` | Return grouped recipe result families for the active workbench scope. |
 | `archive` | `search` | Search artifact annotations through the runtime worker. |
 | `archive` | `annotateAndSearch` | Update annotations, then return the refreshed matching archive slice. |
 
@@ -84,8 +90,9 @@ Future responsibilities:
 
 ## Next Control-Plane Queue
 
-1. Move recipe replay and fork-with-params into a tRPC procedure.
-2. Add typed job-event reads for progress logs, retries, and cancellation.
-3. Add result-family procedures for sweeps and multi-output script jobs.
-4. Promote archive annotation/search mutations to the UI path.
+1. Add typed job-event streaming for progress/log deltas and reconnect.
+2. Promote archive annotation/search mutations to the normal UI path.
+3. Add fork-with-edited-params forms that call `recipes.fork`.
+4. Add family-specific inspectors for sweeps, memory query bundles, and style
+   profile bundles.
 5. Evaluate Postgres only after these procedures stabilize.

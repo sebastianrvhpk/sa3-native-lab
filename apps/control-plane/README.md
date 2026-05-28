@@ -25,13 +25,21 @@ The second command is the preferred local path because it starts the Python API,
 this control plane, and the frontend with `VITE_SA3_CONTROL_PLANE_URL` already
 set. `GET /health` is available for the dev runner.
 
-## First Procedure
+## Current Procedures
 
 `workbench.load` aggregates health, sessions, artifacts, jobs, the mode atlas,
 and operator specs into one UI-ready workbench state. It intentionally contains
 app logic such as active-session resolution, archive/session grouping, running
-job filtering, and readiness summaries.
+job filtering, result-family grouping, and readiness summaries.
 
-The frontend uses this procedure for workbench reads when the control-plane URL
-is configured. Model execution and mutations still flow through the Python
-worker until those app-level procedures are designed and tested.
+The control plane also exposes:
+
+- `jobs.list/get/cancel/retry`
+- `recipes.replay/fork`
+- `artifacts.inspect`
+- `families.load`
+- `archive.search`
+- `archive.annotateAndSearch`
+
+The frontend uses this path when the control-plane URL is configured. Heavy
+model execution and artifact file IO still flow through the Python worker.
