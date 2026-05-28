@@ -1074,8 +1074,8 @@ audio {
 }
 
 .deck-controls {
-  display: grid;
-  grid-template-columns: 38px 38px repeat(3, max-content) minmax(120px, 1fr) max-content;
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   align-items: center;
 }
@@ -1089,13 +1089,16 @@ audio {
 }
 
 .deck-volume {
+  display: grid;
   grid-template-columns: max-content minmax(80px, 1fr);
   align-items: center;
   color: var(--muted);
+  flex: 1 1 150px;
 }
 
 .deck-volume.rate {
   grid-template-columns: max-content 70px;
+  flex: 0 0 118px;
 }
 
 .audio-deck.compact {
