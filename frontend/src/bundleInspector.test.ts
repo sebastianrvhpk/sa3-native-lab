@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { bundleDomainSections, bundleReuseActions, promptSearchCandidates, summarizeBundle } from "./bundleInspector";
+import {
+  bundleDomainSections,
+  bundleReuseActions,
+  promptCandidateGeneratedArtifacts,
+  promptSearchCandidates,
+  summarizeBundle,
+} from "./bundleInspector";
 
 describe("bundle inspector summaries", () => {
   it("promotes sweep metrics and plot counts into reader rows", () => {
@@ -173,6 +179,30 @@ describe("bundle inspector summaries", () => {
     ).toEqual([
       { rank: 1, prompt: "warm granular loop", score: 0.82, source: "selected" },
       { rank: 2, prompt: "warm granular loop shimmer", score: 0.78, source: "beam" },
+    ]);
+    expect(
+      promptCandidateGeneratedArtifacts("art_prompt_bundle", [
+        {
+          artifact_id: "art_take",
+          kind: "audio",
+          source_artifact_ids: ["art_prompt_bundle"],
+          prompt: "warm granular loop shimmer",
+          metadata: { generation_origin: "prompt_search_candidate" },
+          created_at: "2026-05-28T15:00:00.000Z",
+        },
+        {
+          artifact_id: "art_other",
+          kind: "audio",
+          source_artifact_ids: ["art_prompt_bundle"],
+          prompt: "other",
+          metadata: { generation_origin: "manual" },
+          created_at: "2026-05-28T15:01:00.000Z",
+        },
+      ] as never, "warm granular loop shimmer"),
+    ).toEqual([
+      expect.objectContaining({
+        artifact_id: "art_take",
+      }),
     ]);
   });
 });

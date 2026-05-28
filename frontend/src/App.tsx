@@ -32,7 +32,7 @@ import { createApi, type ArtifactAnnotationPayload, type ExperimentPayload, type
 import { ArtifactBadge, ArtifactIcon } from "./artifactDisplay";
 import { artifactMeta, artifactName, artifactShape, formatDuration, sortNewest, sortNewestJobs } from "./artifactUtils";
 import { AudioDeck, TinyWave } from "./audioDeck";
-import { BundleField } from "./bundleInspector";
+import { BundleField, type PromptCandidateGenerationRequest } from "./bundleInspector";
 import { createControlPlaneClient, DEFAULT_CONTROL_PLANE_URL, type ResultFamily, type WorkbenchState } from "./controlPlane";
 import { ForkRecipePanel } from "./forkRecipePanel";
 import { JobProgress, type JobActionHandlers } from "./jobProgress";
@@ -1024,10 +1024,10 @@ export function App() {
   });
 
   const generatePromptCandidate = useMutation({
-    mutationFn: (candidatePrompt: string) => {
+    mutationFn: (candidate: PromptCandidateGenerationRequest) => {
       const selected = audioModels.find((item) => item.value === audioModel)!;
       return api.generateText({
-        prompt: candidatePrompt,
+        prompt: candidate.prompt,
         negative_prompt: negativePrompt.trim() || null,
         duration_seconds: duration,
         steps,
@@ -1037,6 +1037,19 @@ export function App() {
         model: selected.value,
         decoder: audioDecoder,
         backend: "mlx",
+        source_artifact_id: candidate.bundleArtifactId,
+        notes: `Prompt candidate ${candidate.rank ? `#${candidate.rank} ` : ""}from prompt-search bundle ${candidate.bundleArtifactId}`,
+        metadata: {
+          generation_origin: "prompt_search_candidate",
+          prompt_search_bundle_id: candidate.bundleArtifactId,
+          prompt_candidate_rank: candidate.rank ?? null,
+          prompt_candidate_score: primitiveMetadataValue(candidate.score),
+          prompt_candidate_source: candidate.source ?? null,
+          prompt_search_scorer: candidate.scorer ?? null,
+          prompt_search_mode: candidate.searchMode ?? null,
+          prompt_search_model: candidate.searchModel ?? null,
+          prompt_search_duration_seconds: candidate.searchDurationSeconds ?? null,
+        },
         session_id: activeSessionId,
       });
     },
@@ -1149,9 +1162,9 @@ export function App() {
     setPrompt(candidatePrompt);
   };
 
-  const runPromptCandidate = (candidatePrompt: string) => {
-    usePromptCandidate(candidatePrompt);
-    generatePromptCandidate.mutate(candidatePrompt);
+  const runPromptCandidate = (candidate: PromptCandidateGenerationRequest) => {
+    usePromptCandidate(candidate.prompt);
+    generatePromptCandidate.mutate(candidate);
   };
 
   return (
@@ -1644,7 +1657,7 @@ function Specimen({
   onUseAsDonor: (artifactId: string) => void;
   onUseInRecipe: (fieldKey: string, path: string, mode: string) => void;
   onUsePrompt: (prompt: string) => void;
-  onGeneratePrompt: (prompt: string) => void;
+  onGeneratePrompt: (request: PromptCandidateGenerationRequest) => void;
   getArtifactPath: (artifact: ArtifactRecord, fieldKey: string) => string;
 }) {
   if (!artifact) {
@@ -2528,6 +2541,10 @@ function uniqueArtifacts(artifacts: ArtifactRecord[]) {
 
 function recordValue(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
+}
+
+function primitiveMetadataValue(value: unknown) {
+  return typeof value === "string" || typeof value === "number" || typeof value === "boolean" ? value : null;
 }
 
 function newestTimestamp(timestamps: string[]) {

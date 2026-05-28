@@ -1,9 +1,10 @@
 import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CirclePlus } from "lucide-react";
+import { AudioLines, CirclePlus, FlaskConical, Sparkles } from "lucide-react";
 
 import { createApi } from "./api";
-import { artifactMeta, artifactName, formatBytes } from "./artifactUtils";
+import { artifactMeta, artifactName, formatBytes, sortNewest } from "./artifactUtils";
+import { AudioDeck } from "./audioDeck";
 import type { ArtifactInspection, ArtifactRecord, BundleAudioEntry, BundleFileEntry } from "./types";
 
 export function BundleField({
@@ -26,7 +27,7 @@ export function BundleField({
   onUseAsDonor: (artifactId: string) => void;
   onUseInRecipe: (fieldKey: string, path: string, mode: string) => void;
   onUsePrompt: (prompt: string) => void;
-  onGeneratePrompt: (prompt: string) => void;
+  onGeneratePrompt: (request: PromptCandidateGenerationRequest) => void;
   getArtifactPath: (artifact: ArtifactRecord, fieldKey: string) => string;
 }) {
   const api = useMemo(() => createApi(apiBase), [apiBase]);
@@ -76,6 +77,9 @@ export function BundleField({
             onUsePrompt={onUsePrompt}
             onGeneratePrompt={onGeneratePrompt}
             onUseInRecipe={onUseInRecipe}
+            artifacts={artifacts}
+            onCompare={onCompare}
+            onSelectArtifact={onSelectArtifact}
           />
         ) : null}
         {inspection.data ? (
@@ -190,6 +194,9 @@ function BundleReaderPanel({
   onUsePrompt,
   onGeneratePrompt,
   onUseInRecipe,
+  artifacts,
+  onCompare,
+  onSelectArtifact,
 }: {
   inspection: ArtifactInspection;
   apiBase: string;
@@ -197,8 +204,11 @@ function BundleReaderPanel({
   promotingAudioPath: string | null;
   promoteAudioError: string | null;
   onUsePrompt: (prompt: string) => void;
-  onGeneratePrompt: (prompt: string) => void;
+  onGeneratePrompt: (request: PromptCandidateGenerationRequest) => void;
   onUseInRecipe: (fieldKey: string, path: string, mode: string) => void;
+  artifacts: ArtifactRecord[];
+  onCompare: (slot: "a" | "b", artifactId: string | null) => void;
+  onSelectArtifact: (artifactId: string | null) => void;
 }) {
   const descriptor = summarizeBundle(inspection.bundle_summary, inspection.bundle_preview, inspection.bundle_files);
   const rows = descriptor.rows.filter(([, value]) => value !== undefined && value !== null && value !== "");
@@ -228,9 +238,14 @@ function BundleReaderPanel({
       {domainSections.length ? <BundleDomainCards sections={domainSections} /> : null}
       <PromptSearchCandidatePanel
         summary={inspection.bundle_summary}
+        artifact={inspection.artifact}
+        artifacts={artifacts}
+        apiBase={apiBase}
         onUsePrompt={onUsePrompt}
         onGeneratePrompt={onGeneratePrompt}
         onUseInRecipe={onUseInRecipe}
+        onCompare={onCompare}
+        onSelectArtifact={onSelectArtifact}
       />
       <BundleAudioChildren
         artifactId={inspection.artifact.artifact_id}
@@ -258,6 +273,14 @@ export interface PromptCandidateAction {
   source?: string;
 }
 
+export interface PromptCandidateGenerationRequest extends PromptCandidateAction {
+  bundleArtifactId: string;
+  scorer?: string;
+  searchMode?: string;
+  searchModel?: string;
+  searchDurationSeconds?: number;
+}
+
 export function promptSearchCandidates(summary: Record<string, unknown> | undefined): PromptCandidateAction[] {
   const promptSearch = objectValue(summary?.prompt_search);
   if (!promptSearch) return [];
@@ -281,41 +304,118 @@ export function promptSearchCandidates(summary: Record<string, unknown> | undefi
 
 function PromptSearchCandidatePanel({
   summary,
+  artifact,
+  artifacts,
+  apiBase,
   onUsePrompt,
   onGeneratePrompt,
   onUseInRecipe,
+  onCompare,
+  onSelectArtifact,
 }: {
   summary: Record<string, unknown> | undefined;
+  artifact: ArtifactRecord;
+  artifacts: ArtifactRecord[];
+  apiBase: string;
   onUsePrompt: (prompt: string) => void;
-  onGeneratePrompt: (prompt: string) => void;
+  onGeneratePrompt: (request: PromptCandidateGenerationRequest) => void;
   onUseInRecipe: (fieldKey: string, path: string, mode: string) => void;
+  onCompare: (slot: "a" | "b", artifactId: string | null) => void;
+  onSelectArtifact: (artifactId: string | null) => void;
 }) {
   const candidates = promptSearchCandidates(summary);
   if (!candidates.length) return null;
+  const totalTakes = promptCandidateGeneratedArtifacts(artifact.artifact_id, artifacts).length;
   return (
     <div className="prompt-candidate-panel" aria-label="Prompt search candidates">
-      <strong>Candidate prompts</strong>
-      {candidates.map((candidate) => (
-        <article key={`${candidate.rank ?? "candidate"}:${candidate.prompt}`}>
-          <div>
-            <span>{candidate.prompt}</span>
-            <small>{promptCandidateMeta(candidate)}</small>
-          </div>
-          <div className="prompt-candidate-actions">
-            <button type="button" onClick={() => onUsePrompt(candidate.prompt)}>
-              Use
-            </button>
-            <button type="button" onClick={() => onGeneratePrompt(candidate.prompt)}>
-              Generate
-            </button>
-            <button type="button" onClick={() => onUseInRecipe("prompt", candidate.prompt, "experiment.alpha_sweep")}>
-              Sweep
-            </button>
-          </div>
-        </article>
-      ))}
+      <div className="prompt-candidate-head">
+        <strong>Candidate prompts</strong>
+        <span>
+          <AudioLines size={13} />
+          {totalTakes} take{totalTakes === 1 ? "" : "s"}
+        </span>
+      </div>
+      {candidates.map((candidate) => {
+        const generated = promptCandidateGeneratedArtifacts(artifact.artifact_id, artifacts, candidate.prompt);
+        return (
+          <article key={`${candidate.rank ?? "candidate"}:${candidate.prompt}`} className={generated.length ? "has-takes" : ""}>
+            <div>
+              <span>{candidate.prompt}</span>
+              <small>{promptCandidateMeta(candidate)}</small>
+            </div>
+            <div className="prompt-candidate-actions">
+              <button type="button" onClick={() => onUsePrompt(candidate.prompt)}>
+                Use
+              </button>
+              <button type="button" onClick={() => onGeneratePrompt(promptCandidateGenerationRequest(candidate, artifact, summary))}>
+                <Sparkles aria-hidden="true" size={13} />
+                Generate
+              </button>
+              <button type="button" onClick={() => onUseInRecipe("prompt", candidate.prompt, "experiment.alpha_sweep")}>
+                Sweep
+              </button>
+            </div>
+            {generated.length ? (
+              <div className="prompt-generated-takes" aria-label={`Generated takes for ${candidate.prompt}`}>
+                {generated.slice(0, 3).map((take) => (
+                  <div key={take.artifact_id} className="prompt-generated-take">
+                    <button type="button" onClick={() => onSelectArtifact(take.artifact_id)} title={artifactName(take)}>
+                      <AudioLines size={14} />
+                      <span>{generatedTakeLabel(take)}</span>
+                    </button>
+                    <AudioDeck artifact={take} apiBase={apiBase} compact />
+                    <div className="prompt-generated-actions">
+                      <button type="button" onClick={() => onCompare("a", take.artifact_id)} title="Send generated take to comparison slot A">
+                        <FlaskConical aria-hidden="true" size={12} />
+                        A
+                      </button>
+                      <button type="button" onClick={() => onCompare("b", take.artifact_id)} title="Send generated take to comparison slot B">
+                        <FlaskConical aria-hidden="true" size={12} />
+                        B
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </article>
+        );
+      })}
     </div>
   );
+}
+
+export function promptCandidateGeneratedArtifacts(bundleArtifactId: string, artifacts: ArtifactRecord[], prompt?: string): ArtifactRecord[] {
+  return sortNewest(
+    artifacts.filter((artifact) => {
+      if (artifact.kind !== "audio") return false;
+      if (!artifact.source_artifact_ids.includes(bundleArtifactId)) return false;
+      if (prompt && artifact.prompt !== prompt) return false;
+      return artifact.metadata.generation_origin === "prompt_search_candidate";
+    }),
+  );
+}
+
+function promptCandidateGenerationRequest(
+  candidate: PromptCandidateAction,
+  artifact: ArtifactRecord,
+  summary: Record<string, unknown> | undefined,
+): PromptCandidateGenerationRequest {
+  const promptSearch = objectValue(summary?.prompt_search);
+  return {
+    ...candidate,
+    bundleArtifactId: artifact.artifact_id,
+    scorer: stringValue(promptSearch?.scorer),
+    searchMode: stringValue(promptSearch?.search_mode),
+    searchModel: stringValue(promptSearch?.model),
+    searchDurationSeconds: numberValue(promptSearch?.duration_seconds),
+  };
+}
+
+function generatedTakeLabel(artifact: ArtifactRecord) {
+  const rank = typeof artifact.metadata.prompt_candidate_rank === "number" ? `#${artifact.metadata.prompt_candidate_rank}` : "take";
+  const seed = typeof artifact.metadata.seed === "number" ? ` · seed ${artifact.metadata.seed}` : "";
+  return `${rank}${seed}`;
 }
 
 export function bundleDomainSections(summary: Record<string, unknown> | undefined): BundleDomainSection[] {
@@ -892,6 +992,14 @@ function isInlineImagePath(path: string) {
 
 function objectValue(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
+}
+
+function stringValue(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+function numberValue(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
 function arrayOfObjects(value: unknown): Record<string, unknown>[] {

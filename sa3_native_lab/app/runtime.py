@@ -876,6 +876,8 @@ class RuntimeDispatcher:
             "steps": steps,
             "duration_seconds": duration,
         }
+        if seed is not None:
+            artifact_metadata["seed"] = int(seed)
         request_metadata = params.get("metadata")
         if isinstance(request_metadata, dict):
             artifact_metadata.update(_clean_params(request_metadata))

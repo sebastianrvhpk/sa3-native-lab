@@ -668,9 +668,24 @@ label {
   gap: 6px;
 }
 
-.prompt-candidate-panel > strong {
+.prompt-candidate-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.prompt-candidate-head > strong {
   color: var(--ink);
   font-size: 0.72rem;
+}
+
+.prompt-candidate-head > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 0.64rem;
 }
 
 .prompt-candidate-panel article {
@@ -685,6 +700,13 @@ label {
     linear-gradient(135deg, rgb(234 74 162 / 0.1), rgb(85 198 199 / 0.1)),
     rgb(255 255 255 / 0.44);
   min-width: 0;
+}
+
+.prompt-candidate-panel article.has-takes {
+  grid-template-columns: minmax(0, 1fr);
+  background:
+    linear-gradient(135deg, rgb(201 238 72 / 0.13), rgb(85 198 199 / 0.13), rgb(234 74 162 / 0.08)),
+    rgb(255 255 255 / 0.5);
 }
 
 .prompt-candidate-panel article > div:first-child {
@@ -715,6 +737,7 @@ label {
   display: flex;
   gap: 5px;
   min-width: 0;
+  justify-content: flex-end;
 }
 
 .prompt-candidate-actions button {
@@ -727,6 +750,56 @@ label {
   box-shadow: none;
   font-size: 0.66rem;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.prompt-generated-takes {
+  display: grid;
+  gap: 6px;
+  grid-column: 1 / -1;
+}
+
+.prompt-generated-take {
+  display: grid;
+  grid-template-columns: minmax(58px, 74px) minmax(0, 1fr) max-content;
+  gap: 6px;
+  align-items: center;
+  border: 1px solid rgb(45 51 52 / 0.12);
+  border-radius: 6px;
+  padding: 5px;
+  background: rgb(255 255 255 / 0.44);
+  min-width: 0;
+}
+
+.prompt-generated-take > button:first-child,
+.prompt-generated-actions button {
+  min-height: 26px;
+  width: auto;
+  padding: 0 7px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 999px;
+  font-size: 0.64rem;
+  color: var(--ink);
+  background: rgb(255 255 255 / 0.62);
+  box-shadow: none;
+}
+
+.prompt-generated-take > button:first-child span {
+  font-size: 0.64rem;
+}
+
+.prompt-generated-take .audio-deck.compact {
+  min-height: 50px;
+}
+
+.prompt-generated-actions {
+  display: flex;
+  gap: 4px;
+  align-items: center;
 }
 
 .bundle-audio-children {
