@@ -159,6 +159,20 @@ export interface HealthResponse {
   backends: ModelStatus[];
 }
 
+export interface ReadinessCheck {
+  name: string;
+  status: "ok" | "warn" | "error" | string;
+  message: string;
+  detail?: string | null;
+}
+
+export interface ReadinessResponse {
+  checks: ReadinessCheck[];
+  ok: boolean;
+  warnings: number;
+  errors: number;
+}
+
 export interface NotebookMode {
   mode_id: string;
   title: string;

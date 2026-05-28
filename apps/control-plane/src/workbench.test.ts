@@ -101,6 +101,27 @@ test("tRPC jobs and recipes procedures call Python lifecycle endpoints", async (
   assert.deepEqual(calls[3]?.body, { params: { shift_frames: 2 } });
 });
 
+test("tRPC system readiness calls Python readiness endpoint", async () => {
+  const fakeFetch: typeof fetch = async (url) => {
+    const path = new URL(String(url)).pathname;
+    if (path === "/readiness") {
+      return Response.json({
+        ok: true,
+        warnings: 0,
+        errors: 0,
+        checks: [{ name: "artifact-root", status: "ok", message: "writable" }],
+      });
+    }
+    return Response.json({ detail: "not found" }, { status: 404 });
+  };
+  const caller = appRouter.createCaller({ baseUrl: "http://python.test", fetchImpl: fakeFetch });
+
+  const readiness = await caller.system.readiness();
+
+  assert.equal(readiness.ok, true);
+  assert.equal(readiness.checks[0]?.name, "artifact-root");
+});
+
 test("tRPC artifact inspection and family loading expose app-shaped records", async () => {
   const session = sessionRecord("sess_active", "2026-05-27T14:00:00.000Z");
   const artifact = {

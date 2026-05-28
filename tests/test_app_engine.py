@@ -301,6 +301,10 @@ def test_fastapi_surface_imports_and_runs_latent_job(tmp_path):
     health = client.get("/health")
     assert health.status_code == 200
     assert any(item["backend"] == "mlx" for item in health.json()["backends"])
+    readiness = client.get("/readiness")
+    assert readiness.status_code == 200
+    readiness_names = {item["name"] for item in readiness.json()["checks"]}
+    assert {"artifact-root", "hf-auth", "mlx-medium-weights", "same-l-access"} <= readiness_names
 
     audio_bytes = BytesIO()
     sf.write(audio_bytes, np.linspace(-1.0, 1.0, 16, dtype=np.float32), 16000, format="WAV", subtype="FLOAT")

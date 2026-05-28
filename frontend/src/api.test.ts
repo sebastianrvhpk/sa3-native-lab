@@ -32,6 +32,14 @@ const server = setupServer(
       bundle_files: [{ path: "metrics.json", byte_size: 16, compressed_size: 12 }],
     }),
   ),
+  http.get("http://api.test/readiness", () =>
+    HttpResponse.json({
+      ok: true,
+      warnings: 0,
+      errors: 0,
+      checks: [{ name: "artifact-root", status: "ok", message: "/tmp/lab" }],
+    }),
+  ),
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
@@ -50,6 +58,13 @@ describe("createApi", () => {
     await expect(createApi("http://api.test").inspectArtifact("art_bundle")).resolves.toMatchObject({
       artifact: { artifact_id: "art_bundle" },
       bundle_files: [{ path: "metrics.json", byte_size: 16 }],
+    });
+  });
+
+  it("reads readiness checks", async () => {
+    await expect(createApi("http://api.test").readiness()).resolves.toMatchObject({
+      ok: true,
+      checks: [{ name: "artifact-root" }],
     });
   });
 });

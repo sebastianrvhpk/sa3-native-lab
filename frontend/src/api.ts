@@ -8,6 +8,7 @@ import type {
   NotebookMode,
   OperatorName,
   OperatorSpec,
+  ReadinessResponse,
   SessionRecord,
 } from "./types";
 
@@ -137,6 +138,7 @@ export function createApi(baseUrl: string) {
     artifactFileUrl: (artifactId: string) => `${base}/artifacts/${artifactId}/file`,
     jobEventsUrl: (jobId: string) => websocketUrl(base, `/jobs/${encodeURIComponent(jobId)}/events`),
     health: () => request<HealthResponse>("/health"),
+    readiness: () => request<ReadinessResponse>("/readiness"),
     operatorSpecs: () => request<OperatorSpec[]>("/operators/specs"),
     sessions: () => request<SessionRecord[]>("/sessions"),
     createSession: (payload: { name?: string | null; notes?: string | null } = {}) =>

@@ -48,7 +48,18 @@ import {
   type RecipeValue,
 } from "./recipeFormModel";
 import { useBenchStore } from "./store";
-import type { ArtifactRecord, JobEvent, JobRecord, ModelStatus, NotebookMode, OperatorName, OperatorSpec, SessionRecord } from "./types";
+import type {
+  ArtifactRecord,
+  HealthResponse,
+  JobEvent,
+  JobRecord,
+  ModelStatus,
+  NotebookMode,
+  OperatorName,
+  OperatorSpec,
+  ReadinessCheck,
+  SessionRecord,
+} from "./types";
 
 const audioModels = [
   { value: "medium", label: "medium", decoder: "same-l" },
@@ -598,6 +609,7 @@ export function App() {
   const useControlPlane = Boolean(controlPlane);
 
   const health = useQuery({ queryKey: ["health", apiBase], queryFn: api.health, refetchInterval: 3000, enabled: !useControlPlane });
+  const readiness = useQuery({ queryKey: ["readiness", apiBase], queryFn: api.readiness, refetchInterval: 30000 });
   const operatorSpecs = useQuery({ queryKey: ["operator-specs", apiBase], queryFn: api.operatorSpecs, staleTime: 30000, enabled: !useControlPlane });
   const sessions = useQuery({ queryKey: ["sessions", apiBase], queryFn: api.sessions, refetchInterval: 3000, enabled: !useControlPlane });
   const modeAtlas = useQuery({ queryKey: ["colab-modes", apiBase], queryFn: api.colabModes, staleTime: Infinity, enabled: !useControlPlane });
@@ -677,6 +689,7 @@ export function App() {
   const operatorSpecRows = workbenchState?.operatorSpecs ?? operatorSpecs.data ?? [];
   const modeAtlasRows = workbenchState?.modeAtlas ?? modeAtlas.data ?? [];
   const healthData = workbenchState?.health ?? health.data;
+  const readinessChecks = readiness.data?.checks ?? readinessChecksFromHealth(healthData);
   const specMap = useMemo(() => new Map(operatorSpecRows.map((spec) => [spec.name, spec])), [operatorSpecRows]);
   const activeGenerateSpec = specMap.get(generationMode);
   const sameEncodeSpec = specMap.get("latent.encode");
@@ -1234,6 +1247,7 @@ export function App() {
             </div>
             <Activity size={19} />
           </div>
+          <ReadinessPanel checks={readinessChecks} />
           <ResultFamilyPanel
             families={sessionResultFamilies}
             artifacts={allArtifacts}
@@ -1679,6 +1693,33 @@ function InlineJobStatus({ job, onCancelJob, onRetryJob }: { job: JobRecord | nu
     <div className="inline-job-status">
       <JobProgress job={job} compact onCancelJob={onCancelJob} onRetryJob={onRetryJob} />
     </div>
+  );
+}
+
+function ReadinessPanel({ checks }: { checks: ReadinessCheck[] }) {
+  const rows = priorityReadinessChecks(checks);
+  const errorCount = checks.filter((check) => check.status === "error").length;
+  const warnCount = checks.filter((check) => check.status === "warn").length;
+  const state = errorCount ? "error" : warnCount ? "warn" : "ok";
+  return (
+    <details className={`readiness-panel ${state}`}>
+      <summary>
+        <span>
+          <Gauge size={15} />
+          Readiness
+        </span>
+        <strong>{state}</strong>
+      </summary>
+      <div className="readiness-list">
+        {rows.map((check) => (
+          <div key={check.name} className={`readiness-row ${check.status}`}>
+            <span>{readinessLabel(check.name)}</span>
+            <strong>{check.status}</strong>
+            <small title={check.detail ?? check.message}>{check.message}</small>
+          </div>
+        ))}
+      </div>
+    </details>
   );
 }
 
@@ -2404,6 +2445,35 @@ function sortNewest(artifacts: ArtifactRecord[]) {
 
 function sortNewestJobs(jobs: JobRecord[]) {
   return [...jobs].sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
+}
+
+function readinessChecksFromHealth(health: HealthResponse | undefined): ReadinessCheck[] {
+  if (!health) return [];
+  return [
+    { name: "artifact-root", status: "ok", message: health.artifact_root },
+    ...health.backends.map((backend) => ({
+      name: `backend:${backend.backend}`,
+      status: backend.available ? "ok" : "warn",
+      message: backend.message ?? backend.device ?? backend.backend,
+    })),
+  ];
+}
+
+function priorityReadinessChecks(checks: ReadinessCheck[]) {
+  const priority = ["artifact-root", "hf-auth", "mlx-medium-weights", "same-l-access", "backend:mlx", "backend:torch_mps"];
+  const byName = new Map(checks.map((check) => [check.name, check]));
+  const selected = priority.map((name) => byName.get(name)).filter((check): check is ReadinessCheck => Boolean(check));
+  const urgent = checks.filter((check) => (check.status === "error" || check.status === "warn") && !priority.includes(check.name));
+  return [...selected, ...urgent].slice(0, 7);
+}
+
+function readinessLabel(name: string) {
+  return name
+    .replace("backend:", "")
+    .replace("hf-auth", "HF auth")
+    .replace("mlx-medium-weights", "MLX medium")
+    .replace("same-l-access", "SAME-L")
+    .replace("artifact-root", "Artifacts");
 }
 
 function mergeJobRecords(baseJobs: JobRecord[], overlayJobs: JobRecord[]) {

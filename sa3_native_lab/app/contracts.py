@@ -232,6 +232,20 @@ class HealthResponse(ContractModel):
     backends: list[ModelStatus]
 
 
+class ReadinessCheck(ContractModel):
+    name: str
+    status: str
+    message: str
+    detail: str | None = None
+
+
+class ReadinessResponse(ContractModel):
+    checks: list[ReadinessCheck]
+    ok: bool
+    warnings: int = 0
+    errors: int = 0
+
+
 class OperatorSpec(ContractModel):
     name: OperatorName
     maturity: str

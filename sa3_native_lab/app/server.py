@@ -30,6 +30,8 @@ from .contracts import (
     OperatorRunRequest,
     Recipe,
     RecipeForkRequest,
+    ReadinessCheck,
+    ReadinessResponse,
     SessionCreateRequest,
     SessionRecord,
     SessionUpdateRequest,
@@ -74,6 +76,10 @@ def create_app(
             artifact_root=store.root,
             backends=runtime.backend_statuses(),
         )
+
+    @app.get("/readiness", response_model=ReadinessResponse)
+    def readiness() -> ReadinessResponse:
+        return _readiness_response(store, runtime)
 
     @app.get("/models/status")
     def model_statuses():
@@ -403,4 +409,88 @@ def _fork_recipe(recipe: Recipe, request: RecipeForkRequest | None = None) -> Re
         notes=notes,
         session_id=session_id,
         version=recipe.version,
+    )
+
+
+def _readiness_response(store: ArtifactStore, runtime: RuntimeDispatcher) -> ReadinessResponse:
+    checks = [
+        _artifact_root_check(store),
+        *_backend_readiness_checks(runtime),
+        _huggingface_readiness_check(),
+        _mlx_medium_weight_check(runtime.repo_root),
+        _same_l_access_check(),
+    ]
+    errors = sum(1 for check in checks if check.status == "error")
+    warnings = sum(1 for check in checks if check.status == "warn")
+    return ReadinessResponse(checks=checks, ok=errors == 0, warnings=warnings, errors=errors)
+
+
+def _artifact_root_check(store: ArtifactStore) -> ReadinessCheck:
+    try:
+        store.root.mkdir(parents=True, exist_ok=True)
+        probe = store.root / ".readiness-write-test"
+        probe.write_text("ok", encoding="utf-8")
+        probe.unlink(missing_ok=True)
+    except Exception as exc:
+        return ReadinessCheck(
+            name="artifact-root",
+            status="error",
+            message=f"artifact root is not writable: {store.root}",
+            detail=str(exc),
+        )
+    return ReadinessCheck(name="artifact-root", status="ok", message=f"artifact root is writable: {store.root}")
+
+
+def _backend_readiness_checks(runtime: RuntimeDispatcher) -> list[ReadinessCheck]:
+    checks = []
+    for status in runtime.backend_statuses():
+        checks.append(
+            ReadinessCheck(
+                name=f"backend:{status.backend.value}",
+                status="ok" if status.available else "warn",
+                message=status.message or f"{status.backend.value} backend checked",
+                detail=str(status.details) if status.details else None,
+            )
+        )
+    return checks
+
+
+def _huggingface_readiness_check() -> ReadinessCheck:
+    try:
+        from .dev import huggingface_auth_check
+
+        check = huggingface_auth_check()
+        return ReadinessCheck(name=check.name, status=check.status, message=check.message, detail=check.detail)
+    except Exception as exc:
+        return ReadinessCheck(name="hf-auth", status="warn", message="Hugging Face auth could not be checked", detail=str(exc))
+
+
+def _mlx_medium_weight_check(repo_root: Path) -> ReadinessCheck:
+    required = [
+        repo_root / "optimized" / "mlx" / "models" / "mlx" / "dit_medium_f16.npz",
+        repo_root / "optimized" / "mlx" / "models" / "mlx" / "same_l_decoder_f32.npz",
+        repo_root / "optimized" / "mlx" / "models" / "mlx" / "same_l_encoder_f32.npz",
+        repo_root / "optimized" / "mlx" / "models" / "mlx" / "t5gemma_f16.npz",
+    ]
+    present = [path for path in required if path.exists() or path.is_symlink()]
+    missing = [path.name for path in required if path not in present]
+    if len(present) == len(required):
+        return ReadinessCheck(name="mlx-medium-weights", status="ok", message="Medium MLX weights are present")
+    return ReadinessCheck(
+        name="mlx-medium-weights",
+        status="warn",
+        message=f"Medium MLX weights are partially local ({len(present)}/{len(required)})",
+        detail=", ".join(missing) or None,
+    )
+
+
+def _same_l_access_check() -> ReadinessCheck:
+    hf = _huggingface_readiness_check()
+    if hf.status == "ok":
+        return ReadinessCheck(name="same-l-access", status="ok", message="SAME-L downloads can use Hugging Face auth")
+    return ReadinessCheck(
+        name="same-l-access",
+        status="warn",
+        message="SAME-L may need Hugging Face auth on first load",
+        detail=hf.detail,
     )

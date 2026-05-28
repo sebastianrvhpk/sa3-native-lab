@@ -46,6 +46,9 @@ const artifactIdInputSchema = z.object({
 });
 
 export const appRouter = t.router({
+  system: t.router({
+    readiness: t.procedure.query(({ ctx }) => createPythonClient(ctx).readiness()),
+  }),
   workbench: t.router({
     load: t.procedure
       .input(workbenchLoadInputSchema.optional().default({}))

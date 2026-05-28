@@ -7,6 +7,7 @@ import type {
   NotebookMode,
   OperatorSpec,
   RecipeForkPayload,
+  ReadinessResponse,
   SessionRecord,
 } from "./contracts.js";
 
@@ -58,6 +59,7 @@ export function createPythonClient({ baseUrl, fetchImpl = fetch }: PythonClientO
 
   return {
     health: () => request<HealthResponse>("/health"),
+    readiness: () => request<ReadinessResponse>("/readiness"),
     operatorSpecs: () => request<OperatorSpec[]>("/operators/specs"),
     sessions: () => request<SessionRecord[]>("/sessions"),
     colabModes: () => request<NotebookMode[]>("/colab/modes"),
