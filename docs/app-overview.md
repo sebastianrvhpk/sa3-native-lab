@@ -102,7 +102,9 @@ Every visible control maps to an executable request parameter. Donor-latent
 selection appears only for graft or DSP modes that need a donor.
 Operator Studio also has a first-pass local preset rack: named browser-local
 parameter sets can be saved, reloaded, updated, or deleted per operator mode so
-repeatable latent explorations do not require rebuilding a form by hand.
+repeatable latent explorations do not require rebuilding a form by hand. When a
+preset is selected, the UI now shows parameter and donor-latent drift from the
+saved setting and can revert the current controls back to that preset.
 
 ### Recipe Studio
 
@@ -141,19 +143,24 @@ summary; image plots render inline and bundle-contained audio can be played
 through the bundle-file endpoint instead of staying buried in zip contents.
 Embedded bundle audio can also be promoted into a normal audio artifact, which
 gives it peaks, playback, lineage, recipe provenance, annotations, and reuse in
-the rest of the app. Reusable bundle types expose native Recipe Studio actions
-such as use as profile, sweep vectors, use direction, use prompt in sweep, use
-soft prompt, use memory, and use checkpoint. Prompt-search bundles expose
-candidate prompts as a small listening bench: a candidate can be used as the
-main generation prompt, sent to an alpha sweep, or rendered as MLX audio with
-lineage back to the bundle. Generated candidate takes appear inline beside the
-prompt, can be played immediately, assigned to A/B comparison slots, and marked
+the rest of the app. Bundle readers now show compact workflow signals for real
+available affordances: recipe actions, playable audio, lineage, plots, metrics,
+prompt candidates, memory hits, sweep variants, tensors, checkpoints, and
+geometry stats. Reusable bundle types expose native Recipe Studio actions such
+as use as profile, sweep vectors, use direction, use prompt in sweep, use soft
+prompt, use memory, and use checkpoint. Prompt-search bundles expose candidate
+prompts as a small listening bench: a candidate can be used as the main
+generation prompt, sent to an alpha sweep, or rendered as MLX audio with lineage
+back to the bundle. Generated candidate takes appear inline beside the prompt,
+can be played immediately, assigned to A/B comparison slots, and marked
 keeper/maybe/rejected with optional listening notes. They also show compact
 descriptor deltas against the prompt-search target audio for level, brightness,
 spectral motion, noise/flatness, and stereo width. A small decision-study panel
 summarizes listened/generated takes by keeper/maybe/reject state and averages
 the descriptor shifts for keepers so prompt-search listening notes become
-research feedback rather than isolated labels.
+research feedback rather than isolated labels. Prompt-search panels also show
+first-pass prompt memory across generated takes, grouping keeper/maybe/reject
+decisions by prompt text across runs.
 Jobs and artifacts with the same recipe are grouped as result families in the
 right rail with run metrics when the job reports them; prompt-candidate
 generations are grouped under their search bundle instead of scattering as
@@ -192,8 +199,9 @@ Confirmed in the current codebase:
   Prompt-search candidates can be rendered as generated audio takes with
   lineage, inline playback, A/B assignment, target-vs-take descriptor deltas,
   saved listening decisions, and a first-pass decision-study summary that
-  correlates listened choices with descriptor shifts. CLAP remains queued behind
-  the same explicit scorer field.
+  correlates listened choices with descriptor shifts. Generated prompt takes are
+  also grouped into a prompt-memory summary across runs. CLAP remains queued
+  behind the same explicit scorer field.
 - Artifact annotation and archive search are implemented for labels, notes,
   tags, durable keeper/maybe/reject listening decisions, artifact kind, model,
   operator, result family, and source lineage.
@@ -210,8 +218,9 @@ Confirmed in the current codebase:
   inspectors, bundle metrics, inline plot/image previews, and kind-specific
   artifact vitals, embedded bundle-audio playback and promotion, prompt-search
   scorer controls, candidate-family bundle reading, durable listening decision
-  controls, prompt-search decision summaries, Operator Studio local presets,
-  sibling sweep comparison, and the first native geometry-audit recipe.
+  controls, prompt-search decision summaries, prompt memory, Operator Studio
+  local presets with visible diffs, bundle workflow signals, sibling sweep
+  comparison, and the first native geometry-audit recipe.
 - Core app surfaces are now split into focused modules for audio playback,
   artifact display, job progress, result families, recipe forks, and bundle
   inspection.
@@ -222,10 +231,10 @@ Still partial:
 - Some Colab modes are mapped but not yet first-class native interactions.
   Prompt-search modes now have a native recipe path and an SA3 flow-loss scorer,
   plus first-pass target/take descriptor deltas and listened-decision
-  correlation. Mode 2/3/5 parity still needs richer layer/alpha comparison
-  reports, cross-run analysis, and clearer runtime-cost notes.
+  correlation plus prompt-memory grouping across runs. Mode 2/3/5 parity still
+  needs richer layer/alpha comparison reports and clearer runtime-cost notes.
 - Operator presets are currently browser-local. Backend or Postgres-backed
-  presets, recipe diffs, and shareable preset history remain future work.
+  preset persistence and shareable preset history remain future work.
 - Type-specific readers for profiles, vectors, soft prompts, training outputs,
   sweeps, memory collections, and geometry audits now receive backend-parsed
   summaries, first-pass metrics/plot discovery, embedded image/audio rendering,

@@ -50,13 +50,15 @@ For the broader stack direction and promotion triggers, see
    decisions by decision, kind, model, operator, family, tag, text, and source
    lineage. Prompt-search takes now expose first-pass target-vs-take descriptor
    deltas plus a decision-study summary over keeper/maybe/reject annotations;
-   next they need richer cross-run and sweep-family comparisons.
+   prompt memory now groups generated prompt-candidate decisions across runs.
+   Next they need richer sweep-family and layer/alpha comparisons.
 
 2. Presets for Operator Studio.
    Browser-local named presets now exist for blur, DSP, graft, renoise, and
    cyclic roll. They can be saved, updated, selected, and deleted per operator
-   mode. Next, promote useful presets into backend recipe history with explicit
-   diffs before adding a heavier database-backed preset library.
+   mode. Selected presets show parameter and donor-latent diffs with a revert
+   action. Next, promote useful presets into backend recipe history before
+   adding a heavier database-backed preset library.
 
 3. Artifact filtering and tagging.
    Labels, tags, notes, keeper/maybe/reject listening decisions, archive search,
@@ -76,9 +78,11 @@ For the broader stack direction and promotion triggers, see
    audio artifacts. Prompt-search bundles now show scorer metadata, compact
    candidate families, inline generated takes, A/B assignment for candidate
    audio, target/take descriptor deltas, and saved listening decisions with
-   notes. Next, vector/profile/soft-prompt/sweep/geometry/prompt search bundles
-   should expose richer domain-specific controls without making the user inspect
-   zip contents.
+   notes. Bundle panels now show workflow signals for recipe actions, playable
+   audio, lineage, plots, metrics, candidates, memory hits, variants, tensors,
+   checkpoints, and geometry stats. Next, vector/profile/soft-prompt/sweep/
+   geometry/prompt-search bundles should expose deeper domain-specific controls
+   without making the user inspect zip contents.
 
 ## P2: Research Cognition
 
@@ -105,10 +109,10 @@ For the broader stack direction and promotion triggers, see
    takes are grouped under the prompt-search family and can be played, sent to
    A/B beside the candidate, marked keeper/maybe/rejected with notes, and
    compared to the target through lightweight descriptor deltas. They can also be
-   summarized through a decision-study panel and recovered later through
-   decision/model/operator/family filters. The next research step is richer
-   layer/alpha comparison, cross-run aggregation, and runtime-cost notes. CLAP or
-   hybrid scoring belongs after that comparison workflow has real usage.
+   summarized through a decision-study panel, grouped into prompt memory across
+   runs, and recovered later through decision/model/operator/family filters. The
+   next research step is richer layer/alpha comparison and runtime-cost notes.
+   CLAP or hybrid scoring belongs after that comparison workflow has real usage.
 
 5. Geometry and control probes.
    `experiment.geometry_audit` now produces a local latent geometry report
@@ -150,7 +154,8 @@ For the broader stack direction and promotion triggers, see
    are validated. The next step is richer cross-field constraints such as donor
    requirements, source artifact kind, and mode-specific path compatibility.
    Operator presets are still browser-local; persisted preset contracts should
-   wait until recipe diffs and validation metadata are stable enough to save.
+   wait until validation metadata and backend history semantics are stable
+   enough to save.
 
 4. Add persistent worker processes.
    Repeated Medium generation would benefit from a resident MLX/PyTorch worker
@@ -168,9 +173,9 @@ For the broader stack direction and promotion triggers, see
    geometry reports are now also surfaced, and bundle audio can be promoted into
    first-class audio artifacts. The specimen panel shows kind-specific vitals for
    audio, latent, and bundle artifacts. Next each bundle kind should grow a
-   dedicated inspector component with richer actions: vector bundle, profile,
-   prompt search, soft prompt, training output, sweep, memory collection, and
-   geometry audit.
+   dedicated inspector component with richer actions beyond the new workflow
+   signals: vector bundle, profile, prompt search, soft prompt, training output,
+   sweep, memory collection, and geometry audit.
 
 7. Continue extracting app surfaces from `App.tsx`.
    Audio playback, artifact display, job progress, result families, recipe

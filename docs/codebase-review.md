@@ -41,10 +41,10 @@ and the next risks for turning the Colab experiments into a proper app.
   A/B promotion from the table. Embedded bundle audio can be promoted into a
   first-class audio artifact, and prompt-search bundles are parsed into native
   scorer rows, candidate-family previews, generated-take decision summaries,
-  and prompt reuse actions.
+  prompt memory, workflow-signal chips, and prompt reuse actions.
 - Operator Studio now has browser-local presets for repeatable latent operator
-  explorations, which is useful immediately even before presets become durable
-  backend records.
+  explorations, plus selected-preset diffs for changed params and donor latents.
+  This is useful immediately even before presets become durable backend records.
 
 ## Important Risks
 
@@ -60,14 +60,14 @@ and the next risks for turning the Colab experiments into a proper app.
   as more Colab modes become native.
 - Bundle artifacts have backend-parsed JSON/NPZ summaries, metric rows, plot
   file discovery, inline image previews, typed UI readers, and recipe-input
-  actions, but vector/profile/prompt-search/soft-prompt-specific inspectors are
-  still shallow.
+  actions plus first-pass workflow signals, but vector/profile/prompt-search/
+  soft-prompt-specific inspectors are still shallow.
 - `experiment.prompt_search` now has a deterministic `lexical_probe` fallback
   and an optional `sa3_flow_probe` scorer. It should not be presented as mature
   audio-text inversion until the real Medium/MPS scorer has listening
-  validation, cost notes, and cross-run comparison workflow. The candidate
-  comparison and decision-correlation slice exists, but CLAP is still queued
-  rather than implemented.
+  validation, cost notes, and layer/alpha comparison workflow. The candidate
+  comparison, decision-correlation, and prompt-memory slices exist, but CLAP is
+  still queued rather than implemented.
 - Long-running jobs have cancel/retry, but not pause/resume, priority,
   resource-aware scheduling, or resident worker reuse.
 - Error messages are now transformed into first-pass recovery hints, but command

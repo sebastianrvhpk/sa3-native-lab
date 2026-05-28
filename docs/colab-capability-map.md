@@ -58,8 +58,9 @@ Operator Studio exposes the direct latent operators as native controls rather
 than notebook snippets: cyclic roll, blur, DSP, graft, and renoise all map to
 their executable request params, with donor-latent selection shown only when the
 chosen mode needs a donor. Browser-local presets now save and reload named
-parameter sets per operator mode; backend-backed preset history and recipe diffs
-remain future promotion work.
+parameter sets per operator mode and show selected-preset diffs for changed
+params and donor latents; backend-backed preset history remains future
+promotion work.
 
 The session archive now supports label, notes, tag annotation, listening
 decisions, and local recovery filters. Latent memory query is promoted from
@@ -78,18 +79,19 @@ marked as a probe until the real Medium/MPS path has short-audio listening
 validation, runtime-cost notes, and richer candidate comparison. The first
 candidate-comparison slice now shows target-vs-take descriptor deltas for
 generated prompt-search takes and summarizes those deltas against saved
-keeper/maybe/reject decisions. CLAP or hybrid scoring remains a future adapter
+keeper/maybe/reject decisions. Prompt memory also groups generated prompt takes
+by prompt text across runs. CLAP or hybrid scoring remains a future adapter
 behind the same `scorer` field.
 
 ## Next Promotion Targets
 
-1. Extend prompt-search decision correlation across runs and document the useful
-   Medium/MPS score-sample/timestep settings.
+1. Add prompt-search sweep/layer comparisons and document the useful Medium/MPS
+   score-sample/timestep settings.
 2. Add CLAP or hybrid prompt scoring only after the SA3 flow probe has a good
    comparison workflow.
 3. Control-head recipes for Mode 12 and the labelled-probe part of Mode 15.
-4. Promote Operator Studio presets into backend recipe diffs for shareable
-   repeatable latent explorations.
+4. Promote Operator Studio presets into backend history for shareable repeatable
+   latent explorations.
 5. Richer memory/dataset browsing, including preview audio for non-local children.
 6. Long-job controls for LoRA training: pause/resume, priority, and
    resource-aware scheduling are not yet implemented.

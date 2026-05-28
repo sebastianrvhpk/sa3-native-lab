@@ -253,9 +253,10 @@ variant promotion and metric tables, durable keeper/maybe/reject listening
 decisions, session/archive recovery filters for decisions, kind, model,
 operator, family, tag, text, and lineage, memory-query result reuse,
 bundle-to-recipe actions, prompt-search decision summaries, Operator Studio
-local presets, backend-parsed typed bundle inspectors, inline bundle plot
-previews, readiness checks, artifact selection, kind-specific artifact vitals,
-real waveform peaks, region looping, download, and A/B audio playback.
+local presets with visible diffs, prompt-memory grouping, bundle workflow
+signals, backend-parsed typed bundle inspectors, inline bundle plot previews,
+readiness checks, artifact selection, kind-specific artifact vitals, real
+waveform peaks, region looping, download, and A/B audio playback.
 
 ### Notebook Parity Check
 
