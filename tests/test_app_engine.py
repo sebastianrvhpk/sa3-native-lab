@@ -474,6 +474,19 @@ def test_colab_mode_atlas_covers_numbered_modes(tmp_path):
     assert any(mode["status"] == "native recipe" and "experiment.alpha_sweep" in mode["operators"] for mode in modes)
 
 
+def test_fastapi_allows_local_dev_port_origins(tmp_path):
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+
+    from sa3_native_lab.app.server import create_app
+
+    client = TestClient(create_app(artifact_root=tmp_path / "lab", repo_root=tmp_path))
+    response = client.get("/health", headers={"Origin": "http://127.0.0.1:5174"})
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://127.0.0.1:5174"
+
+
 def test_fastapi_inspects_bundle_artifact(tmp_path):
     pytest.importorskip("fastapi")
     from fastapi.testclient import TestClient
