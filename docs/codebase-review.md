@@ -28,33 +28,40 @@ and the next risks for turning the Colab experiments into a proper app.
   editing, and bundle inspection are now split out of `App.tsx`.
 - Medium/SAME-L is now the default path across app contracts, runtime fallbacks,
   frontend defaults, README commands, docs, and tests.
+- Backend operator specs now include `ui_fields`, and the frontend merges those
+  fields into Operator Studio and Recipe Studio so bounds, defaults, options,
+  required fields, artifact-kind hints, and backend choices are visible.
+- Job progress cards now classify common failures into recovery hints instead
+  of leaving the user with only a raw failed status.
+- Bundle inspection promotes JSON/NPZ summaries, metric scalars, and plot/image
+  discovery into typed reader rows.
 
 ## Important Risks
 
-- Frontend field schemas are still duplicated in TypeScript instead of coming
-  from backend operator/experiment specs. This is the biggest drift risk.
+- Frontend field schemas are still partly duplicated in TypeScript. The new
+  backend `ui_fields` merge reduces drift, but the static catalogs still carry
+  layout, copy, and some hand-shaped controls.
 - Live job event transport now has a tRPC/SSE bridge with heartbeat and
-  resume-aware IDs, but durable event replay and user-facing recovery guidance
-  are not yet handled.
+  resume-aware IDs, but durable event replay is not yet handled.
 - `RuntimeDispatcher` owns many responsibilities: backend status, MLX
   generation, SAME encode/decode, latent operators, script adapters, subprocess
   wrapping, and output finalization. It works, but it will become harder to test
   as more Colab modes become native.
-- Bundle artifacts have backend-parsed JSON/NPZ summaries and typed UI readers,
-  but vector/profile/soft-prompt plots and richer reuse actions are still
-  missing.
+- Bundle artifacts have backend-parsed JSON/NPZ summaries, metric rows, plot
+  file discovery, and typed UI readers, but vector/profile/soft-prompt plot
+  previews and richer reuse actions are still missing.
 - Long-running jobs have cancel/retry, but not pause/resume, priority,
   resource-aware scheduling, or resident worker reuse.
-- Error messages are preserved in job records but not yet transformed into
-  user-friendly recovery guidance.
-- The frontend build is clean, but there are no frontend unit tests for form to
-  API payload conversion. This matters now that Operator Studio is schema-like.
+- Error messages are now transformed into first-pass recovery hints, but command
+  context and safe stderr-tail preservation need more work.
+- The frontend build is clean, and payload/form helper tests now exist, but
+  component-level tests should expand as fields become more schema-driven.
 
 ## Suggested Refactors
 
-1. Add a backend schema endpoint for UI fields.
-   Keep the canonical operator/experiment field definitions in Python, then
-   generate or fetch frontend controls from those specs.
+1. Continue migrating field schemas toward backend `ui_fields`.
+   Keep canonical operator/experiment parameter truth in Python while preserving
+   the custom instrument layout in React.
 
 2. Harden job events in tRPC.
    Job lifecycle, recipe, archive, family procedures, and a heartbeat/resume
@@ -70,8 +77,8 @@ and the next risks for turning the Colab experiments into a proper app.
    Recipe Studio payloads.
 
 5. Add artifact inspectors.
-   Extend bundle readers with plots, previews, and reuse actions instead of
-   stopping at parsed summaries.
+   Extend bundle readers from plot discovery to actual previews and reuse
+   actions instead of stopping at parsed summaries.
 
 6. Add deeper job control.
    Later add pause/resume, priorities, worker pools, and resident model

@@ -12,12 +12,13 @@ For the broader stack direction and promotion triggers, see
    Typed job events now reach the UI through a tRPC/SSE control-plane bridge
    when the control plane is enabled. The bridge now emits monotonic IDs,
    resume-aware sequencing, heartbeat events, and log-tail diagnostics. The
-   next trust step is durable event history/reconnect replay and clearer
-   failure recovery guidance.
+   next trust step is durable event history/reconnect replay.
 
 2. Improve error surfacing.
-   Job failures should show command, stderr tail, missing file paths, model
-   auth hints, and suggested next action instead of only a failed status.
+   Job failures now classify common failures into recovery hints for Hugging
+   Face auth, missing MLX setup, path/output problems, subprocess exits, and
+   memory pressure. Next, preserve richer stderr tails and command context
+   without exposing sensitive tokens.
 
 3. Deepen environment readiness checks.
    `/readiness` now reports artifact root, HF auth, Medium MLX weights, SAME-L
@@ -26,8 +27,10 @@ For the broader stack direction and promotion triggers, see
 
 4. Tighten fork-with-changes forms.
    The UI can fork recipe params, backend, model, seed, and notes with visible
-   deltas plus reset controls. Next it should derive bounds and required fields
-   from operator specs.
+   deltas plus reset controls. Backend `ui_fields` now provide defaults,
+   bounds, options, required flags, artifact-kind hints, and advanced flags for
+   Operator Studio and Recipe Studio. Next, make more complex controls fully
+   schema-driven without losing the custom instrument layout.
 
 ## P1: Exploration Speed
 
@@ -47,8 +50,9 @@ For the broader stack direction and promotion triggers, see
 
 4. Better bundle readers.
    Bundle file inventory, JSON previews, memory-result reuse, and first-pass
-   typed readers now exist. The backend now parses JSON/NPZ bundle summaries.
-   Next, vector/profile/soft-prompt/sweep bundles should expose plots,
+   typed readers now exist. The backend now parses JSON/NPZ bundle summaries
+   and promotes metric scalars plus plot/image files into reader rows. Next,
+   vector/profile/soft-prompt/sweep bundles should expose actual plot previews,
    generated audio children, and richer reuse actions without making the user
    inspect zip contents.
 
@@ -97,13 +101,15 @@ For the broader stack direction and promotion triggers, see
    as the model/runtime owner.
 
 2. Generate frontend schemas from backend operator specs.
-   Operator/experiment field catalogs currently live in the frontend. A future
-   typed schema endpoint would reduce drift between Python contracts and UI
-   controls.
+   Backend operator specs now emit `ui_fields`, and the frontend merges them
+   into the existing hand-shaped catalogs. The next step is reducing static
+   catalog duplication while preserving instrument-specific controls and copy.
 
 3. Keep Zod/TanStack Form validation converging.
-   The first typed form foundation exists. The next step is deriving more form
-   bounds and required-ness from backend operator specs to reduce drift.
+   The first typed form foundation exists, and backend bounds/options now feed
+   frontend forms. The next step is richer schema validation for cross-field
+   constraints such as donor requirements, source artifact kind, and alpha list
+   parsing.
 
 4. Add persistent worker processes.
    Repeated Medium generation would benefit from a resident MLX/PyTorch worker
@@ -115,10 +121,10 @@ For the broader stack direction and promotion triggers, see
    tests and future workers cleaner.
 
 6. Add typed artifact inspectors.
-   Bundle summaries now parse JSON/NPZ metadata in the backend. Next each kind
-   should grow a dedicated inspector component with plots and reuse actions:
-   audio, latent, vector bundle, profile, soft prompt, training output, and
-   memory collection.
+   Bundle summaries now parse JSON/NPZ metadata, metric scalars, and plot/image
+   file discovery in the backend. Next each kind should grow a dedicated
+   inspector component with plot previews and reuse actions: audio, latent,
+   vector bundle, profile, soft prompt, training output, and memory collection.
 
 7. Continue extracting app surfaces from `App.tsx`.
    Audio playback, artifact display, job progress, result families, recipe

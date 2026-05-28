@@ -59,8 +59,9 @@ selection, waveform inspection, audio playback, A/B comparison, MLX generation,
 SAME encode/decode, latent-operator runs, Recipe Studio, Mode Atlas, and job
 polling. The bench also has a Run Monitor that surfaces active jobs, percent
 progress, live event snapshots, heartbeat diagnostics, elapsed time,
-cancellation, retry, and the latest backend message near the controls that
-started the work. Selected artifacts can be labeled, tagged, annotated,
+cancellation, retry, the latest backend message, and recovery hints for common
+failures such as gated Hugging Face access, missing MLX setup, path mistakes,
+subprocess exits, and memory pressure. Selected artifacts can be labeled, tagged, annotated,
 replayed from their recipe, and searched later from the archive. Result families
 can be inspected as a compact branch surface with source references,
 per-artifact playback, A/B assignment, alpha-sweep promotion controls, job
@@ -97,6 +98,13 @@ Recipe Studio wraps the notebook/script experiments as background recipes. It
 covers style vectors, style profiles, residual vectors, alpha sweeps, soft
 prompts, dataset pre-encoding, local latent-memory query, and LoRA training.
 
+Operator and recipe controls are partly hand-shaped for playability and partly
+derived from backend `ui_fields` emitted by `/operators/specs`. The frontend
+keeps the current instrument layout, then merges backend defaults, bounds,
+options, artifact-kind hints, and newly discovered fields into the form model.
+This keeps parameters such as duration, seed, model, alpha lists, bundle paths,
+and backend choices accessible while reducing drift from Python contracts.
+
 ## Artifact Model
 
 Artifacts are stored under `.sa3_lab/` by default. The app currently supports:
@@ -111,7 +119,9 @@ operator, backend, inputs, params, model, seed, logs, and source artifacts.
 Artifacts can also carry user labels, notes, and tags for archive search.
 Bundle artifacts can be inspected through the API and UI to reveal their file
 inventory, backend-parsed JSON/NPZ summaries, parsed preview metadata, recipe,
-source artifacts, and child artifacts. Jobs and artifacts with the same recipe
+source artifacts, and child artifacts. Sweep and script bundles now promote
+`metrics.json` values and plot/image files into the reader summary instead of
+leaving them buried in zip contents. Jobs and artifacts with the same recipe
 are grouped as result families in the right rail with run metrics when the job
 reports them. Memory query bundle previews expose ranked hits that can be
 selected, placed in A/B when audio, or reused as latent donors when the hit is a
@@ -146,8 +156,9 @@ Confirmed in the current codebase:
   implemented behind the control-plane launch flag.
 - The frontend has live job-event snapshots, a readiness panel, a recipe fork
   editor with diffs and resets, result-family detail playback, memory-result
-  reuse actions, alpha-sweep variant promotion, backend-parsed typed bundle
-  inspectors, and bundle previews.
+  reuse actions, alpha-sweep variant promotion, job recovery hints,
+  backend-derived operator field metadata, backend-parsed typed bundle
+  inspectors, bundle metrics, and plot/file summaries.
 - Core app surfaces are now split into focused modules for audio playback,
   artifact display, job progress, result families, recipe forks, and bundle
   inspection.
@@ -157,14 +168,15 @@ Still partial:
 
 - Some Colab modes are mapped but not yet first-class native interactions.
 - Type-specific readers for profiles, vectors, soft prompts, training outputs,
-  sweeps, and memory collections now receive backend-parsed summaries, but
-  still need richer plots and reuse actions.
+  sweeps, and memory collections now receive backend-parsed summaries plus
+  first-pass metrics/plot discovery, but still need richer visual plot previews
+  and reuse actions.
 - Memory-query bundles expose preview rows and donor/A-B reuse actions, but
   still need richer dataset browsing, preview audio for non-local children, and
   style-reference promotion.
 - Multi-output sweeps have family grouping, metrics, direct playback, explicit
-  A/B promotion controls, and recipe fork deltas, but still need sweep-specific
-  metric tables and sibling recipe comparison.
+  A/B promotion controls, recipe fork deltas, and inspected metric summaries,
+  but still need sweep-specific sortable tables and sibling recipe comparison.
 - Live job events now reach React through the control plane when that path is
   enabled; the bridge currently polls Python job snapshots and can later switch
   its internal source to Python WebSocket or a durable event store without

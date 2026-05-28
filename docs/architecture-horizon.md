@@ -17,6 +17,8 @@ memory, lineage, and exploratory control.
 - React 19, TypeScript, Vite frontend.
 - TanStack Query for server state.
 - Zustand for local bench state.
+- React Aria Components for accessible field controls.
+- TanStack Form for recipe/operator form state and validation.
 - tRPC and Zod control plane for app-shaped contracts.
 - pytest, Node test, TypeScript build, and Playwright smoke.
 
@@ -24,8 +26,8 @@ memory, lineage, and exploratory control.
 
 | Area | Preferred Stack | Promotion Trigger |
 | --- | --- | --- |
-| Controls | React Aria Components | Replace bespoke sliders, selects, dialogs, tabs, menus, tooltips, and tables with accessible primitives that can keep the custom visual language. |
-| Forms | TanStack Form | Operator and Recipe Studio fields need schema-driven validation, derived readiness, and repeatable payload building. |
+| Controls | React Aria Components | Continue replacing remaining bespoke selects, dialogs, tabs, menus, tooltips, and tables with accessible primitives that can keep the custom visual language. |
+| Forms | TanStack Form | Expand the current form foundation so backend `ui_fields` drive validation, readiness, and repeatable payload building. |
 | Testing | Vitest, Testing Library, MSW, Playwright | Add fast unit/component tests for payload builders and mocked API/tRPC states while keeping Playwright for real app flows. |
 | App contract | tRPC and Zod | Harden job-event subscriptions and move family actions, archive flows, and deeper artifact inspectors behind app-level procedures when they need UI-shaped data. |
 
@@ -66,7 +68,7 @@ memory, lineage, and exploratory control.
 ## Next Promotion Candidates
 
 1. React Aria Components for accessible controls.
-2. TanStack Form for schema-driven operator and recipe forms.
-3. Vitest, Testing Library, and MSW for fast contract and component tests.
-4. More tRPC/Zod procedures for resumable job events, family actions, archive
+2. Vitest, Testing Library, and MSW for fast contract and component tests.
+3. More tRPC/Zod procedures for resumable job events, family actions, archive
    mutations, and backend-parsed artifact inspectors.
+4. Storybook once the extracted app surfaces need visual regression coverage.

@@ -54,7 +54,9 @@ can inspect a family, play its audio artifacts, assign A/B comparison slots,
 show related jobs, promote alpha-sweep variants, and branch the recipe with
 visible diffs. Memory-query bundle hits can also feed app actions when they
 resolve to local artifacts. Bundle inspection now includes backend-parsed
-summaries for JSON/NPZ outputs in addition to file inventory.
+summaries for JSON/NPZ outputs, metric scalars, and plot/image discovery in
+addition to file inventory. Operator specs also carry backend-derived
+`ui_fields`, which React merges into the hand-shaped instrument forms.
 
 The local runner can launch the full path:
 
@@ -67,7 +69,7 @@ uv run sa3-lab dev --with-control-plane
 | Router | Procedure | Purpose |
 | --- | --- | --- |
 | `system` | `readiness` | Report app/runtime readiness checks from the Python worker. |
-| `workbench` | `load` | Build UI-ready workbench state from Python runtime records. |
+| `workbench` | `load` | Build UI-ready workbench state, including operator `ui_fields`, from Python runtime records. |
 | `jobs` | `list`, `get`, `events`, `cancel`, `retry` | App-level lifecycle actions and live snapshots over Python background jobs. |
 | `recipes` | `replay`, `fork` | Re-run or branch a persisted recipe without rebuilding payloads in React. |
 | `artifacts` | `inspect` | Fetch artifact, recipe, sources, children, bundle file inventory, safe previews, and parsed bundle summaries. |
@@ -104,12 +106,11 @@ Future responsibilities:
 
 ## Next Control-Plane Queue
 
-1. Add durable event history/reconnect replay and stderr-tail recovery guidance
-   to `jobs.events`.
+1. Add durable event history/reconnect replay to `jobs.events`.
 2. Promote archive annotation/search mutations to the normal UI path.
-3. Add bounded fork forms derived from operator specs.
+3. Move more bounded fork and recipe forms onto backend-derived `ui_fields`.
 4. Promote family detail and memory-result actions into tRPC procedures where
    they need server-side shaping beyond `workbench.load`.
-5. Add richer family-specific inspectors for sweeps, memory query bundles, and
-   style profile bundles.
+5. Add richer family-specific inspectors and plot previews for sweeps, memory
+   query bundles, and style profile bundles.
 6. Evaluate Postgres only after these procedures stabilize.

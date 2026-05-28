@@ -184,6 +184,13 @@ curl http://127.0.0.1:8733/models/status
 curl http://127.0.0.1:8733/operators/specs
 ```
 
+`/operators/specs` is now more than an inventory endpoint: each operator also
+returns `ui_fields` with labels, defaults, bounds, select options, artifact-kind
+hints, and required/advanced flags. The React instrument merges those backend
+field contracts into Operator Studio and Recipe Studio, so duration, seed,
+model, sweep, path, and backend params stay reachable as the Colab scripts move
+into native UI.
+
 Text generation runs through the Apple Silicon MLX backend when
 `optimized/mlx/install.sh` has been completed:
 
