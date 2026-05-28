@@ -30,6 +30,7 @@ const server = setupServer(
       sources: [],
       children: [],
       bundle_files: [{ path: "metrics.json", byte_size: 16, compressed_size: 12 }],
+      bundle_audio_files: [{ path: "take.wav", byte_size: 3200, media_type: "audio/wav", duration_seconds: 0.1 }],
       bundle_preview: { result_count: 2 },
       bundle_summary: { kind: "sweep", file_count: 1 },
     }),
@@ -97,6 +98,7 @@ describe("createApi", () => {
     await expect(api.inspectArtifact("art_bundle")).resolves.toMatchObject({
       artifact: { artifact_id: "art_bundle" },
       bundle_files: [{ path: "metrics.json", byte_size: 16 }],
+      bundle_audio_files: [{ path: "take.wav", media_type: "audio/wav" }],
       bundle_preview: { result_count: 2 },
     });
     expect(api.bundleFileUrl("art_bundle", "plots/main plot.png")).toBe(

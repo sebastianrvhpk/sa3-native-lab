@@ -449,6 +449,7 @@ def test_fastapi_inspects_bundle_artifact(tmp_path):
     output_dir.mkdir()
     (output_dir / "metrics.json").write_text('{"score": 0.8}\n', encoding="utf-8")
     (output_dir / "plot.png").write_bytes(b"plot")
+    sf.write(output_dir / "take.wav", np.zeros((800, 1), dtype=np.float32), 8000)
     recipe = Recipe(operator=OperatorName.EXPERIMENT_ALPHA_SWEEP, backend=BackendName.TORCH_CPU)
     record = app.state.store.finalize_bundle_path(artifact_id="art_bundle", path=output_dir, recipe=recipe)
 
@@ -464,11 +465,19 @@ def test_fastapi_inspects_bundle_artifact(tmp_path):
     assert payload["bundle_summary"]["json_files"][0]["path"] == "metrics.json"
     assert payload["bundle_summary"]["metrics"]["values"]["score"] == 0.8
     assert payload["bundle_summary"]["plots"]["count"] == 1
+    assert payload["bundle_audio_files"][0]["path"] == "take.wav"
+    assert payload["bundle_audio_files"][0]["media_type"] == "audio/wav"
+    assert payload["bundle_audio_files"][0]["sample_rate"] == 8000
+    assert payload["bundle_audio_files"][0]["duration_seconds"] == 0.1
 
     plot = client.get(f"/artifacts/{record.artifact_id}/bundle-file", params={"path": "plot.png"})
     assert plot.status_code == 200
     assert plot.content == b"plot"
     assert plot.headers["content-type"] == "image/png"
+
+    audio = client.get(f"/artifacts/{record.artifact_id}/bundle-file", params={"path": "take.wav"})
+    assert audio.status_code == 200
+    assert audio.headers["content-type"] == "audio/wav"
 
 
 def test_runtime_same_encode_decode_with_fake_adapter(tmp_path):

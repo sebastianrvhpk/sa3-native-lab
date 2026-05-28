@@ -82,6 +82,17 @@ export interface BundleFileEntry {
   compressed_size?: number | null;
 }
 
+export interface BundleAudioEntry {
+  path: string;
+  byte_size: number;
+  media_type?: string | null;
+  sample_rate?: number | null;
+  channels?: number | null;
+  frames?: number | null;
+  duration_seconds?: number | null;
+  format?: string | null;
+}
+
 export interface Recipe {
   recipe_id: string;
   operator: OperatorName;
@@ -102,6 +113,7 @@ export interface ArtifactInspection {
   sources: ArtifactRecord[];
   children: ArtifactRecord[];
   bundle_files: BundleFileEntry[];
+  bundle_audio_files: BundleAudioEntry[];
   bundle_preview: Record<string, unknown>;
   bundle_summary: Record<string, unknown>;
 }

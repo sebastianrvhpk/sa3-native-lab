@@ -100,6 +100,17 @@ class BundleFileEntry(ContractModel):
     compressed_size: int | None = None
 
 
+class BundleAudioEntry(ContractModel):
+    path: str
+    byte_size: int
+    media_type: str | None = None
+    sample_rate: int | None = None
+    channels: int | None = None
+    frames: int | None = None
+    duration_seconds: float | None = None
+    format: str | None = None
+
+
 class LatentMetadata(ContractModel):
     shape: tuple[int, int]
     latent_rate: float
@@ -153,6 +164,7 @@ class ArtifactInspection(ContractModel):
     sources: list[ArtifactRecord] = Field(default_factory=list)
     children: list[ArtifactRecord] = Field(default_factory=list)
     bundle_files: list[BundleFileEntry] = Field(default_factory=list)
+    bundle_audio_files: list[BundleAudioEntry] = Field(default_factory=list)
     bundle_preview: dict[str, Any] = Field(default_factory=dict)
     bundle_summary: dict[str, Any] = Field(default_factory=dict)
 

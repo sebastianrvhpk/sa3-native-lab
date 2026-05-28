@@ -18,6 +18,7 @@ from .contracts import (
     ArtifactRecord,
     AudioMetadata,
     AudioPeaksResponse,
+    BundleAudioEntry,
     BundleFileEntry,
     FileInfo,
     LatentMetadata,
@@ -378,6 +379,7 @@ class ArtifactStore:
             sources=sources,
             children=children,
             bundle_files=bundle_files,
+            bundle_audio_files=_bundle_audio_entries(record.path, bundle_files) if record.kind == ArtifactKind.BUNDLE else [],
             bundle_preview=_bundle_preview(record) if record.kind == ArtifactKind.BUNDLE else {},
             bundle_summary=_bundle_summary(record, bundle_files) if record.kind == ArtifactKind.BUNDLE else {},
         )
@@ -529,6 +531,65 @@ def _bundle_file_entries(path: Path) -> list[BundleFileEntry]:
     return [BundleFileEntry(path=path.name, byte_size=path.stat().st_size)]
 
 
+AUDIO_SUFFIXES = {".wav", ".flac", ".mp3", ".ogg", ".m4a", ".aiff", ".aif"}
+
+
+def _bundle_audio_entries(path: Path, files: list[BundleFileEntry]) -> list[BundleAudioEntry]:
+    entries: list[BundleAudioEntry] = []
+    for file in files:
+        if Path(file.path.lower()).suffix not in AUDIO_SUFFIXES:
+            continue
+        metadata = _bundle_audio_metadata(path, file.path)
+        entries.append(
+            BundleAudioEntry(
+                path=file.path,
+                byte_size=file.byte_size,
+                media_type=_guess_media_type(Path(file.path)),
+                sample_rate=metadata.get("sample_rate"),
+                channels=metadata.get("channels"),
+                frames=metadata.get("frames"),
+                duration_seconds=metadata.get("duration_seconds"),
+                format=metadata.get("format"),
+            )
+        )
+    return entries
+
+
+def _bundle_audio_metadata(path: Path, inner_path: str) -> dict[str, Any]:
+    try:
+        import soundfile as sf
+
+        if path.is_dir():
+            root = path.resolve()
+            target = (root / _safe_bundle_member_path(inner_path)).resolve()
+            if not target.is_file() or root not in target.parents:
+                return {}
+            info = sf.info(str(target))
+        elif zipfile.is_zipfile(path):
+            safe_path = _safe_bundle_member_path(inner_path)
+            with zipfile.ZipFile(path) as archive:
+                item = archive.getinfo(safe_path)
+                if item.file_size > 256 * 1024 * 1024:
+                    return {}
+                with archive.open(item) as handle:
+                    info = sf.info(io.BytesIO(handle.read()))
+        elif path.name == inner_path:
+            info = sf.info(str(path))
+        else:
+            return {}
+    except Exception:
+        return {}
+
+    duration = float(info.frames / info.samplerate) if info.samplerate else None
+    return {
+        "sample_rate": int(info.samplerate) if info.samplerate else None,
+        "channels": int(info.channels) if info.channels else None,
+        "frames": int(info.frames),
+        "duration_seconds": duration,
+        "format": info.format,
+    }
+
+
 def _bundle_preview(record: ArtifactRecord) -> dict[str, Any]:
     preview: dict[str, Any] = {
         "operator": record.metadata.get("operator"),
@@ -573,7 +634,7 @@ def _bundle_preview(record: ArtifactRecord) -> dict[str, Any]:
 
 def _bundle_summary(record: ArtifactRecord, files: list[BundleFileEntry]) -> dict[str, Any]:
     file_names = [entry.path.lower() for entry in files]
-    audio_count = sum(1 for name in file_names if Path(name).suffix in {".wav", ".flac", ".mp3", ".ogg", ".m4a", ".aiff", ".aif"})
+    audio_count = sum(1 for name in file_names if Path(name).suffix in AUDIO_SUFFIXES)
     latent_count = sum(1 for name in file_names if Path(name).suffix == ".npy")
     npz_count = sum(1 for name in file_names if Path(name).suffix == ".npz")
     json_payloads = list(_iter_bundle_json_payloads(record.path, max_bytes=1024 * 1024))

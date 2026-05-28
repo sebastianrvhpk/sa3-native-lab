@@ -227,6 +227,7 @@ test("tRPC artifact inspection and family loading expose app-shaped records", as
         sources: [],
         children: [],
         bundle_files: [{ path: "metrics.json", byte_size: 16, compressed_size: 12 }],
+        bundle_audio_files: [{ path: "take.wav", byte_size: 3200, media_type: "audio/wav", duration_seconds: 0.1 }],
         bundle_preview: { result_count: 3 },
         bundle_summary: { kind: "sweep", file_count: 1 },
       },
@@ -243,6 +244,7 @@ test("tRPC artifact inspection and family loading expose app-shaped records", as
   const families = await caller.families.load({ sessionId: session.session_id });
 
   assert.equal(inspection.bundle_files[0]?.path, "metrics.json");
+  assert.equal(inspection.bundle_audio_files[0]?.path, "take.wav");
   assert.equal(inspection.bundle_preview.result_count, 3);
   assert.equal(families.sessionResultFamilies[0]?.latestArtifactId, artifact.artifact_id);
   assert.equal(families.sessionResultFamilies[0]?.artifactKinds[0], "bundle");
