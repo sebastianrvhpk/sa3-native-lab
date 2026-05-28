@@ -920,6 +920,17 @@ export function App() {
     setExperimentForm(defaultExperimentForm(mode));
   };
 
+  const useArtifactAsDonor = (artifactId: string) => {
+    const artifact = allArtifacts.find((item) => item.artifact_id === artifactId);
+    if (!artifact || artifact.kind !== "latent") return;
+    const currentConfig = operatorCatalog.find((item) => item.value === operator) ?? operatorCatalog[0];
+    if (!operatorUsesDonor(currentConfig, operatorForm)) {
+      setOperator("latent.graft");
+      setOperatorForm(defaultOperatorForm("latent.graft"));
+    }
+    setDonorArtifactId(artifactId);
+  };
+
   return (
     <main className="app-shell">
       <header className="top-strip">
@@ -982,6 +993,8 @@ export function App() {
             onAnnotate={(artifactId, payload) => annotateArtifact.mutate({ artifactId, payload })}
             onCompare={setCompare}
             onReplayRecipe={(recipeId) => replayRecipeMutation.mutate(recipeId)}
+            onSelectArtifact={selectArtifact}
+            onUseAsDonor={useArtifactAsDonor}
           />
           <RunMonitor
             runningJobs={runningJobs}
@@ -1367,6 +1380,8 @@ function Specimen({
   onAnnotate,
   onCompare,
   onReplayRecipe,
+  onSelectArtifact,
+  onUseAsDonor,
 }: {
   artifact: ArtifactRecord | null;
   artifacts: ArtifactRecord[];
@@ -1375,6 +1390,8 @@ function Specimen({
   onAnnotate: (artifactId: string, payload: ArtifactAnnotationPayload) => void;
   onCompare: (slot: "a" | "b", artifactId: string | null) => void;
   onReplayRecipe: (recipeId: string) => void;
+  onSelectArtifact: (artifactId: string | null) => void;
+  onUseAsDonor: (artifactId: string) => void;
 }) {
   if (!artifact) {
     return (
@@ -1395,7 +1412,14 @@ function Specimen({
         ) : artifact.kind === "latent" ? (
           <LatentField artifact={artifact} />
         ) : (
-          <BundleField artifact={artifact} apiBase={apiBase} />
+          <BundleField
+            artifact={artifact}
+            artifacts={artifacts}
+            apiBase={apiBase}
+            onCompare={onCompare}
+            onSelectArtifact={onSelectArtifact}
+            onUseAsDonor={onUseAsDonor}
+          />
         )}
         <LineageThread artifact={artifact} sources={sourceArtifacts} />
       </div>
@@ -2384,7 +2408,21 @@ function LatentField({ artifact }: { artifact: ArtifactRecord }) {
   );
 }
 
-function BundleField({ artifact, apiBase }: { artifact: ArtifactRecord; apiBase: string }) {
+function BundleField({
+  artifact,
+  artifacts,
+  apiBase,
+  onCompare,
+  onSelectArtifact,
+  onUseAsDonor,
+}: {
+  artifact: ArtifactRecord;
+  artifacts: ArtifactRecord[];
+  apiBase: string;
+  onCompare: (slot: "a" | "b", artifactId: string | null) => void;
+  onSelectArtifact: (artifactId: string | null) => void;
+  onUseAsDonor: (artifactId: string) => void;
+}) {
   const api = useMemo(() => createApi(apiBase), [apiBase]);
   const inspection = useQuery({
     queryKey: ["artifact-inspection", apiBase, artifact.artifact_id],
@@ -2419,8 +2457,12 @@ function BundleField({ artifact, apiBase }: { artifact: ArtifactRecord; apiBase:
         {inspection.data ? (
           <BundlePreview
             preview={inspection.data.bundle_preview}
+            artifacts={artifacts}
             sourceCount={inspection.data.sources.length}
             childCount={inspection.data.children.length}
+            onCompare={onCompare}
+            onSelectArtifact={onSelectArtifact}
+            onUseAsDonor={onUseAsDonor}
           />
         ) : null}
       </div>
@@ -2430,12 +2472,20 @@ function BundleField({ artifact, apiBase }: { artifact: ArtifactRecord; apiBase:
 
 function BundlePreview({
   preview,
+  artifacts,
   sourceCount,
   childCount,
+  onCompare,
+  onSelectArtifact,
+  onUseAsDonor,
 }: {
   preview: Record<string, unknown>;
+  artifacts: ArtifactRecord[];
   sourceCount: number;
   childCount: number;
+  onCompare: (slot: "a" | "b", artifactId: string | null) => void;
+  onSelectArtifact: (artifactId: string | null) => void;
+  onUseAsDonor: (artifactId: string) => void;
 }) {
   const rows = [
     ["operator", preview.operator],
@@ -2447,6 +2497,7 @@ function BundlePreview({
     ["children", childCount],
   ].filter(([, value]) => value !== undefined && value !== null && value !== "");
   const results = Array.isArray(preview.results) ? preview.results.slice(0, 3) : [];
+  const artifactMap = new Map(artifacts.map((artifact) => [artifact.artifact_id, artifact]));
   if (!rows.length && !results.length) return null;
   return (
     <div className="bundle-preview">
@@ -2463,11 +2514,29 @@ function BundlePreview({
         <div className="bundle-result-list">
           {results.map((result, index) => {
             const item = result && typeof result === "object" ? (result as Record<string, unknown>) : {};
+            const artifactId = typeof item.artifact_id === "string" ? item.artifact_id : "";
+            const localArtifact = artifactId ? artifactMap.get(artifactId) ?? null : null;
             return (
-              <i key={`${String(item.artifact_id ?? index)}-${index}`}>
-                {String(item.artifact_id ?? `result ${index + 1}`)}
-                <small>{formatBundleScore(item)}</small>
-              </i>
+              <article key={`${String(item.artifact_id ?? index)}-${index}`}>
+                <div>
+                  <strong>{localArtifact ? artifactName(localArtifact) : String(item.artifact_id ?? `result ${index + 1}`)}</strong>
+                  <small>{formatBundleScore(item) || (localArtifact ? artifactMeta(localArtifact) : "memory hit")}</small>
+                </div>
+                <div className="memory-hit-actions">
+                  <button type="button" disabled={!localArtifact} onClick={() => onSelectArtifact(localArtifact?.artifact_id ?? null)}>
+                    Select
+                  </button>
+                  <button type="button" disabled={localArtifact?.kind !== "audio"} onClick={() => localArtifact && onCompare("a", localArtifact.artifact_id)}>
+                    A
+                  </button>
+                  <button type="button" disabled={localArtifact?.kind !== "audio"} onClick={() => localArtifact && onCompare("b", localArtifact.artifact_id)}>
+                    B
+                  </button>
+                  <button type="button" disabled={localArtifact?.kind !== "latent"} onClick={() => localArtifact && onUseAsDonor(localArtifact.artifact_id)}>
+                    Donor
+                  </button>
+                </div>
+              </article>
             );
           })}
         </div>

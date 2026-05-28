@@ -459,8 +459,7 @@ label {
   gap: 5px;
 }
 
-.bundle-file-list i,
-.bundle-result-list i {
+.bundle-file-list i {
   display: grid;
   grid-template-columns: minmax(0, 1fr) max-content;
   gap: 8px;
@@ -471,7 +470,7 @@ label {
 
 .bundle-file-list i,
 .bundle-file-list small,
-.bundle-result-list i,
+.bundle-result-list strong,
 .bundle-result-list small {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -488,6 +487,42 @@ label {
 .bundle-result-list {
   display: grid;
   gap: 5px;
+}
+
+.bundle-result-list article {
+  border: 1px solid var(--line-soft);
+  border-radius: 7px;
+  padding: 7px;
+  display: grid;
+  gap: 6px;
+  background: rgb(255 255 255 / 0.34);
+  min-width: 0;
+}
+
+.bundle-result-list article > div:first-child {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.bundle-result-list strong {
+  color: var(--ink);
+  font-size: 0.74rem;
+}
+
+.memory-hit-actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.memory-hit-actions button {
+  min-height: 26px;
+  width: 100%;
+  padding: 0 5px;
+  border-radius: 6px;
+  box-shadow: none;
+  font-size: 0.68rem;
 }
 
 .lineage-thread {
