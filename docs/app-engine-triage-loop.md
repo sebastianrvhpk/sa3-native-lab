@@ -53,7 +53,7 @@ source audio / prompt
 | P2 | Memory atlas and retrieval | `LatentMemoryIndex` + `memory.query` + memory-hit reuse actions | Promote first slice | nearest-neighbor runtime test, frontend smoke |
 | P2 | SAME geometry audit | `geometry_report` + `experiment.geometry_audit` + bundle summary reader | Promote first slice | runtime test, frontend tests |
 | P2 | Prompt search probe | `experiment.prompt_search` + `prompt_optimization` helpers + prompt-search bundle reader | Promote as probe | runtime test, frontend tests |
-| P2 | SA3 flow prompt scoring | `latent_audio_primitives.flow_prompt` + `experiment.prompt_search.scorer=sa3_flow_probe` | Promote as explicit model-backed probe | flow-scorer primitive tests, runtime scorer-switch test |
+| P2 | SA3 flow prompt scoring | `latent_audio_primitives.flow_prompt` + `experiment.prompt_search.scorer=sa3_flow_probe` | Promote as explicit model-backed probe | flow-scorer primitive tests, runtime scorer-switch test, tiny authenticated Medium/MPS smoke |
 | P2 | CLAP / hybrid prompt scoring | queued scorer adapter behind the same scorer contract | Defer | future model-backed recipe tests |
 
 ## Acceptance Tests Per Pass
@@ -67,13 +67,13 @@ source audio / prompt
 
 ## Immediate Next Queue
 
-1. Validate `sa3_flow_probe` against real Medium/MPS runs on short target audio,
-   including progress messages, runtime cost notes, and failure recovery text.
+1. Add generated-audio comparison for prompt-search candidates, including
+   source/candidate A/B assignment, prompt adoption, and explicit promotion.
 2. Add richer domain-specific inspectors for style profiles, vectors, prompt
    search, soft prompts, memory collections, sweeps, geometry audits, and
    training outputs.
-3. Add CLAP or hybrid scorer only after the SA3 flow probe has real listening
-   validation and a useful comparison workflow.
+3. Add CLAP or hybrid scorer only after the SA3 flow probe has a useful
+   generated-audio comparison workflow.
 4. Add control-head recipe adapters for Mode 12 and labelled-probe extensions
    for Mode 15.
 5. Continue shrinking frontend field drift until backend `ui_fields` can drive

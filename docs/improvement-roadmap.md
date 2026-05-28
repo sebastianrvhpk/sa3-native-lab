@@ -20,13 +20,15 @@ For the broader stack direction and promotion triggers, see
 2. Improve error surfacing.
    Job failures now classify common failures into recovery hints for Hugging
    Face auth, missing MLX setup, path/output problems, subprocess exits, and
-   memory pressure. Next, preserve richer stderr tails and command context
-   without exposing sensitive tokens.
+   memory pressure. Medium torch prompt probes also preflight Hugging Face cache
+   space before the heavy checkpoint download. Next, preserve richer stderr
+   tails and command context without exposing sensitive tokens.
 
 3. Deepen environment readiness checks.
    `/readiness` now reports artifact root, HF auth, Medium MLX weights, SAME-L
-   access, and backend availability. Next checks should cover exact HF license
-   acceptance, disk space, model cache paths, and optional extras.
+   access, Hugging Face cache space, and backend availability. Next checks
+   should cover exact HF license acceptance, active model cache paths, and
+   optional extras.
 
 4. Tighten fork-with-changes forms.
    The UI can fork recipe params, backend, model, seed, and notes with visible
@@ -88,10 +90,11 @@ For the broader stack direction and promotion triggers, see
 4. Prompt/residual comparison bench.
    Prompt search now exists as `experiment.prompt_search` with beam, greedy, and
    coordinate modes, `lexical_probe` fallback, and optional `sa3_flow_probe`
-   scoring over Medium flow losses. The next research step is validating that
-   scorer on real short target audio, then pairing prompt candidates with
-   generated-audio grids, descriptor deltas, and layer/alpha comparisons. CLAP
-   or hybrid scoring belongs after that comparison workflow exists.
+   scoring over Medium flow losses. A tiny authenticated Medium/MPS smoke run
+   succeeded locally on short target audio. The next research step is pairing
+   prompt candidates with generated-audio grids, descriptor deltas, and
+   layer/alpha comparisons. CLAP or hybrid scoring belongs after that comparison
+   workflow exists.
 
 5. Geometry and control probes.
    `experiment.geometry_audit` now produces a local latent geometry report

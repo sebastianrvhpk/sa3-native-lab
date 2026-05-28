@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import time
 from io import BytesIO
+from io import StringIO
 from pathlib import Path
 from threading import Event
 
@@ -30,7 +31,7 @@ from sa3_native_lab.app.contracts import (  # noqa: E402
     TextGenerateRequest,
 )
 from sa3_native_lab.app.jobs import JobManager, JobResult  # noqa: E402
-from sa3_native_lab.app.runtime import RuntimeDispatcher  # noqa: E402
+from sa3_native_lab.app.runtime import RuntimeDispatcher, _download_sa3_model_files_with_progress  # noqa: E402
 from sa3_native_lab.app.storage import ArtifactStore  # noqa: E402
 
 
@@ -248,6 +249,42 @@ def test_runtime_prompt_search_uses_sa3_flow_probe_scorer(tmp_path):
     assert inspection.bundle_summary["prompt_search"]["model"] == "medium"
     assert inspection.bundle_summary["prompt_search"]["score_samples"] == 2
     assert inspection.bundle_summary["prompt_search"]["families"][0]["prompt"] == payload["prompt"]
+
+
+def test_sa3_model_download_progress_reports_checkpoint(monkeypatch):
+    import huggingface_hub
+
+    updates: list[tuple[float, str]] = []
+    downloads: list[tuple[str, str]] = []
+
+    class FakeContext:
+        def set_progress(self, progress: float, message: str) -> None:
+            updates.append((progress, message))
+
+    def fake_hf_hub_download(*, repo_id: str, filename: str, tqdm_class):
+        downloads.append((repo_id, filename))
+        progress = tqdm_class(total=100, file=StringIO())
+        progress.update(25)
+        progress.update(75)
+        progress.close()
+        return f"/fake-cache/{filename}"
+
+    monkeypatch.setattr(huggingface_hub, "hf_hub_download", fake_hf_hub_download)
+
+    _download_sa3_model_files_with_progress(
+        "medium",
+        context=FakeContext(),  # type: ignore[arg-type]
+        progress_start=0.1,
+        progress_end=0.2,
+    )
+
+    assert downloads == [
+        ("stabilityai/stable-audio-3-medium", "model_config.json"),
+        ("stabilityai/stable-audio-3-medium", "model.safetensors"),
+    ]
+    assert any("downloading SA3 medium checkpoint 100%" in message for _, message in updates)
+    assert updates[-1][0] == pytest.approx(0.2)
+    assert updates[-1][1] == "resolved SA3 medium checkpoint"
 
 
 def test_audio_peaks_are_derived_from_audio_file(tmp_path):

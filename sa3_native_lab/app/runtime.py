@@ -7,6 +7,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 from dataclasses import fields
 from pathlib import Path
 from typing import Any
@@ -1331,7 +1332,13 @@ class RuntimeDispatcher:
         model_name = str(recipe.model or params.get("model") or "medium")
         device = str(params.get("device") or _device_for_backend(recipe.backend))
         _ensure_sa3_model_cache_space(model_name)
-        context.set_progress(0.11, f"loading SA3 flow scorer model={model_name} device={device}")
+        _download_sa3_model_files_with_progress(
+            model_name,
+            context=context,
+            progress_start=0.105,
+            progress_end=0.135,
+        )
+        context.set_progress(0.135, f"loading SA3 flow scorer model={model_name} device={device}")
         context.log(f"SA3 flow prompt scorer loading model={model_name} device={device}")
         stable_model = StableAudioModel.from_pretrained(
             model_name,
@@ -1907,6 +1914,62 @@ def _ensure_sa3_model_cache_space(model_name: str) -> None:
         f"{_format_bytes(free_bytes)} is currently free at {cache_dir}. "
         "Free disk space, move HF_HOME to a larger volume, or use the MLX generation path for Medium."
     )
+
+
+def _download_sa3_model_files_with_progress(
+    model_name: str,
+    *,
+    context: JobContext,
+    progress_start: float,
+    progress_end: float,
+) -> None:
+    try:
+        from huggingface_hub import hf_hub_download
+        from stable_audio_3.model_configs import all_models
+        from tqdm.auto import tqdm
+    except Exception:
+        return
+
+    model_cfg = all_models.get(model_name)
+    repo_id = getattr(model_cfg, "repo_id", None)
+    config_path = getattr(model_cfg, "config_path", None)
+    ckpt_path = getattr(model_cfg, "ckpt_path", None)
+    if not repo_id or not config_path or not ckpt_path:
+        return
+
+    files = [(config_path, "config"), (ckpt_path, "checkpoint")]
+    span = max(0.0, progress_end - progress_start)
+    for index, (filename, label) in enumerate(files):
+        file_start = progress_start + span * index / len(files)
+        file_end = progress_start + span * (index + 1) / len(files)
+        context.set_progress(file_start, f"resolving SA3 {model_name} {label}")
+
+        class JobDownloadTqdm(tqdm):
+            def __init__(self, *args: Any, **kwargs: Any) -> None:
+                super().__init__(*args, **kwargs)
+                self._last_progress_report = 0.0
+                self._last_progress_percent = -1
+
+            def update(self, n: int | float = 1) -> bool | None:
+                result = super().update(n)
+                total = float(self.total or 0)
+                if total <= 0:
+                    return result
+                fraction = max(0.0, min(1.0, float(self.n) / total))
+                percent = int(fraction * 100)
+                now = time.monotonic()
+                if percent == self._last_progress_percent and now - self._last_progress_report < 0.75:
+                    return result
+                self._last_progress_percent = percent
+                self._last_progress_report = now
+                context.set_progress(
+                    file_start + (file_end - file_start) * fraction,
+                    f"downloading SA3 {model_name} {label} {percent}%",
+                )
+                return result
+
+        hf_hub_download(repo_id=repo_id, filename=filename, tqdm_class=JobDownloadTqdm)
+        context.set_progress(file_end, f"resolved SA3 {model_name} {label}")
 
 
 def _hf_cached_file(repo_id: str, filename: str) -> bool:
