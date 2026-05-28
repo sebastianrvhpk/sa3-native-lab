@@ -248,12 +248,34 @@ class ReadinessResponse(ContractModel):
     errors: int = 0
 
 
+class OperatorFieldOption(ContractModel):
+    value: str
+    label: str | None = None
+
+
+class OperatorFieldSpec(ContractModel):
+    key: str
+    label: str
+    type: str
+    default: Any = None
+    required: bool = False
+    advanced: bool = False
+    min: float | None = None
+    max: float | None = None
+    step: float | None = None
+    options: list[OperatorFieldOption] = Field(default_factory=list)
+    artifact_kinds: list[ArtifactKind] = Field(default_factory=list)
+    placeholder: str | None = None
+    description: str | None = None
+
+
 class OperatorSpec(ContractModel):
     name: OperatorName
     maturity: str
     backends: list[BackendName]
     inputs: list[str] = Field(default_factory=list)
     params: dict[str, Any] = Field(default_factory=dict)
+    ui_fields: list[OperatorFieldSpec] = Field(default_factory=list)
     produces: list[ArtifactKind] = Field(default_factory=list)
     status: str = "available"
 

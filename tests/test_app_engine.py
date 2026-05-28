@@ -15,6 +15,7 @@ pytest.importorskip("pydantic")
 
 from sa3_native_lab.app.contracts import (  # noqa: E402
     ArtifactAnnotationRequest,
+    ArtifactKind,
     AudioToAudioRequest,
     BackendName,
     InpaintRequest,
@@ -159,6 +160,20 @@ def test_operator_specs_cover_typed_request_params(tmp_path):
     assert decode_fields <= set(specs[OperatorName.LATENT_DECODE].params)
     assert specs[OperatorName.TEXT_TO_AUDIO].backends == [BackendName.MLX]
     assert OperatorName.EXPERIMENT_ALPHA_SWEEP in specs
+
+    text_ui_fields = {field.key: field for field in specs[OperatorName.TEXT_TO_AUDIO].ui_fields}
+    assert text_ui_fields["duration_seconds"].min == 0.5
+    assert text_ui_fields["duration_seconds"].step == 0.5
+    assert text_ui_fields["model"].default == "medium"
+    assert [option.value for option in text_ui_fields["model"].options] == ["sm-music", "sm-sfx", "medium"]
+    assert text_ui_fields["backend"].default == BackendName.MLX
+
+    alpha_ui_fields = {field.key: field for field in specs[OperatorName.EXPERIMENT_ALPHA_SWEEP].ui_fields}
+    assert alpha_ui_fields["vectors_path"].required is True
+    assert alpha_ui_fields["vectors_path"].artifact_kinds == [ArtifactKind.BUNDLE]
+
+    memory_ui_fields = {field.key: field for field in specs[OperatorName.MEMORY_QUERY].ui_fields}
+    assert [option.value for option in memory_ui_fields["metric"].options] == ["cosine", "euclidean"]
 
 
 def test_sessions_persist_and_attach_artifacts(tmp_path):

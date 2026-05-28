@@ -29,6 +29,8 @@ from .contracts import (
     ArtifactRecord,
     BackendName,
     ModelStatus,
+    OperatorFieldOption,
+    OperatorFieldSpec,
     OperatorName,
     OperatorSpec,
     Recipe,
@@ -59,6 +61,200 @@ PROGRESS_PERCENT_RE = re.compile(r"(?<![\d.])(\d{1,3})(?:\.\d+)?%")
 AUDIO_EXTENSIONS = {".wav", ".flac", ".mp3", ".ogg", ".m4a", ".aiff", ".aif"}
 
 
+FIELD_HINTS: dict[str, dict[str, Any]] = {
+    "prompt": {"type": "text", "default": "audio texture", "required": True},
+    "negative_prompt": {"type": "text", "advanced": True, "placeholder": "optional"},
+    "duration_seconds": {"type": "number", "default": 30.0, "min": 0.5, "max": 120.0, "step": 0.5},
+    "duration": {"type": "number", "default": 8.0, "min": 0.5, "max": 120.0, "step": 0.5},
+    "steps": {"type": "number", "default": 8, "min": 1, "max": 256, "step": 1},
+    "seed": {"type": "number", "step": 1},
+    "cfg_scale": {"type": "number", "default": 1.0, "min": 0.0, "step": 0.1},
+    "apg_scale": {"type": "number", "default": 1.0, "min": 0.0, "step": 0.1},
+    "init_noise_level": {"type": "number", "default": 0.7, "min": 0.0, "max": 1.0, "step": 0.05},
+    "inpaint_start_seconds": {"type": "number", "default": 0.0, "min": 0.0, "step": 0.1},
+    "inpaint_end_seconds": {"type": "number", "default": 2.0, "min": 0.1, "step": 0.1},
+    "chunked": {"type": "checkbox", "default": False, "advanced": True},
+    "chunk_size": {"type": "number", "default": 128, "min": 1, "step": 1, "advanced": True},
+    "overlap": {"type": "number", "default": 32, "min": 0, "step": 1, "advanced": True},
+    "notes": {"type": "text", "advanced": True, "placeholder": "optional"},
+    "model": {"type": "select"},
+    "decoder": {"type": "select", "options": ["same-s", "same-l"], "advanced": True},
+    "backend": {"type": "select", "advanced": True},
+    "mode": {"type": "select"},
+    "shift_frames": {"type": "number", "default": 1, "min": -4096, "max": 4096, "step": 1},
+    "strength": {"type": "range", "default": 1.0, "min": 0.0, "max": 1.5, "step": 0.01},
+    "symmetric": {"type": "checkbox", "default": True},
+    "fraction": {"type": "range", "default": 0.25, "min": 0.01, "max": 1.0, "step": 0.01},
+    "amount": {"type": "range", "default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01},
+    "sigma": {"type": "range", "default": 0.4, "min": 0.0, "max": 1.5, "step": 0.01},
+    "alpha": {"type": "number", "default": 0.6, "step": 0.05},
+    "std_alpha": {"type": "number", "default": 0.0, "step": 0.05},
+    "alphas": {"type": "text", "default": "-8,-4,0,4,8", "placeholder": "-8,-4,0,4,8"},
+    "layer": {"type": "number", "default": -1, "step": 1, "advanced": True},
+    "layers": {"type": "text", "advanced": True, "placeholder": "blank or 1,4,8"},
+    "limit": {"type": "number", "default": 0, "min": 0, "step": 1, "advanced": True},
+    "num_pairs": {"type": "number", "default": 2, "min": 1, "step": 1},
+    "axis": {"type": "text", "default": "valence", "required": True},
+    "baseline": {"type": "select", "default": "prompt", "options": ["prompt", "negative_audio"]},
+    "top_k": {"type": "number", "default": 5, "min": 1, "step": 1},
+    "metric": {"type": "select", "default": "cosine", "options": ["cosine", "euclidean"]},
+    "exclude_self": {"type": "checkbox", "default": True},
+    "optimization_steps": {"type": "number", "default": 100, "min": 1, "step": 1},
+    "lr": {"type": "number", "step": 0.00001, "advanced": True},
+    "reg_weight": {"type": "number", "default": 0.0001, "step": 0.0001, "advanced": True},
+    "train_keys": {"type": "text", "default": "prompt", "advanced": True},
+    "velocity_convention": {"type": "select", "default": "noise_minus_data", "options": ["noise_minus_data", "data_minus_noise"], "advanced": True},
+    "batch_size": {"type": "number", "default": 1, "min": 1, "step": 1},
+    "sample_size": {"type": "number", "default": 12582912, "min": 1, "step": 1, "advanced": True},
+    "pad": {"type": "checkbox", "default": False, "advanced": True},
+    "model_half": {"type": "checkbox", "default": False, "advanced": True},
+    "rank": {"type": "number", "default": 16, "min": 1, "step": 1},
+    "lora_alpha": {"type": "number", "step": 1, "advanced": True},
+    "adapter_type": {"type": "select", "default": "lora", "options": ["lora", "lora-xs"], "advanced": True},
+    "dropout": {"type": "number", "default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05, "advanced": True},
+    "logger": {"type": "select", "default": "csv", "options": ["wandb", "comet", "csv", "none"], "advanced": True},
+    "include": {"type": "text", "advanced": True},
+    "exclude": {"type": "text", "advanced": True},
+    "device": {"type": "text", "advanced": True},
+    "name": {"type": "text"},
+    "positive_path": {"type": "path", "required": True},
+    "negative_path": {"type": "path"},
+    "input_path": {"type": "path", "required": True},
+    "data_dir": {"type": "path"},
+    "target_audio_path": {"type": "artifact-path", "artifact_kinds": [ArtifactKind.AUDIO]},
+    "vectors_path": {"type": "artifact-path", "required": True, "artifact_kinds": [ArtifactKind.BUNDLE]},
+    "profile_path": {"type": "artifact-path", "required": True, "artifact_kinds": [ArtifactKind.BUNDLE]},
+    "direction_path": {"type": "artifact-path", "required": True, "artifact_kinds": [ArtifactKind.BUNDLE]},
+    "soft_prompt_path": {"type": "artifact-path", "required": True, "artifact_kinds": [ArtifactKind.BUNDLE]},
+    "target_memory_path": {"type": "artifact-path", "required": True, "artifact_kinds": [ArtifactKind.BUNDLE]},
+    "reference_memory_path": {"type": "artifact-path", "artifact_kinds": [ArtifactKind.BUNDLE]},
+    "encoded_dir": {"type": "artifact-path", "artifact_kinds": [ArtifactKind.BUNDLE]},
+    "svd_bases_path": {"type": "artifact-path", "artifact_kinds": [ArtifactKind.BUNDLE], "advanced": True},
+    "lora_checkpoint": {"type": "artifact-path", "artifact_kinds": [ArtifactKind.BUNDLE], "advanced": True},
+}
+
+
+GENERIC_TYPE_PARTS = {"str", "int", "float", "bool", "folder", "file", "csv", "patterns", "null", "..."}
+
+
+def _with_ui_fields(spec: OperatorSpec) -> OperatorSpec:
+    return spec.model_copy(update={"ui_fields": _ui_fields_for_spec(spec)})
+
+
+def _ui_fields_for_spec(spec: OperatorSpec) -> list[OperatorFieldSpec]:
+    fields = [_ui_field_for_param(key, value) for key, value in spec.params.items()]
+    fields.append(
+        OperatorFieldSpec(
+            key="backend",
+            label="Backend",
+            type="select",
+            default=spec.backends[0].value if spec.backends else None,
+            advanced=True,
+            options=[_field_option(backend.value) for backend in spec.backends],
+        )
+    )
+    return fields
+
+
+def _ui_field_for_param(key: str, param_type: Any) -> OperatorFieldSpec:
+    hint = FIELD_HINTS.get(key, {})
+    options = _field_options(key, param_type, hint)
+    field_type = str(hint.get("type") or _infer_field_type(param_type, options))
+    default = hint.get("default", _default_for_field(key, field_type, options))
+    return OperatorFieldSpec(
+        key=key,
+        label=str(hint.get("label") or _human_label(key)),
+        type=field_type,
+        default=default,
+        required=bool(hint.get("required", False)),
+        advanced=bool(hint.get("advanced", False)),
+        min=_optional_float(hint.get("min")),
+        max=_optional_float(hint.get("max")),
+        step=_optional_float(hint.get("step")),
+        options=options,
+        artifact_kinds=list(hint.get("artifact_kinds", [])),
+        placeholder=hint.get("placeholder"),
+        description=hint.get("description"),
+    )
+
+
+def _field_options(key: str, param_type: Any, hint: dict[str, Any]) -> list[OperatorFieldOption]:
+    raw_options = hint.get("options")
+    if raw_options is None:
+        raw_options = _literal_options(param_type)
+    if not raw_options:
+        return []
+    return [_field_option(str(value), key=key) for value in raw_options]
+
+
+def _literal_options(param_type: Any) -> list[str]:
+    if not isinstance(param_type, str) or "|" not in param_type:
+        return []
+    values = [part.strip() for part in param_type.split("|") if part.strip()]
+    if not values:
+        return []
+    meaningful = [value for value in values if value not in GENERIC_TYPE_PARTS]
+    if not meaningful:
+        return []
+    if len(meaningful) != len([value for value in values if value != "null"]):
+        return []
+    return meaningful
+
+
+def _field_option(value: str, *, key: str | None = None) -> OperatorFieldOption:
+    label = {
+        "sm-music": "Small Music",
+        "sm-sfx": "Small SFX",
+        "medium": "Medium",
+        "same-s": "SAME-S",
+        "same-l": "SAME-L",
+        "torch_mps": "Torch MPS",
+        "torch_cpu": "Torch CPU",
+        "mlx": "MLX",
+        "cpu": "CPU",
+    }.get(value)
+    if label is None:
+        label = _human_label(value if key != "model" else value.replace("-", " "))
+    return OperatorFieldOption(value=value, label=label)
+
+
+def _infer_field_type(param_type: Any, options: list[OperatorFieldOption]) -> str:
+    if options:
+        return "select"
+    value = str(param_type)
+    if "bool" in value:
+        return "checkbox"
+    if value in {"int", "int|null", "float", "float|null"}:
+        return "number"
+    if "folder" in value or "file" in value:
+        return "path"
+    return "text"
+
+
+def _default_for_field(key: str, field_type: str, options: list[OperatorFieldOption]) -> Any:
+    if key == "model":
+        values = {option.value for option in options}
+        if "medium" in values:
+            return "medium"
+        if "same-l" in values:
+            return "same-l"
+    if field_type == "checkbox":
+        return False
+    if field_type == "select" and options:
+        return options[0].value
+    return None
+
+
+def _optional_float(value: Any) -> float | None:
+    if value is None:
+        return None
+    return float(value)
+
+
+def _human_label(value: str) -> str:
+    return str(value).replace("_", " ").replace("-", " ").title()
+
+
 class RuntimeDispatcher:
     def __init__(self, store: ArtifactStore, *, repo_root: str | Path | None = None) -> None:
         self.store = store
@@ -78,7 +274,7 @@ class RuntimeDispatcher:
         return [self._mlx_status(), self._torch_status(), self._cpu_status()]
 
     def operator_specs(self) -> list[OperatorSpec]:
-        return [
+        specs = [
             OperatorSpec(
                 name=OperatorName.TEXT_TO_AUDIO,
                 maturity="core",
@@ -218,6 +414,7 @@ class RuntimeDispatcher:
             ),
             *self._script_operator_specs(),
         ]
+        return [_with_ui_fields(spec) for spec in specs]
 
     def _script_operator_specs(self) -> list[OperatorSpec]:
         return [
