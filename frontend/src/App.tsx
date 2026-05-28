@@ -979,8 +979,7 @@ export function App() {
   const annotateArtifact = useMutation({
     mutationFn: ({ artifactId, payload }: { artifactId: string; payload: ArtifactAnnotationPayload }) =>
       api.annotateArtifact(artifactId, payload),
-    onSuccess: async (artifact) => {
-      selectArtifact(artifact.artifact_id);
+    onSuccess: async () => {
       await invalidate();
     },
   });
