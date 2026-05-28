@@ -2531,6 +2531,69 @@ audio {
   gap: 7px;
 }
 
+.sweep-sibling-comparison {
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  padding: 9px;
+  display: grid;
+  gap: 7px;
+  background:
+    linear-gradient(135deg, rgb(85 198 199 / 0.14), rgb(201 238 72 / 0.1), rgb(65 108 199 / 0.08)),
+    rgb(255 255 255 / 0.44);
+}
+
+.sweep-sibling-comparison article {
+  border: 1px solid var(--line-soft);
+  border-radius: 7px;
+  padding: 7px;
+  display: grid;
+  gap: 7px;
+  background: rgb(255 255 255 / 0.48);
+  min-width: 0;
+}
+
+.sweep-sibling-comparison article > div:first-child {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.sweep-sibling-comparison strong,
+.sweep-sibling-comparison span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sweep-sibling-comparison article > div:first-child strong {
+  color: var(--ink);
+  font-size: 0.73rem;
+}
+
+.sweep-sibling-comparison article > div:first-child span {
+  color: var(--muted);
+  font-size: 0.66rem;
+}
+
+.sweep-sibling-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.sweep-sibling-actions button {
+  min-height: 28px;
+  padding: 0 6px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  box-shadow: none;
+  background: rgb(255 255 255 / 0.54);
+  font-size: 0.66rem;
+}
+
 .sweep-family-grid article {
   border: 1px solid var(--line-soft);
   border-radius: 7px;

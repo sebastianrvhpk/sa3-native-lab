@@ -1371,11 +1371,13 @@ export function App() {
           />
           <FamilyDetailPanel
             family={inspectedFamily}
+            families={sessionResultFamilies}
             artifacts={allArtifacts}
             jobs={allJobs}
             selectedId={selectedArtifact?.artifact_id ?? null}
             apiBase={apiBase}
             onSelect={selectArtifact}
+            onInspectFamily={setInspectedFamilyId}
             onCompare={setCompare}
             onReplayRecipe={(recipeId) => replayRecipeMutation.mutate(recipeId)}
             onForkRecipe={setForkTarget}

@@ -12,8 +12,16 @@ describe("FamilyDetailPanel", () => {
     const user = userEvent.setup();
     const onCompare = vi.fn();
     const onSelect = vi.fn();
+    const onInspectFamily = vi.fn();
     const onForkRecipe = vi.fn();
     const family = sweepFamily();
+    const sibling = sweepFamily({
+      recipe_id: "recipe_sibling",
+      params: { alphas: "-8,0,8", prompt: "glass rhythm", vectors_path: "art_vectors" },
+      seed: 9,
+      created_at: "2026-05-27T16:00:00.000Z",
+      updatedAt: "2026-05-27T16:02:00.000Z",
+    });
     const artifacts = [
       audioArtifact("art_pos", "alpha_pos4p00.wav", "2026-05-27T15:02:00.000Z", { score: 0.91 }),
       audioArtifact("art_neg", "alpha_neg4p00.wav", "2026-05-27T15:01:00.000Z", { score: 0.32 }),
@@ -23,11 +31,13 @@ describe("FamilyDetailPanel", () => {
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
         <FamilyDetailPanel
           family={family}
+          families={[family, sibling]}
           artifacts={artifacts}
           jobs={[]}
           selectedId={null}
           apiBase="http://api.test"
           onSelect={onSelect}
+          onInspectFamily={onInspectFamily}
           onCompare={onCompare}
           onReplayRecipe={vi.fn()}
           onForkRecipe={onForkRecipe}
@@ -41,33 +51,39 @@ describe("FamilyDetailPanel", () => {
     expect(screen.getByText("alpha +4")).toBeInTheDocument();
     expect(screen.getByText("0.32")).toBeInTheDocument();
     expect(screen.getByText("best")).toBeInTheDocument();
+    expect(screen.getByLabelText("Sibling sweep comparison")).toBeInTheDocument();
+    expect(screen.getByText("3 alphas · 2 artifacts · medium · seed 9")).toBeInTheDocument();
 
     const negativeVariant = screen.getByText("alpha -4").closest("article");
     expect(negativeVariant).not.toBeNull();
     await user.click(within(negativeVariant as HTMLElement).getByRole("button", { name: "A" }));
     await user.click(within(negativeVariant as HTMLElement).getByTitle("Fork the sweep recipe"));
     await user.click(within(screen.getByLabelText("Sort sweep variants")).getByRole("button", { name: "score" }));
+    await user.click(within(screen.getByLabelText("Sibling sweep comparison")).getByRole("button", { name: /inspect/i }));
 
     const tableRows = within(screen.getByLabelText("Alpha sweep metric table")).getAllByTitle("Select sweep artifact");
     expect(tableRows[0]).toHaveTextContent("alpha_pos4p00");
 
     expect(onCompare).toHaveBeenCalledWith("a", "art_neg");
+    expect(onInspectFamily).toHaveBeenCalledWith("recipe_sibling");
     expect(onForkRecipe).toHaveBeenCalledWith(family.recipe);
   });
 });
 
-function sweepFamily(): ResultFamily {
+function sweepFamily(
+  overrides: Partial<Recipe> & { updatedAt?: string } = {},
+): ResultFamily {
   const recipe: Recipe = {
-    recipe_id: "recipe_sweep",
+    recipe_id: overrides.recipe_id ?? "recipe_sweep",
     operator: "experiment.alpha_sweep",
     backend: "torch_mps",
     inputs: {},
-    params: { alphas: "-4,4", prompt: "glass rhythm" },
-    model: "medium",
-    seed: 7,
+    params: overrides.params ?? { alphas: "-4,4", prompt: "glass rhythm", vectors_path: "art_vectors" },
+    model: overrides.model ?? "medium",
+    seed: overrides.seed ?? 7,
     notes: null,
     session_id: "sess_1",
-    created_at: "2026-05-27T15:00:00.000Z",
+    created_at: overrides.created_at ?? "2026-05-27T15:00:00.000Z",
     version: 1,
   };
   return {
@@ -83,7 +99,7 @@ function sweepFamily(): ResultFamily {
     latestArtifactId: "art_pos",
     metrics: {},
     createdAt: recipe.created_at,
-    updatedAt: "2026-05-27T15:02:00.000Z",
+    updatedAt: overrides.updatedAt ?? "2026-05-27T15:02:00.000Z",
   };
 }
 

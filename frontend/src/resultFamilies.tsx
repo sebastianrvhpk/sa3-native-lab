@@ -83,11 +83,13 @@ export function ResultFamilyPanel({
 
 export function FamilyDetailPanel({
   family,
+  families = [],
   artifacts,
   jobs,
   selectedId,
   apiBase,
   onSelect,
+  onInspectFamily,
   onCompare,
   onReplayRecipe,
   onForkRecipe,
@@ -95,11 +97,13 @@ export function FamilyDetailPanel({
   onRetryJob,
 }: {
   family: ResultFamily | null;
+  families?: ResultFamily[];
   artifacts: ArtifactRecord[];
   jobs: JobRecord[];
   selectedId: string | null;
   apiBase: string;
   onSelect: (artifactId: string | null) => void;
+  onInspectFamily?: (familyId: string) => void;
   onCompare: (slot: "a" | "b", artifactId: string | null) => void;
   onReplayRecipe: (recipeId: string) => void;
   onForkRecipe: (recipe: Recipe) => void;
@@ -113,6 +117,7 @@ export function FamilyDetailPanel({
   const sourceIds = Object.values(family.recipe.inputs).filter((value): value is string => typeof value === "string" && value.length > 0);
   const sourceArtifacts = sourceIds.map((artifactId) => artifactMap.get(artifactId)).filter((artifact): artifact is ArtifactRecord => Boolean(artifact));
   const sweepEntries = buildSweepEntries(family, familyArtifacts);
+  const siblingSweeps = findSiblingSweepFamilies(family, families);
 
   return (
     <section className="family-detail">
@@ -151,6 +156,14 @@ export function FamilyDetailPanel({
       </div>
       {sweepEntries.length ? (
         <SweepFamilyBand entries={sweepEntries} onSelect={onSelect} onCompare={onCompare} onForkRecipe={() => onForkRecipe(family.recipe)} />
+      ) : null}
+      {siblingSweeps.length ? (
+        <SweepSiblingComparison
+          siblings={siblingSweeps}
+          onInspectFamily={onInspectFamily}
+          onReplayRecipe={onReplayRecipe}
+          onForkRecipe={onForkRecipe}
+        />
       ) : null}
       <div className="family-artifacts">
         {familyArtifacts.length ? (
@@ -193,6 +206,50 @@ export function FamilyDetailPanel({
         </details>
       ) : null}
     </section>
+  );
+}
+
+function SweepSiblingComparison({
+  siblings,
+  onInspectFamily,
+  onReplayRecipe,
+  onForkRecipe,
+}: {
+  siblings: ResultFamily[];
+  onInspectFamily?: (familyId: string) => void;
+  onReplayRecipe: (recipeId: string) => void;
+  onForkRecipe: (recipe: Recipe) => void;
+}) {
+  return (
+    <div className="sweep-sibling-comparison" aria-label="Sibling sweep comparison">
+      <div className="sweep-family-head">
+        <span>Sibling sweeps</span>
+        <strong>{siblings.length} nearby</strong>
+      </div>
+      {siblings.slice(0, 3).map((family) => (
+        <article key={family.familyId}>
+          <div>
+            <strong>{siblingSweepLabel(family)}</strong>
+            <span>{siblingSweepMeta(family)}</span>
+          </div>
+          <MetricChips metrics={family.metrics} />
+          <div className="sweep-sibling-actions">
+            <button type="button" disabled={!onInspectFamily} onClick={() => onInspectFamily?.(family.familyId)}>
+              <Search size={13} />
+              Inspect
+            </button>
+            <button type="button" onClick={() => onReplayRecipe(family.recipeId)}>
+              <Repeat size={13} />
+              Replay
+            </button>
+            <button type="button" onClick={() => onForkRecipe(family.recipe)}>
+              <GitFork size={13} />
+              Fork
+            </button>
+          </div>
+        </article>
+      ))}
+    </div>
   );
 }
 
@@ -454,4 +511,50 @@ function sweepLabel(artifact: ArtifactRecord, index: number) {
 function formatAlpha(value: number) {
   const prefix = value > 0 ? "+" : "";
   return `${prefix}${value.toFixed(2).replace(/\.?0+$/, "")}`;
+}
+
+function findSiblingSweepFamilies(family: ResultFamily, families: ResultFamily[]): ResultFamily[] {
+  if (family.operator !== "experiment.alpha_sweep") return [];
+  const anchor = sweepSiblingAnchor(family.recipe);
+  return families
+    .filter((candidate) => candidate.familyId !== family.familyId && candidate.operator === "experiment.alpha_sweep")
+    .filter((candidate) => sweepSiblingAnchorMatches(anchor, sweepSiblingAnchor(candidate.recipe)))
+    .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
+    .slice(0, 4);
+}
+
+function sweepSiblingAnchor(recipe: Recipe) {
+  return {
+    vectors: recipeInputOrParam(recipe, "vectors_path"),
+    prompt: typeof recipe.params.prompt === "string" ? recipe.params.prompt.trim().toLowerCase() : "",
+    model: recipe.model ?? "",
+  };
+}
+
+function sweepSiblingAnchorMatches(
+  left: ReturnType<typeof sweepSiblingAnchor>,
+  right: ReturnType<typeof sweepSiblingAnchor>,
+) {
+  if (left.vectors && right.vectors) return left.vectors === right.vectors;
+  if (left.prompt && right.prompt) return left.prompt === right.prompt;
+  return left.model !== "" && left.model === right.model;
+}
+
+function recipeInputOrParam(recipe: Recipe, key: string) {
+  const inputValue = recipe.inputs[key];
+  if (typeof inputValue === "string" && inputValue.length) return inputValue;
+  const paramValue = recipe.params[key];
+  return typeof paramValue === "string" && paramValue.length ? paramValue : "";
+}
+
+function siblingSweepLabel(family: ResultFamily) {
+  const prompt = typeof family.recipe.params.prompt === "string" ? family.recipe.params.prompt.trim() : "";
+  return prompt || formatFamilyStamp(family.updatedAt);
+}
+
+function siblingSweepMeta(family: ResultFamily) {
+  const alphas = parseAlphaList(family.recipe.params.alphas);
+  const alphaText = alphas.length ? `${alphas.length} alphas` : "open alpha set";
+  const seedText = family.recipe.seed !== null && family.recipe.seed !== undefined ? `seed ${family.recipe.seed}` : "no seed";
+  return `${alphaText} · ${family.artifactIds.length} artifacts · ${family.recipe.model ?? family.recipe.backend} · ${seedText}`;
 }
