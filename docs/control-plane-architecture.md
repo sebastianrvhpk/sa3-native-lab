@@ -42,10 +42,12 @@ The React frontend now has a feature-flagged tRPC client. When
 inspection, and family reads are also exposed as app-shaped tRPC procedures.
 Model execution and artifact file IO still belong to the Python worker. Live
 job snapshots now use a `jobs.events` tRPC/SSE subscription when the control
-plane is enabled. That bridge currently polls Python job snapshots, which keeps
-the React contract stable while leaving room to swap the internal source to the
-Python WebSocket stream or a durable event log later. Events now include
-monotonic IDs, resume-aware sequencing, heartbeat diagnostics, and log tails.
+plane is enabled. Python persists per-job JSONL snapshots and exposes them via
+`/jobs/{job_id}/events/history`; the bridge replays missed journal events
+before it resumes live polling. This keeps the React contract stable while
+leaving room to swap the live source to the Python WebSocket stream later.
+Events now include monotonic IDs, resume-aware sequencing, heartbeat
+diagnostics, and log tails.
 When the env var is absent, the frontend falls back to the existing direct
 Python read queries, Python mutations, and Python job WebSockets.
 
@@ -55,8 +57,10 @@ show related jobs, promote alpha-sweep variants, and branch the recipe with
 visible diffs. Memory-query bundle hits can also feed app actions when they
 resolve to local artifacts. Bundle inspection now includes backend-parsed
 summaries for JSON/NPZ outputs, metric scalars, and plot/image discovery in
-addition to file inventory. Operator specs also carry backend-derived
-`ui_fields`, which React merges into the hand-shaped instrument forms.
+addition to file inventory. Reusable bundles can populate Recipe Studio fields
+for vectors, directions, profiles, memory folders, soft prompts, and LoRA
+checkpoints. Operator specs also carry backend-derived `ui_fields`, which React
+merges into the hand-shaped instrument forms.
 
 The local runner can launch the full path:
 
@@ -70,7 +74,7 @@ uv run sa3-lab dev --with-control-plane
 | --- | --- | --- |
 | `system` | `readiness` | Report app/runtime readiness checks from the Python worker. |
 | `workbench` | `load` | Build UI-ready workbench state, including operator `ui_fields`, from Python runtime records. |
-| `jobs` | `list`, `get`, `events`, `cancel`, `retry` | App-level lifecycle actions and live snapshots over Python background jobs. |
+| `jobs` | `list`, `get`, `events`, `cancel`, `retry` | App-level lifecycle actions with durable journal replay and live snapshots over Python background jobs. |
 | `recipes` | `replay`, `fork` | Re-run or branch a persisted recipe without rebuilding payloads in React. |
 | `artifacts` | `inspect` | Fetch artifact, recipe, sources, children, bundle file inventory, safe previews, and parsed bundle summaries. |
 | `families` | `load` | Return grouped recipe result families for the active workbench scope. |
@@ -106,11 +110,12 @@ Future responsibilities:
 
 ## Next Control-Plane Queue
 
-1. Add durable event history/reconnect replay to `jobs.events`.
+1. Replace live polling inside `jobs.events` with a stream source while keeping
+   the durable journal replay contract.
 2. Promote archive annotation/search mutations to the normal UI path.
 3. Move more bounded fork and recipe forms onto backend-derived `ui_fields`.
 4. Promote family detail and memory-result actions into tRPC procedures where
    they need server-side shaping beyond `workbench.load`.
-5. Add richer family-specific inspectors and plot previews for sweeps, memory
+5. Add richer family-specific inspectors and embedded plot previews for sweeps, memory
    query bundles, and style profile bundles.
 6. Evaluate Postgres only after these procedures stabilize.

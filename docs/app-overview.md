@@ -49,6 +49,7 @@ Important endpoints:
 - `POST /experiments/run`
 - `POST /jobs/{job_id}/cancel`
 - `POST /jobs/{job_id}/retry`
+- `GET /jobs/{job_id}/events/history`
 - `POST /recipes/{recipe_id}/replay`
 - `POST /recipes/{recipe_id}/fork`
 
@@ -75,9 +76,10 @@ shapes sessions, artifacts, jobs, result families, health, readiness, operator
 specs, and mode atlas data. It also exposes job lifecycle, recipe replay/fork,
 artifact inspection, family loading, archive procedures, and a tRPC/SSE job
 event bridge while the Python worker keeps owning model execution and artifact
-file IO. The event bridge uses monotonic IDs, resume-aware sequencing, heartbeat
-events, and log-tail diagnostics, but it is still backed by Python job polling
-rather than a durable event store.
+file IO. Python now persists a per-job JSONL event journal, and the control
+plane replays missed journal snapshots before resuming live polling. The event
+bridge still uses polling as its live source, but refresh/reconnect no longer
+depends only on transient in-memory state.
 
 ### Operator Studio
 
@@ -102,8 +104,10 @@ Operator and recipe controls are partly hand-shaped for playability and partly
 derived from backend `ui_fields` emitted by `/operators/specs`. The frontend
 keeps the current instrument layout, then merges backend defaults, bounds,
 options, artifact-kind hints, and newly discovered fields into the form model.
-This keeps parameters such as duration, seed, model, alpha lists, bundle paths,
-and backend choices accessible while reducing drift from Python contracts.
+Select controls, integer-like numeric controls, and alpha-list fields now get
+first-pass schema validation from that model. This keeps parameters such as
+duration, seed, model, alpha lists, bundle paths, and backend choices
+accessible while reducing drift from Python contracts.
 
 ## Artifact Model
 
@@ -121,11 +125,13 @@ Bundle artifacts can be inspected through the API and UI to reveal their file
 inventory, backend-parsed JSON/NPZ summaries, parsed preview metadata, recipe,
 source artifacts, and child artifacts. Sweep and script bundles now promote
 `metrics.json` values and plot/image files into the reader summary instead of
-leaving them buried in zip contents. Jobs and artifacts with the same recipe
-are grouped as result families in the right rail with run metrics when the job
-reports them. Memory query bundle previews expose ranked hits that can be
-selected, placed in A/B when audio, or reused as latent donors when the hit is a
-latent artifact.
+leaving them buried in zip contents. Reusable bundle types expose native
+Recipe Studio actions such as use as profile, sweep vectors, use direction, use
+soft prompt, use memory, and use checkpoint. Jobs and artifacts with the same
+recipe are grouped as result families in the right rail with run metrics when
+the job reports them. Memory query bundle previews expose ranked hits that can
+be selected, placed in A/B when audio, or reused as latent donors when the hit
+is a latent artifact.
 
 ## Runtime Assumptions
 
@@ -154,11 +160,13 @@ Confirmed in the current codebase:
 - tRPC workbench, readiness, job lifecycle, recipe replay/fork, artifact
   inspection, result-family procedures, and job-event subscriptions are
   implemented behind the control-plane launch flag.
-- The frontend has live job-event snapshots, a readiness panel, a recipe fork
+- The frontend has durable job-event replay through the control plane, a
+  readiness panel, a recipe fork
   editor with diffs and resets, result-family detail playback, memory-result
-  reuse actions, alpha-sweep variant promotion, job recovery hints,
+  reuse actions, alpha-sweep variant promotion with a compact metric table,
+  bundle-to-recipe reuse actions, job recovery hints,
   backend-derived operator field metadata, backend-parsed typed bundle
-  inspectors, bundle metrics, and plot/file summaries.
+  inspectors, bundle metrics, and plot/file preview shells.
 - Core app surfaces are now split into focused modules for audio playback,
   artifact display, job progress, result families, recipe forks, and bundle
   inspection.
@@ -169,15 +177,15 @@ Still partial:
 - Some Colab modes are mapped but not yet first-class native interactions.
 - Type-specific readers for profiles, vectors, soft prompts, training outputs,
   sweeps, and memory collections now receive backend-parsed summaries plus
-  first-pass metrics/plot discovery, but still need richer visual plot previews
-  and reuse actions.
+  first-pass metrics/plot discovery and recipe-input actions, but still need
+  actual embedded plot rendering and richer kind-specific inspectors.
 - Memory-query bundles expose preview rows and donor/A-B reuse actions, but
   still need richer dataset browsing, preview audio for non-local children, and
   style-reference promotion.
 - Multi-output sweeps have family grouping, metrics, direct playback, explicit
-  A/B promotion controls, recipe fork deltas, and inspected metric summaries,
-  but still need sweep-specific sortable tables and sibling recipe comparison.
+  A/B promotion controls, recipe fork deltas, inspected metric summaries, and a
+  compact alpha/metric table, but still need sortable columns and sibling
+  recipe comparison.
 - Live job events now reach React through the control plane when that path is
-  enabled; the bridge currently polls Python job snapshots and can later switch
-  its internal source to Python WebSocket or a durable event store without
-  changing the UI contract.
+  enabled; the bridge replays Python's durable job journal and can later switch
+  its live source to Python WebSocket without changing the UI contract.

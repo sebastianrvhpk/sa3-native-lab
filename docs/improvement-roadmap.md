@@ -11,8 +11,10 @@ For the broader stack direction and promotion triggers, see
 1. Harden live job-event transport.
    Typed job events now reach the UI through a tRPC/SSE control-plane bridge
    when the control plane is enabled. The bridge now emits monotonic IDs,
-   resume-aware sequencing, heartbeat events, and log-tail diagnostics. The
-   next trust step is durable event history/reconnect replay.
+   resume-aware sequencing, heartbeat events, log-tail diagnostics, and
+   durable Python job-journal replay. The next trust step is richer command and
+   stderr-tail context plus eventually replacing live polling with a stream
+   source.
 
 2. Improve error surfacing.
    Job failures now classify common failures into recovery hints for Hugging
@@ -29,15 +31,16 @@ For the broader stack direction and promotion triggers, see
    The UI can fork recipe params, backend, model, seed, and notes with visible
    deltas plus reset controls. Backend `ui_fields` now provide defaults,
    bounds, options, required flags, artifact-kind hints, and advanced flags for
-   Operator Studio and Recipe Studio. Next, make more complex controls fully
-   schema-driven without losing the custom instrument layout.
+   Operator Studio and Recipe Studio. Select options, whole-number controls,
+   and alpha lists have first-pass validation. Next, make more complex controls
+   fully schema-driven without losing the custom instrument layout.
 
 ## P1: Exploration Speed
 
 1. Deepen result-family views for sweeps.
    Recipe families now appear with metrics, a detail panel, per-result playback,
-   explicit A/B promotion, replay, and fork actions. Next they need
-   sweep-specific metric tables and sibling recipe comparison.
+   explicit A/B promotion, replay, fork actions, and a compact sweep metric
+   table. Next they need sortable columns and sibling recipe comparison.
 
 2. Presets for Operator Studio.
    Store named parameter sets for blur, DSP, graft, renoise, and cyclic roll.
@@ -51,10 +54,11 @@ For the broader stack direction and promotion triggers, see
 4. Better bundle readers.
    Bundle file inventory, JSON previews, memory-result reuse, and first-pass
    typed readers now exist. The backend now parses JSON/NPZ bundle summaries
-   and promotes metric scalars plus plot/image files into reader rows. Next,
-   vector/profile/soft-prompt/sweep bundles should expose actual plot previews,
-   generated audio children, and richer reuse actions without making the user
-   inspect zip contents.
+   and promotes metric scalars plus plot/image files into reader rows. Bundle
+   cards can now route profiles, vectors, directions, soft prompts, memory
+   folders, and LoRA checkpoints into Recipe Studio. Next, vector/profile/
+   soft-prompt/sweep bundles should expose actual embedded plot previews and
+   generated audio children without making the user inspect zip contents.
 
 ## P2: Research Cognition
 
@@ -107,9 +111,9 @@ For the broader stack direction and promotion triggers, see
 
 3. Keep Zod/TanStack Form validation converging.
    The first typed form foundation exists, and backend bounds/options now feed
-   frontend forms. The next step is richer schema validation for cross-field
-   constraints such as donor requirements, source artifact kind, and alpha list
-   parsing.
+   frontend forms. Select membership, integer controls, and alpha list parsing
+   are validated. The next step is richer cross-field constraints such as donor
+   requirements, source artifact kind, and mode-specific path compatibility.
 
 4. Add persistent worker processes.
    Repeated Medium generation would benefit from a resident MLX/PyTorch worker
@@ -122,9 +126,10 @@ For the broader stack direction and promotion triggers, see
 
 6. Add typed artifact inspectors.
    Bundle summaries now parse JSON/NPZ metadata, metric scalars, and plot/image
-   file discovery in the backend. Next each kind should grow a dedicated
-   inspector component with plot previews and reuse actions: audio, latent,
-   vector bundle, profile, soft prompt, training output, and memory collection.
+   file discovery in the backend, and reusable bundles can populate Recipe
+   Studio fields. Next each kind should grow a dedicated inspector component
+   with embedded previews and richer actions: audio, latent, vector bundle,
+   profile, soft prompt, training output, and memory collection.
 
 7. Continue extracting app surfaces from `App.tsx`.
    Audio playback, artifact display, job progress, result families, recipe

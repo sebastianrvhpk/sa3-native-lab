@@ -40,13 +40,14 @@ source audio / prompt
 | P1 | App-shaped tRPC workbench reads | `apps/control-plane` + feature-flagged frontend client | Promote carefully | control-plane tests, frontend build, `sa3-lab dev --with-control-plane` |
 | P1 | Typed recipe replay/fork, retry, cancellation | Python API + tRPC job/recipe routers + React actions | Promote | API tests, control-plane tests, frontend build |
 | P1 | Live job event snapshots | `/jobs/{id}/events` + React Query/live cache merge | Promote first slice | websocket API test, frontend build |
-| P1 | Control-plane job-event bridge | tRPC/SSE `jobs.events` subscription over Python job snapshots with heartbeat/resume diagnostics | Promote | control-plane tests, frontend build |
+| P1 | Durable job-event replay | Python JSONL job journal + `/jobs/{id}/events/history` + tRPC `jobs.events` replay | Promote | API tests, control-plane tests |
+| P1 | Control-plane job-event bridge | tRPC/SSE `jobs.events` subscription over durable journal replay plus Python job snapshot polling with heartbeat/resume diagnostics | Promote | control-plane tests, frontend build |
 | P1 | Job recovery hints | `JobProgress` failure classifier over errors/logs | Promote | frontend unit tests |
 | P1 | Runtime readiness checks | `/readiness` + `system.readiness` + readiness panel | Promote | API tests, control-plane tests, frontend tests |
 | P1 | Fork-with-edited-params UI | recipe-derived fork editor with diff/reset controls | Promote | frontend tests/build |
 | P1 | Bundle inspection and result families | `/artifacts/{id}/inspect` + `families.load` + result rail/detail panel | Promote | API tests, control-plane tests, frontend tests |
-| P1 | Typed bundle readers | backend `bundle_summary` parser + `BundleField` readers for memory/profile/vector/sweep/soft-prompt/training outputs, metrics, and plot discovery | Promote | API tests, frontend tests/build |
-| P1 | Alpha-sweep family promotion | `FamilyDetailPanel` alpha variant band with explicit A/B promotion | Promote first slice | frontend tests/build |
+| P1 | Typed bundle readers | backend `bundle_summary` parser + `BundleField` readers for memory/profile/vector/sweep/soft-prompt/training outputs, metrics, plot discovery, and recipe-input reuse | Promote | API tests, frontend tests/build |
+| P1 | Alpha-sweep family promotion | `FamilyDetailPanel` alpha variant band with explicit A/B promotion and compact metric table | Promote first slice | frontend tests/build |
 | P2 | Memory atlas and retrieval | `LatentMemoryIndex` + `memory.query` + memory-hit reuse actions | Promote first slice | nearest-neighbor runtime test, frontend smoke |
 | P2 | Residual steering and prompt search | existing scripts/experiments | Defer | model-backed recipe tests |
 
@@ -61,10 +62,10 @@ source audio / prompt
 
 ## Immediate Next Queue
 
-1. Add durable event history/reconnect replay behind `jobs.events`.
-2. Add visual plot previews and richer reuse actions for style profiles,
-   vectors, soft prompts, memory collections, sweeps, and training outputs.
-3. Add sweep-family metric tables and recipe comparison across sibling runs.
+1. Add embedded plot rendering for discovered bundle plot/image files.
+2. Add richer kind-specific inspectors for style profiles, vectors, soft
+   prompts, memory collections, sweeps, and training outputs.
+3. Add sortable sweep tables and recipe comparison across sibling runs.
 4. Continue shrinking frontend field drift until backend `ui_fields` can drive
    most controls without losing the instrument-specific layout.
 5. Add prompt-search recipe adapters for Colab Modes 2/3/5.

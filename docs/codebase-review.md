@@ -22,7 +22,7 @@ and the next risks for turning the Colab experiments into a proper app.
   alpha-sweep promotion plus recipe fork diff/reset controls.
 - A first TypeScript tRPC control plane exists in `apps/control-plane`; it owns
   app-shaped workbench reads plus job lifecycle, recipe, artifact, family, and
-  archive procedures plus heartbeat/resume-aware job-event subscriptions while
+  archive procedures plus durable-journal-aware job-event subscriptions while
   Python remains the model/runtime worker.
 - Audio playback, artifact display, job progress, result families, recipe fork
   editing, and bundle inspection are now split out of `App.tsx`.
@@ -34,7 +34,8 @@ and the next risks for turning the Colab experiments into a proper app.
 - Job progress cards now classify common failures into recovery hints instead
   of leaving the user with only a raw failed status.
 - Bundle inspection promotes JSON/NPZ summaries, metric scalars, and plot/image
-  discovery into typed reader rows.
+  discovery into typed reader rows. Reusable bundles can now populate Recipe
+  Studio fields directly, and alpha sweep families have a compact metric table.
 
 ## Important Risks
 
@@ -42,14 +43,16 @@ and the next risks for turning the Colab experiments into a proper app.
   backend `ui_fields` merge reduces drift, but the static catalogs still carry
   layout, copy, and some hand-shaped controls.
 - Live job event transport now has a tRPC/SSE bridge with heartbeat and
-  resume-aware IDs, but durable event replay is not yet handled.
+  resume-aware IDs plus Python job-journal replay. The live source is still
+  polling, so a future stream source would reduce latency and load.
 - `RuntimeDispatcher` owns many responsibilities: backend status, MLX
   generation, SAME encode/decode, latent operators, script adapters, subprocess
   wrapping, and output finalization. It works, but it will become harder to test
   as more Colab modes become native.
 - Bundle artifacts have backend-parsed JSON/NPZ summaries, metric rows, plot
-  file discovery, and typed UI readers, but vector/profile/soft-prompt plot
-  previews and richer reuse actions are still missing.
+  file discovery, typed UI readers, and recipe-input actions, but embedded
+  vector/profile/soft-prompt plot previews and deeper inspectors are still
+  missing.
 - Long-running jobs have cancel/retry, but not pause/resume, priority,
   resource-aware scheduling, or resident worker reuse.
 - Error messages are now transformed into first-pass recovery hints, but command
@@ -65,7 +68,8 @@ and the next risks for turning the Colab experiments into a proper app.
 
 2. Harden job events in tRPC.
    Job lifecycle, recipe, archive, family procedures, and a heartbeat/resume
-   event bridge exist. The next app-level contract gap is durable event replay.
+   event bridge exist. Durable replay now exists; the next gap is replacing
+   live polling with a stream source and preserving richer safe stderr context.
 
 3. Split runtime adapters.
    Move MLX, SAME, latent operators, and script recipes into modules such as
@@ -77,8 +81,8 @@ and the next risks for turning the Colab experiments into a proper app.
    Recipe Studio payloads.
 
 5. Add artifact inspectors.
-   Extend bundle readers from plot discovery to actual previews and reuse
-   actions instead of stopping at parsed summaries.
+   Extend bundle readers from plot discovery and recipe actions to actual
+   embedded previews and kind-specific inspectors.
 
 6. Add deeper job control.
    Later add pause/resume, priorities, worker pools, and resident model
