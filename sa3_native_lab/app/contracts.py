@@ -59,6 +59,7 @@ class OperatorName(str, Enum):
     EXPERIMENT_AUDIO_RESIDUAL_VECTORS_EXTRACT = "experiment.audio_residual_vectors.extract"
     EXPERIMENT_ALPHA_SWEEP = "experiment.alpha_sweep"
     EXPERIMENT_GEOMETRY_AUDIT = "experiment.geometry_audit"
+    EXPERIMENT_PROMPT_SEARCH = "experiment.prompt_search"
     EXPERIMENT_SOFT_PROMPT_OPTIMIZE = "experiment.soft_prompt.optimize"
     EXPERIMENT_SOFT_PROMPT_GENERATE = "experiment.soft_prompt.generate"
     DATASET_PRE_ENCODE = "dataset.pre_encode"

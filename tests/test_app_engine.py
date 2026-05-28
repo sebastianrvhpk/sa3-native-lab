@@ -140,6 +140,45 @@ def test_runtime_geometry_audit_returns_report_bundle(tmp_path):
     assert inspection.bundle_summary["geometry"]["latent_count"] == 2
 
 
+def test_runtime_prompt_search_returns_probe_bundle(tmp_path):
+    store = ArtifactStore(tmp_path / "lab")
+    audio_path = tmp_path / "warm_granular_loop.wav"
+    sf.write(audio_path, np.zeros((800, 1), dtype=np.float32), 8000)
+    source = store.import_audio_file(audio_path, prompt="warm granular loop", label="target")
+    runtime = RuntimeDispatcher(store, repo_root=tmp_path)
+    jobs = JobManager(store.jobs_dir)
+    recipe = Recipe(
+        operator=OperatorName.EXPERIMENT_PROMPT_SEARCH,
+        backend=BackendName.CPU,
+        inputs={"source": source.artifact_id},
+        params={
+            "search_mode": "beam",
+            "seed_prompt": "warm loop",
+            "vocabulary": "warm, granular, cold, percussive",
+            "tokens_generated": 2,
+            "beam_width": 2,
+            "branch_factor": 4,
+            "seed": 7,
+        },
+    )
+
+    record = jobs.submit(recipe, runtime.handler_for_recipe(recipe))
+    finished = _wait_for_job(jobs, record.job_id)
+    artifact = store.get_artifact(finished.artifact_ids[0])
+    payload = json.loads(artifact.path.read_text(encoding="utf-8"))
+    inspection = store.inspect_artifact(artifact.artifact_id)
+
+    assert finished.status == JobStatus.SUCCEEDED
+    assert payload["operator"] == "experiment.prompt_search"
+    assert payload["scorer"]["kind"] == "lexical_probe"
+    assert payload["scorer"]["model_backed"] is False
+    assert "warm" in payload["prompt"]
+    assert finished.metrics["scorer"] == "lexical_probe"
+    assert inspection.bundle_summary["kind"] == "prompt-search"
+    assert inspection.bundle_summary["prompt_search"]["prompt"] == payload["prompt"]
+    assert inspection.bundle_preview["prompt"] == payload["prompt"]
+
+
 def test_audio_peaks_are_derived_from_audio_file(tmp_path):
     store = ArtifactStore(tmp_path)
     audio_path = tmp_path / "shape.wav"
@@ -211,6 +250,11 @@ def test_operator_specs_cover_typed_request_params(tmp_path):
     geometry_ui_fields = {field.key: field for field in specs[OperatorName.EXPERIMENT_GEOMETRY_AUDIT].ui_fields}
     assert geometry_ui_fields["n_components"].default == 8
     assert geometry_ui_fields["n_components"].description == "Number of principal components to keep in the geometry audit."
+
+    prompt_ui_fields = {field.key: field for field in specs[OperatorName.EXPERIMENT_PROMPT_SEARCH].ui_fields}
+    assert [option.value for option in prompt_ui_fields["search_mode"].options] == ["beam", "greedy", "coordinate"]
+    assert prompt_ui_fields["target_audio_path"].artifact_kinds == [ArtifactKind.AUDIO]
+    assert prompt_ui_fields["tokens_generated"].default == 4
 
 
 def test_sessions_persist_and_attach_artifacts(tmp_path):

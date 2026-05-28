@@ -17,6 +17,13 @@ from latent_audio_primitives.index import LatentMemoryIndex
 from latent_audio_primitives.latent_blur import LatentBlurSpec, apply_latent_blur
 from latent_audio_primitives.latent_dsp import LatentDSPSpec, apply_latent_dsp
 from latent_audio_primitives.looping import cyclic_mix_latents, cyclic_roll_latents
+from latent_audio_primitives.prompt_optimization import (
+    beam_token_prompt_search,
+    coordinate_prompt_search,
+    default_modifier_axes,
+    greedy_token_prompt_search,
+    prompt_seed_from_audio_path,
+)
 from latent_audio_primitives.schema import LatentItem
 from latent_audio_primitives.selective_renoise import (
     LatentMaskSpec,
@@ -60,6 +67,38 @@ SCRIPT_EXPERIMENT_OPERATORS = {
 PROGRESS_PERCENT_RE = re.compile(r"(?<![\d.])(\d{1,3})(?:\.\d+)?%")
 
 AUDIO_EXTENSIONS = {".wav", ".flac", ".mp3", ".ogg", ".m4a", ".aiff", ".aif"}
+DEFAULT_PROMPT_SEARCH_VOCABULARY = [
+    "warm",
+    "cold",
+    "bright",
+    "dark",
+    "muted",
+    "shimmering",
+    "granular",
+    "textured",
+    "pulsing",
+    "drifting",
+    "wide stereo",
+    "close",
+    "dry",
+    "reverberant",
+    "ambient",
+    "cinematic",
+    "electronic",
+    "acoustic",
+    "percussive",
+    "sustained",
+    "metallic",
+    "soft",
+    "dense",
+    "sparse",
+    "loop",
+    "rhythm",
+    "tone",
+    "noise",
+    "gesture",
+    "texture",
+]
 
 
 FIELD_HINTS: dict[str, dict[str, Any]] = {
@@ -102,6 +141,19 @@ FIELD_HINTS: dict[str, dict[str, Any]] = {
     "metric": {"type": "select", "default": "cosine", "options": ["cosine", "euclidean"]},
     "exclude_self": {"type": "checkbox", "default": True},
     "optimization_steps": {"type": "number", "default": 100, "min": 1, "step": 1},
+    "search_mode": {"type": "select", "default": "beam", "options": ["beam", "greedy", "coordinate"], "description": "Prompt search strategy used by the native probe scorer."},
+    "seed_prompt": {"type": "text", "default": "audio texture", "description": "Starting text for prompt search or soft-prompt optimization."},
+    "vocabulary": {"type": "text", "default": ", ".join(DEFAULT_PROMPT_SEARCH_VOCABULARY), "advanced": True},
+    "tokens_generated": {"type": "number", "default": 4, "min": 1, "max": 32, "step": 1},
+    "beam_width": {"type": "number", "default": 4, "min": 1, "max": 24, "step": 1},
+    "branch_factor": {"type": "number", "default": 64, "min": 1, "step": 1, "advanced": True},
+    "runs": {"type": "number", "default": 4, "min": 1, "max": 64, "step": 1, "advanced": True},
+    "rounds": {"type": "number", "default": 2, "min": 1, "max": 12, "step": 1, "advanced": True},
+    "candidate_batch_size": {"type": "number", "default": 0, "min": 0, "step": 1, "advanced": True},
+    "prefix": {"type": "text", "advanced": True, "placeholder": "optional"},
+    "suffix": {"type": "text", "advanced": True, "placeholder": "optional"},
+    "separator": {"type": "text", "default": " ", "advanced": True},
+    "modifier_axes": {"type": "text", "advanced": True, "placeholder": "bright|dark|warm; sparse|dense"},
     "lr": {"type": "number", "step": 0.00001, "advanced": True},
     "reg_weight": {"type": "number", "default": 0.0001, "step": 0.0001, "advanced": True},
     "train_keys": {"type": "text", "default": "prompt", "advanced": True},
@@ -414,6 +466,30 @@ class RuntimeDispatcher:
                 produces=[ArtifactKind.AUDIO],
                 status="implemented",
             ),
+            OperatorSpec(
+                name=OperatorName.EXPERIMENT_PROMPT_SEARCH,
+                maturity="probe",
+                backends=[BackendName.CPU],
+                inputs=["source?"],
+                params={
+                    "target_audio_path": "file|null",
+                    "seed_prompt": "str|null",
+                    "search_mode": "beam|greedy|coordinate",
+                    "vocabulary": "csv",
+                    "tokens_generated": "int",
+                    "beam_width": "int",
+                    "branch_factor": "int|null",
+                    "runs": "int",
+                    "rounds": "int",
+                    "candidate_batch_size": "int|null",
+                    "prefix": "str|null",
+                    "suffix": "str|null",
+                    "modifier_axes": "csv|null",
+                    "seed": "int|null",
+                },
+                produces=[ArtifactKind.BUNDLE],
+                status="implemented with lexical probe scorer; model-backed scorer queued",
+            ),
             *self._script_operator_specs(),
         ]
         return [_with_ui_fields(spec) for spec in specs]
@@ -598,6 +674,8 @@ class RuntimeDispatcher:
             return lambda context: self._run_memory_query(recipe, context)
         if recipe.operator == OperatorName.EXPERIMENT_GEOMETRY_AUDIT:
             return lambda context: self._run_geometry_audit(recipe, context)
+        if recipe.operator == OperatorName.EXPERIMENT_PROMPT_SEARCH:
+            return lambda context: self._run_prompt_search(recipe, context)
         if recipe.operator in SCRIPT_EXPERIMENT_OPERATORS:
             return lambda context: self._run_script_experiment(recipe, context)
         raise ValueError(f"operator is not implemented yet: {recipe.operator}")
@@ -1055,6 +1133,130 @@ class RuntimeDispatcher:
             },
         )
 
+    def _run_prompt_search(self, recipe: Recipe, context: JobContext) -> JobResult:
+        params = dict(recipe.params)
+        source_id = recipe.inputs.get("source")
+        source = self.store.get_artifact(source_id) if source_id else None
+        if source is not None and source.kind != ArtifactKind.AUDIO:
+            raise ValueError(f"source artifact {source_id} must be audio for prompt search")
+
+        target_audio_path = str(params.get("target_audio_path") or "").strip()
+        if not target_audio_path and source is not None:
+            target_audio_path = str(source.path)
+        seed_prompt = str(params.get("seed_prompt") or "").strip()
+        if not seed_prompt:
+            if source is not None and source.prompt:
+                seed_prompt = source.prompt
+            elif target_audio_path:
+                seed_prompt = prompt_seed_from_audio_path(target_audio_path, extra_tags=list(source.tags if source else []))
+            else:
+                seed_prompt = "audio texture"
+
+        seed = int(recipe.seed if recipe.seed is not None else params.get("seed", 0) or 0)
+        search_mode = str(params.get("search_mode") or "beam").lower()
+        vocabulary = _parse_prompt_vocabulary(params.get("vocabulary"))
+        target_tokens = _prompt_search_target_tokens(
+            target_audio_path=target_audio_path,
+            seed_prompt=seed_prompt,
+            source=source,
+        )
+        scorer = _lexical_prompt_scorer(target_tokens)
+        batch_scorer = lambda prompts: [scorer(prompt) for prompt in prompts]
+
+        context.set_progress(0.20, f"running {search_mode} prompt search")
+        if search_mode == "coordinate":
+            axes = _parse_modifier_axes(params.get("modifier_axes")) or default_modifier_axes()
+            result = coordinate_prompt_search(
+                seed_prompt,
+                axes,
+                scorer,
+                rounds=max(1, int(params.get("rounds", 2) or 2)),
+            )
+            tokens = _prompt_tokens(result.prompt)
+            beams: list[dict[str, Any]] = []
+        elif search_mode == "greedy":
+            result = greedy_token_prompt_search(
+                vocabulary,
+                batch_scorer,
+                tokens_generated=max(1, int(params.get("tokens_generated", 4) or 4)),
+                runs=max(1, int(params.get("runs", 4) or 4)),
+                candidate_batch_size=_optional_positive_int(params.get("candidate_batch_size")),
+                seed=seed,
+                prefix=str(params.get("prefix") or seed_prompt),
+                suffix=str(params.get("suffix") or ""),
+                separator=str(params.get("separator") or " "),
+            )
+            tokens = result.tokens
+            beams = []
+        elif search_mode == "beam":
+            result = beam_token_prompt_search(
+                vocabulary,
+                batch_scorer,
+                tokens_generated=max(1, int(params.get("tokens_generated", 4) or 4)),
+                beam_width=max(1, int(params.get("beam_width", 4) or 4)),
+                branch_factor=_optional_positive_int(params.get("branch_factor")),
+                candidate_batch_size=_optional_positive_int(params.get("candidate_batch_size")),
+                seed=seed,
+                prefix=str(params.get("prefix") or seed_prompt),
+                suffix=str(params.get("suffix") or ""),
+                separator=str(params.get("separator") or " "),
+            )
+            tokens = result.tokens
+            beams = [{"prompt": prompt, "score": float(score)} for prompt, score in result.beams[:12]]
+        else:
+            raise ValueError("prompt search mode must be 'beam', 'greedy', or 'coordinate'")
+
+        context.set_progress(0.70, "saving prompt search bundle")
+        history = [{"prompt": prompt, "score": float(score)} for prompt, score in result.history[:300]]
+        payload = {
+            "operator": _operator_value(recipe.operator),
+            "status": "probe",
+            "scorer": {
+                "kind": "lexical_probe",
+                "model_backed": False,
+                "notes": "Deterministic local scorer for wiring and triage; replace with SA3/CLAP scoring for semantic audio-text ranking.",
+                "target_tokens": sorted(target_tokens)[:48],
+            },
+            "source_artifact_id": source_id,
+            "target_audio_path": target_audio_path or None,
+            "search_mode": search_mode,
+            "seed": seed,
+            "seed_prompt": seed_prompt,
+            "prompt": result.prompt,
+            "score": float(result.score),
+            "tokens": tokens,
+            "beams": beams,
+            "candidate_count": len(result.history),
+            "history": history,
+        }
+        output_id, output_path = self.store.reserve_artifact_path(filename="prompt_search.json")
+        output_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        artifact = self.store.finalize_bundle_path(
+            artifact_id=output_id,
+            path=output_path,
+            recipe=recipe,
+            source_artifact_ids=[source_id] if source_id else [],
+            label="prompt search",
+            prompt=result.prompt,
+            metadata={
+                "operator": _operator_value(recipe.operator),
+                "metric": "lexical_probe",
+                "result_count": 1,
+                "candidate_count": len(result.history),
+                "search_mode": search_mode,
+            },
+        )
+        return JobResult(
+            artifact_ids=[artifact.artifact_id],
+            metrics={
+                "prompt": result.prompt,
+                "score": float(result.score),
+                "candidate_count": len(result.history),
+                "scorer": "lexical_probe",
+                "search_mode": search_mode,
+            },
+        )
+
     def _run_script_experiment(self, recipe: Recipe, context: JobContext) -> JobResult:
         output_id, marker_path = self.store.reserve_artifact_path(filename=f"{_operator_slug(recipe.operator)}.zip")
         output_root = marker_path.parent / "script_output"
@@ -1423,6 +1625,87 @@ def _numeric_descriptors(value: Any) -> dict[str, float]:
         except (TypeError, ValueError):
             continue
     return descriptors
+
+
+def _parse_prompt_vocabulary(value: Any) -> list[str]:
+    if isinstance(value, (list, tuple)):
+        tokens = [str(item).strip() for item in value]
+    else:
+        text = str(value or "").strip()
+        if not text:
+            return list(DEFAULT_PROMPT_SEARCH_VOCABULARY)
+        tokens = [part.strip() for part in re.split(r"[,;\n]+", text)]
+        if len(tokens) == 1:
+            tokens = [part.strip() for part in text.split()]
+    deduped = []
+    for token in tokens:
+        normalized = re.sub(r"\s+", " ", token).strip().lower()
+        if normalized and normalized not in deduped:
+            deduped.append(normalized)
+    return deduped or list(DEFAULT_PROMPT_SEARCH_VOCABULARY)
+
+
+def _parse_modifier_axes(value: Any) -> list[list[str]]:
+    text = str(value or "").strip()
+    if not text:
+        return []
+    axes: list[list[str]] = []
+    for axis_text in re.split(r"[;\n]+", text):
+        axis = [part.strip().lower() for part in re.split(r"[|,]+", axis_text) if part.strip()]
+        if axis:
+            axes.append(axis)
+    return axes
+
+
+def _optional_positive_int(value: Any) -> int | None:
+    if value in (None, ""):
+        return None
+    parsed = int(value)
+    return parsed if parsed > 0 else None
+
+
+def _prompt_search_target_tokens(
+    *,
+    target_audio_path: str,
+    seed_prompt: str,
+    source: ArtifactRecord | None,
+) -> set[str]:
+    chunks = [seed_prompt]
+    if target_audio_path:
+        path = Path(target_audio_path)
+        chunks.extend([path.stem, *path.parent.parts[-2:]])
+    if source is not None:
+        chunks.extend(
+            [
+                source.label or "",
+                source.prompt or "",
+                source.file.filename if source.file else "",
+                *source.tags,
+            ]
+        )
+    tokens = set(_prompt_tokens(" ".join(chunks)))
+    return tokens or {"audio", "texture"}
+
+
+def _lexical_prompt_scorer(target_tokens: set[str]):
+    def score(prompt: str) -> float:
+        tokens = _prompt_tokens(prompt)
+        if not tokens:
+            return 0.0
+        unique = set(tokens)
+        overlap = len(unique & target_tokens)
+        coverage = overlap / max(len(target_tokens), 1)
+        repeated = max(0, len(tokens) - len(unique))
+        diversity = len(unique) / len(tokens)
+        length_bonus = min(len(tokens), 14) * 0.01
+        overlap_density = sum(1 for token in tokens if token in target_tokens) * 0.05
+        return float(coverage + overlap_density + diversity * 0.05 + length_bonus - repeated * 0.02)
+
+    return score
+
+
+def _prompt_tokens(text: str) -> list[str]:
+    return [token for token in re.split(r"[^a-zA-Z0-9]+", text.lower()) if token]
 
 
 def _dataclass_kwargs(cls: type, params: dict[str, Any]) -> dict[str, Any]:

@@ -22,6 +22,7 @@ export type OperatorName =
   | "experiment.audio_residual_vectors.extract"
   | "experiment.alpha_sweep"
   | "experiment.geometry_audit"
+  | "experiment.prompt_search"
   | "experiment.soft_prompt.optimize"
   | "experiment.soft_prompt.generate"
   | "dataset.pre_encode"

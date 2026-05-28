@@ -676,6 +676,12 @@ def _bundle_preview(record: ArtifactRecord) -> dict[str, Any]:
         if path.endswith("sweep.json") and isinstance(payload, list):
             preview["result_count"] = len(payload)
             preview["alphas"] = [item.get("alpha") for item in payload[:12] if isinstance(item, dict) and "alpha" in item]
+        if path.endswith("prompt_search.json") and isinstance(payload, dict):
+            preview["prompt"] = payload.get("prompt")
+            preview["score"] = payload.get("score")
+            preview["candidate_count"] = payload.get("candidate_count")
+            scorer = payload.get("scorer")
+            preview["metric"] = scorer.get("kind") if isinstance(scorer, dict) else preview.get("metric")
     return {key: value for key, value in preview.items() if value is not None}
 
 
@@ -720,6 +726,9 @@ def _bundle_summary(record: ArtifactRecord, files: list[BundleFileEntry]) -> dic
     geometry = _geometry_summary(json_payloads)
     if geometry:
         summary["geometry"] = geometry
+    prompt_search = _prompt_search_summary(json_payloads)
+    if prompt_search:
+        summary["prompt_search"] = prompt_search
     profile_summary = _profile_summary(npz_summaries)
     if profile_summary:
         summary["profile"] = profile_summary
@@ -801,6 +810,8 @@ def _classify_bundle_kind(
     npz_summaries: list[dict[str, Any]],
 ) -> str:
     operator = str(record.metadata.get("operator") or "")
+    if "prompt_search" in operator or any(name.endswith("prompt_search.json") for name, _ in json_payloads):
+        return "prompt-search"
     if operator == "memory.query" or any(isinstance(payload, dict) and "results" in payload for _, payload in json_payloads):
         return "memory"
     if "geometry" in operator or any(name.endswith("geometry_report.json") for name, _ in json_payloads):
@@ -943,6 +954,30 @@ def _geometry_summary(json_payloads: list[tuple[str, Any]]) -> dict[str, Any] | 
             "summary_std_mean": report.get("summary_std_mean"),
             "frame_count": report.get("frame_count"),
             "dim": report.get("dim"),
+        }
+    return None
+
+
+def _prompt_search_summary(json_payloads: list[tuple[str, Any]]) -> dict[str, Any] | None:
+    for path, payload in json_payloads:
+        if not path.endswith("prompt_search.json") or not isinstance(payload, dict):
+            continue
+        scorer = payload.get("scorer")
+        if not isinstance(scorer, dict):
+            scorer = {}
+        history = payload.get("history")
+        beams = payload.get("beams")
+        return {
+            "path": path,
+            "prompt": payload.get("prompt"),
+            "score": payload.get("score"),
+            "search_mode": payload.get("search_mode"),
+            "seed_prompt": payload.get("seed_prompt"),
+            "candidate_count": payload.get("candidate_count"),
+            "scorer": scorer.get("kind"),
+            "model_backed": scorer.get("model_backed"),
+            "history": history[:8] if isinstance(history, list) else [],
+            "beams": beams[:8] if isinstance(beams, list) else [],
         }
     return None
 
