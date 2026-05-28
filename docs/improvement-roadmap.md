@@ -3,6 +3,9 @@
 This roadmap is a code-grounded triage queue for turning the current Colab
 migration into a stronger local research app.
 
+For the broader stack direction and promotion triggers, see
+`docs/architecture-horizon.md`.
+
 ## P0: Trust And Runability
 
 1. Add job cancellation and retry.

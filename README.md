@@ -15,6 +15,7 @@ For the current app-level description and improvement queue, see:
 - `docs/app-overview.md`
 - `docs/codebase-review.md`
 - `docs/improvement-roadmap.md`
+- `docs/architecture-horizon.md`
 
 ## Upstream
 
