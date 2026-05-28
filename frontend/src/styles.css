@@ -1629,6 +1629,112 @@ audio {
   font-size: 0.68rem;
 }
 
+.fork-panel {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 12px;
+  display: grid;
+  gap: 10px;
+  background:
+    linear-gradient(135deg, rgb(85 198 199 / 0.14), rgb(143 91 210 / 0.12), rgb(243 168 60 / 0.1)),
+    rgb(255 255 255 / 0.5);
+}
+
+.fork-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.fork-head strong {
+  display: block;
+  margin-top: 2px;
+}
+
+.fork-head button {
+  width: 30px;
+  min-height: 30px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fork-core-grid,
+.fork-param-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.fork-core-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.fork-core-grid label,
+.fork-param,
+.fork-notes {
+  display: grid;
+  gap: 5px;
+  color: var(--quiet);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+}
+
+.fork-core-grid input,
+.fork-core-grid select,
+.fork-param input,
+.fork-param textarea,
+.fork-notes textarea {
+  width: 100%;
+  border: 1px solid var(--hair);
+  border-radius: 6px;
+  background: rgb(255 255 255 / 0.6);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.76rem;
+  letter-spacing: 0;
+  outline: none;
+  padding: 7px;
+}
+
+.fork-param.checkbox {
+  grid-template-columns: minmax(0, 1fr) max-content;
+  align-items: center;
+  text-transform: none;
+  color: var(--ink);
+}
+
+.fork-param.checkbox input {
+  width: 18px;
+  height: 18px;
+}
+
+.fork-param textarea,
+.fork-notes textarea {
+  min-height: 68px;
+  resize: vertical;
+}
+
+.fork-param.invalid textarea {
+  border-color: rgb(210 68 101 / 0.72);
+}
+
+.fork-param small {
+  color: var(--rose);
+  font-size: 0.68rem;
+}
+
+.fork-submit {
+  width: 100%;
+  min-height: 34px;
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+  justify-content: center;
+}
+
 .family-row {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -2090,6 +2196,7 @@ audio {
   }
 
   .range-pair,
+  .fork-core-grid,
   .path-actions {
     grid-template-columns: 1fr;
   }

@@ -40,6 +40,29 @@ const server = setupServer(
       checks: [{ name: "artifact-root", status: "ok", message: "/tmp/lab" }],
     }),
   ),
+  http.post("http://api.test/recipes/recipe_1/fork", async ({ request }) => {
+    const payload = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({
+      job_id: "job_fork",
+      status: "queued",
+      recipe: {
+        recipe_id: "recipe_fork",
+        operator: "latent.cyclic_roll",
+        backend: payload.backend ?? "torch_mps",
+        inputs: {},
+        params: payload.params ?? {},
+        seed: payload.seed ?? null,
+        session_id: payload.session_id ?? null,
+        created_at: "2026-05-27T15:00:00.000Z",
+        version: 1,
+      },
+      progress: 0,
+      artifact_ids: [],
+      metrics: {},
+      logs: [],
+      created_at: "2026-05-27T15:00:00.000Z",
+    });
+  }),
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
@@ -65,6 +88,19 @@ describe("createApi", () => {
     await expect(createApi("http://api.test").readiness()).resolves.toMatchObject({
       ok: true,
       checks: [{ name: "artifact-root" }],
+    });
+  });
+
+  it("forks recipes with edited params", async () => {
+    await expect(
+      createApi("http://api.test").forkRecipe("recipe_1", {
+        backend: "torch_mps",
+        params: { shift_frames: 4 },
+        seed: 11,
+      }),
+    ).resolves.toMatchObject({
+      job_id: "job_fork",
+      recipe: { params: { shift_frames: 4 }, seed: 11 },
     });
   });
 });

@@ -30,7 +30,7 @@ import {
 } from "lucide-react";
 
 import modelImage from "../../stable-audio-3.png";
-import { createApi, type ArtifactAnnotationPayload, type ExperimentPayload } from "./api";
+import { createApi, type ArtifactAnnotationPayload, type ExperimentPayload, type RecipeForkPayload } from "./api";
 import { createControlPlaneClient, DEFAULT_CONTROL_PLANE_URL, type ResultFamily, type WorkbenchState } from "./controlPlane";
 import { RecipeFields } from "./RecipeFields";
 import {
@@ -58,6 +58,7 @@ import type {
   OperatorName,
   OperatorSpec,
   ReadinessCheck,
+  Recipe,
   SessionRecord,
 } from "./types";
 
@@ -653,6 +654,7 @@ export function App() {
   const [experimentMode, setExperimentMode] = useState<ExperimentMode>("experiment.audio_style_vectors");
   const [experimentForm, setExperimentForm] = useState<Record<string, RecipeValue>>(() => defaultExperimentForm("experiment.audio_style_vectors"));
   const [liveJobsById, setLiveJobsById] = useState<Record<string, JobRecord>>({});
+  const [forkTarget, setForkTarget] = useState<Recipe | null>(null);
 
   const workbenchState = workbench.data;
   const allArtifacts = workbenchState?.artifacts ?? artifacts.data ?? [];
@@ -779,6 +781,14 @@ export function App() {
   const replayRecipeMutation = useMutation({
     mutationFn: (recipeId: string) => api.replayRecipe(recipeId),
     onSuccess: invalidate,
+  });
+
+  const forkRecipeMutation = useMutation({
+    mutationFn: ({ recipeId, payload }: { recipeId: string; payload: RecipeForkPayload }) => api.forkRecipe(recipeId, payload),
+    onSuccess: async () => {
+      setForkTarget(null);
+      await invalidate();
+    },
   });
 
   const annotateArtifact = useMutation({
@@ -1248,12 +1258,26 @@ export function App() {
             <Activity size={19} />
           </div>
           <ReadinessPanel checks={readinessChecks} />
+          {forkTarget ? (
+            <ForkRecipePanel
+              recipe={forkTarget}
+              submitting={forkRecipeMutation.isPending}
+              onClose={() => setForkTarget(null)}
+              onSubmit={(payload) =>
+                forkRecipeMutation.mutate({
+                  recipeId: forkTarget.recipe_id,
+                  payload: { ...payload, session_id: activeSessionId },
+                })
+              }
+            />
+          ) : null}
           <ResultFamilyPanel
             families={sessionResultFamilies}
             artifacts={allArtifacts}
             selectedId={selectedArtifact?.artifact_id ?? null}
             onSelect={selectArtifact}
             onReplayRecipe={(recipeId) => replayRecipeMutation.mutate(recipeId)}
+            onForkRecipe={setForkTarget}
           />
           <SessionTray
             artifacts={sessionArtifacts}
@@ -1723,18 +1747,183 @@ function ReadinessPanel({ checks }: { checks: ReadinessCheck[] }) {
   );
 }
 
+function ForkRecipePanel({
+  recipe,
+  submitting,
+  onSubmit,
+  onClose,
+}: {
+  recipe: Recipe;
+  submitting: boolean;
+  onSubmit: (payload: RecipeForkPayload) => void;
+  onClose: () => void;
+}) {
+  const [params, setParams] = useState<Record<string, unknown>>(recipe.params);
+  const [complexDrafts, setComplexDrafts] = useState<Record<string, string>>({});
+  const [complexErrors, setComplexErrors] = useState<Record<string, string>>({});
+  const [backend, setBackend] = useState<NonNullable<RecipeForkPayload["backend"]>>(recipe.backend);
+  const [model, setModel] = useState(recipe.model ?? "");
+  const [seed, setSeed] = useState(recipe.seed?.toString() ?? "");
+  const [notes, setNotes] = useState(recipe.notes ?? "");
+
+  useEffect(() => {
+    setParams(recipe.params);
+    setComplexDrafts({});
+    setComplexErrors({});
+    setBackend(recipe.backend);
+    setModel(recipe.model ?? "");
+    setSeed(recipe.seed?.toString() ?? "");
+    setNotes(recipe.notes ?? "");
+  }, [recipe]);
+
+  const setParam = (key: string, value: unknown) => {
+    setParams((current) => ({ ...current, [key]: value }));
+  };
+
+  const submit = () => {
+    const parsedParams = { ...params };
+    const errors: Record<string, string> = {};
+    for (const [key, draft] of Object.entries(complexDrafts)) {
+      try {
+        parsedParams[key] = JSON.parse(draft);
+      } catch {
+        errors[key] = "Invalid JSON";
+      }
+    }
+    setComplexErrors(errors);
+    if (Object.keys(errors).length) return;
+    const parsedSeed = seed.trim() ? Number(seed) : null;
+    onSubmit({
+      backend,
+      model: model.trim() || null,
+      seed: Number.isFinite(parsedSeed) ? parsedSeed : null,
+      notes: notes.trim() || null,
+      params: parsedParams,
+    });
+  };
+
+  return (
+    <section className="fork-panel">
+      <div className="fork-head">
+        <div>
+          <span className="eyebrow">Fork Recipe</span>
+          <strong>{shortOperatorName(recipe.operator)}</strong>
+        </div>
+        <button type="button" onClick={onClose} title="Close fork editor">
+          <X size={15} />
+        </button>
+      </div>
+      <div className="fork-core-grid">
+        <label>
+          Backend
+          <select value={backend} onChange={(event) => setBackend(event.target.value as NonNullable<RecipeForkPayload["backend"]>)}>
+            {backendOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Model
+          <input value={model} onChange={(event) => setModel(event.target.value)} placeholder="default" />
+        </label>
+        <label>
+          Seed
+          <input type="number" value={seed} onChange={(event) => setSeed(event.target.value)} placeholder="random" />
+        </label>
+      </div>
+      <div className="fork-param-grid">
+        {Object.entries(params).length ? (
+          Object.entries(params).map(([key, value]) => (
+            <ForkParamControl
+              key={key}
+              name={key}
+              value={value}
+              draft={complexDrafts[key]}
+              error={complexErrors[key]}
+              onChange={(next) => setParam(key, next)}
+              onDraft={(draft) => setComplexDrafts((current) => ({ ...current, [key]: draft }))}
+            />
+          ))
+        ) : (
+          <div className="quiet-panel compact">No params on this recipe</div>
+        )}
+      </div>
+      <label className="fork-notes">
+        Notes
+        <textarea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="why this branch exists" />
+      </label>
+      <button type="button" className="fork-submit" disabled={submitting} onClick={submit}>
+        {submitting ? <LoaderCircle className="spin" size={15} /> : <GitFork size={15} />}
+        Fork with changes
+      </button>
+    </section>
+  );
+}
+
+function ForkParamControl({
+  name,
+  value,
+  draft,
+  error,
+  onChange,
+  onDraft,
+}: {
+  name: string;
+  value: unknown;
+  draft?: string;
+  error?: string;
+  onChange: (value: unknown) => void;
+  onDraft: (value: string) => void;
+}) {
+  if (typeof value === "boolean") {
+    return (
+      <label className="fork-param checkbox">
+        <span>{prettyParamName(name)}</span>
+        <input type="checkbox" checked={value} onChange={(event) => onChange(event.target.checked)} />
+      </label>
+    );
+  }
+  if (typeof value === "number") {
+    return (
+      <label className="fork-param">
+        {prettyParamName(name)}
+        <input type="number" value={value} onChange={(event) => onChange(Number(event.target.value))} />
+      </label>
+    );
+  }
+  if (typeof value === "string") {
+    return (
+      <label className="fork-param">
+        {prettyParamName(name)}
+        <input value={value} onChange={(event) => onChange(event.target.value)} />
+      </label>
+    );
+  }
+  return (
+    <label className={`fork-param complex ${error ? "invalid" : ""}`}>
+      {prettyParamName(name)}
+      <textarea value={draft ?? JSON.stringify(value, null, 2)} onChange={(event) => onDraft(event.target.value)} />
+      {error ? <small>{error}</small> : null}
+    </label>
+  );
+}
+
 function ResultFamilyPanel({
   families,
   artifacts,
   selectedId,
   onSelect,
   onReplayRecipe,
+  onForkRecipe,
 }: {
   families: ResultFamily[];
   artifacts: ArtifactRecord[];
   selectedId: string | null;
   onSelect: (artifactId: string | null) => void;
   onReplayRecipe: (recipeId: string) => void;
+  onForkRecipe: (recipe: Recipe) => void;
 }) {
   if (!families.length) {
     return <div className="quiet-panel compact">No result families yet</div>;
@@ -1771,6 +1960,10 @@ function ResultFamilyPanel({
             <button type="button" className="family-replay" onClick={() => onReplayRecipe(family.recipeId)} title="Replay family recipe">
               <Repeat size={14} />
               Replay
+            </button>
+            <button type="button" className="family-replay" onClick={() => onForkRecipe(family.recipe)} title="Fork family recipe">
+              <GitFork size={14} />
+              Fork
             </button>
           </article>
         );
@@ -2474,6 +2667,10 @@ function readinessLabel(name: string) {
     .replace("mlx-medium-weights", "MLX medium")
     .replace("same-l-access", "SAME-L")
     .replace("artifact-root", "Artifacts");
+}
+
+function prettyParamName(name: string) {
+  return name.replaceAll("_", " ");
 }
 
 function mergeJobRecords(baseJobs: JobRecord[], overlayJobs: JobRecord[]) {
