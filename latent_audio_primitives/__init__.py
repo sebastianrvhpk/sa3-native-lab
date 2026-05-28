@@ -79,6 +79,12 @@ from .prompt_optimization import (
     greedy_token_prompt_search,
     prompt_seed_from_audio_path,
 )
+from .flow_prompt import (
+    flow_velocity_target,
+    parse_float_sequence,
+    sa3_flow_losses_for_prompts,
+    timesteps_from_logsnr_values,
+)
 from .latent_math import (
     as_time_major,
     boundary_summary,
@@ -231,6 +237,7 @@ __all__ = [
     "fit_latent_geometry",
     "fit_linear_control_probe",
     "fit_residual_feature_basis",
+    "flow_velocity_target",
     "frames_from_fraction",
     "geometry_report",
     "graft_latent_channels",
@@ -268,6 +275,7 @@ __all__ = [
     "pca_reconstruct",
     "pca_component_gain",
     "periodicity_report",
+    "parse_float_sequence",
     "preview_native_tokenizer_vocabulary",
     "predict_control",
     "project_residual_features",
@@ -278,6 +286,7 @@ __all__ = [
     "repeated_loop_preview_audio",
     "residual_feature_direction",
     "sa3_cyclic_roll_sample_from_init_latents",
+    "sa3_flow_losses_for_prompts",
     "save_item",
     "save_items",
     "save_style_direction",
@@ -300,6 +309,7 @@ __all__ = [
     "summary_direction",
     "temporal_box_blur_latents",
     "temporal_blur_latents",
+    "timesteps_from_logsnr_values",
     "transition_cost",
     "whiten_latent",
 ]
