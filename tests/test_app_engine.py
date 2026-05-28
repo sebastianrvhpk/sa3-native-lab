@@ -465,6 +465,11 @@ def test_fastapi_inspects_bundle_artifact(tmp_path):
     assert payload["bundle_summary"]["metrics"]["values"]["score"] == 0.8
     assert payload["bundle_summary"]["plots"]["count"] == 1
 
+    plot = client.get(f"/artifacts/{record.artifact_id}/bundle-file", params={"path": "plot.png"})
+    assert plot.status_code == 200
+    assert plot.content == b"plot"
+    assert plot.headers["content-type"] == "image/png"
+
 
 def test_runtime_same_encode_decode_with_fake_adapter(tmp_path):
     store = ArtifactStore(tmp_path / "lab")

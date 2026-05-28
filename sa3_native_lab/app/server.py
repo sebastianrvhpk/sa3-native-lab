@@ -5,7 +5,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 
 from sa3_native_lab import __version__
 
@@ -146,6 +146,17 @@ def create_app(
             raise HTTPException(status_code=404, detail=f"artifact file missing: {artifact_id}")
         media_type = record.file.media_type if record.file else None
         return FileResponse(record.path, media_type=media_type, filename=record.path.name)
+
+    @app.get("/artifacts/{artifact_id}/bundle-file")
+    def get_bundle_file(artifact_id: str, path: str):
+        try:
+            content, media_type, filename = store.bundle_file(artifact_id, path)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=f"bundle file not found: {path}") from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        headers = {"Content-Disposition": f'inline; filename="{filename}"'}
+        return Response(content=content, media_type=media_type or "application/octet-stream", headers=headers)
 
     @app.get("/artifacts/{artifact_id}/peaks", response_model=AudioPeaksResponse)
     def get_artifact_peaks(artifact_id: str, bins: int = 96) -> AudioPeaksResponse:

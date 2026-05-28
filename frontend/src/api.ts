@@ -136,6 +136,8 @@ export function createApi(baseUrl: string) {
   return {
     base,
     artifactFileUrl: (artifactId: string) => `${base}/artifacts/${artifactId}/file`,
+    bundleFileUrl: (artifactId: string, path: string) =>
+      `${base}/artifacts/${encodeURIComponent(artifactId)}/bundle-file?path=${encodeURIComponent(path)}`,
     jobEventsUrl: (jobId: string) => websocketUrl(base, `/jobs/${encodeURIComponent(jobId)}/events`),
     health: () => request<HealthResponse>("/health"),
     readiness: () => request<ReadinessResponse>("/readiness"),

@@ -93,11 +93,15 @@ describe("createApi", () => {
   });
 
   it("inspects bundle file inventories", async () => {
-    await expect(createApi("http://api.test").inspectArtifact("art_bundle")).resolves.toMatchObject({
+    const api = createApi("http://api.test");
+    await expect(api.inspectArtifact("art_bundle")).resolves.toMatchObject({
       artifact: { artifact_id: "art_bundle" },
       bundle_files: [{ path: "metrics.json", byte_size: 16 }],
       bundle_preview: { result_count: 2 },
     });
+    expect(api.bundleFileUrl("art_bundle", "plots/main plot.png")).toBe(
+      "http://api.test/artifacts/art_bundle/bundle-file?path=plots%2Fmain%20plot.png",
+    );
   });
 
   it("reads readiness checks", async () => {

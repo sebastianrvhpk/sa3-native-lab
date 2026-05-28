@@ -45,7 +45,7 @@ export function BundleField({
         <span>
           {inspection.isLoading ? "Inspecting..." : bundleFiles.length ? `${bundleFiles.length} files · ${formatBytes(totalBytes)}` : artifact.file ? formatBytes(artifact.file.byte_size) : "bundle"}
         </span>
-        {inspection.data ? <BundleReaderPanel inspection={inspection.data} /> : null}
+        {inspection.data ? <BundleReaderPanel inspection={inspection.data} apiBase={apiBase} /> : null}
         {inspection.data ? (
           <BundleReuseActions
             inspection={inspection.data}
@@ -139,10 +139,11 @@ function BundleReuseActions({
   );
 }
 
-function BundleReaderPanel({ inspection }: { inspection: ArtifactInspection }) {
+function BundleReaderPanel({ inspection, apiBase }: { inspection: ArtifactInspection; apiBase: string }) {
   const descriptor = summarizeBundle(inspection.bundle_summary, inspection.bundle_preview, inspection.bundle_files);
   const rows = descriptor.rows.filter(([, value]) => value !== undefined && value !== null && value !== "");
   const plotFiles = descriptor.plotFiles ?? [];
+  const api = createApi(apiBase);
   return (
     <div className={`bundle-kind-panel ${descriptor.kind}`}>
       <div>
@@ -162,7 +163,7 @@ function BundleReaderPanel({ inspection }: { inspection: ArtifactInspection }) {
           })}
         </div>
       ) : null}
-      {plotFiles.length ? <PlotPreviewShell files={plotFiles} /> : null}
+      {plotFiles.length ? <PlotPreviewShell files={plotFiles} artifactId={inspection.artifact.artifact_id} getFileUrl={api.bundleFileUrl} /> : null}
     </div>
   );
 }
@@ -321,14 +322,31 @@ function BundlePreview({
   );
 }
 
-function PlotPreviewShell({ files }: { files: readonly string[] }) {
+function PlotPreviewShell({
+  files,
+  artifactId,
+  getFileUrl,
+}: {
+  files: readonly string[];
+  artifactId: string;
+  getFileUrl: (artifactId: string, path: string) => string;
+}) {
   return (
     <div className="bundle-plot-shell" aria-label="Bundle plot files">
       <strong>Plot preview</strong>
       <div>
-        {files.slice(0, 4).map((file) => (
-          <span key={file}>{file}</span>
-        ))}
+        {files.slice(0, 4).map((file) =>
+          isInlineImagePath(file) ? (
+            <a key={file} href={getFileUrl(artifactId, file)} target="_blank" rel="noreferrer" title={file}>
+              <img src={getFileUrl(artifactId, file)} alt={file} loading="lazy" />
+              <span>{file}</span>
+            </a>
+          ) : (
+            <a key={file} className="plot-file-link" href={getFileUrl(artifactId, file)} target="_blank" rel="noreferrer">
+              {file}
+            </a>
+          ),
+        )}
       </div>
     </div>
   );
@@ -446,6 +464,10 @@ function prettyBundleKey(key: string) {
 function isPlotPath(path: string) {
   const value = path.toLowerCase();
   return /\.(png|jpe?g|webp|svg|pdf)$/.test(value) || value.includes("plot") || value.includes("chart");
+}
+
+function isInlineImagePath(path: string) {
+  return /\.(png|jpe?g|webp|svg)$/i.test(path);
 }
 
 function dedupeReuseActions(actions: BundleReuseAction[]) {

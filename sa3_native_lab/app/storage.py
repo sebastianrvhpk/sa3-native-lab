@@ -410,6 +410,28 @@ class ArtifactStore:
             peaks=peaks,
         )
 
+    def bundle_file(self, artifact_id: str, inner_path: str) -> tuple[bytes, str | None, str]:
+        record = self.get_artifact(artifact_id)
+        if record.kind != ArtifactKind.BUNDLE:
+            raise ValueError(f"artifact {artifact_id} is not a bundle artifact")
+        safe_path = _safe_bundle_member_path(inner_path)
+        if record.path.is_dir():
+            root = record.path.resolve()
+            target = (root / safe_path).resolve()
+            if not target.is_file() or root not in target.parents:
+                raise KeyError(inner_path)
+            return target.read_bytes(), _guess_media_type(target), target.name
+        if zipfile.is_zipfile(record.path):
+            with zipfile.ZipFile(record.path) as archive:
+                try:
+                    with archive.open(safe_path) as handle:
+                        return handle.read(), _guess_media_type(Path(safe_path)), Path(safe_path).name
+                except KeyError:
+                    raise KeyError(inner_path) from None
+        if record.path.name == safe_path:
+            return record.path.read_bytes(), record.file.media_type if record.file else _guess_media_type(record.path), record.path.name
+        raise KeyError(inner_path)
+
     def list_artifacts(
         self,
         *,
@@ -450,6 +472,13 @@ def _safe_filename(filename: str) -> str:
     name = Path(filename).name
     safe = "".join(ch if ch.isalnum() or ch in "-_." else "_" for ch in name)
     return safe[:180] or "artifact.bin"
+
+
+def _safe_bundle_member_path(inner_path: str) -> str:
+    path = Path(inner_path)
+    if path.is_absolute() or ".." in path.parts:
+        raise KeyError(inner_path)
+    return path.as_posix()
 
 
 def _artifact_matches_search(record: ArtifactRecord, *, query: str | None, tags: list[str] | None) -> bool:
@@ -859,6 +888,16 @@ def _guess_media_type(path: Path) -> str | None:
         return "audio/ogg"
     if suffix == ".m4a":
         return "audio/mp4"
+    if suffix == ".png":
+        return "image/png"
+    if suffix in {".jpg", ".jpeg"}:
+        return "image/jpeg"
+    if suffix == ".webp":
+        return "image/webp"
+    if suffix == ".svg":
+        return "image/svg+xml"
+    if suffix == ".pdf":
+        return "application/pdf"
     return None
 
 
