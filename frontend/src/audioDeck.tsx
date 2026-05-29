@@ -1,6 +1,6 @@
 import { type CSSProperties, type MouseEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Pause, Play, Repeat, SkipBack, SkipForward } from "lucide-react";
+import { Pause, Play, Repeat, SkipBack, SkipForward, X } from "lucide-react";
 
 import { createApi } from "./api";
 import { artifactName, formatDuration, formatPlaybackTime } from "./artifactUtils";
@@ -174,10 +174,31 @@ export function AudioDeck({ artifact, apiBase, compact = false }: { artifact: Ar
               {formatLoopRegion(loopRegion)}
             </button>
           ) : null}
+          {loopRegion ? (
+            <span className="deck-region-editor" aria-label="Loop region editor">
+              <button type="button" onClick={() => setLoopRegion(nudgeLoopRegion(loopRegion, "start", -0.25, displayDuration))} title="Move loop start earlier">
+                In-
+              </button>
+              <button type="button" onClick={() => setLoopRegion(nudgeLoopRegion(loopRegion, "start", 0.25, displayDuration))} title="Move loop start later">
+                In+
+              </button>
+              <button type="button" onClick={() => setLoopRegion(nudgeLoopRegion(loopRegion, "end", -0.25, displayDuration))} title="Move loop end earlier">
+                Out-
+              </button>
+              <button type="button" onClick={() => setLoopRegion(nudgeLoopRegion(loopRegion, "end", 0.25, displayDuration))} title="Move loop end later">
+                Out+
+              </button>
+            </span>
+          ) : null}
           {markers.map((marker) => (
-            <button key={marker.id} type="button" className="deck-chip marker-chip" onClick={() => seekTo(displayDuration ? marker.time / displayDuration : 0)} title={`Jump to ${formatPlaybackTime(marker.time)}`}>
-              {marker.label} {formatPlaybackTime(marker.time)}
-            </button>
+            <span key={marker.id} className="deck-marker">
+              <button type="button" className="deck-chip marker-chip" onClick={() => seekTo(displayDuration ? marker.time / displayDuration : 0)} title={`Jump to ${formatPlaybackTime(marker.time)}`}>
+                {marker.label} {formatPlaybackTime(marker.time)}
+              </button>
+              <button type="button" className="deck-marker-delete" aria-label={`Delete ${marker.label}`} onClick={() => setMarkers((current) => removePlaybackMarker(current, marker.id))}>
+                <X size={12} />
+              </button>
+            </span>
           ))}
           {markers.length ? (
             <button type="button" className="deck-chip" onClick={() => setMarkers([])} title="Clear local markers">
@@ -333,6 +354,11 @@ export function formatLoopRegion(region: LoopRegion) {
   return `${formatPlaybackTime(region.start)}-${formatPlaybackTime(region.end)}`;
 }
 
+export function nudgeLoopRegion(region: LoopRegion, edge: "start" | "end", deltaSeconds: number, duration: number): LoopRegion {
+  if (edge === "start") return clampLoopRegion(region.start + deltaSeconds, region.end, duration);
+  return clampLoopRegion(region.start, region.end + deltaSeconds, duration);
+}
+
 export function addPlaybackMarker(markers: readonly PlaybackMarker[], currentTime: number, duration: number, limit = 8): PlaybackMarker[] {
   const boundedDuration = Math.max(0, duration);
   if (!boundedDuration) return [...markers];
@@ -350,6 +376,12 @@ export function addPlaybackMarker(markers: readonly PlaybackMarker[], currentTim
     .sort((left, right) => left.time - right.time)
     .slice(-limit);
   return next.map((marker, index) => ({ ...marker, label: `M${index + 1}` }));
+}
+
+export function removePlaybackMarker(markers: readonly PlaybackMarker[], markerId: string): PlaybackMarker[] {
+  return markers
+    .filter((marker) => marker.id !== markerId)
+    .map((marker, index) => ({ ...marker, label: `M${index + 1}` }));
 }
 
 export function markerFractions(markers: readonly PlaybackMarker[], duration: number): number[] {

@@ -42,6 +42,17 @@ export function auditionPositionLabel(artifacts: readonly ArtifactRecord[], sele
   return `${cursor.selectedIndex + 1}/${cursor.playlist.length}`;
 }
 
+export function auditionKeyboardTarget(artifacts: readonly ArtifactRecord[], selectedId: string | null, key: string, limit = 12): ArtifactRecord | null {
+  const cursor = auditionCursor(artifacts, selectedId, limit);
+  if (!cursor.playlist.length) return null;
+  if (key === "ArrowUp" || key === "ArrowLeft") return cursor.previous;
+  if (key === "ArrowDown" || key === "ArrowRight") return cursor.next;
+  if (key === "Home") return cursor.playlist[0] ?? null;
+  if (key === "End") return cursor.playlist[cursor.playlist.length - 1] ?? null;
+  if (!cursor.selected && (key === "Enter" || key === " ")) return cursor.playlist[0] ?? null;
+  return null;
+}
+
 function auditionOrigin(artifact: ArtifactRecord): string {
   const origin = artifact.metadata.generation_origin;
   if (origin === "prompt_search_candidate") return "prompt take";

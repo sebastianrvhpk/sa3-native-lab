@@ -1981,6 +1981,49 @@ audio {
   background: linear-gradient(135deg, rgb(234 74 162 / 0.14), rgb(85 198 199 / 0.16));
 }
 
+.deck-region-editor,
+.deck-marker {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.deck-region-editor {
+  min-height: 34px;
+  border: 1px solid var(--hair);
+  border-radius: 999px;
+  padding: 2px;
+  background: rgb(255 255 255 / 0.5);
+}
+
+.deck-region-editor button,
+.deck-marker-delete {
+  min-height: 28px;
+  width: auto;
+  padding: 0 7px;
+  border-radius: 999px;
+  box-shadow: none;
+  background: rgb(255 255 255 / 0.56);
+  font-size: 0.66rem;
+}
+
+.deck-marker {
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.38);
+}
+
+.deck-marker .deck-chip {
+  padding-right: 6px;
+}
+
+.deck-marker-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  padding: 0;
+}
+
 .deck-volume {
   display: grid;
   grid-template-columns: max-content minmax(80px, 1fr);
@@ -4514,6 +4557,11 @@ audio {
     linear-gradient(145deg, rgb(255 255 255 / 0.55), rgb(255 255 255 / 0.12)),
     linear-gradient(135deg, rgb(85 198 199 / 0.17), rgb(201 238 72 / 0.12), rgb(234 74 162 / 0.08));
   box-shadow: 0 0 0 1px rgb(255 255 255 / 0.42) inset;
+}
+
+.audition-stack:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 3px;
 }
 
 .audition-stack-head {

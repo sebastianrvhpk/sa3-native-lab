@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { auditionCursor, auditionPositionLabel, auditionStackRows } from "./auditionStack";
+import { auditionCursor, auditionKeyboardTarget, auditionPositionLabel, auditionStackRows } from "./auditionStack";
 
 describe("audition stack", () => {
   it("summarizes newest session audio artifacts for listening", () => {
@@ -64,6 +64,20 @@ describe("audition stack", () => {
     expect(cursor.previous?.artifact_id).toBe("art_new");
     expect(cursor.next?.artifact_id).toBe("art_old");
     expect(auditionPositionLabel(artifacts, "art_mid")).toBe("2/3");
+  });
+
+  it("maps keyboard navigation to real audition targets", () => {
+    const artifacts = [
+      audio("art_old", "2026-05-28T10:00:00.000Z"),
+      audio("art_mid", "2026-05-28T11:00:00.000Z"),
+      audio("art_new", "2026-05-28T12:00:00.000Z"),
+    ];
+
+    expect(auditionKeyboardTarget(artifacts, "art_mid", "ArrowUp")?.artifact_id).toBe("art_new");
+    expect(auditionKeyboardTarget(artifacts, "art_mid", "ArrowDown")?.artifact_id).toBe("art_old");
+    expect(auditionKeyboardTarget(artifacts, "art_mid", "Home")?.artifact_id).toBe("art_new");
+    expect(auditionKeyboardTarget(artifacts, "art_mid", "End")?.artifact_id).toBe("art_old");
+    expect(auditionKeyboardTarget(artifacts, null, "Enter")?.artifact_id).toBe("art_new");
   });
 });
 

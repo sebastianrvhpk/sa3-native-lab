@@ -52,7 +52,7 @@ import {
 } from "./artifactFilters";
 import { ArtifactBadge, ArtifactIcon } from "./artifactDisplay";
 import { artifactMeta, artifactName, artifactShape, formatDuration, sortNewest, sortNewestJobs } from "./artifactUtils";
-import { auditionCursor, auditionPositionLabel, auditionStackRows } from "./auditionStack";
+import { auditionCursor, auditionKeyboardTarget, auditionPositionLabel, auditionStackRows } from "./auditionStack";
 import { AudioDeck, TinyWave } from "./audioDeck";
 import { BundleField, type PromptCandidateGenerationRequest } from "./bundleInspector";
 import { createControlPlaneClient, DEFAULT_CONTROL_PLANE_URL, type ResultFamily, type WorkbenchState } from "./controlPlane";
@@ -1803,8 +1803,22 @@ function AuditionStackPanel({
   const cursor = auditionCursor(artifacts, selectedId, 8);
   const position = auditionPositionLabel(artifacts, selectedId, 8);
   if (!rows.length) return null;
+  const moveSelection = (key: string) => {
+    const target = auditionKeyboardTarget(artifacts, selectedId, key, 8);
+    if (!target) return false;
+    onSelect(target.artifact_id);
+    return true;
+  };
   return (
-    <div className="audition-stack" aria-label="Session audition stack">
+    <div
+      className="audition-stack"
+      aria-label="Session audition stack"
+      tabIndex={0}
+      onKeyDown={(event) => {
+        if (!moveSelection(event.key)) return;
+        event.preventDefault();
+      }}
+    >
       <div className="audition-stack-head">
         <div>
           <span className="eyebrow">Audition</span>
