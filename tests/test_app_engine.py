@@ -470,6 +470,26 @@ def test_colab_mode_operators_reference_known_app_surfaces(tmp_path):
             assert operator in specs or operator in non_runtime_operators, f"{mode.mode_id} references unmapped operator {operator}"
 
 
+def test_colab_mode_runtime_specs_are_interface_complete(tmp_path):
+    specs = {spec.name: spec for spec in RuntimeDispatcher(ArtifactStore(tmp_path / "lab"), repo_root=tmp_path).operator_specs()}
+    non_runtime_operators = {OperatorName.ANNOTATE}
+
+    for mode in list_colab_modes():
+        if "native" in mode.status or "recipe" in mode.status or "chainable" in mode.status:
+            assert mode.inputs, f"{mode.mode_id} must describe inputs"
+            assert mode.outputs, f"{mode.mode_id} must describe outputs"
+            assert mode.operators, f"{mode.mode_id} must list executable operators"
+        for operator in mode.operators:
+            if operator in non_runtime_operators:
+                continue
+            spec = specs[operator]
+            ui_keys = {field.key for field in spec.ui_fields}
+            missing = set(spec.params) - ui_keys
+            assert not missing, f"{mode.mode_id} / {operator} missing UI fields for {sorted(missing)}"
+            assert spec.backends, f"{mode.mode_id} / {operator} must declare backends"
+            assert spec.produces, f"{mode.mode_id} / {operator} must declare artifact kinds"
+
+
 def test_sessions_persist_and_attach_artifacts(tmp_path):
     store = ArtifactStore(tmp_path)
     session = store.create_session(SessionCreateRequest(name="sketch one"))
