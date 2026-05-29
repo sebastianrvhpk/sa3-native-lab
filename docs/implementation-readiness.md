@@ -54,9 +54,12 @@ field, an artifact relationship, or an explicitly documented future capability.
   families, and A/B assignment instead of decorative routing.
 - The session tray now has a tested workspace pulse for active takes, families,
   job state, listening decisions, archive volume, and the next real focus
-  action.
+  action. Archive artifacts can be recovered into the active session through a
+  tested annotation/session reassignment path.
 - The listening bench now has a tested recent-take playlist cursor and local
   waveform markers in addition to playback, loop, A/B, and decision controls.
+  The player now supports marker deletion, relabeling after deletion, loop-edge
+  nudging, and keyboardable audition navigation.
 - Prompt search is no longer only a script adapter: it has a native recipe path,
   scorer metadata, generated takes, lineage, descriptor deltas, listening
   decisions, decision summaries, and first-pass prompt memory.
@@ -140,11 +143,11 @@ that every experiment can be trusted, replayed, compared, and reused.
 - Component tests for all mode-specific recipe panels once they become more
   domain-specific.
 - Browser/integration tests for session/archive/replay flows as first-class
-  workflows. The derived workspace model has unit coverage; the live UI flow
-  still needs more end-to-end coverage.
+  workflows. The derived workspace model and archive recovery payload have unit
+  coverage; the live UI flow still needs more end-to-end coverage.
 - Playback-specific browser tests for loop regions, A/B behavior,
   generated-take promotion, marker editing, and session playlists. The core
-  marker and playlist helpers now have unit coverage.
+  marker, loop nudge, delete, and playlist helpers now have unit coverage.
 - Performance or runtime-cost tests for Medium/MPS prompt-search scorer paths.
 - Tests that protect against token or credential leakage in logs, command
   context, and error tails.
@@ -183,8 +186,8 @@ that every experiment can be trusted, replayed, compared, and reused.
 - Job events are much better than silent jobs, but the live source still leans
   on polling underneath the control-plane bridge.
 - The queue/archive/session model is becoming a primary creative organization
-  surface through the workspace pulse, but archive recovery and long-session
-  cleanup still need deeper end-to-end workflows.
+  surface through the workspace pulse and artifact recovery, but long-session
+  cleanup still needs deeper end-to-end workflows.
 
 ### Not Bad Code, But Incomplete Architecture
 
@@ -226,8 +229,8 @@ instead of invisible friction.
 ### P1: Session And Archive As Creative Workflow
 
 1. Promote workspace/session/run/family/artifact into the app's default mental
-   model. A first data-backed workspace pulse is implemented; the next step is
-   browser-tested recovery and archive flows.
+   model. A first data-backed workspace pulse and archive recovery path are
+   implemented; the next step is browser-tested archive/replay/fork flows.
 2. Reduce queue clutter by making active session, archive, generated families,
    and reusable outputs distinct surfaces.
 3. Make "new session", "archive session", "recover result", "fork run", and
@@ -242,8 +245,9 @@ instead of invisible friction.
 1. Upgrade playback into a creative comparison instrument.
 2. Add richer loop, marker, region, A/B, take-stack, and session-playlist
    behaviors where they directly improve listening decisions. Local markers and
-   playlist cursor helpers are implemented; editable marker/region workflows
-   remain next.
+   playlist cursor helpers are implemented, along with loop-edge nudging,
+   marker deletion, and keyboardable audition navigation; draggable regions,
+   marker notes, and persistence remain next.
 3. Consider wavesurfer.js when regions, zoom, marker editing, and waveform
    interaction become central enough to justify the dependency.
 4. Tie listening decisions back into prompt-search, sweeps, memory reuse, and

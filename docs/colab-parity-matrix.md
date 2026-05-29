@@ -40,7 +40,7 @@ meaning is real.
 | HF login and model loading | `HF_TOKEN`/HF cache, Medium/SAME-L defaults, readiness panel | native | Safe stderr and command-context preservation still needs hardening. | Token-leak regression tests are missing. | Add safe log-tail sanitizer tests before richer failure logs. |
 | Medium smoke test | `/generate/text`, MLX wrapper, listening bench | native | Smoke is operational but not represented as a reusable demo fixture. | Smoke path exists outside normal unit tests. | Add a tiny deterministic demo fixture only when runtime cost is acceptable. |
 | Shared helpers | API contracts, artifact store, descriptors, bundle inspection | native | Helpers are spread across runtime/adapters; `RuntimeDispatcher` remains broad. | Existing tests cover many helpers, but not all bundle-specific summaries. | Split adapters when the next mode becomes too hard to test in-place. |
-| Custom Colab audio player | Listening bench, waveform peaks, region loop, A/B, decisions, recent audition stack, playlist cursor, waveform markers, artifact landing | partial | Local markers and playlist sequencing helpers exist; editable marker regions, waveform zoom, and full playlist keyboard flow are still missing. | Audition stack, marker, and job landing tests exist; full playback browser interaction tests are still thin. | Continue playback-composer pass with editable regions and browser-level player tests. |
+| Custom Colab audio player | Listening bench, waveform peaks, region loop, A/B, decisions, recent audition stack, keyboardable playlist cursor, waveform markers, marker deletion, loop-edge nudging, artifact landing | partial | Local marker/loop editing exists; waveform zoom, draggable regions, marker notes, and persisted player annotations are still missing. | Audition stack, marker, loop-nudge, recovery, and job landing tests exist; full playback browser interaction tests are still thin. | Continue playback-composer pass with draggable regions and browser-level player tests. |
 | Dataset and long-file policy | `dataset.pre_encode`, SAME encode/decode, memory query | partial | Long-file chunking rules are not consistently exposed across all dataset paths. | Dataset chunking/payload tests are partial. | Add dataset mode inspector and chunking contract rows. |
 
 ## Mode Matrix
@@ -79,15 +79,16 @@ meaning is real.
 1. Keep this matrix synchronized with `/colab/modes`.
 2. Add a contract test proving the runtime mode atlas still covers the notebook
    mode headings and only references known app operators.
-3. Continue playback-composer behavior with editable regions, waveform zoom,
-   marker management, keyboardable playlist navigation, and browser-level
-   tests. Mode 2/3 presets, scorer-cost notes, generated-take run-comparison
+3. Continue playback-composer behavior with draggable regions, waveform zoom,
+   marker notes/persistence, and browser-level tests. Mode 2/3 presets,
+   scorer-cost notes, generated-take run-comparison
    rows, vocabulary sets, axis sets, and prompt history now exist; custom
    save/share for vocabulary and axes can wait until backend preset history
    exists.
-4. Expand session/workspace/archive modeling from the first workspace pulse
-   into recovery, archive review, and long-session cleanup flows before
-   Postgres so the persistence schema stores the right product objects.
+4. Expand session/workspace/archive modeling from workspace pulse and artifact
+   recovery into archive review, replay/fork from archive, and long-session
+   cleanup flows before Postgres so the persistence schema stores the right
+   product objects.
 5. Keep enriching mode-specific bundle inspectors. First domain cards exist for
    sweeps, memory hits, vector NPZs, soft-prompt tensors, and training
    checkpoints; profile and geometry workflows need the next domain pass.

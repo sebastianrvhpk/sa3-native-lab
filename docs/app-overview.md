@@ -85,7 +85,9 @@ before submit. The session tray also shows a data-backed workspace pulse for
 active takes, result families, job activity, listening decisions, and archive
 volume. Its focus hint points to real next actions such as monitoring a run,
 opening the next undecided take, recovering an archived artifact, or archiving a
-crowded session.
+crowded session. Archived artifacts can now be recovered into the active
+session through the archive drawer; the recovery uses the annotation contract to
+move `session_id` and records source/target session metadata.
 
 Read-heavy workbench state can now be loaded through the TypeScript tRPC
 control plane. This is enabled by setting `VITE_SA3_CONTROL_PLANE_URL` or by
@@ -241,8 +243,9 @@ Confirmed in the current codebase:
   local presets with visible diffs, bundle workflow signals, richer domain
   cards for memory/sweep/vector/soft-prompt/training bundles, sibling sweep
   comparison, data-backed specimen lineage threads, a session workspace pulse,
-  playback playlist navigation, local waveform markers, and the first native
-  geometry-audit recipe.
+  archive artifact recovery, keyboardable playback playlist navigation, local
+  waveform markers, per-marker deletion, loop-edge nudging, and the first
+  native geometry-audit recipe.
 - Core app surfaces are now split into focused modules for audio playback,
   artifact display, job progress, result families, recipe forks, and bundle
   inspection.
@@ -265,6 +268,9 @@ Still partial:
 - Memory-query bundles expose preview rows and donor/A-B reuse actions, but
   still need richer dataset browsing, preview audio for non-local children, and
   style-reference promotion.
+- Playback is now beyond the basic browser player, with playlist navigation,
+  markers, marker deletion, loop regions, and loop-edge nudging. It still needs
+  waveform zoom, draggable regions, and persistent marker/region annotations.
 - Multi-output sweeps have family grouping, metrics, direct playback, explicit
   A/B promotion controls, recipe fork deltas, inspected metric summaries, best
   candidate marking, saved listening decisions, sort controls, a compact
