@@ -4318,14 +4318,38 @@ audio {
 
 .session-artifact {
   display: grid;
-  grid-template-columns: 20px minmax(0, 1fr) 48px;
-  gap: 8px;
-  align-items: center;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 7px;
   min-height: 54px;
   padding: 8px;
   text-align: left;
   background: rgb(255 255 255 / 0.5);
   box-shadow: none;
+}
+
+.session-artifact-main {
+  width: 100%;
+  min-height: 38px;
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) 48px;
+  gap: 8px;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  text-align: left;
+}
+
+.session-artifact-action {
+  justify-self: end;
+  min-height: 28px;
+  padding: 0 9px;
+  border-radius: 7px;
+  background: linear-gradient(135deg, rgb(201 238 72 / 0.28), rgb(85 198 199 / 0.16));
+  box-shadow: none;
+  font-size: 0.68rem;
 }
 
 .session-artifact.selected {

@@ -536,6 +536,7 @@ class ArtifactStore:
                 "notes": request.notes if request.notes is not None else record.notes,
                 "tags": request.tags if request.tags is not None else record.tags,
                 "metadata": metadata,
+                "session_id": request.session_id if request.session_id is not None else record.session_id,
             }
         )
         self.write_artifact(updated)

@@ -73,6 +73,25 @@ describe("session workspace model", () => {
       artifactId: "art_take",
     });
   });
+
+  it("prioritizes archive recovery when an archived artifact is selected", () => {
+    const archived = audio("art_archived", "2026-05-27T11:00:00.000Z");
+    const summary = summarizeSessionWorkspace({
+      artifacts: [audio("art_open", "2026-05-28T11:00:00.000Z")],
+      archivedArtifacts: [archived],
+      jobs: [],
+      archivedJobs: [],
+      runningJobs: [],
+      families: [],
+      selectedId: archived.artifact_id,
+    });
+
+    expect(workspaceFocus(summary)).toEqual({
+      label: "Recover take",
+      detail: "selected from archive",
+      tone: "recover",
+    });
+  });
 });
 
 function audio(artifactId: string, createdAt: string, metadata: Record<string, unknown> = {}): ArtifactRecord {

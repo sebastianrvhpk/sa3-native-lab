@@ -60,6 +60,25 @@ def test_latent_artifact_roundtrip_and_annotation(tmp_path):
     assert annotated.metadata["score"] == 0.8
 
 
+def test_artifact_annotation_can_recover_into_active_session(tmp_path):
+    store = ArtifactStore(tmp_path)
+    source_session = store.create_session(SessionCreateRequest(name="old"))
+    target_session = store.create_session(SessionCreateRequest(name="current"))
+    record = store.store_latent_array(np.zeros((3, 2), dtype=np.float32), latent_rate=1.5, session_id=source_session.session_id)
+
+    recovered = store.annotate_artifact(
+        record.artifact_id,
+        ArtifactAnnotationRequest(
+            session_id=target_session.session_id,
+            metadata={"recovered_from_session_id": source_session.session_id},
+        ),
+    )
+
+    assert recovered.session_id == target_session.session_id
+    assert recovered.metadata["recovered_from_session_id"] == source_session.session_id
+    assert store.get_artifact(record.artifact_id).session_id == target_session.session_id
+
+
 def test_artifact_search_filters_annotation_text_and_tags(tmp_path):
     store = ArtifactStore(tmp_path)
     first = store.store_latent_array(np.ones((4, 3), dtype=np.float32), latent_rate=2.0)

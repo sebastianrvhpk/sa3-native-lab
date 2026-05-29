@@ -106,6 +106,25 @@ const server = setupServer(
       archived_at: payload.status === "archived" ? "2026-05-27T15:05:00.000Z" : null,
     });
   }),
+  http.post("http://api.test/artifacts/art_archive/annotate", async ({ request }) => {
+    const payload = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({
+      artifact_id: "art_archive",
+      kind: "audio",
+      path: "/tmp/art_archive.wav",
+      file: { filename: "art_archive.wav", media_type: "audio/wav", byte_size: 3200 },
+      audio: { sample_rate: 8000, channels: 1, frames: 800, duration_seconds: 0.1, format: "WAV" },
+      source_artifact_ids: [],
+      recipe_id: "recipe_old",
+      label: "archive take",
+      prompt: null,
+      notes: null,
+      tags: ["maybe"],
+      metadata: payload.metadata ?? {},
+      session_id: payload.session_id ?? null,
+      created_at: "2026-05-27T15:00:00.000Z",
+    });
+  }),
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
@@ -182,6 +201,19 @@ describe("createApi", () => {
       session_id: "sess_1",
       status: "archived",
       archived_at: "2026-05-27T15:05:00.000Z",
+    });
+  });
+
+  it("recovers an archived artifact into a target session through annotation", async () => {
+    await expect(
+      createApi("http://api.test").annotateArtifact("art_archive", {
+        session_id: "sess_1",
+        metadata: { recovered_from_session_id: "sess_old" },
+      }),
+    ).resolves.toMatchObject({
+      artifact_id: "art_archive",
+      session_id: "sess_1",
+      metadata: { recovered_from_session_id: "sess_old" },
     });
   });
 });

@@ -101,6 +101,7 @@ export interface ArtifactAnnotationPayload {
   notes?: string | null;
   tags?: string[] | null;
   metadata?: Record<string, unknown> | null;
+  session_id?: string | null;
 }
 
 export interface BundleAudioPromotionPayload {

@@ -110,6 +110,7 @@ import {
   type RecipeField,
   type RecipeValue,
 } from "./recipeFormModel";
+import { artifactRecoveryPayload, recoverableArchiveArtifacts } from "./sessionRecovery";
 import { summarizeSessionWorkspace, workspaceFocus, workspacePulseRows, type WorkspaceFocus, type WorkspacePulseRow } from "./sessionWorkspace";
 import { useBenchStore } from "./store";
 import type {
@@ -1100,6 +1101,26 @@ export function App() {
     },
   });
 
+  const recoverArtifact = useMutation({
+    mutationFn: (artifact: ArtifactRecord) => {
+      if (!activeSessionId) {
+        throw new Error("No active session available for recovery");
+      }
+      return api.annotateArtifact(
+        artifact.artifact_id,
+        artifactRecoveryPayload({
+          artifact,
+          targetSessionId: activeSessionId,
+          source: "archive_tray",
+        }),
+      );
+    },
+    onSuccess: async (artifact) => {
+      selectArtifact(artifact.artifact_id);
+      await invalidate();
+    },
+  });
+
   const cancelJobMutation = useMutation({
     mutationFn: (jobId: string) => api.cancelJob(jobId),
     onSuccess: invalidate,
@@ -1649,13 +1670,16 @@ export function App() {
             runningJobs={runningJobs}
             selectedId={selectedArtifact?.artifact_id ?? null}
             apiBase={apiBase}
+            activeSessionId={activeSessionId}
             session={activeSession}
             sessionStartedAt={activeSession?.created_at ?? sessionStartedAt}
             creatingSession={createSession.isPending}
             archivingSession={archiveSession.isPending}
+            recoveringArtifactId={recoverArtifact.isPending ? recoverArtifact.variables?.artifact_id ?? null : null}
             onSelect={selectArtifact}
             onStartSession={() => createSession.mutate()}
             onArchiveSession={() => activeSession && archiveSession.mutate(activeSession)}
+            onRecoverArtifact={(artifact) => recoverArtifact.mutate(artifact)}
             onCancelJob={(job) => cancelJobMutation.mutate(job.job_id)}
             onRetryJob={(job) => retryJobMutation.mutate(job.job_id)}
           />
@@ -2188,13 +2212,16 @@ function SessionTray({
   runningJobs,
   selectedId,
   apiBase,
+  activeSessionId,
   session,
   sessionStartedAt,
   creatingSession,
   archivingSession,
+  recoveringArtifactId,
   onSelect,
   onStartSession,
   onArchiveSession,
+  onRecoverArtifact,
   onCancelJob,
   onRetryJob,
 }: {
@@ -2206,13 +2233,16 @@ function SessionTray({
   runningJobs: JobRecord[];
   selectedId: string | null;
   apiBase: string;
+  activeSessionId: string | null;
   session: SessionRecord | null;
   sessionStartedAt: string;
   creatingSession: boolean;
   archivingSession: boolean;
+  recoveringArtifactId: string | null;
   onSelect: (artifactId: string | null) => void;
   onStartSession: () => void;
   onArchiveSession: () => void;
+  onRecoverArtifact: (artifact: ArtifactRecord) => void;
 } & JobActionHandlers) {
   const [artifactFilters, setArtifactFilters] = useState<ArtifactFilterState>(emptyArtifactFilters);
   const filterContext = useMemo(() => ({ jobs: [...jobs, ...archivedJobs], families }), [jobs, archivedJobs, families]);
@@ -2226,6 +2256,10 @@ function SessionTray({
   const archiveArtifactRows = sortNewest(filteredArchiveArtifacts).slice(0, 10);
   const archiveJobRows = filterActive ? [] : sortNewestJobs(archivedJobs).slice(0, 10);
   const activeJobs = runningJobs.slice(0, 3);
+  const recoverableIds = useMemo(
+    () => new Set(recoverableArchiveArtifacts(archiveArtifactRows, activeSessionId).map((artifact) => artifact.artifact_id)),
+    [archiveArtifactRows, activeSessionId],
+  );
   const workspaceSummary = useMemo(
     () => summarizeSessionWorkspace({ artifacts, archivedArtifacts, jobs, archivedJobs, families, runningJobs, selectedId }),
     [artifacts, archivedArtifacts, jobs, archivedJobs, families, runningJobs, selectedId],
@@ -2327,6 +2361,15 @@ function SessionTray({
               selected={artifact.artifact_id === selectedId}
               apiBase={apiBase}
               onSelect={onSelect}
+              action={
+                recoverableIds.has(artifact.artifact_id)
+                  ? {
+                      label: recoveringArtifactId === artifact.artifact_id ? "Recovering" : "Recover",
+                      disabled: Boolean(recoveringArtifactId),
+                      onAction: () => onRecoverArtifact(artifact),
+                    }
+                  : undefined
+              }
             />
           ))}
           {archiveJobRows.map((job) => (
@@ -2516,29 +2559,42 @@ function SessionArtifactRow({
   selected,
   apiBase,
   onSelect,
+  action,
 }: {
   artifact: ArtifactRecord;
   selected: boolean;
   apiBase: string;
   onSelect: (artifactId: string | null) => void;
+  action?: {
+    label: string;
+    disabled?: boolean;
+    onAction: () => void;
+  };
 }) {
   return (
-    <button type="button" className={`session-artifact ${selected ? "selected" : ""}`} onClick={() => onSelect(artifact.artifact_id)}>
-      <ArtifactIcon artifact={artifact} />
-      <div>
-        <strong>{artifactName(artifact)}</strong>
-        <span>{artifactMeta(artifact)}</span>
-        <ListeningDecisionBadge artifact={artifact} />
-        {artifact.tags.length ? (
-          <span className="artifact-tags">
-            {artifact.tags.slice(0, 3).map((tag) => (
-              <i key={tag}>#{tag}</i>
-            ))}
-          </span>
-        ) : null}
-      </div>
-      {artifact.kind === "audio" ? <TinyWave artifact={artifact} apiBase={apiBase} /> : null}
-    </button>
+    <article className={`session-artifact ${selected ? "selected" : ""}`}>
+      <button type="button" className="session-artifact-main" onClick={() => onSelect(artifact.artifact_id)}>
+        <ArtifactIcon artifact={artifact} />
+        <div>
+          <strong>{artifactName(artifact)}</strong>
+          <span>{artifactMeta(artifact)}</span>
+          <ListeningDecisionBadge artifact={artifact} />
+          {artifact.tags.length ? (
+            <span className="artifact-tags">
+              {artifact.tags.slice(0, 3).map((tag) => (
+                <i key={tag}>#{tag}</i>
+              ))}
+            </span>
+          ) : null}
+        </div>
+        {artifact.kind === "audio" ? <TinyWave artifact={artifact} apiBase={apiBase} /> : null}
+      </button>
+      {action ? (
+        <button type="button" className="session-artifact-action" disabled={action.disabled} onClick={action.onAction}>
+          {action.label}
+        </button>
+      ) : null}
+    </article>
   );
 }
 

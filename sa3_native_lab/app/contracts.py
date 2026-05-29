@@ -426,3 +426,4 @@ class ArtifactAnnotationRequest(ContractModel):
     notes: str | None = None
     tags: list[str] | None = None
     metadata: dict[str, Any] | None = None
+    session_id: str | None = None

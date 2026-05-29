@@ -144,19 +144,19 @@ export function workspaceFocus(summary: SessionWorkspaceSummary): WorkspaceFocus
       tone: "run",
     };
   }
+  if (summary.selectedInArchive) {
+    return {
+      label: "Recover take",
+      detail: "selected from archive",
+      tone: "recover",
+    };
+  }
   if (summary.latestAudioId && summary.openAudioTakes > 0) {
     return {
       label: "Listen next",
       detail: `${summary.openAudioTakes} undecided audio take${summary.openAudioTakes === 1 ? "" : "s"}`,
       tone: "listen",
       artifactId: summary.latestAudioId,
-    };
-  }
-  if (summary.selectedInArchive) {
-    return {
-      label: "Recovered take",
-      detail: "selected from archive",
-      tone: "recover",
     };
   }
   if (summary.takes >= 12 && summary.activeJobs === 0) {
