@@ -177,6 +177,9 @@ export function bundleReuseActions(inspection: Pick<ArtifactInspection, "artifac
     actions.push({ label: "Use as target memory", fieldKey: "target_memory_path", mode: "experiment.style_profile.build" });
     actions.push({ label: "Use as reference", fieldKey: "reference_memory_path", mode: "experiment.style_profile.build" });
   }
+  if (kind === "dataset" || operator.includes("dataset.pre_encode")) {
+    actions.push({ label: "Use encoded dataset", fieldKey: "encoded_dir", mode: "training.lora" });
+  }
   if (kind === "training" || operator.includes("lora")) {
     actions.push({ label: "Use checkpoint", fieldKey: "lora_checkpoint", mode: "training.lora" });
   }
@@ -324,6 +327,7 @@ export function bundleWorkflowHints(inspection: Pick<ArtifactInspection, "artifa
   const sweep = objectValue(summary.sweep);
   const vectors = objectValue(summary.vectors);
   const geometry = objectValue(summary.geometry);
+  const dataset = objectValue(summary.dataset);
   const profile = objectValue(summary.profile);
   const softPrompt = objectValue(summary.soft_prompt);
   const training = objectValue(summary.training);
@@ -334,6 +338,11 @@ export function bundleWorkflowHints(inspection: Pick<ArtifactInspection, "artifa
   if (kind === "memory" || memory) {
     add("memory hits", memory?.result_count ?? inspection.bundle_preview.result_count, "probe");
     add("metric", memory?.metric ?? inspection.bundle_preview.metric, "probe");
+  }
+  if (kind === "dataset" || dataset) {
+    add("dataset items", dataset?.item_count, "probe");
+    add("latents", dataset?.latent_count, "probe");
+    add("prompts", dataset?.prompt_count, "evidence");
   }
   if (kind === "sweep" || sweep) {
     add("variants", sweep?.count, "probe");
@@ -397,6 +406,31 @@ export function bundleDomainSections(summary: Record<string, unknown> | undefine
       items: hits,
     });
   }
+  const dataset = objectValue(summary.dataset);
+  if (dataset) {
+    const items = arrayOfObjects(dataset.items).slice(0, 6).map((item, index) => ({
+      label: datasetItemLabel(item, index),
+      meta: datasetItemMeta(item),
+    }));
+    const latentFiles = arrayOfStrings(dataset.latent_files);
+    sections.push({
+      title: "Dataset",
+      rows: [
+        ["items", dataset.item_count],
+        ["latents", dataset.latent_count],
+        ["metadata", dataset.metadata_count],
+        ["prompts", dataset.prompt_count],
+        ["model", dataset.model],
+        ["sample rate", dataset.sample_rate ? `${dataset.sample_rate} Hz` : undefined],
+        ["sample size", dataset.sample_size],
+        ["chunk", formatSeconds(dataset.chunk_duration)],
+        ["hop", formatSeconds(dataset.hop_duration)],
+        ["source", dataset.source],
+      ],
+      files: latentFiles,
+      items,
+    });
+  }
   const vectors = objectValue(summary.vectors);
   if (vectors) {
     const vectorFiles = arrayOfObjects(vectors.npz_files);
@@ -421,14 +455,24 @@ export function bundleDomainSections(summary: Record<string, unknown> | undefine
   }
   const geometry = objectValue(summary.geometry);
   if (geometry) {
+    const artifacts = arrayOfObjects(geometry.artifacts).slice(0, 5).map((artifact, index) => ({
+      label: String(artifact.item_id ?? artifact.artifact_id ?? artifact.path ?? `latent ${index + 1}`),
+      meta: geometryArtifactMeta(artifact),
+    }));
     sections.push({
       title: "Geometry",
       rows: [
+        ["path", geometry.path],
         ["latents", geometry.latent_count],
+        ["candidates", geometry.candidate_count],
         ["components", geometry.n_components],
         ["kept variance", formatMaybeNumber(geometry.kept_variance_fraction)],
         ["summary std", formatMaybeNumber(geometry.summary_std_mean)],
+        ["frames", geometry.frame_count],
+        ["dim", geometry.dim],
       ],
+      files: arrayOfStrings([geometry.path]),
+      items: artifacts,
     });
   }
   const promptSearch = objectValue(summary.prompt_search);
@@ -455,7 +499,23 @@ export function bundleDomainSections(summary: Record<string, unknown> | undefine
   }
   const profile = objectValue(summary.profile);
   if (profile) {
-    for (const item of arrayOfObjects(profile.profiles).slice(0, 3)) {
+    const profiles = arrayOfObjects(profile.profiles);
+    if (profiles.length) {
+      sections.push({
+        title: "Profiles",
+        rows: [
+          ["profiles", profiles.length],
+          ["items", sumNumeric(profiles, "item_count")],
+          ["dims", uniqueValues(profiles.map((item) => item.dim)).join(", ") || undefined],
+        ],
+        files: profiles.map((item) => String(item.path ?? "")).filter(Boolean),
+        items: profiles.slice(0, 6).map((item) => ({
+          label: String(item.name || item.path || "profile"),
+          meta: profileItemMeta(item),
+        })),
+      });
+    }
+    for (const item of profiles.slice(0, 3)) {
       sections.push({
         title: String(item.name || item.path || "Profile"),
         rows: [
@@ -543,6 +603,11 @@ export function summarizeBundle(summary: Record<string, unknown> | undefined, pr
   if (memory) {
     rows.unshift(["hits", memory.result_count], ["metric", memory.metric]);
     rows.push(["candidates", memory.candidate_count]);
+  }
+  const dataset = summary.dataset && typeof summary.dataset === "object" ? (summary.dataset as Record<string, unknown>) : null;
+  if (dataset) {
+    rows.unshift(["items", dataset.item_count], ["latents", dataset.latent_count]);
+    rows.push(["metadata", dataset.metadata_count], ["prompts", dataset.prompt_count], ["model", dataset.model]);
   }
   const vectors = summary.vectors && typeof summary.vectors === "object" ? (summary.vectors as Record<string, unknown>) : null;
   if (vectors) {
@@ -687,6 +752,7 @@ function errorMessage(error: unknown): string {
 
 function bundleKindLabel(kind: string) {
   if (kind === "memory") return "Memory query";
+  if (kind === "dataset") return "Encoded dataset";
   if (kind === "sweep") return "Sweep results";
   if (kind === "profile") return "Style profile";
   if (kind === "vectors") return "Vector bundle";
@@ -699,6 +765,7 @@ function bundleKindLabel(kind: string) {
 
 function bundleKindDescription(kind: string) {
   if (kind === "memory") return "Ranked latent neighbors parsed from local bundle metadata";
+  if (kind === "dataset") return "Pre-encoded latent items for memory, profile, or training workflows";
   if (kind === "sweep") return "Parameter branch outputs with alpha and artifact metadata";
   if (kind === "profile") return "Reusable latent/audio statistics for profile-guided generation";
   if (kind === "vectors") return "Residual or style direction vectors with parsed layers and shapes";
@@ -881,6 +948,20 @@ function classifyBundle(preview: Record<string, unknown>, files: BundleFileEntry
       plotFiles: files.map((file) => file.path).filter(isPlotPath),
     };
   }
+  if (operator.includes("dataset.pre_encode") || hasFile("manifest.json")) {
+    return {
+      kind: "dataset",
+      label: "Encoded dataset",
+      description: "Pre-encoded latent items for memory, profile, or training workflows",
+      rows: [
+        ["operator", operator],
+        ["latents", fileNames.filter((name) => name.endsWith(".npy")).length],
+        ["metadata", fileNames.filter((name) => name.endsWith(".json")).length],
+        ["files", files.length],
+      ],
+      plotFiles: files.map((file) => file.path).filter(isPlotPath),
+    };
+  }
   if (operator.includes("geometry") || hasFile("geometry_report.json")) {
     return {
       kind: "geometry",
@@ -1009,10 +1090,42 @@ function memoryHitMeta(hit: Record<string, unknown>) {
   return parts.join(" · ") || undefined;
 }
 
+function datasetItemLabel(item: Record<string, unknown>, index: number) {
+  return String(item.item_id ?? basename(typeof item.path === "string" ? item.path : undefined) ?? `item ${index + 1}`);
+}
+
+function datasetItemMeta(item: Record<string, unknown>) {
+  const chunk = item.chunk_index !== undefined ? `chunk ${item.chunk_index}` : null;
+  const duration = formatSeconds(item.chunk_duration_seconds);
+  const rate = item.sample_rate ? `${item.sample_rate} Hz` : null;
+  const source = basename(typeof item.source_path === "string" ? item.source_path : undefined);
+  const prompt = typeof item.prompt === "string" && item.prompt ? item.prompt : null;
+  return [prompt, source, chunk, duration, rate].filter(Boolean).join(" · ") || undefined;
+}
+
 function vectorFileMeta(file: Record<string, unknown>) {
-  const kind = objectValue(file.scalars)?.kind;
+  const scalars = objectValue(file.scalars);
+  const kind = scalars?.kind;
+  const name = scalars?.name ?? scalars?.axis ?? scalars?.target_name;
+  const dim = scalars?.dim !== undefined ? `dim ${scalars.dim}` : null;
+  const layer = scalars?.layer !== undefined ? `layer ${scalars.layer}` : null;
   const arrays = formatArrayShapes(objectValue(file.arrays));
-  return [kind, arrays].filter(Boolean).join(" · ") || undefined;
+  return [kind, name, dim, layer, arrays].filter(Boolean).join(" · ") || undefined;
+}
+
+function geometryArtifactMeta(artifact: Record<string, unknown>) {
+  const prompt = typeof artifact.prompt === "string" && artifact.prompt ? artifact.prompt : null;
+  const dim = artifact.dim !== undefined ? `dim ${artifact.dim}` : null;
+  const duration = formatSeconds(artifact.duration_seconds);
+  const path = basename(typeof artifact.path === "string" ? artifact.path : undefined);
+  return [prompt, path, dim, duration].filter(Boolean).join(" · ") || undefined;
+}
+
+function profileItemMeta(item: Record<string, unknown>) {
+  const dim = item.dim !== undefined ? `dim ${item.dim}` : null;
+  const count = item.item_count !== undefined ? `${item.item_count} items` : null;
+  const arrays = formatArrayShapes(objectValue(item.arrays));
+  return [dim, count, arrays].filter(Boolean).join(" · ") || undefined;
 }
 
 function formatArrayShapes(arrays: Record<string, unknown> | null) {
@@ -1027,6 +1140,16 @@ function formatDomainValue(value: unknown) {
   if (Array.isArray(value)) return value.join(", ");
   if (typeof value === "number") return String(formatMaybeNumber(value));
   return String(value);
+}
+
+function sumNumeric(items: Record<string, unknown>[], key: string) {
+  const values = items.map((item) => item[key]).filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+  if (!values.length) return undefined;
+  return values.reduce((total, value) => total + value, 0);
+}
+
+function uniqueValues(values: unknown[]) {
+  return Array.from(new Set(values.filter((value) => value !== undefined && value !== null && value !== "").map(String)));
 }
 
 function bundlePlotFiles(summary: Record<string, unknown>, files: BundleFileEntry[]): string[] {

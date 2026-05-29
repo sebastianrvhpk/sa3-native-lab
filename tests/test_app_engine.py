@@ -551,6 +551,51 @@ def test_bundle_artifact_zips_directory_outputs(tmp_path):
     assert inspection.bundle_summary["npz_files"][0]["scalars"]["kind"] == "LatentStyleDirection"
 
 
+def test_bundle_summary_promotes_dataset_pre_encode_manifest(tmp_path):
+    store = ArtifactStore(tmp_path)
+    output_dir = tmp_path / "encoded"
+    output_dir.mkdir()
+    np.save(output_dir / "0000000000.npy", np.zeros((2, 4), dtype=np.float32))
+    (output_dir / "0000000000.json").write_text(
+        json.dumps(
+            {
+                "prompt": "soft pulse",
+                "source_path": "clips/soft.wav",
+                "sample_rate": 44100,
+                "chunk_duration_seconds": 4.0,
+                "hop_duration_seconds": 2.0,
+            }
+        ),
+        encoding="utf-8",
+    )
+    (output_dir / "manifest.json").write_text(
+        json.dumps({"manifest_version": 1, "items": [{"item_id": "clip-1", "path": "0000000000"}]}),
+        encoding="utf-8",
+    )
+    recipe = Recipe(
+        operator=OperatorName.DATASET_PRE_ENCODE,
+        backend=BackendName.TORCH_CPU,
+        params={"model": "same-l", "sample_size": 88200},
+    )
+
+    record = store.finalize_bundle_path(
+        artifact_id="art_dataset",
+        path=output_dir,
+        recipe=recipe,
+        metadata={"model": "same-l", "data_dir": "clips", "sample_size": 88200},
+    )
+    inspection = store.inspect_artifact(record.artifact_id)
+
+    assert inspection.bundle_summary["kind"] == "dataset"
+    assert inspection.bundle_summary["dataset"]["item_count"] == 1
+    assert inspection.bundle_summary["dataset"]["latent_count"] == 1
+    assert inspection.bundle_summary["dataset"]["metadata_count"] == 1
+    assert inspection.bundle_summary["dataset"]["prompt_count"] == 1
+    assert inspection.bundle_summary["dataset"]["sample_rate"] == 44100
+    assert inspection.bundle_summary["dataset"]["chunk_duration"] == 4.0
+    assert inspection.bundle_summary["dataset"]["items"][0]["prompt"] == "soft pulse"
+
+
 def test_job_manager_persists_success(tmp_path):
     manager = JobManager(tmp_path)
     recipe = Recipe(

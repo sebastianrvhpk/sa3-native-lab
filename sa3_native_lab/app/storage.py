@@ -747,6 +747,9 @@ def _bundle_summary(record: ArtifactRecord, files: list[BundleFileEntry]) -> dic
     memory = _memory_summary(json_payloads)
     if memory:
         summary["memory"] = memory
+    dataset = _dataset_summary(record, files, json_payloads)
+    if dataset:
+        summary["dataset"] = dataset
     vector_summary = _vector_summary(json_payloads, npz_summaries)
     if vector_summary:
         summary["vectors"] = vector_summary
@@ -839,6 +842,8 @@ def _classify_bundle_kind(
     operator = str(record.metadata.get("operator") or "")
     if "prompt_search" in operator or any(name.endswith("prompt_search.json") for name, _ in json_payloads):
         return "prompt-search"
+    if operator == "dataset.pre_encode":
+        return "dataset"
     if operator == "memory.query" or any(isinstance(payload, dict) and "results" in payload for _, payload in json_payloads):
         return "memory"
     if "geometry" in operator or any(name.endswith("geometry_report.json") for name, _ in json_payloads):
@@ -850,6 +855,9 @@ def _classify_bundle_kind(
         return "profile"
     if "LatentStyleDirection" in npz_kinds or "AudioSetDirection" in npz_kinds or "vectors" in operator:
         return "vectors"
+    has_manifest_items = any(name.endswith("manifest.json") and isinstance(payload, dict) and isinstance(payload.get("items"), list) for name, payload in json_payloads)
+    if has_manifest_items and any(name.endswith(".npy") for name in file_names):
+        return "dataset"
     if any("soft_prompt" in name for name in file_names):
         return "soft-prompt"
     if any("lora" in name or "checkpoint" in name for name in file_names):
@@ -943,6 +951,92 @@ def _memory_summary(json_payloads: list[tuple[str, Any]]) -> dict[str, Any] | No
     return None
 
 
+def _dataset_summary(
+    record: ArtifactRecord,
+    files: list[BundleFileEntry],
+    json_payloads: list[tuple[str, Any]],
+) -> dict[str, Any] | None:
+    file_names = [entry.path for entry in files]
+    latent_files = [name for name in file_names if Path(name.lower()).suffix == ".npy"]
+    manifests: list[dict[str, Any]] = []
+    metadata_items: list[dict[str, Any]] = []
+    latent_stems = {_bundle_json_stem(name) for name in latent_files}
+    for path, payload in json_payloads:
+        if not isinstance(payload, dict):
+            continue
+        if path.endswith("manifest.json") and isinstance(payload.get("items"), list):
+            manifests.append({"path": path, "items": payload["items"]})
+            continue
+        item = _dataset_metadata_item(path, payload, latent_stems=latent_stems)
+        if item:
+            metadata_items.append(item)
+    if not manifests and not metadata_items and not (record.metadata.get("operator") == "dataset.pre_encode" and latent_files):
+        return None
+
+    manifest_items = [item for manifest in manifests for item in manifest["items"] if isinstance(item, dict)]
+    visible_items = metadata_items or [_dataset_manifest_item(item) for item in manifest_items[:12]]
+    prompt_count = sum(1 for item in visible_items if item.get("prompt"))
+    metadata = record.metadata or {}
+    return {
+        "path": manifests[0]["path"] if manifests else None,
+        "item_count": len(manifest_items) or len(metadata_items) or len(latent_files),
+        "latent_count": len(latent_files),
+        "metadata_count": len(metadata_items),
+        "prompt_count": prompt_count or None,
+        "model": metadata.get("model"),
+        "source": metadata.get("data_dir") or metadata.get("bundle_source_path"),
+        "sample_size": metadata.get("sample_size"),
+        "sample_rate": _first_present(metadata_items, "sample_rate"),
+        "chunk_duration": _first_present(metadata_items, "chunk_duration_seconds"),
+        "hop_duration": _first_present(metadata_items, "hop_duration_seconds"),
+        "items": visible_items[:12],
+        "latent_files": latent_files[:12],
+    }
+
+
+def _dataset_metadata_item(path: str, payload: dict[str, Any], *, latent_stems: set[str]) -> dict[str, Any] | None:
+    path_stem = _bundle_json_stem(path)
+    is_latent_pair = path_stem in latent_stems
+    is_memory_item = path.endswith("metadata.json") and "item_id" in payload
+    is_pre_encode_sidecar = is_latent_pair and ("prompt" in payload or "padding_mask" in payload)
+    if not (is_memory_item or is_pre_encode_sidecar):
+        return None
+    item_id = payload.get("item_id") or Path(path).stem
+    if path.endswith("metadata.json"):
+        item_id = payload.get("item_id") or Path(path).parent.name
+    return {
+        "item_id": item_id,
+        "path": path,
+        "prompt": payload.get("prompt"),
+        "latent_rate": payload.get("latent_rate"),
+        "sample_rate": payload.get("sample_rate"),
+        "chunk_index": payload.get("chunk_index"),
+        "chunk_duration_seconds": payload.get("chunk_duration_seconds"),
+        "hop_duration_seconds": payload.get("hop_duration_seconds"),
+        "source_path": payload.get("source_path") or payload.get("path"),
+    }
+
+
+def _dataset_manifest_item(item: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "item_id": item.get("item_id"),
+        "path": item.get("path"),
+        "prompt": item.get("prompt"),
+    }
+
+
+def _bundle_json_stem(path: str) -> str:
+    return str(Path(path).with_suffix(""))
+
+
+def _first_present(items: list[dict[str, Any]], key: str) -> Any:
+    for item in items:
+        value = item.get(key)
+        if value is not None:
+            return value
+    return None
+
+
 def _vector_summary(json_payloads: list[tuple[str, Any]], npz_summaries: list[dict[str, Any]]) -> dict[str, Any] | None:
     for _path, payload in json_payloads:
         if not isinstance(payload, dict):
@@ -981,6 +1075,7 @@ def _geometry_summary(json_payloads: list[tuple[str, Any]]) -> dict[str, Any] | 
             "summary_std_mean": report.get("summary_std_mean"),
             "frame_count": report.get("frame_count"),
             "dim": report.get("dim"),
+            "artifacts": payload.get("artifacts")[:8] if isinstance(payload.get("artifacts"), list) else [],
         }
     return None
 

@@ -128,6 +128,92 @@ describe("bundle inspector summaries", () => {
     ]);
   });
 
+  it("turns dataset manifests and profile npz files into native inspector cards", () => {
+    const summary = summarizeBundle(
+      {
+        kind: "dataset",
+        file_count: 4,
+        dataset: { item_count: 2, latent_count: 2, metadata_count: 2, prompt_count: 1, model: "same-l" },
+      },
+      {},
+      [],
+    );
+    const sections = bundleDomainSections({
+      kind: "dataset",
+      dataset: {
+        item_count: 2,
+        latent_count: 2,
+        metadata_count: 2,
+        prompt_count: 1,
+        model: "same-l",
+        sample_rate: 44100,
+        sample_size: 88200,
+        chunk_duration: 4,
+        hop_duration: 2,
+        source: "clips",
+        latent_files: ["0000000000.npy", "0000000001.npy"],
+        items: [
+          {
+            item_id: "clip-1",
+            prompt: "soft pulse",
+            source_path: "clips/soft.wav",
+            sample_rate: 44100,
+            chunk_duration_seconds: 4,
+          },
+        ],
+      },
+      profile: {
+        profiles: [
+          {
+            path: "profile.npz",
+            name: "target",
+            dim: 64,
+            item_count: 5,
+            arrays: { mean: [64], std: [64] },
+          },
+        ],
+      },
+    });
+
+    expect(summary.label).toBe("Encoded dataset");
+    expect(summary.rows).toContainEqual(["items", 2]);
+    expect(summary.rows).toContainEqual(["latents", 2]);
+    expect(summary.rows).toContainEqual(["model", "same-l"]);
+    expect(sections.find((section) => section.title === "Dataset")).toEqual({
+      title: "Dataset",
+      rows: [
+        ["items", 2],
+        ["latents", 2],
+        ["metadata", 2],
+        ["prompts", 1],
+        ["model", "same-l"],
+        ["sample rate", "44100 Hz"],
+        ["sample size", 88200],
+        ["chunk", "4s"],
+        ["hop", "2s"],
+        ["source", "clips"],
+      ],
+      files: ["0000000000.npy", "0000000001.npy"],
+      items: [{ label: "clip-1", meta: "soft pulse · soft.wav · 4s · 44100 Hz" }],
+    });
+    expect(sections.find((section) => section.title === "Profiles")).toEqual({
+      title: "Profiles",
+      rows: [
+        ["profiles", 1],
+        ["items", 5],
+        ["dims", "64"],
+      ],
+      files: ["profile.npz"],
+      items: [{ label: "target", meta: "dim 64 · 5 items · mean 64, std 64" }],
+    });
+    expect(
+      bundleReuseActions({
+        artifact: { metadata: { operator: "dataset.pre_encode" } } as never,
+        bundle_summary: { kind: "dataset" },
+      }),
+    ).toEqual([{ label: "Use encoded dataset", fieldKey: "encoded_dir", mode: "training.lora" }]);
+  });
+
   it("summarizes bundle workflow signals from real bundle metadata", () => {
     const hints = bundleWorkflowHints({
       artifact: {
@@ -179,11 +265,17 @@ describe("bundle inspector summaries", () => {
     expect(bundleDomainSections({ geometry: { latent_count: 4, n_components: 3, kept_variance_fraction: 0.934 } })).toContainEqual({
       title: "Geometry",
       rows: [
+        ["path", undefined],
         ["latents", 4],
+        ["candidates", undefined],
         ["components", 3],
         ["kept variance", "0.934"],
         ["summary std", undefined],
+        ["frames", undefined],
+        ["dim", undefined],
       ],
+      files: [],
+      items: [],
     });
   });
 

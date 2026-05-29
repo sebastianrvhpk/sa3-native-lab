@@ -51,10 +51,10 @@ export function formatBytes(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export function sortNewest(artifacts: ArtifactRecord[]) {
+export function sortNewest(artifacts: readonly ArtifactRecord[]) {
   return [...artifacts].sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
 }
 
-export function sortNewestJobs(jobs: JobRecord[]) {
+export function sortNewestJobs(jobs: readonly JobRecord[]) {
   return [...jobs].sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
 }

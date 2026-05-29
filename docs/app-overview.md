@@ -192,8 +192,10 @@ right rail with run metrics when the job reports them; prompt-candidate
 generations are grouped under their search bundle instead of scattering as
 unrelated text-to-audio rows. Memory query bundle previews expose ranked hits
 that can be selected, placed in A/B when audio, or reused as latent donors when
-the hit is a latent artifact. Alpha sweep families can also compare sibling
-sweep runs that share a vector bundle or prompt.
+the hit is a latent artifact. Encoded dataset bundles expose manifest/sidecar
+counts, chunk timing, prompt coverage, latent files, and reuse into LoRA
+training. Alpha sweep families can also compare sibling sweep runs that share a
+vector bundle or prompt.
 
 ## Runtime Assumptions
 

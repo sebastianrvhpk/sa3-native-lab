@@ -75,8 +75,9 @@ field, an artifact relationship, or an explicitly documented future capability.
   scorer metadata, generated takes, lineage, descriptor deltas, listening
   decisions, decision summaries, and first-pass prompt memory.
 - Bundle inspectors now surface parsed sweep outputs, memory hits, vector NPZs,
-  soft-prompt tensors, and training checkpoints as domain cards instead of only
-  file inventory.
+  encoded dataset manifests, profile aggregates, direction NPZ metadata,
+  geometry artifacts, soft-prompt tensors, and training checkpoints as domain
+  cards instead of only file inventory.
 - Operator Studio has browser-local presets with visible diff and revert
   behavior.
 - The docs already cover app overview, Colab capability mapping, triage status,
