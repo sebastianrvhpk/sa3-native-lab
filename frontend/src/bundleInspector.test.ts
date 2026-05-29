@@ -81,6 +81,53 @@ describe("bundle inspector summaries", () => {
     expect(sections.find((section) => section.title === "Soft Prompt")?.files).toEqual(["soft_prompt.pt"]);
   });
 
+  it("turns sweep, memory, vector, soft-prompt, and training summaries into domain items", () => {
+    const sections = bundleDomainSections({
+      sweep: {
+        count: 2,
+        alphas: [-2, 2],
+        alpha_min: -2,
+        alpha_max: 2,
+        outputs: [{ alpha: -2, audio_path: "runs/a_minus.wav", latent_path: "runs/a_minus.npy" }],
+      },
+      memory: {
+        metric: "cosine",
+        top_k: 4,
+        result_count: 1,
+        candidate_count: 9,
+        results: [{ artifact_id: "art_neighbor", score: 0.91, kind: "latent" }],
+      },
+      vectors: {
+        npz_files: [
+          {
+            path: "direction.npz",
+            scalars: { kind: "LatentStyleDirection" },
+            arrays: { direction: [64, 128] },
+          },
+        ],
+      },
+      soft_prompt: { tensor_files: ["optim/soft_prompt.pt"] },
+      training: { checkpoint_files: ["runs/lora_adapter.safetensors", "runs/checkpoint-20.pt"] },
+    });
+
+    expect(sections.find((section) => section.title === "Sweep")?.items).toEqual([
+      { label: "alpha -2", meta: "a_minus.wav · a_minus.npy" },
+    ]);
+    expect(sections.find((section) => section.title === "Memory")?.items).toEqual([
+      { label: "art_neighbor", meta: "score 0.91 · latent" },
+    ]);
+    expect(sections.find((section) => section.title === "Vectors")?.items).toEqual([
+      { label: "direction.npz", meta: "LatentStyleDirection · direction 64x128" },
+    ]);
+    expect(sections.find((section) => section.title === "Soft Prompt")?.items).toEqual([
+      { label: "soft_prompt.pt", meta: "conditioning tensor" },
+    ]);
+    expect(sections.find((section) => section.title === "Training")?.items).toEqual([
+      { label: "lora_adapter.safetensors", meta: "LoRA adapter" },
+      { label: "checkpoint-20.pt", meta: "checkpoint" },
+    ]);
+  });
+
   it("summarizes bundle workflow signals from real bundle metadata", () => {
     const hints = bundleWorkflowHints({
       artifact: {

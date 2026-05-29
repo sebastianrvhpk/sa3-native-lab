@@ -364,6 +364,10 @@ export function bundleDomainSections(summary: Record<string, unknown> | undefine
   const sections: BundleDomainSection[] = [];
   const sweep = objectValue(summary.sweep);
   if (sweep) {
+    const outputs = arrayOfObjects(sweep.outputs).slice(0, 5).map((output) => ({
+      label: sweepOutputLabel(output),
+      meta: sweepOutputMeta(output),
+    }));
     sections.push({
       title: "Sweep",
       rows: [
@@ -372,23 +376,31 @@ export function bundleDomainSections(summary: Record<string, unknown> | undefine
         ["range", sweep.alpha_min !== undefined && sweep.alpha_max !== undefined ? `${sweep.alpha_min} to ${sweep.alpha_max}` : undefined],
       ],
       files: sweepOutputFiles(sweep),
+      items: outputs,
     });
   }
   const memory = objectValue(summary.memory);
   if (memory) {
+    const hits = arrayOfObjects(memory.results).slice(0, 5).map((hit, index) => ({
+      label: String(hit.artifact_id ?? hit.path ?? `hit ${index + 1}`),
+      meta: memoryHitMeta(hit),
+    }));
     sections.push({
       title: "Memory",
       rows: [
         ["metric", memory.metric],
         ["hits", memory.result_count],
         ["candidates", memory.candidate_count],
+        ["top k", memory.top_k],
         ["source", memory.source_artifact_id],
       ],
+      items: hits,
     });
   }
   const vectors = objectValue(summary.vectors);
   if (vectors) {
-    sections.push({
+    const vectorFiles = arrayOfObjects(vectors.npz_files);
+    const vectorSection: BundleDomainSection = {
       title: "Vectors",
       rows: [
         ["best layer", vectors.best_layer],
@@ -396,7 +408,16 @@ export function bundleDomainSections(summary: Record<string, unknown> | undefine
         ["examples", vectors.example_count],
         ["layers", Array.isArray(vectors.layers) ? vectors.layers.join(", ") : vectors.layers],
       ],
-    });
+    };
+    if (vectorFiles.length) {
+      vectorSection.rows.push(["vector files", vectorFiles.length]);
+      vectorSection.files = vectorFiles.map((file) => String(file.path ?? "")).filter(Boolean);
+      vectorSection.items = vectorFiles.slice(0, 5).map((file) => ({
+        label: String(file.path ?? "vector file"),
+        meta: vectorFileMeta(file),
+      }));
+    }
+    sections.push(vectorSection);
   }
   const geometry = objectValue(summary.geometry);
   if (geometry) {
@@ -458,18 +479,28 @@ export function bundleDomainSections(summary: Record<string, unknown> | undefine
   }
   const softPrompt = objectValue(summary.soft_prompt);
   if (softPrompt) {
+    const tensorFiles = arrayOfStrings(softPrompt.tensor_files);
     sections.push({
       title: "Soft Prompt",
-      rows: [["tensors", Array.isArray(softPrompt.tensor_files) ? softPrompt.tensor_files.length : undefined]],
-      files: arrayOfStrings(softPrompt.tensor_files),
+      rows: [
+        ["tensors", tensorFiles.length || undefined],
+        ["primary", basename(tensorFiles[0])],
+      ],
+      files: tensorFiles,
+      items: tensorFiles.slice(0, 5).map((file) => ({ label: basename(file), meta: "conditioning tensor" })),
     });
   }
   const training = objectValue(summary.training);
   if (training) {
+    const checkpointFiles = arrayOfStrings(training.checkpoint_files);
     sections.push({
       title: "Training",
-      rows: [["checkpoints", Array.isArray(training.checkpoint_files) ? training.checkpoint_files.length : undefined]],
-      files: arrayOfStrings(training.checkpoint_files),
+      rows: [
+        ["checkpoints", checkpointFiles.length || undefined],
+        ["primary", basename(checkpointFiles[0])],
+      ],
+      files: checkpointFiles,
+      items: checkpointFiles.slice(0, 5).map((file) => ({ label: basename(file), meta: checkpointKind(file) })),
     });
   }
   return sections.filter((section) => section.rows.some(([, value]) => value !== undefined && value !== null && value !== "") || section.files?.length);
@@ -954,6 +985,36 @@ function sweepOutputFiles(sweep: Record<string, unknown>): string[] {
     .filter((item): item is string => typeof item === "string" && item.length > 0);
 }
 
+function sweepOutputLabel(output: Record<string, unknown>) {
+  if (output.alpha !== undefined && output.alpha !== null) return `alpha ${formatMaybeNumber(output.alpha)}`;
+  if (output.item_id) return String(output.item_id);
+  return "sweep output";
+}
+
+function sweepOutputMeta(output: Record<string, unknown>) {
+  const files = [output.audio_path, output.latent_path]
+    .filter((item): item is string => typeof item === "string" && item.length > 0)
+    .map(basename);
+  return files.join(" · ") || undefined;
+}
+
+function memoryHitMeta(hit: Record<string, unknown>) {
+  const score = formatMaybeNumber(hit.score);
+  const distance = formatMaybeNumber(hit.distance);
+  const parts = [
+    score !== undefined ? `score ${score}` : null,
+    distance !== undefined ? `distance ${distance}` : null,
+    typeof hit.kind === "string" ? hit.kind : null,
+  ].filter(Boolean);
+  return parts.join(" · ") || undefined;
+}
+
+function vectorFileMeta(file: Record<string, unknown>) {
+  const kind = objectValue(file.scalars)?.kind;
+  const arrays = formatArrayShapes(objectValue(file.arrays));
+  return [kind, arrays].filter(Boolean).join(" · ") || undefined;
+}
+
 function formatArrayShapes(arrays: Record<string, unknown> | null) {
   if (!arrays) return undefined;
   return Object.entries(arrays)
@@ -1009,6 +1070,20 @@ function bundleAudioMeta(entry: BundleAudioEntry) {
     formatBytes(entry.byte_size),
   ].filter(Boolean);
   return parts.join(" · ");
+}
+
+function basename(path: string | undefined) {
+  if (!path) return undefined;
+  const parts = path.split("/").filter(Boolean);
+  return parts[parts.length - 1] ?? path;
+}
+
+function checkpointKind(path: string) {
+  const lower = path.toLowerCase();
+  if (lower.includes("lora")) return "LoRA adapter";
+  if (lower.includes("checkpoint")) return "checkpoint";
+  if (lower.includes("adapter")) return "adapter";
+  return "training artifact";
 }
 
 function dedupeReuseActions(actions: BundleReuseAction[]) {
