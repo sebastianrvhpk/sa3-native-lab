@@ -414,6 +414,16 @@ def test_operator_specs_cover_typed_request_params(tmp_path):
     ]
 
 
+def test_operator_specs_emit_ui_fields_for_all_runtime_params(tmp_path):
+    store = ArtifactStore(tmp_path / "lab")
+    specs = RuntimeDispatcher(store, repo_root=tmp_path).operator_specs()
+
+    for spec in specs:
+        ui_keys = {field.key for field in spec.ui_fields}
+        assert set(spec.params) <= ui_keys, f"{spec.name} missing UI fields for {sorted(set(spec.params) - ui_keys)}"
+        assert "backend" in ui_keys
+
+
 def test_colab_mode_map_covers_notebook_sections():
     notebook_path = Path(__file__).resolve().parents[1] / "colab" / "sa3_same_native_experimental_modes.ipynb"
     notebook = json.loads(notebook_path.read_text())

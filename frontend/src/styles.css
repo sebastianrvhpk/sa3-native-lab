@@ -1943,6 +1943,16 @@ audio {
   box-shadow: 0 0 0 4px rgb(248 246 239 / 0.58);
 }
 
+.playable-wave .wave-marker {
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  width: 2px;
+  background: rgb(177 55 132 / 0.72);
+  box-shadow: 0 0 0 3px rgb(255 255 255 / 0.38);
+  pointer-events: none;
+}
+
 .playable-wave.loading span {
   opacity: 0.28;
 }
@@ -1965,6 +1975,10 @@ audio {
   border-radius: 999px;
   font-size: 0.72rem;
   white-space: nowrap;
+}
+
+.deck-chip.marker-chip {
+  background: linear-gradient(135deg, rgb(234 74 162 / 0.14), rgb(85 198 199 / 0.16));
 }
 
 .deck-volume {
@@ -4370,6 +4384,22 @@ audio {
 .audition-stack-head strong {
   color: var(--ink);
   font-size: 0.8rem;
+}
+
+.audition-transport {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.audition-transport button {
+  width: 28px;
+  min-height: 28px;
+  border-radius: 999px;
+  padding: 0;
+  font-size: 0.62rem;
+  background: rgb(255 255 255 / 0.62);
+  box-shadow: none;
 }
 
 .audition-stack article {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { auditionStackRows } from "./auditionStack";
+import { auditionCursor, auditionPositionLabel, auditionStackRows } from "./auditionStack";
 
 describe("audition stack", () => {
   it("summarizes newest session audio artifacts for listening", () => {
@@ -50,4 +50,31 @@ describe("audition stack", () => {
       }),
     ]);
   });
+
+  it("builds a newest-first playlist cursor for session audition", () => {
+    const artifacts = [
+      audio("art_old", "2026-05-28T10:00:00.000Z"),
+      audio("art_mid", "2026-05-28T11:00:00.000Z"),
+      audio("art_new", "2026-05-28T12:00:00.000Z"),
+    ];
+
+    const cursor = auditionCursor(artifacts, "art_mid");
+
+    expect(cursor.playlist.map((artifact) => artifact.artifact_id)).toEqual(["art_new", "art_mid", "art_old"]);
+    expect(cursor.previous?.artifact_id).toBe("art_new");
+    expect(cursor.next?.artifact_id).toBe("art_old");
+    expect(auditionPositionLabel(artifacts, "art_mid")).toBe("2/3");
+  });
 });
+
+function audio(artifactId: string, createdAt: string) {
+  return {
+    artifact_id: artifactId,
+    kind: "audio",
+    path: `/tmp/${artifactId}.wav`,
+    metadata: {},
+    tags: [],
+    source_artifact_ids: [],
+    created_at: createdAt,
+  } as never;
+}

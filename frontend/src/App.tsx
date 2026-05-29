@@ -20,6 +20,8 @@ import {
   Plus,
   Repeat,
   Search,
+  SkipBack,
+  SkipForward,
   SlidersHorizontal,
   Upload,
   Wand2,
@@ -50,7 +52,7 @@ import {
 } from "./artifactFilters";
 import { ArtifactBadge, ArtifactIcon } from "./artifactDisplay";
 import { artifactMeta, artifactName, artifactShape, formatDuration, sortNewest, sortNewestJobs } from "./artifactUtils";
-import { auditionStackRows } from "./auditionStack";
+import { auditionCursor, auditionPositionLabel, auditionStackRows } from "./auditionStack";
 import { AudioDeck, TinyWave } from "./audioDeck";
 import { BundleField, type PromptCandidateGenerationRequest } from "./bundleInspector";
 import { createControlPlaneClient, DEFAULT_CONTROL_PLANE_URL, type ResultFamily, type WorkbenchState } from "./controlPlane";
@@ -59,6 +61,7 @@ import { JobProgress, type JobActionHandlers } from "./jobProgress";
 import { isJobActive, landingArtifactId, shortOperatorName } from "./jobUtils";
 import { artifactLineageModel, type CompareSlots } from "./lineageModel";
 import { ListeningDecisionBadge } from "./listeningDecision";
+import { specCoverageSummary, specPairCoverageSummary } from "./operatorSpecCoverage";
 import {
   createOperatorPreset,
   deleteOperatorPreset,
@@ -782,7 +785,6 @@ const audioToAudioControlKeys = [...generateControlKeys, "init_noise_level"];
 const inpaintControlKeys = [...audioToAudioControlKeys, "inpaint_start_seconds", "inpaint_end_seconds"];
 const sameEncodeControlKeys = ["model", "chunked", "chunk_size", "overlap", "prompt", "notes"];
 const sameDecodeControlKeys = ["model", "chunked", "chunk_size", "overlap", "notes"];
-const systemParamKeys = new Set(["metadata"]);
 
 const generationCatalog: readonly GenerationConfig[] = [
   {
@@ -1772,16 +1774,31 @@ function AuditionStackPanel({
   onSelect: (artifactId: string) => void;
   onCompare: (slot: "a" | "b", artifactId: string | null) => void;
 }) {
-  const rows = auditionStackRows(artifacts, 5);
+  const rows = auditionStackRows(artifacts, 8);
+  const cursor = auditionCursor(artifacts, selectedId, 8);
+  const position = auditionPositionLabel(artifacts, selectedId, 8);
   if (!rows.length) return null;
   return (
     <div className="audition-stack" aria-label="Session audition stack">
       <div className="audition-stack-head">
         <div>
           <span className="eyebrow">Audition</span>
-          <strong>{rows.length} recent takes</strong>
+          <strong>{position}</strong>
         </div>
-        <Waves size={18} />
+        <div className="audition-transport">
+          <button type="button" disabled={!cursor.previous} onClick={() => cursor.previous && onSelect(cursor.previous.artifact_id)} title="Previous take">
+            <SkipBack size={14} />
+          </button>
+          <button type="button" disabled={!cursor.next} onClick={() => cursor.next && onSelect(cursor.next.artifact_id)} title="Next take">
+            <SkipForward size={14} />
+          </button>
+          <button type="button" disabled={!cursor.selected} onClick={() => cursor.selected && onCompare("a", cursor.selected.artifact_id)} title="Send selected take to A">
+            A
+          </button>
+          <button type="button" disabled={!cursor.selected} onClick={() => cursor.selected && onCompare("b", cursor.selected.artifact_id)} title="Send selected take to B">
+            B
+          </button>
+        </div>
       </div>
       {rows.map((row) => {
         const artifact = artifacts.find((item) => item.artifact_id === row.artifactId);
@@ -2684,16 +2701,14 @@ function formatPresetValue(value: RecipeValue | null): string {
 }
 
 function SpecCoverage({ spec, controlledKeys }: { spec: OperatorSpec | undefined; controlledKeys: readonly string[] }) {
-  const params = specParamKeys(spec);
-  const missing = missingParamKeys(spec, controlledKeys);
-  const status = !spec ? "waiting" : missing.length ? "partial" : "covered";
+  const coverage = specCoverageSummary(spec, controlledKeys);
   return (
-    <div className={`spec-coverage ${status}`}>
-      <span>{!spec ? "Spec pending" : missing.length ? `${missing.length} missing params` : "Spec covered"}</span>
+    <div className={`spec-coverage ${coverage.status}`}>
+      <span>{!spec ? "Spec pending" : coverage.missing.length ? `${coverage.missing.length} missing params` : "Spec covered"}</span>
       <small>
-        {spec ? `${params.length} params · ${spec.backends.join(", ")} · ${spec.status}` : "waiting for /operators/specs"}
+        {spec ? `${coverage.paramCount} params · ${spec.backends.join(", ")} · ${spec.status}` : "waiting for /operators/specs"}
       </small>
-      {missing.length ? <em title={missing.join(", ")}>{missing.slice(0, 4).join(", ")}</em> : null}
+      {coverage.missing.length ? <em title={coverage.missing.join(", ")}>{coverage.missing.slice(0, 4).join(", ")}</em> : null}
     </div>
   );
 }
@@ -2705,15 +2720,13 @@ function SpecCoveragePair({
   specs: readonly (OperatorSpec | undefined)[];
   controlledKeys: readonly (readonly string[])[];
 }) {
-  const mergedMissing = specs.flatMap((spec, index) => missingParamKeys(spec, controlledKeys[index] ?? []));
+  const coverage = specPairCoverageSummary(specs, controlledKeys);
   const readySpecs = specs.filter(Boolean) as OperatorSpec[];
-  const status = readySpecs.length !== specs.length ? "waiting" : mergedMissing.length ? "partial" : "covered";
-  const paramCount = readySpecs.reduce((count, spec) => count + specParamKeys(spec).length, 0);
   return (
-    <div className={`spec-coverage ${status}`}>
-      <span>{readySpecs.length !== specs.length ? "Spec pending" : mergedMissing.length ? `${mergedMissing.length} missing params` : "Spec covered"}</span>
-      <small>{readySpecs.length ? `${paramCount} params · encode/decode` : "waiting for /operators/specs"}</small>
-      {mergedMissing.length ? <em title={mergedMissing.join(", ")}>{mergedMissing.slice(0, 4).join(", ")}</em> : null}
+    <div className={`spec-coverage ${coverage.status}`}>
+      <span>{readySpecs.length !== specs.length ? "Spec pending" : coverage.missing.length ? `${coverage.missing.length} missing params` : "Spec covered"}</span>
+      <small>{readySpecs.length ? `${coverage.paramCount} params · encode/decode` : "waiting for /operators/specs"}</small>
+      {coverage.missing.length ? <em title={coverage.missing.join(", ")}>{coverage.missing.slice(0, 4).join(", ")}</em> : null}
     </div>
   );
 }
@@ -2750,15 +2763,6 @@ function generationControlKeys(mode: GenerationMode): readonly string[] {
   if (mode === "generate.inpaint") return inpaintControlKeys;
   if (mode === "generate.audio_to_audio") return audioToAudioControlKeys;
   return generateControlKeys;
-}
-
-function specParamKeys(spec: OperatorSpec | undefined): string[] {
-  return Object.keys(spec?.params ?? {});
-}
-
-function missingParamKeys(spec: OperatorSpec | undefined, controlledKeys: readonly string[]): string[] {
-  const controlled = new Set(controlledKeys);
-  return specParamKeys(spec).filter((key) => !systemParamKeys.has(key) && !controlled.has(key));
 }
 
 function filteredOperatorSpec(spec: OperatorSpec | undefined, fieldKeysToKeep: readonly string[]): OperatorSpec | undefined {

@@ -10,13 +10,36 @@ export interface AuditionStackRow {
 }
 
 export function auditionStackRows(artifacts: readonly ArtifactRecord[], limit = 6): AuditionStackRow[] {
-  return sortNewest(artifacts.filter((artifact) => artifact.kind === "audio")).slice(0, limit).map((artifact) => ({
+  return auditionPlaylist(artifacts, limit).map((artifact) => ({
     artifactId: artifact.artifact_id,
     label: artifactName(artifact),
     meta: artifactMeta(artifact),
     prompt: artifact.prompt,
     origin: auditionOrigin(artifact),
   }));
+}
+
+export function auditionPlaylist(artifacts: readonly ArtifactRecord[], limit = 12): ArtifactRecord[] {
+  return sortNewest(artifacts.filter((artifact) => artifact.kind === "audio")).slice(0, limit);
+}
+
+export function auditionCursor(artifacts: readonly ArtifactRecord[], selectedId: string | null, limit = 12) {
+  const playlist = auditionPlaylist(artifacts, limit);
+  const selectedIndex = playlist.findIndex((artifact) => artifact.artifact_id === selectedId);
+  return {
+    playlist,
+    selectedIndex,
+    selected: selectedIndex >= 0 ? playlist[selectedIndex] : null,
+    previous: selectedIndex > 0 ? playlist[selectedIndex - 1] : null,
+    next: selectedIndex >= 0 && selectedIndex < playlist.length - 1 ? playlist[selectedIndex + 1] : null,
+  };
+}
+
+export function auditionPositionLabel(artifacts: readonly ArtifactRecord[], selectedId: string | null, limit = 12): string {
+  const cursor = auditionCursor(artifacts, selectedId, limit);
+  if (!cursor.playlist.length) return "0 takes";
+  if (cursor.selectedIndex < 0) return `${cursor.playlist.length} takes`;
+  return `${cursor.selectedIndex + 1}/${cursor.playlist.length}`;
 }
 
 function auditionOrigin(artifact: ArtifactRecord): string {

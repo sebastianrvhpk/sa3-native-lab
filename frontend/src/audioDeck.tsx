@@ -11,6 +11,12 @@ interface LoopRegion {
   end: number;
 }
 
+export interface PlaybackMarker {
+  id: string;
+  time: number;
+  label: string;
+}
+
 export function AudioDeck({ artifact, apiBase, compact = false }: { artifact: ArtifactRecord; apiBase: string; compact?: boolean }) {
   const api = useMemo(() => createApi(apiBase), [apiBase]);
   const binCount = compact ? 36 : 128;
@@ -28,6 +34,7 @@ export function AudioDeck({ artifact, apiBase, compact = false }: { artifact: Ar
   const [loop, setLoop] = useState(false);
   const [loopRegion, setLoopRegion] = useState<LoopRegion | null>(null);
   const [playbackRate, setPlaybackRate] = useState(1);
+  const [markers, setMarkers] = useState<PlaybackMarker[]>([]);
   const fileUrl = `${apiBase}/artifacts/${artifact.artifact_id}/file`;
   const displayDuration = duration || artifact.audio?.duration_seconds || 0;
   const progress = displayDuration > 0 ? currentTime / displayDuration : 0;
@@ -39,6 +46,7 @@ export function AudioDeck({ artifact, apiBase, compact = false }: { artifact: Ar
     setCurrentTime(0);
     setDuration(artifact.audio?.duration_seconds ?? 0);
     setLoopRegion(null);
+    setMarkers([]);
   }, [artifact.artifact_id, artifact.audio?.duration_seconds]);
 
   useEffect(() => {
@@ -76,6 +84,11 @@ export function AudioDeck({ artifact, apiBase, compact = false }: { artifact: Ar
     );
     setLoopRegion(next);
     setLoop(true);
+  };
+
+  const addMarker = () => {
+    const targetDuration = duration || artifact.audio?.duration_seconds || audioRef.current?.duration || 0;
+    setMarkers((current) => addPlaybackMarker(current, currentTime, targetDuration));
   };
 
   const togglePlay = async () => {
@@ -136,6 +149,7 @@ export function AudioDeck({ artifact, apiBase, compact = false }: { artifact: Ar
         loopActive={loop && Boolean(loopRegion)}
         loopStart={loopStartFraction}
         loopEnd={loopEndFraction}
+        markers={markerFractions(markers, displayDuration)}
         onSeek={seekTo}
       />
       {!compact ? (
@@ -152,9 +166,22 @@ export function AudioDeck({ artifact, apiBase, compact = false }: { artifact: Ar
           <button type="button" className="deck-chip" onClick={() => setRegionEdge("end")} title="Set loop end">
             Out
           </button>
+          <button type="button" className="deck-chip" onClick={addMarker} title="Add marker at current playback position">
+            Mark
+          </button>
           {loopRegion ? (
             <button type="button" className="deck-chip" onClick={() => setLoopRegion(null)} title="Clear loop region">
               {formatLoopRegion(loopRegion)}
+            </button>
+          ) : null}
+          {markers.map((marker) => (
+            <button key={marker.id} type="button" className="deck-chip marker-chip" onClick={() => seekTo(displayDuration ? marker.time / displayDuration : 0)} title={`Jump to ${formatPlaybackTime(marker.time)}`}>
+              {marker.label} {formatPlaybackTime(marker.time)}
+            </button>
+          ))}
+          {markers.length ? (
+            <button type="button" className="deck-chip" onClick={() => setMarkers([])} title="Clear local markers">
+              Clear marks
             </button>
           ) : null}
           <label className="deck-volume">
@@ -203,6 +230,7 @@ function PlayableWave({
   loopActive,
   loopStart,
   loopEnd,
+  markers = [],
   onSeek,
 }: {
   peaks: number[];
@@ -212,6 +240,7 @@ function PlayableWave({
   loopActive?: boolean;
   loopStart?: number;
   loopEnd?: number;
+  markers?: number[];
   onSeek: (fraction: number) => void;
 }) {
   const maxPeak = Math.max(...peaks, 0.0001);
@@ -246,6 +275,14 @@ function PlayableWave({
       }
     >
       {loopActive ? <b aria-hidden="true" /> : null}
+      {markers.map((marker, index) => (
+        <em
+          key={`${marker}-${index}`}
+          className="wave-marker"
+          aria-hidden="true"
+          style={{ left: `${clamp(marker, 0, 1) * 100}%` }}
+        />
+      ))}
       {peaks.map((peak, index) => {
         const played = peaks.length <= 1 ? false : index / (peaks.length - 1) <= progress;
         return (
@@ -294,6 +331,30 @@ export function clampLoopRegion(start: number, end: number, duration: number): L
 
 export function formatLoopRegion(region: LoopRegion) {
   return `${formatPlaybackTime(region.start)}-${formatPlaybackTime(region.end)}`;
+}
+
+export function addPlaybackMarker(markers: readonly PlaybackMarker[], currentTime: number, duration: number, limit = 8): PlaybackMarker[] {
+  const boundedDuration = Math.max(0, duration);
+  if (!boundedDuration) return [...markers];
+  const time = clamp(Number.isFinite(currentTime) ? currentTime : 0, 0, boundedDuration);
+  const withoutNearDuplicate = markers.filter((marker) => Math.abs(marker.time - time) > 0.05);
+  const nextIndex = markers.length + 1;
+  const next = [
+    ...withoutNearDuplicate,
+    {
+      id: `marker-${nextIndex}-${Math.round(time * 1000)}`,
+      time,
+      label: `M${nextIndex}`,
+    },
+  ]
+    .sort((left, right) => left.time - right.time)
+    .slice(-limit);
+  return next.map((marker, index) => ({ ...marker, label: `M${index + 1}` }));
+}
+
+export function markerFractions(markers: readonly PlaybackMarker[], duration: number): number[] {
+  if (!duration) return [];
+  return markers.map((marker) => Math.round(clamp(marker.time / duration, 0, 1) * 1_000_000) / 1_000_000);
 }
 
 function clamp(value: number, min: number, max: number) {
