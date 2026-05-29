@@ -59,7 +59,11 @@ field, an artifact relationship, or an explicitly documented future capability.
 - The listening bench now has a tested recent-take playlist cursor and local
   waveform markers in addition to playback, loop, A/B, and decision controls.
   The player now supports marker deletion, relabeling after deletion, loop-edge
-  nudging, and keyboardable audition navigation.
+  nudging, keyboardable audition navigation, persisted playback annotations,
+  WaveSurfer zoom, and draggable loop regions.
+- `sa3-lab smoke-fixture` now provides a cheap local runtime smoke by creating a
+  deterministic latent fixture, submitting a real background job through
+  `RuntimeDispatcher`, and verifying that a latent output artifact persists.
 - Prompt search is no longer only a script adapter: it has a native recipe path,
   scorer metadata, generated takes, lineage, descriptor deltas, listening
   decisions, decision summaries, and first-pass prompt memory.
@@ -132,6 +136,8 @@ that every experiment can be trusted, replayed, compared, and reused.
   artifact inspection, family loading, archive actions, and event bridging.
 - Build-level confidence for the React/Vite frontend.
 - Smoke-level confidence for the local app path when explicitly run.
+- Fixture-backed runtime confidence for storage, jobs, dispatcher execution,
+  and output artifact persistence without gated model downloads.
 
 ### What Is Still Missing
 
@@ -146,8 +152,9 @@ that every experiment can be trusted, replayed, compared, and reused.
   workflows. The derived workspace model and archive recovery payload have unit
   coverage; the live UI flow still needs more end-to-end coverage.
 - Playback-specific browser tests for loop regions, A/B behavior,
-  generated-take promotion, marker editing, and session playlists. The core
-  marker, loop nudge, delete, and playlist helpers now have unit coverage.
+  generated-take promotion, marker editing, persisted cues, and session
+  playlists. The core marker, playback-state persistence payload, loop nudge,
+  delete, and playlist helpers now have unit coverage.
 - Performance or runtime-cost tests for Medium/MPS prompt-search scorer paths.
 - Tests that protect against token or credential leakage in logs, command
   context, and error tails.
@@ -186,8 +193,9 @@ that every experiment can be trusted, replayed, compared, and reused.
 - Job events are much better than silent jobs, but the live source still leans
   on polling underneath the control-plane bridge.
 - The queue/archive/session model is becoming a primary creative organization
-  surface through the workspace pulse and artifact recovery, but long-session
-  cleanup still needs deeper end-to-end workflows.
+  surface through the workspace pulse, artifact recovery, and direct artifact
+  archive actions, but long-session cleanup still needs deeper end-to-end
+  workflows.
 
 ### Not Bad Code, But Incomplete Architecture
 
@@ -244,12 +252,13 @@ instead of invisible friction.
 
 1. Upgrade playback into a creative comparison instrument.
 2. Add richer loop, marker, region, A/B, take-stack, and session-playlist
-   behaviors where they directly improve listening decisions. Local markers and
-   playlist cursor helpers are implemented, along with loop-edge nudging,
-   marker deletion, and keyboardable audition navigation; draggable regions,
-   marker notes, and persistence remain next.
-3. Consider wavesurfer.js when regions, zoom, marker editing, and waveform
-   interaction become central enough to justify the dependency.
+   behaviors where they directly improve listening decisions. Local markers,
+   playlist cursor helpers, loop-edge nudging, marker deletion, keyboardable
+   audition navigation, persisted cue annotations, WaveSurfer zoom, and
+   draggable loop regions are implemented; marker notes and richer playlist
+   sequencing remain next.
+3. Keep wavesurfer.js focused on real listening work: zoom, loop regions,
+   marker editing, scrubbing, and future region annotations.
 4. Tie listening decisions back into prompt-search, sweeps, memory reuse, and
    artifact recovery.
 

@@ -3,6 +3,9 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import numpy as np
+
+from sa3_native_lab.app.contracts import ArtifactKind
 from sa3_native_lab.app.dev import (
     DevCheck,
     build_api_command,
@@ -14,7 +17,9 @@ from sa3_native_lab.app.dev import (
     huggingface_auth_check,
     is_port_open,
     resolve_repo_root,
+    run_fixture_smoke,
 )
+from sa3_native_lab.app.storage import ArtifactStore
 
 
 def test_dev_runner_builds_api_command(tmp_path):
@@ -106,3 +111,28 @@ def test_dev_runner_repo_root_defaults_to_project_root():
 
 def test_dev_runner_port_probe_returns_false_for_invalid_port():
     assert is_port_open("127.0.0.1", 9, timeout=0.01) is False
+
+
+def test_fixture_smoke_runs_local_runtime_job(tmp_path):
+    artifact_root = tmp_path / "smoke"
+
+    result = run_fixture_smoke(root=resolve_repo_root(), artifact_root=artifact_root, timeout=10.0)
+
+    assert result.status == "ok"
+    assert result.source_artifact_id
+    assert result.output_artifact_id
+    assert result.output_artifact_id != result.source_artifact_id
+    assert result.progress == 1.0
+    assert result.phase == "done"
+
+    store = ArtifactStore(artifact_root)
+    source = store.get_artifact(result.source_artifact_id)
+    output = store.get_artifact(result.output_artifact_id)
+    assert source.kind == ArtifactKind.LATENT
+    assert output.kind == ArtifactKind.LATENT
+    assert output.session_id == result.session_id
+    assert output.source_artifact_ids == [source.artifact_id]
+    assert output.metadata["smoke_fixture"] is True
+    assert output.metadata["smoke_job_id"] == result.job_id
+    assert output.metadata["smoke_source_artifact_id"] == source.artifact_id
+    assert np.load(source.path, allow_pickle=False).shape == np.load(output.path, allow_pickle=False).shape

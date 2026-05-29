@@ -16,11 +16,23 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
+from .contracts import (
+    ArtifactAnnotationRequest,
+    ArtifactKind,
+    BackendName,
+    JobRecord,
+    JobStatus,
+    OperatorName,
+    Recipe,
+    SessionCreateRequest,
+)
+
 
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_API_PORT = 8733
 DEFAULT_FRONTEND_PORT = 5173
 DEFAULT_CONTROL_PLANE_PORT = 8787
+TERMINAL_JOB_STATUSES = {JobStatus.SUCCEEDED, JobStatus.FAILED, JobStatus.CANCELLED}
 
 
 @dataclass(frozen=True)
@@ -33,6 +45,21 @@ class DevCheck:
     @property
     def ok(self) -> bool:
         return self.status != "error"
+
+
+@dataclass(frozen=True)
+class SmokeFixtureResult:
+    status: str
+    message: str
+    artifact_root: str
+    session_id: str
+    job_id: str
+    source_artifact_id: str
+    output_artifact_id: str | None
+    phase: str | None
+    progress: float
+    elapsed_seconds: float
+    metrics: dict[str, Any]
 
 
 def main() -> None:
@@ -50,11 +77,21 @@ def main() -> None:
     dev.add_argument("--reload-api", action="store_true", help="Run the API with uvicorn reload.")
     dev.add_argument("--startup-timeout", type=float, default=30.0, help="Seconds to wait for local servers.")
 
+    smoke = subparsers.add_parser(
+        "smoke-fixture",
+        help="Run a fast fixture-backed runtime job through storage, jobs, and the runtime dispatcher.",
+    )
+    _add_common_args(smoke)
+    smoke.add_argument("--timeout", type=float, default=15.0, help="Seconds to wait for the fixture job.")
+    smoke.add_argument("--json", action="store_true", help="Print the smoke result as JSON.")
+
     args = parser.parse_args()
     if args.command == "doctor":
         raise SystemExit(run_doctor(args))
     if args.command == "dev":
         raise SystemExit(run_dev(args))
+    if args.command == "smoke-fixture":
+        raise SystemExit(run_fixture_smoke_command(args))
     parser.error(f"unknown command: {args.command}")
 
 
@@ -176,6 +213,135 @@ def run_dev(args: argparse.Namespace) -> int:
         return 1
     finally:
         stop_children(children)
+
+
+def run_fixture_smoke_command(args: argparse.Namespace) -> int:
+    root = resolve_repo_root(args.repo_root)
+    artifact_root = args.artifact_root or root / ".sa3_lab" / "smoke-fixture"
+    try:
+        result = run_fixture_smoke(root=root, artifact_root=artifact_root, timeout=args.timeout)
+    except Exception as exc:
+        if args.json:
+            print(
+                json.dumps(
+                    {
+                        "status": "failed",
+                        "message": str(exc),
+                        "artifact_root": str(artifact_root),
+                    },
+                    indent=2,
+                )
+            )
+        else:
+            print(f"SA3 Native Lab fixture smoke failed: {exc}")
+        return 1
+
+    payload = asdict(result)
+    if args.json:
+        print(json.dumps(payload, indent=2))
+    else:
+        print("SA3 Native Lab fixture smoke")
+        print(f"[{result.status}] {result.message}")
+        print(f"  artifact root: {result.artifact_root}")
+        print(f"  session:       {result.session_id}")
+        print(f"  job:           {result.job_id}")
+        print(f"  source:        {result.source_artifact_id}")
+        print(f"  output:        {result.output_artifact_id}")
+        print(f"  elapsed:       {result.elapsed_seconds:.2f}s")
+    return 0 if result.status == "ok" else 1
+
+
+def run_fixture_smoke(*, root: Path, artifact_root: Path, timeout: float = 15.0) -> SmokeFixtureResult:
+    import numpy as np
+
+    from .jobs import JobManager
+    from .runtime import RuntimeDispatcher
+    from .storage import ArtifactStore
+
+    start = time.monotonic()
+    store = ArtifactStore(artifact_root)
+    runtime = RuntimeDispatcher(store, repo_root=root)
+    jobs = JobManager(artifact_root / "jobs", max_workers=1)
+    try:
+        session = store.create_session(
+            SessionCreateRequest(
+                name="Fixture smoke",
+                notes="Fast local smoke that exercises storage, jobs, runtime dispatch, and artifact persistence.",
+                metadata={"smoke_fixture": True},
+            )
+        )
+        fixture = np.linspace(-1.0, 1.0, num=64, dtype=np.float32).reshape(16, 4)
+        source = store.store_latent_array(
+            fixture,
+            latent_rate=4.0,
+            filename="fixture-source.npy",
+            session_id=session.session_id,
+            label="fixture source latent",
+            metadata={
+                "smoke_fixture": True,
+                "fixture_role": "source",
+                "description": "small deterministic time-major latent used by sa3-lab smoke-fixture",
+            },
+        )
+        recipe = Recipe(
+            operator=OperatorName.LATENT_CYCLIC_ROLL,
+            backend=BackendName.TORCH_CPU,
+            inputs={"source": source.artifact_id},
+            params={"shift_frames": 3, "strength": 1.0, "symmetric": False},
+            notes="Fixture smoke cyclic roll",
+            session_id=session.session_id,
+        )
+        job = jobs.submit(recipe, runtime.handler_for_recipe(recipe))
+        final = wait_for_job_terminal(jobs, job.job_id, timeout=timeout)
+        elapsed = time.monotonic() - start
+        if final.status != JobStatus.SUCCEEDED:
+            detail = final.error or final.message or final.status.value
+            raise RuntimeError(f"fixture job ended with {final.status.value}: {detail}")
+        if not final.artifact_ids:
+            raise RuntimeError("fixture job succeeded without output artifacts")
+        output = store.get_artifact(final.artifact_ids[0])
+        if output.kind != ArtifactKind.LATENT or output.latent is None:
+            raise RuntimeError(f"fixture job produced non-latent artifact: {output.artifact_id}")
+        output = store.annotate_artifact(
+            output.artifact_id,
+            ArtifactAnnotationRequest(
+                metadata={
+                    "smoke_fixture": True,
+                    "fixture_role": "output",
+                    "smoke_job_id": final.job_id,
+                    "smoke_source_artifact_id": source.artifact_id,
+                }
+            ),
+        )
+        return SmokeFixtureResult(
+            status="ok",
+            message="fixture latent operator completed and persisted an output artifact",
+            artifact_root=str(artifact_root),
+            session_id=session.session_id,
+            job_id=final.job_id,
+            source_artifact_id=source.artifact_id,
+            output_artifact_id=output.artifact_id,
+            phase=final.phase,
+            progress=final.progress,
+            elapsed_seconds=elapsed,
+            metrics=final.metrics,
+        )
+    finally:
+        jobs.shutdown(wait=True)
+
+
+def wait_for_job_terminal(jobs: Any, job_id: str, *, timeout: float) -> JobRecord:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        record = jobs.get(job_id)
+        if record.status in TERMINAL_JOB_STATUSES:
+            return record
+        time.sleep(0.05)
+    record = jobs.get(job_id)
+    raise TimeoutError(
+        f"timed out waiting for job {job_id}; status={record.status.value}, phase={record.phase}, "
+        f"message={record.message}"
+    )
 
 
 def resolve_repo_root(repo_root: Path | None = None) -> Path:

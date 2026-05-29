@@ -124,6 +124,17 @@ uv run sa3-lab doctor
 uv run sa3-lab doctor --with-control-plane
 ```
 
+Run the fast local fixture smoke when you want to verify the actual runtime
+path without downloading or sampling a gated model:
+
+```bash
+uv run sa3-lab smoke-fixture --json
+```
+
+That command creates a tiny `.npy` latent, submits `latent.cyclic_roll` through
+the same `JobManager` and runtime dispatcher used by the app, and confirms a
+new artifact lands in `.sa3_lab/smoke-fixture`.
+
 Start the API daemon and Vite workbench together:
 
 ```bash

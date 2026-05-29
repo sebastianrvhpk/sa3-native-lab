@@ -46,8 +46,10 @@ For the broader stack direction and promotion triggers, see
 1. Playback composer.
    The result rail now has a first recent-audition stack for session audio:
    recent takes can be selected, played compactly, inspected with their
-   listening decision badge, and routed directly into A/B slots. Next playback
-   work should add marker/loop editing and explicit playlist sequencing.
+   listening decision badge, and routed directly into A/B slots. The main
+   specimen player now persists markers and loop regions as artifact
+   annotations and uses WaveSurfer for zoom plus draggable loop edits. Next
+   playback work should add marker notes and explicit playlist sequencing.
 
 2. Deepen result-family views for sweeps.
    Recipe families now appear with metrics, a detail panel, per-result playback,

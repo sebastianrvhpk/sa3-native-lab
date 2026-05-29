@@ -58,9 +58,10 @@ Important endpoints:
 ### Listening Bench
 
 The React app in `frontend/` is the working interface. It supports artifact
-selection, waveform inspection, audio playback, region looping, playback-rate
-checks, A/B comparison, MLX generation, SAME encode/decode, latent-operator
-runs, Recipe Studio, Mode Atlas, and job polling. Generate and SAME controls are
+selection, waveform inspection, audio playback, WaveSurfer-backed waveform
+zoom, draggable loop regions, playback-rate checks, A/B comparison, MLX
+generation, SAME encode/decode, latent-operator runs, Recipe Studio, Mode
+Atlas, and job polling. Generate and SAME controls are
 now native schema-driven forms: the backend `/operators/specs` contract supplies
 defaults, bounds, select options, required flags, and advanced flags, while the
 frontend form model builds typed generation and encode/decode payloads. This
@@ -85,9 +86,13 @@ before submit. The session tray also shows a data-backed workspace pulse for
 active takes, result families, job activity, listening decisions, and archive
 volume. Its focus hint points to real next actions such as monitoring a run,
 opening the next undecided take, recovering an archived artifact, or archiving a
-crowded session. Archived artifacts can now be recovered into the active
-session through the archive drawer; the recovery uses the annotation contract to
-move `session_id` and records source/target session metadata.
+crowded session. Playback markers and loop regions persist as artifact
+annotations under `metadata.playback_state`, so listening cues survive reloads,
+replay/fork work, and session/archive movement. Archived artifacts can now be
+recovered into the active session through the archive drawer; active artifacts
+can also be archived directly from the specimen, session tray, and result-family
+surfaces. Both flows use the annotation contract to move `session_id` and record
+source/target session metadata.
 
 Read-heavy workbench state can now be loaded through the TypeScript tRPC
 control plane. This is enabled by setting `VITE_SA3_CONTROL_PLANE_URL` or by
@@ -198,6 +203,10 @@ sweep runs that share a vector bundle or prompt.
 - Hugging Face auth is needed for gated Stability AI weights.
 - `/readiness` reports artifact-root writability, backend availability, HF auth,
   Medium MLX weight presence, and SAME-L download readiness.
+- `uv run sa3-lab smoke-fixture --json` provides a cheap local runtime smoke:
+  it creates a deterministic latent fixture, submits `latent.cyclic_roll`
+  through the same job/runtime/storage path as the app, and verifies a persisted
+  output artifact without gated model downloads.
 - Long jobs such as LoRA training are submitted as background jobs and can be
   cancelled from the app, although true resumable multi-step workflows are still
   future work.
@@ -244,8 +253,9 @@ Confirmed in the current codebase:
   cards for memory/sweep/vector/soft-prompt/training bundles, sibling sweep
   comparison, data-backed specimen lineage threads, a session workspace pulse,
   archive artifact recovery, keyboardable playback playlist navigation, local
-  waveform markers, per-marker deletion, loop-edge nudging, and the first
-  native geometry-audit recipe.
+  waveform markers, persisted playback cues, WaveSurfer zoom and draggable loop
+  regions, per-marker deletion, loop-edge nudging, data-backed archive actions,
+  and the first native geometry-audit recipe.
 - Core app surfaces are now split into focused modules for audio playback,
   artifact display, job progress, result families, recipe forks, and bundle
   inspection.
@@ -269,8 +279,9 @@ Still partial:
   still need richer dataset browsing, preview audio for non-local children, and
   style-reference promotion.
 - Playback is now beyond the basic browser player, with playlist navigation,
-  markers, marker deletion, loop regions, and loop-edge nudging. It still needs
-  waveform zoom, draggable regions, and persistent marker/region annotations.
+  persisted markers, marker deletion, WaveSurfer zoom, draggable loop regions,
+  region persistence, and loop-edge nudging. It still needs marker notes,
+  richer playlist sequencing, and broader browser-level playback tests.
 - Multi-output sweeps have family grouping, metrics, direct playback, explicit
   A/B promotion controls, recipe fork deltas, inspected metric summaries, best
   candidate marking, saved listening decisions, sort controls, a compact

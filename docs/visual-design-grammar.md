@@ -31,7 +31,7 @@ play something real.
 | Thin grey lines | Real lineage, source relationships, or low-priority lab-surface flow | `LineageThread` nodes backed by source artifacts, recipe/job, current artifact, result family, and A/B slot; subtle non-interactive workbench background only. |
 | Nodes / dots | Artifact/source/decision branch points | Data-backed lineage rows, decision memory, prompt history, A/B routes. |
 | Transport wheel | Playback or macro execution control | AudioDeck play button only for now. |
-| Rainbow waveform lane | Perceptual listening axis | AudioDeck waveform and compact audition playback. |
+| Rainbow waveform lane | Perceptual listening axis | AudioDeck WaveSurfer surface, persisted markers, draggable loop region, and compact audition playback. |
 | Grid clusters | Mode/operator families or dense parameter sets | RecipeFields, Operator Studio, prompt search presets. |
 | Hand labels | Human annotation and experiment labels | Eyebrows, rail heads, chips, small metadata labels. |
 
@@ -89,8 +89,8 @@ Near-horizon additions should remain conditional:
 
 - Motion for React: causal transitions for queued/running/produced, A/B
   promotion, lineage forked, and artifact selected.
-- wavesurfer.js: only when waveform markers, zoom, and editable loop regions
-  become central.
+- wavesurfer.js: promoted for real listening work: waveform zoom, persisted
+  markers, and editable loop regions.
 - React Flow: only when lineage edges become an interactive graph of real
   recipe/source/output relationships.
 

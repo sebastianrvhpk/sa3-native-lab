@@ -125,6 +125,9 @@ class JobManager:
             self._persist(updated)
             return updated
 
+    def shutdown(self, *, wait: bool = True) -> None:
+        self._executor.shutdown(wait=wait)
+
     def is_cancelled(self, job_id: str) -> bool:
         with self._lock:
             return self._records[job_id].status == JobStatus.CANCELLED

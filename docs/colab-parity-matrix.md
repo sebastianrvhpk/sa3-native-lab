@@ -38,9 +38,9 @@ meaning is real.
 | Colab L4 setup | `README.md`, `uv run sa3-lab dev`, `sa3-lab doctor`, MLX install notes | native | Exact HF license/cache-path diagnostics can be richer. | Readiness tests cover current checks, but not license acceptance nuance. | Keep improving `/readiness` before new heavy model paths. |
 | Imports and paths | `.sa3_lab/` artifact root, app storage, sessions | native | Path-based script adapters still expose raw filesystem paths in some places. | Contract tests exist for storage; no path-compatibility matrix yet. | Add path compatibility checks per recipe family. |
 | HF login and model loading | `HF_TOKEN`/HF cache, Medium/SAME-L defaults, readiness panel | native | Safe stderr and command-context preservation still needs hardening. | Token-leak regression tests are missing. | Add safe log-tail sanitizer tests before richer failure logs. |
-| Medium smoke test | `/generate/text`, MLX wrapper, listening bench | native | Smoke is operational but not represented as a reusable demo fixture. | Smoke path exists outside normal unit tests. | Add a tiny deterministic demo fixture only when runtime cost is acceptable. |
+| Medium smoke test | `/generate/text`, MLX wrapper, listening bench, `uv run sa3-lab smoke-fixture --json` | native | Authenticated MLX sampling smoke still depends on model weights and HF access; fixture smoke intentionally avoids that cost. | Fixture-backed runtime smoke is covered by `tests/test_dev_runner.py`; gated model smoke remains manual. | Keep the fixture smoke cheap and add a separately marked authenticated Medium smoke only when runtime cost is acceptable. |
 | Shared helpers | API contracts, artifact store, descriptors, bundle inspection | native | Helpers are spread across runtime/adapters; `RuntimeDispatcher` remains broad. | Existing tests cover many helpers, but not all bundle-specific summaries. | Split adapters when the next mode becomes too hard to test in-place. |
-| Custom Colab audio player | Listening bench, waveform peaks, region loop, A/B, decisions, recent audition stack, keyboardable playlist cursor, waveform markers, marker deletion, loop-edge nudging, artifact landing | partial | Local marker/loop editing exists; waveform zoom, draggable regions, marker notes, and persisted player annotations are still missing. | Audition stack, marker, loop-nudge, recovery, and job landing tests exist; full playback browser interaction tests are still thin. | Continue playback-composer pass with draggable regions and browser-level player tests. |
+| Custom Colab audio player | Listening bench, waveform peaks, WaveSurfer zoom, draggable loop regions, persisted playback annotations, A/B, decisions, recent audition stack, keyboardable playlist cursor, waveform markers, marker deletion, loop-edge nudging, artifact landing | partial | Core marker/loop persistence now exists; marker notes, richer playlist sequencing, and broader browser playback coverage are still missing. | Audition stack, marker, persisted playback-state, loop-nudge, recovery, and job landing tests exist; full playback browser interaction tests are still thin. | Add marker notes and browser-level playback/session tests before treating the player as complete. |
 | Dataset and long-file policy | `dataset.pre_encode`, SAME encode/decode, memory query | partial | Long-file chunking rules are not consistently exposed across all dataset paths. | Dataset chunking/payload tests are partial. | Add dataset mode inspector and chunking contract rows. |
 
 ## Mode Matrix
@@ -79,8 +79,9 @@ meaning is real.
 1. Keep this matrix synchronized with `/colab/modes`.
 2. Add a contract test proving the runtime mode atlas still covers the notebook
    mode headings and only references known app operators.
-3. Continue playback-composer behavior with draggable regions, waveform zoom,
-   marker notes/persistence, and browser-level tests. Mode 2/3 presets,
+3. Continue playback-composer behavior with marker notes, richer playlist
+   sequencing, and browser-level tests. WaveSurfer zoom, draggable loop regions,
+   and marker/loop persistence now exist. Mode 2/3 presets,
    scorer-cost notes, generated-take run-comparison
    rows, vocabulary sets, axis sets, and prompt history now exist; custom
    save/share for vocabulary and axes can wait until backend preset history

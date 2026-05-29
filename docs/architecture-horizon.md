@@ -20,6 +20,8 @@ memory, lineage, and exploratory control.
 - React Aria Components for accessible field controls.
 - TanStack Form for recipe/operator form state and validation.
 - tRPC and Zod control plane for app-shaped contracts.
+- wavesurfer.js for playback zoom, persisted markers, and editable loop
+  regions where artifacts have real audio.
 - pytest, Node test, TypeScript build, and Playwright smoke.
 
 ## Near Horizon
@@ -35,7 +37,6 @@ memory, lineage, and exploratory control.
 
 | Area | Preferred Stack | Promotion Trigger |
 | --- | --- | --- |
-| Audio | wavesurfer.js | Waveform regions, markers, zoom, loop selection, or richer scrubbing become central to listening. |
 | Motion | Motion for React | Use causal transitions for queued/running/produced states, lineage forks, A/B promotion, and result-family expansion. |
 | Component lab | Storybook | UI pieces are extracted from `App.tsx` and need visual QA across job, artifact, form, empty, and error states. |
 | Persistence | Drizzle and Postgres | Sessions, jobs, recipes, annotations, lineage, presets, result families, and job events outgrow JSON manifests. |
