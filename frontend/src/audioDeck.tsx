@@ -1,23 +1,34 @@
-import { type CSSProperties, type MouseEvent, useEffect, useMemo, useRef, useState } from "react";
+import { type CSSProperties, type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Pause, Play, Repeat, SkipBack, SkipForward, X } from "lucide-react";
+import type WaveSurfer from "wavesurfer.js";
+import type RegionsPlugin from "wavesurfer.js/dist/plugins/regions.js";
+import type { Region } from "wavesurfer.js/dist/plugins/regions.js";
 
-import { createApi } from "./api";
-import { artifactName, formatDuration, formatPlaybackTime } from "./artifactUtils";
+import { createApi, type ArtifactAnnotationPayload } from "./api";
+import { artifactName, formatPlaybackTime } from "./artifactUtils";
+import {
+  playbackAnnotationPayload,
+  playbackStateFromArtifact,
+  playbackStateSignature,
+  type PlaybackLoopRegion,
+  type PlaybackMarker,
+} from "./playbackState";
 import type { ArtifactRecord } from "./types";
 
-interface LoopRegion {
-  start: number;
-  end: number;
-}
-
-export interface PlaybackMarker {
-  id: string;
-  time: number;
-  label: string;
-}
-
-export function AudioDeck({ artifact, apiBase, compact = false }: { artifact: ArtifactRecord; apiBase: string; compact?: boolean }) {
+export function AudioDeck({
+  artifact,
+  apiBase,
+  compact = false,
+  onAnnotate,
+  persisting = false,
+}: {
+  artifact: ArtifactRecord;
+  apiBase: string;
+  compact?: boolean;
+  onAnnotate?: (artifactId: string, payload: ArtifactAnnotationPayload) => void;
+  persisting?: boolean;
+}) {
   const api = useMemo(() => createApi(apiBase), [apiBase]);
   const binCount = compact ? 36 : 128;
   const peaks = useQuery({
@@ -26,28 +37,48 @@ export function AudioDeck({ artifact, apiBase, compact = false }: { artifact: Ar
     enabled: artifact.kind === "audio",
     staleTime: Infinity,
   });
-  const audioRef = useRef<HTMLAudioElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(artifact.audio?.duration_seconds ?? 0);
   const [volume, setVolume] = useState(0.92);
   const [loop, setLoop] = useState(false);
-  const [loopRegion, setLoopRegion] = useState<LoopRegion | null>(null);
+  const persistedPlaybackState = useMemo(() => playbackStateFromArtifact(artifact), [artifact]);
+  const persistedSignature = useMemo(
+    () => playbackStateSignature(persistedPlaybackState.markers, persistedPlaybackState.loopRegion),
+    [persistedPlaybackState],
+  );
+  const [loopRegion, setLoopRegion] = useState<PlaybackLoopRegion | null>(persistedPlaybackState.loopRegion);
   const [playbackRate, setPlaybackRate] = useState(1);
-  const [markers, setMarkers] = useState<PlaybackMarker[]>([]);
+  const [markers, setMarkers] = useState<PlaybackMarker[]>(persistedPlaybackState.markers);
+  const [savedSignature, setSavedSignature] = useState(persistedSignature);
+  const [zoom, setZoom] = useState(0);
   const fileUrl = `${apiBase}/artifacts/${artifact.artifact_id}/file`;
+  const wavePeaks = useMemo(
+    () => peaks.data?.peaks ?? placeholderPeaks(artifact.artifact_id, binCount),
+    [artifact.artifact_id, binCount, peaks.data?.peaks],
+  );
   const displayDuration = duration || artifact.audio?.duration_seconds || 0;
   const progress = displayDuration > 0 ? currentTime / displayDuration : 0;
   const loopStartFraction = displayDuration && loopRegion ? loopRegion.start / displayDuration : 0;
   const loopEndFraction = displayDuration && loopRegion ? loopRegion.end / displayDuration : 1;
+  const localSignature = useMemo(() => playbackStateSignature(markers, loopRegion), [markers, loopRegion]);
+  const cuesDirty = localSignature !== savedSignature;
+
+  const setAudioNode = useCallback((node: HTMLAudioElement | null) => {
+    audioRef.current = node;
+    setAudioElement(node);
+  }, []);
 
   useEffect(() => {
     setPlaying(false);
     setCurrentTime(0);
     setDuration(artifact.audio?.duration_seconds ?? 0);
-    setLoopRegion(null);
-    setMarkers([]);
-  }, [artifact.artifact_id, artifact.audio?.duration_seconds]);
+    setLoopRegion(persistedPlaybackState.loopRegion);
+    setMarkers(persistedPlaybackState.markers);
+    setSavedSignature(persistedSignature);
+  }, [artifact.artifact_id, artifact.audio?.duration_seconds, persistedPlaybackState, persistedSignature]);
 
   useEffect(() => {
     if (audioRef.current) audioRef.current.volume = volume;
@@ -91,6 +122,11 @@ export function AudioDeck({ artifact, apiBase, compact = false }: { artifact: Ar
     setMarkers((current) => addPlaybackMarker(current, currentTime, targetDuration));
   };
 
+  const handleLoopRegionChange = useCallback((region: PlaybackLoopRegion) => {
+    setLoopRegion(region);
+    setLoop(true);
+  }, []);
+
   const togglePlay = async () => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -105,10 +141,23 @@ export function AudioDeck({ artifact, apiBase, compact = false }: { artifact: Ar
     }
   };
 
+  const savePlaybackState = () => {
+    if (!onAnnotate) return;
+    onAnnotate(
+      artifact.artifact_id,
+      playbackAnnotationPayload({
+        markers,
+        loopRegion,
+        source: "audio_deck",
+      }),
+    );
+    setSavedSignature(localSignature);
+  };
+
   return (
     <div className={`audio-deck ${compact ? "compact" : ""}`}>
       <audio
-        ref={audioRef}
+        ref={setAudioNode}
         src={fileUrl}
         preload="metadata"
         loop={loop}
@@ -141,17 +190,35 @@ export function AudioDeck({ artifact, apiBase, compact = false }: { artifact: Ar
           <Repeat size={compact ? 15 : 17} />
         </button>
       </div>
-      <PlayableWave
-        peaks={peaks.data?.peaks ?? placeholderPeaks(artifact.artifact_id, binCount)}
-        progress={progress}
-        loading={peaks.isLoading}
-        compact={compact}
-        loopActive={loop && Boolean(loopRegion)}
-        loopStart={loopStartFraction}
-        loopEnd={loopEndFraction}
-        markers={markerFractions(markers, displayDuration)}
-        onSeek={seekTo}
-      />
+      {compact ? (
+        <PlayableWave
+          peaks={wavePeaks}
+          progress={progress}
+          loading={peaks.isLoading}
+          compact={compact}
+          loopActive={loop && Boolean(loopRegion)}
+          loopStart={loopStartFraction}
+          loopEnd={loopEndFraction}
+          markers={markerFractions(markers, displayDuration)}
+          onSeek={seekTo}
+        />
+      ) : (
+        <WaveSurferWave
+          media={audioElement}
+          fileUrl={fileUrl}
+          peaks={wavePeaks}
+          loading={peaks.isLoading}
+          duration={displayDuration}
+          progress={progress}
+          loopActive={loop && Boolean(loopRegion)}
+          loopRegion={loopRegion}
+          markers={markerFractions(markers, displayDuration)}
+          zoom={zoom}
+          onSeek={seekTo}
+          onTimeUpdate={setCurrentTime}
+          onLoopRegionChange={handleLoopRegionChange}
+        />
+      )}
       {!compact ? (
         <div className="deck-controls">
           <button type="button" className="deck-icon" onClick={() => seekBy(-2)} title="Back 2 seconds">
@@ -205,9 +272,18 @@ export function AudioDeck({ artifact, apiBase, compact = false }: { artifact: Ar
               Clear marks
             </button>
           ) : null}
+          {onAnnotate ? (
+            <button type="button" className={`deck-chip persist ${cuesDirty ? "dirty" : ""}`} onClick={savePlaybackState} disabled={!cuesDirty || persisting} title="Save playback cues to artifact metadata">
+              {persisting ? "Saving cues" : cuesDirty ? "Save cues" : "Cues saved"}
+            </button>
+          ) : null}
           <label className="deck-volume">
             Volume
             <input type="range" min={0} max={1} step={0.01} value={volume} onChange={(event) => setVolume(Number(event.target.value))} />
+          </label>
+          <label className="deck-volume zoom">
+            Zoom
+            <input type="range" min={0} max={180} step={1} value={zoom} onChange={(event) => setZoom(Number(event.target.value))} />
           </label>
           <label className="deck-volume rate">
             Rate
@@ -240,6 +316,201 @@ export function TinyWave({ artifact, apiBase }: { artifact: ArtifactRecord; apiB
       peaks={peaks.data?.peaks ?? placeholderPeaks(artifact.artifact_id, 18)}
       loading={peaks.isLoading}
     />
+  );
+}
+
+function WaveSurferWave({
+  media,
+  fileUrl,
+  peaks,
+  loading,
+  duration,
+  progress,
+  loopActive,
+  loopRegion,
+  markers,
+  zoom,
+  onSeek,
+  onTimeUpdate,
+  onLoopRegionChange,
+}: {
+  media: HTMLAudioElement | null;
+  fileUrl: string;
+  peaks: number[];
+  loading?: boolean;
+  duration: number;
+  progress: number;
+  loopActive?: boolean;
+  loopRegion: PlaybackLoopRegion | null;
+  markers: number[];
+  zoom: number;
+  onSeek: (fraction: number) => void;
+  onTimeUpdate: (time: number) => void;
+  onLoopRegionChange: (region: PlaybackLoopRegion) => void;
+}) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const waveRef = useRef<WaveSurfer | null>(null);
+  const regionsRef = useRef<RegionsPlugin | null>(null);
+  const waveCleanupRef = useRef<(() => void) | null>(null);
+  const syncingRegionRef = useRef(false);
+  const loopActiveRef = useRef(loopActive);
+  const loopRegionRef = useRef(loopRegion);
+  const safeDuration = Math.max(0, duration);
+
+  useEffect(() => {
+    loopActiveRef.current = loopActive;
+    loopRegionRef.current = loopRegion;
+  }, [loopActive, loopRegion]);
+
+  useEffect(() => {
+    if (!containerRef.current || !media || !safeDuration) return;
+    let cancelled = false;
+    waveCleanupRef.current?.();
+    waveCleanupRef.current = null;
+
+    void Promise.all([
+      import("wavesurfer.js"),
+      import("wavesurfer.js/dist/plugins/regions.js"),
+      import("wavesurfer.js/dist/plugins/zoom.js"),
+    ]).then(([waveModule, regionsModule, zoomModule]) => {
+      if (cancelled || !containerRef.current) return;
+      const regions = regionsModule.default.create();
+      const wave = waveModule.default.create({
+        container: containerRef.current,
+        media,
+        url: fileUrl,
+        peaks: [peaks],
+        duration: safeDuration,
+        height: 96,
+        normalize: true,
+        minPxPerSec: 0,
+        cursorWidth: 2,
+        cursorColor: "rgba(45, 51, 52, 0.75)",
+        waveColor: ["rgba(143, 91, 210, 0.72)", "rgba(85, 198, 199, 0.62)", "rgba(243, 168, 60, 0.54)"],
+        progressColor: ["rgba(234, 74, 162, 0.78)", "rgba(201, 238, 72, 0.62)", "rgba(65, 108, 199, 0.72)"],
+        barWidth: 2,
+        barGap: 1,
+        barRadius: 2,
+        dragToSeek: true,
+        plugins: [
+          regions,
+          zoomModule.default.create({
+            maxZoom: 180,
+            scale: 0.35,
+            deltaThreshold: 8,
+          }),
+        ],
+      });
+      waveRef.current = wave;
+      regionsRef.current = regions;
+
+      const offTime = wave.on("timeupdate", onTimeUpdate);
+      const offInteraction = wave.on("interaction", (time) => onTimeUpdate(time));
+      const offError = wave.on("error", () => {});
+      const offCreated = regions.on("region-created", (region) => {
+        if (syncingRegionRef.current) return;
+        for (const item of regions.getRegions()) {
+          if (item.id !== region.id) item.remove();
+        }
+        onLoopRegionChange(clampLoopRegion(region.start, region.end, safeDuration));
+      });
+      const offUpdated = regions.on("region-updated", (region) => {
+        if (syncingRegionRef.current) return;
+        onLoopRegionChange(clampLoopRegion(region.start, region.end, safeDuration));
+      });
+      const disableDragSelection = regions.enableDragSelection(
+        {
+          color: "rgba(85, 198, 199, 0.24)",
+          drag: true,
+          resize: true,
+          minLength: 0.05,
+        },
+        5,
+      );
+      syncingRegionRef.current = true;
+      if (loopActiveRef.current && loopRegionRef.current) {
+        addWaveRegion(regions, loopRegionRef.current, safeDuration);
+      }
+      queueMicrotask(() => {
+        syncingRegionRef.current = false;
+      });
+
+      waveCleanupRef.current = () => {
+        offTime();
+        offInteraction();
+        offError();
+        offCreated();
+        offUpdated();
+        disableDragSelection();
+        wave.destroy();
+        waveRef.current = null;
+        regionsRef.current = null;
+      };
+    }).catch(() => {});
+
+    return () => {
+      cancelled = true;
+      waveCleanupRef.current?.();
+      waveCleanupRef.current = null;
+    };
+  }, [fileUrl, media, onLoopRegionChange, onTimeUpdate, peaks, safeDuration]);
+
+  useEffect(() => {
+    const wave = waveRef.current;
+    if (!wave || !duration) return;
+    try {
+      wave.setOptions({ peaks: [peaks], duration });
+    } catch {
+      // The plain bar fallback still reflects peaks if WaveSurfer cannot re-render this browser's media.
+    }
+  }, [duration, peaks]);
+
+  useEffect(() => {
+    const wave = waveRef.current;
+    if (!wave) return;
+    try {
+      wave.zoom(zoom);
+    } catch {
+      // Zoom is unavailable until WaveSurfer has decoded or accepted precomputed peaks.
+    }
+  }, [zoom]);
+
+  useEffect(() => {
+    const regions = regionsRef.current;
+    if (!regions || !safeDuration) return;
+    syncingRegionRef.current = true;
+    regions.clearRegions();
+    if (loopActive && loopRegion) {
+      addWaveRegion(regions, loopRegion, safeDuration);
+    }
+    queueMicrotask(() => {
+      syncingRegionRef.current = false;
+    });
+  }, [loopActive, loopRegion, safeDuration]);
+
+  return (
+    <div
+      className={`wave-surfer-stage ${loading ? "loading" : ""}`}
+      role="slider"
+      aria-label="Audio position"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(clamp(progress, 0, 1) * 100)}
+      tabIndex={0}
+      onKeyDown={(event) => {
+        if (event.key === "ArrowLeft") onSeek(progress - 0.04);
+        if (event.key === "ArrowRight") onSeek(progress + 0.04);
+        if (event.key === "Home") onSeek(0);
+        if (event.key === "End") onSeek(1);
+      }}
+    >
+      <div ref={containerRef} className="wave-surfer-canvas" />
+      <div className="surfer-marker-layer" aria-hidden="true">
+        {markers.map((marker, index) => (
+          <i key={`${marker}-${index}`} className="wave-marker" style={{ left: `${clamp(marker, 0, 1) * 100}%` }} />
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -339,7 +610,7 @@ function placeholderPeaks(seed: string, count: number) {
   });
 }
 
-export function clampLoopRegion(start: number, end: number, duration: number): LoopRegion {
+export function clampLoopRegion(start: number, end: number, duration: number): PlaybackLoopRegion {
   const boundedDuration = Math.max(0, duration);
   if (!boundedDuration) return { start: 0, end: 0 };
   const safeStart = clamp(Number.isFinite(start) ? start : 0, 0, boundedDuration);
@@ -350,13 +621,26 @@ export function clampLoopRegion(start: number, end: number, duration: number): L
   return { start: Math.max(0, boundedDuration - 0.5), end: boundedDuration };
 }
 
-export function formatLoopRegion(region: LoopRegion) {
+export function formatLoopRegion(region: PlaybackLoopRegion) {
   return `${formatPlaybackTime(region.start)}-${formatPlaybackTime(region.end)}`;
 }
 
-export function nudgeLoopRegion(region: LoopRegion, edge: "start" | "end", deltaSeconds: number, duration: number): LoopRegion {
+export function nudgeLoopRegion(region: PlaybackLoopRegion, edge: "start" | "end", deltaSeconds: number, duration: number): PlaybackLoopRegion {
   if (edge === "start") return clampLoopRegion(region.start + deltaSeconds, region.end, duration);
   return clampLoopRegion(region.start, region.end + deltaSeconds, duration);
+}
+
+function addWaveRegion(regions: RegionsPlugin, region: PlaybackLoopRegion, duration: number): Region {
+  const next = clampLoopRegion(region.start, region.end, duration);
+  return regions.addRegion({
+    id: "active-loop-region",
+    start: next.start,
+    end: next.end,
+    color: "rgba(85, 198, 199, 0.24)",
+    drag: true,
+    resize: true,
+    minLength: 0.05,
+  });
 }
 
 export function addPlaybackMarker(markers: readonly PlaybackMarker[], currentTime: number, duration: number, limit = 8): PlaybackMarker[] {

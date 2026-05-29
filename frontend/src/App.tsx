@@ -110,7 +110,7 @@ import {
   type RecipeField,
   type RecipeValue,
 } from "./recipeFormModel";
-import { artifactRecoveryPayload, recoverableArchiveArtifacts } from "./sessionRecovery";
+import { archivableSessionArtifacts, artifactArchivePayload, artifactRecoveryPayload, recoverableArchiveArtifacts } from "./sessionRecovery";
 import { summarizeSessionWorkspace, workspaceFocus, workspacePulseRows, type WorkspaceFocus, type WorkspacePulseRow } from "./sessionWorkspace";
 import { useBenchStore } from "./store";
 import type {
@@ -1121,6 +1121,21 @@ export function App() {
     },
   });
 
+  const archiveArtifact = useMutation({
+    mutationFn: ({ artifact, source }: { artifact: ArtifactRecord; source: string }) =>
+      api.annotateArtifact(
+        artifact.artifact_id,
+        artifactArchivePayload({
+          artifact,
+          source,
+        }),
+      ),
+    onSuccess: async (artifact) => {
+      if (selectedArtifactId === artifact.artifact_id) selectArtifact(null);
+      await invalidate();
+    },
+  });
+
   const cancelJobMutation = useMutation({
     mutationFn: (jobId: string) => api.cancelJob(jobId),
     onSuccess: invalidate,
@@ -1388,7 +1403,7 @@ export function App() {
           />
         </aside>
 
-        <section className="operator-surface">
+        <section className={`operator-surface ${selectedArtifact ? "has-selection" : "idle"}`}>
           <div className="surface-head">
             <div>
               <span className="eyebrow">Listening Bench</span>
@@ -1405,9 +1420,13 @@ export function App() {
             compare={compare}
             apiBase={apiBase}
             annotating={annotateArtifact.isPending}
+            activeSessionId={activeSessionId}
+            archivingArtifactId={archiveArtifact.isPending ? archiveArtifact.variables?.artifact.artifact_id ?? null : null}
             onAnnotate={(artifactId, payload) => annotateArtifact.mutate({ artifactId, payload })}
             onCompare={setCompare}
             onReplayRecipe={(recipeId) => replayRecipeMutation.mutate(recipeId)}
+            onForkRecipe={setForkTarget}
+            onArchiveArtifact={(artifact) => archiveArtifact.mutate({ artifact, source: "specimen" })}
             onSelectArtifact={selectArtifact}
             onUseAsDonor={useArtifactAsDonor}
             onUseInRecipe={useBundleInRecipe}
@@ -1652,12 +1671,15 @@ export function App() {
             jobs={allJobs}
             selectedId={selectedArtifact?.artifact_id ?? null}
             apiBase={apiBase}
+            activeSessionId={activeSessionId}
+            archivingArtifactId={archiveArtifact.isPending ? archiveArtifact.variables?.artifact.artifact_id ?? null : null}
             onSelect={selectArtifact}
             onInspectFamily={setInspectedFamilyId}
             onCompare={setCompare}
             onAnnotate={(artifactId, payload) => annotateArtifact.mutate({ artifactId, payload })}
             onReplayRecipe={(recipeId) => replayRecipeMutation.mutate(recipeId)}
             onForkRecipe={setForkTarget}
+            onArchiveArtifact={(artifact) => archiveArtifact.mutate({ artifact, source: "family_detail" })}
             onCancelJob={(job) => cancelJobMutation.mutate(job.job_id)}
             onRetryJob={(job) => retryJobMutation.mutate(job.job_id)}
           />
@@ -1676,10 +1698,12 @@ export function App() {
             creatingSession={createSession.isPending}
             archivingSession={archiveSession.isPending}
             recoveringArtifactId={recoverArtifact.isPending ? recoverArtifact.variables?.artifact_id ?? null : null}
+            archivingArtifactId={archiveArtifact.isPending ? archiveArtifact.variables?.artifact.artifact_id ?? null : null}
             onSelect={selectArtifact}
             onStartSession={() => createSession.mutate()}
             onArchiveSession={() => activeSession && archiveSession.mutate(activeSession)}
             onRecoverArtifact={(artifact) => recoverArtifact.mutate(artifact)}
+            onArchiveArtifact={(artifact) => archiveArtifact.mutate({ artifact, source: "session_tray" })}
             onCancelJob={(job) => cancelJobMutation.mutate(job.job_id)}
             onRetryJob={(job) => retryJobMutation.mutate(job.job_id)}
           />
@@ -1921,9 +1945,13 @@ function Specimen({
   compare,
   apiBase,
   annotating,
+  activeSessionId,
+  archivingArtifactId,
   onAnnotate,
   onCompare,
   onReplayRecipe,
+  onForkRecipe,
+  onArchiveArtifact,
   onSelectArtifact,
   onUseAsDonor,
   onUseInRecipe,
@@ -1938,9 +1966,13 @@ function Specimen({
   compare: CompareSlots;
   apiBase: string;
   annotating: boolean;
+  activeSessionId: string | null;
+  archivingArtifactId: string | null;
   onAnnotate: (artifactId: string, payload: ArtifactAnnotationPayload) => void;
   onCompare: (slot: "a" | "b", artifactId: string | null) => void;
   onReplayRecipe: (recipeId: string) => void;
+  onForkRecipe: (recipe: Recipe) => void;
+  onArchiveArtifact: (artifact: ArtifactRecord) => void;
   onSelectArtifact: (artifactId: string | null) => void;
   onUseAsDonor: (artifactId: string) => void;
   onUseInRecipe: (fieldKey: string, path: string, mode: string) => void;
@@ -1959,11 +1991,13 @@ function Specimen({
   const sourceArtifacts = artifact.source_artifact_ids
     .map((artifactId) => artifacts.find((item) => item.artifact_id === artifactId))
     .filter((item): item is ArtifactRecord => Boolean(item));
+  const artifactRecipe = artifact.recipe_id ? jobs.find((job) => job.recipe.recipe_id === artifact.recipe_id)?.recipe ?? null : null;
+  const canArchiveArtifact = Boolean(activeSessionId && artifact.session_id === activeSessionId);
   return (
     <div className="specimen">
-      <div className="wave-bus">
+      <div className={`wave-bus ${waveBusStateClass({ artifact, sources: sourceArtifacts, jobs, families, compare })}`}>
         {artifact.kind === "audio" ? (
-          <AudioDeck artifact={artifact} apiBase={apiBase} />
+          <AudioDeck artifact={artifact} apiBase={apiBase} onAnnotate={onAnnotate} persisting={annotating} />
         ) : artifact.kind === "latent" ? (
           <LatentField artifact={artifact} />
         ) : (
@@ -2018,6 +2052,7 @@ function Specimen({
           </button>
           <button
             type="button"
+            aria-label="Replay recipe"
             disabled={!artifact.recipe_id}
             onClick={() => {
               if (artifact.recipe_id) onReplayRecipe(artifact.recipe_id);
@@ -2025,6 +2060,26 @@ function Specimen({
             title="Replay recipe"
           >
             <Repeat size={17} />
+          </button>
+          <button
+            type="button"
+            aria-label="Fork recipe"
+            disabled={!artifactRecipe}
+            onClick={() => {
+              if (artifactRecipe) onForkRecipe(artifactRecipe);
+            }}
+            title="Fork recipe"
+          >
+            <GitFork size={17} />
+          </button>
+          <button
+            type="button"
+            aria-label="Archive artifact"
+            disabled={!canArchiveArtifact || archivingArtifactId === artifact.artifact_id}
+            onClick={() => onArchiveArtifact(artifact)}
+            title="Archive artifact"
+          >
+            <Archive size={17} />
           </button>
           <a className="icon-link" href={fileUrl} download title="Download artifact">
             <Download size={17} />
@@ -2232,10 +2287,12 @@ function SessionTray({
   creatingSession,
   archivingSession,
   recoveringArtifactId,
+  archivingArtifactId,
   onSelect,
   onStartSession,
   onArchiveSession,
   onRecoverArtifact,
+  onArchiveArtifact,
   onCancelJob,
   onRetryJob,
 }: {
@@ -2253,10 +2310,12 @@ function SessionTray({
   creatingSession: boolean;
   archivingSession: boolean;
   recoveringArtifactId: string | null;
+  archivingArtifactId: string | null;
   onSelect: (artifactId: string | null) => void;
   onStartSession: () => void;
   onArchiveSession: () => void;
   onRecoverArtifact: (artifact: ArtifactRecord) => void;
+  onArchiveArtifact: (artifact: ArtifactRecord) => void;
 } & JobActionHandlers) {
   const [artifactFilters, setArtifactFilters] = useState<ArtifactFilterState>(emptyArtifactFilters);
   const filterContext = useMemo(() => ({ jobs: [...jobs, ...archivedJobs], families }), [jobs, archivedJobs, families]);
@@ -2270,6 +2329,10 @@ function SessionTray({
   const archiveArtifactRows = sortNewest(filteredArchiveArtifacts).slice(0, 10);
   const archiveJobRows = filterActive ? [] : sortNewestJobs(archivedJobs).slice(0, 10);
   const activeJobs = runningJobs.slice(0, 3);
+  const archivableIds = useMemo(
+    () => new Set(archivableSessionArtifacts(sessionArtifactRows, activeSessionId).map((artifact) => artifact.artifact_id)),
+    [sessionArtifactRows, activeSessionId],
+  );
   const recoverableIds = useMemo(
     () => new Set(recoverableArchiveArtifacts(archiveArtifactRows, activeSessionId).map((artifact) => artifact.artifact_id)),
     [archiveArtifactRows, activeSessionId],
@@ -2338,6 +2401,15 @@ function SessionTray({
                 selected={artifact.artifact_id === selectedId}
                 apiBase={apiBase}
                 onSelect={onSelect}
+                action={
+                  archivableIds.has(artifact.artifact_id)
+                    ? {
+                        label: archivingArtifactId === artifact.artifact_id ? "Archiving" : "Archive",
+                        disabled: Boolean(archivingArtifactId),
+                        onAction: () => onArchiveArtifact(artifact),
+                      }
+                    : undefined
+                }
               />
             ))}
           </div>
@@ -2725,6 +2797,31 @@ function LineageThread({
       ))}
     </div>
   );
+}
+
+function waveBusStateClass({
+  artifact,
+  sources,
+  jobs,
+  families,
+  compare,
+}: {
+  artifact: ArtifactRecord;
+  sources: ArtifactRecord[];
+  jobs: JobRecord[];
+  families: ResultFamily[];
+  compare: CompareSlots;
+}) {
+  const hasJob = jobs.some((job) => job.recipe.recipe_id === artifact.recipe_id || job.artifact_ids.includes(artifact.artifact_id));
+  const hasFamily = families.some((family) => family.artifactIds.includes(artifact.artifact_id) || family.recipeId === artifact.recipe_id);
+  const hasCompare = compare.a === artifact.artifact_id || compare.b === artifact.artifact_id;
+  return [
+    sources.length ? "has-sources" : "root-source",
+    hasJob ? "has-job" : "no-job",
+    hasFamily ? "has-family" : "no-family",
+    hasCompare ? "has-compare" : "no-compare",
+    sources.length || hasJob || hasFamily || hasCompare ? "has-flow" : "quiet-flow",
+  ].join(" ");
 }
 
 function OperatorPresetRack({

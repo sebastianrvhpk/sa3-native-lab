@@ -79,6 +79,24 @@ def test_artifact_annotation_can_recover_into_active_session(tmp_path):
     assert store.get_artifact(record.artifact_id).session_id == target_session.session_id
 
 
+def test_artifact_annotation_can_clear_session_for_archive(tmp_path):
+    store = ArtifactStore(tmp_path)
+    source_session = store.create_session(SessionCreateRequest(name="current"))
+    record = store.store_latent_array(np.zeros((3, 2), dtype=np.float32), latent_rate=1.5, session_id=source_session.session_id)
+
+    archived = store.annotate_artifact(
+        record.artifact_id,
+        ArtifactAnnotationRequest(
+            session_id=None,
+            metadata={"archived_from_session_id": source_session.session_id},
+        ),
+    )
+
+    assert archived.session_id is None
+    assert archived.metadata["archived_from_session_id"] == source_session.session_id
+    assert store.get_artifact(record.artifact_id).session_id is None
+
+
 def test_artifact_search_filters_annotation_text_and_tags(tmp_path):
     store = ArtifactStore(tmp_path)
     first = store.store_latent_array(np.ones((4, 3), dtype=np.float32), latent_rate=2.0)

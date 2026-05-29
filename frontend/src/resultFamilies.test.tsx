@@ -57,12 +57,15 @@ describe("FamilyDetailPanel", () => {
           jobs={[]}
           selectedId={null}
           apiBase="http://api.test"
+          activeSessionId="sess_1"
+          archivingArtifactId={null}
           onSelect={onSelect}
           onInspectFamily={onInspectFamily}
           onCompare={onCompare}
           onAnnotate={onAnnotate}
           onReplayRecipe={vi.fn()}
           onForkRecipe={onForkRecipe}
+          onArchiveArtifact={vi.fn()}
         />
       </QueryClientProvider>,
     );

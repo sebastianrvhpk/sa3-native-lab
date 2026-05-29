@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { artifactRecoveryPayload, recoverableArchiveArtifacts } from "./sessionRecovery";
+import { archivableSessionArtifacts, artifactArchivePayload, artifactRecoveryPayload, recoverableArchiveArtifacts } from "./sessionRecovery";
 import type { ArtifactRecord } from "./types";
 
 describe("session recovery", () => {
@@ -29,6 +29,31 @@ describe("session recovery", () => {
 
     expect(recoverableArchiveArtifacts([archived, current], "sess_active").map((item) => item.artifact_id)).toEqual(["art_old"]);
     expect(recoverableArchiveArtifacts([archived], null)).toEqual([]);
+  });
+
+  it("builds an annotation payload that clears an artifact from the active session", () => {
+    expect(
+      artifactArchivePayload({
+        artifact: artifact("art_current", "sess_active"),
+        source: "specimen",
+        now: "2026-05-28T20:30:00.000Z",
+      }),
+    ).toEqual({
+      session_id: null,
+      metadata: {
+        archived_from_session_id: "sess_active",
+        archived_artifact_at: "2026-05-28T20:30:00.000Z",
+        archive_source: "specimen",
+      },
+    });
+  });
+
+  it("only offers artifact archive actions for active-session artifacts", () => {
+    const archived = artifact("art_old", "sess_old");
+    const current = artifact("art_current", "sess_active");
+
+    expect(archivableSessionArtifacts([archived, current], "sess_active").map((item) => item.artifact_id)).toEqual(["art_current"]);
+    expect(archivableSessionArtifacts([current], null)).toEqual([]);
   });
 });
 

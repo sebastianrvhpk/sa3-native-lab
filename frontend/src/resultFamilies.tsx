@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Gauge, GitFork, Repeat, Search } from "lucide-react";
+import { Archive, Gauge, GitFork, Repeat, Search } from "lucide-react";
 
 import { ArtifactIcon } from "./artifactDisplay";
 import type { ArtifactAnnotationPayload } from "./api";
@@ -89,12 +89,15 @@ export function FamilyDetailPanel({
   jobs,
   selectedId,
   apiBase,
+  activeSessionId,
+  archivingArtifactId,
   onSelect,
   onInspectFamily,
   onCompare,
   onAnnotate,
   onReplayRecipe,
   onForkRecipe,
+  onArchiveArtifact,
   onCancelJob,
   onRetryJob,
 }: {
@@ -104,12 +107,15 @@ export function FamilyDetailPanel({
   jobs: JobRecord[];
   selectedId: string | null;
   apiBase: string;
+  activeSessionId: string | null;
+  archivingArtifactId: string | null;
   onSelect: (artifactId: string | null) => void;
   onInspectFamily?: (familyId: string) => void;
   onCompare: (slot: "a" | "b", artifactId: string | null) => void;
   onAnnotate: (artifactId: string, payload: ArtifactAnnotationPayload) => void;
   onReplayRecipe: (recipeId: string) => void;
   onForkRecipe: (recipe: Recipe) => void;
+  onArchiveArtifact: (artifact: ArtifactRecord) => void;
 } & JobActionHandlers) {
   if (!family) {
     return <div className="quiet-panel compact">No family selected</div>;
@@ -186,6 +192,15 @@ export function FamilyDetailPanel({
                   <div className="family-artifact-actions">
                     <button type="button" onClick={() => onCompare("a", artifact.artifact_id)}>A</button>
                     <button type="button" onClick={() => onCompare("b", artifact.artifact_id)}>B</button>
+                    <button
+                      type="button"
+                      aria-label="Archive artifact"
+                      disabled={!activeSessionId || artifact.session_id !== activeSessionId || archivingArtifactId === artifact.artifact_id}
+                      onClick={() => onArchiveArtifact(artifact)}
+                      title="Archive artifact"
+                    >
+                      <Archive size={13} />
+                    </button>
                   </div>
                   <ListeningDecisionControls artifact={artifact} source="family_detail" compact onDecide={onAnnotate} />
                 </>

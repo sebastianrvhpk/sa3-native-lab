@@ -18,6 +18,7 @@
     "react": "^19.0.0",
     "react-aria-components": "^1.17.0",
     "react-dom": "^19.0.0",
+    "wavesurfer.js": "^7.12.7",
     "zod": "^4.4.3",
     "zustand": "^5.0.0"
   },

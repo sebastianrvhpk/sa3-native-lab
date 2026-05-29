@@ -216,4 +216,17 @@ describe("createApi", () => {
       metadata: { recovered_from_session_id: "sess_old" },
     });
   });
+
+  it("archives an active artifact by sending an explicit null session id", async () => {
+    await expect(
+      createApi("http://api.test").annotateArtifact("art_archive", {
+        session_id: null,
+        metadata: { archived_from_session_id: "sess_1" },
+      }),
+    ).resolves.toMatchObject({
+      artifact_id: "art_archive",
+      session_id: null,
+      metadata: { archived_from_session_id: "sess_1" },
+    });
+  });
 });

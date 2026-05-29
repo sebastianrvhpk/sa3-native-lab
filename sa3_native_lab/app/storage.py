@@ -530,13 +530,14 @@ class ArtifactStore:
         metadata = dict(record.metadata)
         if request.metadata:
             metadata.update(request.metadata)
+        session_id = request.session_id if "session_id" in request.model_fields_set else record.session_id
         updated = record.model_copy(
             update={
                 "label": request.label if request.label is not None else record.label,
                 "notes": request.notes if request.notes is not None else record.notes,
                 "tags": request.tags if request.tags is not None else record.tags,
                 "metadata": metadata,
-                "session_id": request.session_id if request.session_id is not None else record.session_id,
+                "session_id": session_id,
             }
         )
         self.write_artifact(updated)
