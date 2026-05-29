@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Activity,
@@ -54,7 +54,6 @@ import { ArtifactBadge, ArtifactIcon } from "./artifactDisplay";
 import { artifactMeta, artifactName, artifactShape, formatDuration, sortNewest, sortNewestJobs } from "./artifactUtils";
 import { auditionCursor, auditionKeyboardTarget, auditionPositionLabel, auditionSequenceOptions, auditionStackRows, type AuditionSequenceMode } from "./auditionStack";
 import { AudioDeck, TinyWave } from "./audioDeck";
-import { BundleField, type PromptCandidateGenerationRequest } from "./bundleInspector";
 import { createControlPlaneClient, DEFAULT_CONTROL_PLANE_URL, type ResultFamily, type WorkbenchState } from "./controlPlane";
 import { ForkRecipePanel } from "./forkRecipePanel";
 import { JobProgress, type JobActionHandlers } from "./jobProgress";
@@ -125,6 +124,9 @@ import type {
   Recipe,
   SessionRecord,
 } from "./types";
+import type { PromptCandidateGenerationRequest } from "./bundleInspector";
+
+const BundleField = lazy(() => import("./bundleInspector").then((module) => ({ default: module.BundleField })));
 
 const audioModels = [
   { value: "medium", label: "medium", decoder: "same-l" },
@@ -1948,6 +1950,21 @@ function ArtifactStack({
   );
 }
 
+function BundleFieldFallback({ artifact }: { artifact: ArtifactRecord }) {
+  const cells = artifact.recipe_id ? 36 : 18;
+  return (
+    <div className="bundle-field bundle-field-loading" aria-label={`Experiment bundle ${artifactName(artifact)}`}>
+      {Array.from({ length: cells }, (_, index) => (
+        <span key={index} />
+      ))}
+      <div className="bundle-readout">
+        <strong>{artifact.file?.filename ?? artifactName(artifact)}</strong>
+        <span>Loading bundle inspector</span>
+      </div>
+    </div>
+  );
+}
+
 function Specimen({
   artifact,
   artifacts,
@@ -2012,19 +2029,21 @@ function Specimen({
         ) : artifact.kind === "latent" ? (
           <LatentField artifact={artifact} />
         ) : (
-          <BundleField
-            artifact={artifact}
-            artifacts={artifacts}
-            apiBase={apiBase}
-            onCompare={onCompare}
-            onSelectArtifact={onSelectArtifact}
-            onUseAsDonor={onUseAsDonor}
-            onUseInRecipe={onUseInRecipe}
-            onUsePrompt={onUsePrompt}
-            onGeneratePrompt={onGeneratePrompt}
-            onAnnotate={onAnnotate}
-            getArtifactPath={getArtifactPath}
-          />
+          <Suspense fallback={<BundleFieldFallback artifact={artifact} />}>
+            <BundleField
+              artifact={artifact}
+              artifacts={artifacts}
+              apiBase={apiBase}
+              onCompare={onCompare}
+              onSelectArtifact={onSelectArtifact}
+              onUseAsDonor={onUseAsDonor}
+              onUseInRecipe={onUseInRecipe}
+              onUsePrompt={onUsePrompt}
+              onGeneratePrompt={onGeneratePrompt}
+              onAnnotate={onAnnotate}
+              getArtifactPath={getArtifactPath}
+            />
+          </Suspense>
         )}
         <LineageThread
           artifact={artifact}
