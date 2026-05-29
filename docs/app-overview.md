@@ -207,6 +207,13 @@ sweep runs that share a vector bundle or prompt.
   it creates a deterministic latent fixture, submits `latent.cyclic_roll`
   through the same job/runtime/storage path as the app, and verifies a persisted
   output artifact without gated model downloads.
+- `npm run smoke:playback-session --prefix frontend` is the committed browser
+  smoke for the listening/session loop: Playwright writes marker notes and loop
+  cues, verifies lineage-backed wave-bus state, checks archive/recovery, and
+  captures desktop/mobile screenshots.
+- `uv run sa3-lab smoke-mlx-medium --json` verifies the slow Medium/MLX path is
+  gated by default; `SA3_RUN_MLX_SMOKE=1 uv run sa3-lab smoke-mlx-medium --run
+  --duration 1 --steps 2 --json` submits the authenticated real model smoke.
 - Long jobs such as LoRA training are submitted as background jobs and can be
   cancelled from the app, although true resumable multi-step workflows are still
   future work.

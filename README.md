@@ -135,6 +135,31 @@ That command creates a tiny `.npy` latent, submits `latent.cyclic_roll` through
 the same `JobManager` and runtime dispatcher used by the app, and confirms a
 new artifact lands in `.sa3_lab/smoke-fixture`.
 
+Run the committed browser playback/session smoke when changing listening,
+archive, session, or responsive layout behavior:
+
+```bash
+npm run smoke:playback-session --prefix frontend
+```
+
+That script creates a temporary audio/session fixture, launches the API and Vite
+on disposable ports, drives the app with Playwright, saves marker notes and loop
+cues through the API, checks archive/recovery, and captures desktop/mobile
+screenshots. Set `SA3_SMOKE_SCREENSHOT_DIR=/path/to/screens` to choose where
+screenshots land.
+
+The real Medium/MLX smoke is intentionally slow and gated so normal checks do
+not download or sample a gated model by accident:
+
+```bash
+uv run sa3-lab smoke-mlx-medium --json
+SA3_RUN_MLX_SMOKE=1 uv run sa3-lab smoke-mlx-medium --run --duration 1 --steps 2 --json
+```
+
+The first command should return `status: gated`. The second submits a real
+`generate.text_to_audio` Medium recipe through the app runtime after Hugging
+Face auth and the MLX wrapper/weights are ready.
+
 Start the API daemon and Vite workbench together:
 
 ```bash

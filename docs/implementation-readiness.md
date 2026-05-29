@@ -59,11 +59,18 @@ field, an artifact relationship, or an explicitly documented future capability.
 - The listening bench now has a tested recent-take playlist cursor and local
   waveform markers in addition to playback, loop, A/B, and decision controls.
   The player now supports marker deletion, relabeling after deletion, loop-edge
-  nudging, keyboardable audition navigation, persisted playback annotations,
-  WaveSurfer zoom, and draggable loop regions.
+  nudging, marker notes, sequence-aware audition navigation, persisted playback
+  annotations, WaveSurfer zoom, and draggable loop regions. The committed
+  `npm run smoke:playback-session --prefix frontend` script verifies these
+  interactions in a real browser with temporary API and Vite servers.
 - `sa3-lab smoke-fixture` now provides a cheap local runtime smoke by creating a
   deterministic latent fixture, submitting a real background job through
   `RuntimeDispatcher`, and verifying that a latent output artifact persists.
+- `sa3-lab smoke-mlx-medium` now provides an explicitly gated slow path for
+  authenticated Medium/MLX runtime verification. Without `--run` or
+  `SA3_RUN_MLX_SMOKE=1`, it returns `status: gated`; with the gate enabled it
+  submits a real `generate.text_to_audio` Medium recipe through the same job
+  manager/runtime/storage path as the app.
 - Prompt search is no longer only a script adapter: it has a native recipe path,
   scorer metadata, generated takes, lineage, descriptor deltas, listening
   decisions, decision summaries, and first-pass prompt memory.

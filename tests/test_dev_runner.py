@@ -13,9 +13,11 @@ from sa3_native_lab.app.dev import (
     build_control_plane_env,
     build_frontend_command,
     build_frontend_env,
+    build_mlx_medium_smoke_recipe,
     format_check,
     huggingface_auth_check,
     is_port_open,
+    mlx_medium_smoke_is_enabled,
     resolve_repo_root,
     run_fixture_smoke,
 )
@@ -100,6 +102,34 @@ def test_huggingface_auth_check_accepts_environment_token(monkeypatch):
     assert check.name == "hf-auth"
     assert check.status == "ok"
     assert "environment" in check.message
+
+
+def test_mlx_medium_smoke_requires_explicit_gate():
+    assert mlx_medium_smoke_is_enabled(False, {}) is False
+    assert mlx_medium_smoke_is_enabled(False, {"SA3_RUN_MLX_SMOKE": "0"}) is False
+    assert mlx_medium_smoke_is_enabled(False, {"SA3_RUN_MLX_SMOKE": "1"}) is True
+    assert mlx_medium_smoke_is_enabled(True, {}) is True
+
+
+def test_mlx_medium_smoke_recipe_uses_medium_mlx_defaults():
+    recipe = build_mlx_medium_smoke_recipe(
+        session_id="session_1",
+        prompt="tiny pulse",
+        duration_seconds=1.25,
+        steps=3,
+        seed=99,
+    )
+
+    assert recipe.operator.value == "generate.text_to_audio"
+    assert recipe.backend.value == "mlx"
+    assert recipe.model == "medium"
+    assert recipe.seed == 99
+    assert recipe.session_id == "session_1"
+    assert recipe.params["prompt"] == "tiny pulse"
+    assert recipe.params["duration_seconds"] == 1.25
+    assert recipe.params["steps"] == 3
+    assert recipe.params["decoder"] == "same-l"
+    assert recipe.params["metadata"]["smoke"] == "mlx-medium"
 
 
 def test_dev_runner_repo_root_defaults_to_project_root():

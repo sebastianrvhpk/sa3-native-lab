@@ -62,6 +62,24 @@ class SmokeFixtureResult:
     metrics: dict[str, Any]
 
 
+@dataclass(frozen=True)
+class MlxMediumSmokeResult:
+    status: str
+    message: str
+    artifact_root: str
+    session_id: str
+    job_id: str
+    output_artifact_id: str | None
+    phase: str | None
+    progress: float
+    elapsed_seconds: float
+    prompt: str
+    duration_seconds: float
+    steps: int
+    seed: int | None
+    metrics: dict[str, Any]
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="sa3-lab", description="SA3 Native Lab local app tools.")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -85,6 +103,22 @@ def main() -> None:
     smoke.add_argument("--timeout", type=float, default=15.0, help="Seconds to wait for the fixture job.")
     smoke.add_argument("--json", action="store_true", help="Print the smoke result as JSON.")
 
+    mlx_smoke = subparsers.add_parser(
+        "smoke-mlx-medium",
+        help="Run an explicitly gated, authenticated Medium/MLX text-to-audio smoke.",
+    )
+    _add_common_args(mlx_smoke)
+    mlx_smoke.add_argument("--run", action="store_true", help="Actually run the slow model smoke.")
+    mlx_smoke.add_argument("--timeout", type=float, default=600.0, help="Seconds to wait for the MLX job.")
+    mlx_smoke.add_argument("--prompt", default="warm analog pulse, soft tape texture", help="Prompt for the tiny smoke take.")
+    mlx_smoke.add_argument("--duration", type=float, default=1.0, help="Output duration in seconds.")
+    mlx_smoke.add_argument("--steps", type=int, default=2, help="Sampling steps for the smoke take.")
+    mlx_smoke.add_argument("--seed", type=int, default=17, help="Deterministic seed for the smoke take.")
+    mlx_smoke.add_argument("--cfg-scale", type=float, default=1.0)
+    mlx_smoke.add_argument("--apg-scale", type=float, default=1.0)
+    mlx_smoke.add_argument("--decoder", default="same-l", choices=["same-s", "same-l"])
+    mlx_smoke.add_argument("--json", action="store_true", help="Print the smoke result as JSON.")
+
     args = parser.parse_args()
     if args.command == "doctor":
         raise SystemExit(run_doctor(args))
@@ -92,6 +126,8 @@ def main() -> None:
         raise SystemExit(run_dev(args))
     if args.command == "smoke-fixture":
         raise SystemExit(run_fixture_smoke_command(args))
+    if args.command == "smoke-mlx-medium":
+        raise SystemExit(run_mlx_medium_smoke_command(args))
     parser.error(f"unknown command: {args.command}")
 
 
@@ -249,6 +285,206 @@ def run_fixture_smoke_command(args: argparse.Namespace) -> int:
         print(f"  output:        {result.output_artifact_id}")
         print(f"  elapsed:       {result.elapsed_seconds:.2f}s")
     return 0 if result.status == "ok" else 1
+
+
+def run_mlx_medium_smoke_command(args: argparse.Namespace) -> int:
+    root = resolve_repo_root(args.repo_root)
+    artifact_root = args.artifact_root or root / ".sa3_lab" / "smoke-mlx-medium"
+    if not mlx_medium_smoke_is_enabled(args.run):
+        message = (
+            "MLX Medium smoke is intentionally slow and gated. Re-run with `--run` "
+            "or set SA3_RUN_MLX_SMOKE=1 after HF auth and MLX weights are ready."
+        )
+        if args.json:
+            print(json.dumps({"status": "gated", "message": message, "artifact_root": str(artifact_root)}, indent=2))
+        else:
+            print(message)
+        return 2
+
+    try:
+        result = run_mlx_medium_smoke(
+            root=root,
+            artifact_root=artifact_root,
+            timeout=args.timeout,
+            prompt=args.prompt,
+            duration_seconds=args.duration,
+            steps=args.steps,
+            seed=args.seed,
+            cfg_scale=args.cfg_scale,
+            apg_scale=args.apg_scale,
+            decoder=args.decoder,
+        )
+    except Exception as exc:
+        if args.json:
+            print(
+                json.dumps(
+                    {
+                        "status": "failed",
+                        "message": str(exc),
+                        "artifact_root": str(artifact_root),
+                    },
+                    indent=2,
+                )
+            )
+        else:
+            print(f"SA3 Native Lab MLX Medium smoke failed: {exc}")
+        return 1
+
+    payload = asdict(result)
+    if args.json:
+        print(json.dumps(payload, indent=2))
+    else:
+        print("SA3 Native Lab MLX Medium smoke")
+        print(f"[{result.status}] {result.message}")
+        print(f"  artifact root: {result.artifact_root}")
+        print(f"  session:       {result.session_id}")
+        print(f"  job:           {result.job_id}")
+        print(f"  output:        {result.output_artifact_id}")
+        print(f"  prompt:        {result.prompt}")
+        print(f"  duration:      {result.duration_seconds:.2f}s")
+        print(f"  steps:         {result.steps}")
+        print(f"  elapsed:       {result.elapsed_seconds:.2f}s")
+    return 0 if result.status == "ok" else 1
+
+
+def mlx_medium_smoke_is_enabled(run_requested: bool, env: Mapping[str, str] | None = None) -> bool:
+    values = os.environ if env is None else env
+    return run_requested or values.get("SA3_RUN_MLX_SMOKE") == "1"
+
+
+def build_mlx_medium_smoke_recipe(
+    *,
+    session_id: str,
+    prompt: str,
+    duration_seconds: float = 1.0,
+    steps: int = 2,
+    seed: int | None = 17,
+    cfg_scale: float = 1.0,
+    apg_scale: float = 1.0,
+    decoder: str = "same-l",
+) -> Recipe:
+    return Recipe(
+        operator=OperatorName.TEXT_TO_AUDIO,
+        backend=BackendName.MLX,
+        params={
+            "prompt": prompt,
+            "duration_seconds": duration_seconds,
+            "steps": steps,
+            "cfg_scale": cfg_scale,
+            "apg_scale": apg_scale,
+            "model": "medium",
+            "decoder": decoder,
+            "metadata": {
+                "smoke": "mlx-medium",
+                "model": "medium",
+                "decoder": decoder,
+                "duration_seconds": duration_seconds,
+                "steps": steps,
+            },
+        },
+        model="medium",
+        seed=seed,
+        notes="Explicitly gated authenticated MLX Medium smoke.",
+        session_id=session_id,
+    )
+
+
+def run_mlx_medium_smoke(
+    *,
+    root: Path,
+    artifact_root: Path,
+    timeout: float = 600.0,
+    prompt: str = "warm analog pulse, soft tape texture",
+    duration_seconds: float = 1.0,
+    steps: int = 2,
+    seed: int | None = 17,
+    cfg_scale: float = 1.0,
+    apg_scale: float = 1.0,
+    decoder: str = "same-l",
+) -> MlxMediumSmokeResult:
+    from .jobs import JobManager
+    from .runtime import RuntimeDispatcher
+    from .storage import ArtifactStore
+
+    start = time.monotonic()
+    store = ArtifactStore(artifact_root)
+    runtime = RuntimeDispatcher(store, repo_root=root)
+    mlx_status = next((status for status in runtime.backend_statuses() if status.backend == BackendName.MLX), None)
+    if mlx_status is None or not mlx_status.available:
+        raise RuntimeError((mlx_status.message if mlx_status else None) or "MLX backend is not available")
+
+    auth = huggingface_auth_check()
+    weights_ready = bool((mlx_status.details or {}).get("weights_dir_exists"))
+    if auth.status != "ok" and not weights_ready:
+        raise RuntimeError(
+            "Hugging Face auth is required for the Medium smoke unless MLX weights are already present. "
+            "Run `hf auth login` or set HF_TOKEN."
+        )
+
+    jobs = JobManager(artifact_root / "jobs", max_workers=1)
+    try:
+        session = store.create_session(
+            SessionCreateRequest(
+                name="MLX Medium smoke",
+                notes="Slow gated smoke that runs a real Medium text-to-audio job through the app runtime.",
+                metadata={
+                    "smoke": "mlx-medium",
+                    "authenticated": auth.status == "ok",
+                    "weights_ready": weights_ready,
+                },
+            )
+        )
+        recipe = build_mlx_medium_smoke_recipe(
+            session_id=session.session_id,
+            prompt=prompt,
+            duration_seconds=duration_seconds,
+            steps=steps,
+            seed=seed,
+            cfg_scale=cfg_scale,
+            apg_scale=apg_scale,
+            decoder=decoder,
+        )
+        job = jobs.submit(recipe, runtime.handler_for_recipe(recipe))
+        final = wait_for_job_terminal(jobs, job.job_id, timeout=timeout)
+        elapsed = time.monotonic() - start
+        if final.status != JobStatus.SUCCEEDED:
+            detail = final.error or final.message or final.status.value
+            raise RuntimeError(f"MLX Medium smoke ended with {final.status.value}: {detail}")
+        if not final.artifact_ids:
+            raise RuntimeError("MLX Medium smoke succeeded without output artifacts")
+        output = store.get_artifact(final.artifact_ids[0])
+        if output.kind != ArtifactKind.AUDIO:
+            raise RuntimeError(f"MLX Medium smoke produced non-audio artifact: {output.artifact_id}")
+        output = store.annotate_artifact(
+            output.artifact_id,
+            ArtifactAnnotationRequest(
+                session_id=session.session_id,
+                metadata={
+                    "smoke": "mlx-medium",
+                    "smoke_job_id": final.job_id,
+                    "authenticated": auth.status == "ok",
+                    "weights_ready": weights_ready,
+                },
+            ),
+        )
+        return MlxMediumSmokeResult(
+            status="ok",
+            message="MLX Medium text-to-audio job completed and persisted an audio artifact",
+            artifact_root=str(artifact_root),
+            session_id=session.session_id,
+            job_id=final.job_id,
+            output_artifact_id=output.artifact_id,
+            phase=final.phase,
+            progress=final.progress,
+            elapsed_seconds=elapsed,
+            prompt=prompt,
+            duration_seconds=duration_seconds,
+            steps=steps,
+            seed=seed,
+            metrics=final.metrics,
+        )
+    finally:
+        jobs.shutdown(wait=True)
 
 
 def run_fixture_smoke(*, root: Path, artifact_root: Path, timeout: float = 15.0) -> SmokeFixtureResult:
