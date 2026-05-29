@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { addPlaybackMarker, clampLoopRegion, formatLoopRegion, markerFractions, nudgeLoopRegion, removePlaybackMarker } from "./audioDeck";
+import { addPlaybackMarker, clampLoopRegion, formatLoopRegion, markerFractions, nudgeLoopRegion, removePlaybackMarker, updatePlaybackMarkerNote } from "./audioDeck";
 
 describe("audio deck loop regions", () => {
   it("keeps loop regions inside the loaded duration", () => {
@@ -30,6 +30,15 @@ describe("audio deck loop regions", () => {
     const updated = removePlaybackMarker(markers, markers[1].id);
 
     expect(updated.map((marker) => `${marker.label}:${marker.time}`)).toEqual(["M1:1", "M2:5"]);
+  });
+
+  it("stores short listening notes on local playback markers", () => {
+    const [marker] = addPlaybackMarker([], 1, 10);
+    const updated = updatePlaybackMarkerNote([marker], marker.id, "  brittle seam  ");
+    const cleared = updatePlaybackMarkerNote(updated, marker.id, " ");
+
+    expect(updated[0]).toMatchObject({ note: "brittle seam" });
+    expect(cleared[0].note).toBeUndefined();
   });
 
   it("nudges editable loop region edges inside duration", () => {

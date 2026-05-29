@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { auditionCursor, auditionKeyboardTarget, auditionPositionLabel, auditionStackRows } from "./auditionStack";
+import { auditionCursor, auditionKeyboardTarget, auditionPlaylist, auditionPositionLabel, auditionStackRows } from "./auditionStack";
 
 describe("audition stack", () => {
   it("summarizes newest session audio artifacts for listening", () => {
@@ -79,16 +79,52 @@ describe("audition stack", () => {
     expect(auditionKeyboardTarget(artifacts, "art_mid", "End")?.artifact_id).toBe("art_old");
     expect(auditionKeyboardTarget(artifacts, null, "Enter")?.artifact_id).toBe("art_new");
   });
+
+  it("can sequence session audition by open decisions and keepers", () => {
+    const artifacts = [
+      audio("art_rejected", "2026-05-28T12:00:00.000Z", { listening_decision: "rejected" }),
+      audio("art_open", "2026-05-28T11:00:00.000Z"),
+      audio("art_keeper", "2026-05-28T10:00:00.000Z", { listening_decision: "keeper" }),
+    ];
+
+    expect(auditionPlaylist(artifacts, 12, "open").map((artifact) => artifact.artifact_id)).toEqual([
+      "art_open",
+      "art_rejected",
+      "art_keeper",
+    ]);
+    expect(auditionPlaylist(artifacts, 12, "keepers").map((artifact) => artifact.artifact_id)).toEqual([
+      "art_keeper",
+      "art_open",
+      "art_rejected",
+    ]);
+    expect(auditionStackRows(artifacts, 12, "keepers")[0].sequence).toBe("keeper");
+  });
+
+  it("can sequence around the selected artifact lineage neighborhood", () => {
+    const source = audio("art_source", "2026-05-28T09:00:00.000Z");
+    const selected = audio("art_selected", "2026-05-28T10:00:00.000Z", {}, ["art_source"]);
+    const child = audio("art_child", "2026-05-28T11:00:00.000Z", {}, ["art_selected"]);
+    const unrelated = audio("art_unrelated", "2026-05-28T12:00:00.000Z");
+    const artifacts = [unrelated, child, selected, source];
+
+    expect(auditionPlaylist(artifacts, 12, "lineage", "art_selected").map((artifact) => artifact.artifact_id)).toEqual([
+      "art_selected",
+      "art_source",
+      "art_child",
+      "art_unrelated",
+    ]);
+    expect(auditionPositionLabel(artifacts, "art_selected", 12, "lineage")).toBe("1/4");
+  });
 });
 
-function audio(artifactId: string, createdAt: string) {
+function audio(artifactId: string, createdAt: string, metadata: Record<string, unknown> = {}, sourceArtifactIds: string[] = []) {
   return {
     artifact_id: artifactId,
     kind: "audio",
     path: `/tmp/${artifactId}.wav`,
-    metadata: {},
+    metadata,
     tags: [],
-    source_artifact_ids: [],
+    source_artifact_ids: sourceArtifactIds,
     created_at: createdAt,
   } as never;
 }

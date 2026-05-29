@@ -52,7 +52,7 @@ import {
 } from "./artifactFilters";
 import { ArtifactBadge, ArtifactIcon } from "./artifactDisplay";
 import { artifactMeta, artifactName, artifactShape, formatDuration, sortNewest, sortNewestJobs } from "./artifactUtils";
-import { auditionCursor, auditionKeyboardTarget, auditionPositionLabel, auditionStackRows } from "./auditionStack";
+import { auditionCursor, auditionKeyboardTarget, auditionPositionLabel, auditionSequenceOptions, auditionStackRows, type AuditionSequenceMode } from "./auditionStack";
 import { AudioDeck, TinyWave } from "./audioDeck";
 import { BundleField, type PromptCandidateGenerationRequest } from "./bundleInspector";
 import { createControlPlaneClient, DEFAULT_CONTROL_PLANE_URL, type ResultFamily, type WorkbenchState } from "./controlPlane";
@@ -1823,12 +1823,13 @@ function AuditionStackPanel({
   onSelect: (artifactId: string) => void;
   onCompare: (slot: "a" | "b", artifactId: string | null) => void;
 }) {
-  const rows = auditionStackRows(artifacts, 8);
-  const cursor = auditionCursor(artifacts, selectedId, 8);
-  const position = auditionPositionLabel(artifacts, selectedId, 8);
+  const [sequenceMode, setSequenceMode] = useState<AuditionSequenceMode>("recent");
+  const rows = auditionStackRows(artifacts, 8, sequenceMode, selectedId);
+  const cursor = auditionCursor(artifacts, selectedId, 8, sequenceMode);
+  const position = auditionPositionLabel(artifacts, selectedId, 8, sequenceMode);
   if (!rows.length) return null;
   const moveSelection = (key: string) => {
-    const target = auditionKeyboardTarget(artifacts, selectedId, key, 8);
+    const target = auditionKeyboardTarget(artifacts, selectedId, key, 8, sequenceMode);
     if (!target) return false;
     onSelect(target.artifact_id);
     return true;
@@ -1848,6 +1849,16 @@ function AuditionStackPanel({
           <span className="eyebrow">Audition</span>
           <strong>{position}</strong>
         </div>
+        <label className="audition-sequence">
+          <span>Sequence</span>
+          <select value={sequenceMode} onChange={(event) => setSequenceMode(event.target.value as AuditionSequenceMode)}>
+            {auditionSequenceOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
         <div className="audition-transport">
           <button type="button" disabled={!cursor.previous} onClick={() => cursor.previous && onSelect(cursor.previous.artifact_id)} title="Previous take">
             <SkipBack size={14} />
@@ -1870,7 +1881,7 @@ function AuditionStackPanel({
           <article key={row.artifactId} className={selectedId === row.artifactId ? "selected" : ""}>
             <button type="button" onClick={() => onSelect(row.artifactId)} title={row.prompt ?? row.label}>
               <span>{row.label}</span>
-              <small>{row.origin} · {row.meta}</small>
+              <small>{row.sequence} · {row.origin} · {row.meta}</small>
               <ListeningDecisionBadge artifact={artifact} />
             </button>
             <AudioDeck artifact={artifact} apiBase={apiBase} compact />

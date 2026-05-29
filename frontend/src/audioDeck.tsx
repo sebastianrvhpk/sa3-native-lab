@@ -262,6 +262,14 @@ export function AudioDeck({
               <button type="button" className="deck-chip marker-chip" onClick={() => seekTo(displayDuration ? marker.time / displayDuration : 0)} title={`Jump to ${formatPlaybackTime(marker.time)}`}>
                 {marker.label} {formatPlaybackTime(marker.time)}
               </button>
+              <input
+                aria-label={`Note for ${marker.label}`}
+                className="deck-marker-note"
+                value={marker.note ?? ""}
+                placeholder="note"
+                maxLength={160}
+                onChange={(event) => setMarkers((current) => updatePlaybackMarkerNote(current, marker.id, event.target.value))}
+              />
               <button type="button" className="deck-marker-delete" aria-label={`Delete ${marker.label}`} onClick={() => setMarkers((current) => removePlaybackMarker(current, marker.id))}>
                 <X size={12} />
               </button>
@@ -666,6 +674,20 @@ export function removePlaybackMarker(markers: readonly PlaybackMarker[], markerI
   return markers
     .filter((marker) => marker.id !== markerId)
     .map((marker, index) => ({ ...marker, label: `M${index + 1}` }));
+}
+
+export function updatePlaybackMarkerNote(markers: readonly PlaybackMarker[], markerId: string, note: string): PlaybackMarker[] {
+  const trimmed = note.trim();
+  return markers.map((marker) => {
+    if (marker.id !== markerId) return marker;
+    const next = { ...marker };
+    if (trimmed) {
+      next.note = trimmed.slice(0, 160);
+    } else {
+      delete next.note;
+    }
+    return next;
+  });
 }
 
 export function markerFractions(markers: readonly PlaybackMarker[], duration: number): number[] {

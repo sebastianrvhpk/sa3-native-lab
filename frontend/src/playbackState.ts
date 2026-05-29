@@ -10,6 +10,7 @@ export interface PlaybackMarker {
   id: string;
   time: number;
   label: string;
+  note?: string;
 }
 
 export interface ArtifactPlaybackState {
@@ -81,6 +82,7 @@ function playbackMarkerFromMetadata(value: unknown, index: number): PlaybackMark
       id: stringValue(item.id) || `marker-${index + 1}-${Math.round(time * 1000)}`,
       time,
       label: stringValue(item.label) || `M${index + 1}`,
+      note: markerNoteValue(item.note ?? item.notes),
     },
     index,
   );
@@ -102,6 +104,7 @@ function normalizePlaybackMarker(marker: PlaybackMarker, index: number): Playbac
     id: marker.id || `marker-${index + 1}-${Math.round(time * 1000)}`,
     label: marker.label || `M${index + 1}`,
     time: roundTime(time),
+    ...(markerNoteValue(marker.note) ? { note: markerNoteValue(marker.note) } : {}),
   };
 }
 
@@ -122,6 +125,11 @@ function arrayValue(value: unknown): unknown[] {
 
 function stringValue(value: unknown): string | null {
   return typeof value === "string" ? value : null;
+}
+
+function markerNoteValue(value: unknown): string | undefined {
+  const note = typeof value === "string" ? value.trim() : "";
+  return note ? note.slice(0, 160) : undefined;
 }
 
 function numberValue(value: unknown): number | null {

@@ -9,7 +9,7 @@ describe("artifact playback state", () => {
       artifact({
         playback_state: {
           markers: [
-            { id: "intro", label: "Intro", time: 1.23456 },
+            { id: "intro", label: "Intro", time: 1.23456, note: "first useful transient" },
             { time: "3.5" },
             { time: -1 },
           ],
@@ -21,7 +21,7 @@ describe("artifact playback state", () => {
     );
 
     expect(state.markers).toEqual([
-      { id: "intro", label: "Intro", time: 1.235 },
+      { id: "intro", label: "Intro", note: "first useful transient", time: 1.235 },
       { id: "marker-2-3500", label: "M2", time: 3.5 },
     ]);
     expect(state.loopRegion).toEqual({ start: 0.5, end: 2.125 });
@@ -31,7 +31,7 @@ describe("artifact playback state", () => {
   it("builds an annotation payload for persisted listening cues", () => {
     expect(
       playbackAnnotationPayload({
-        markers: [{ id: "marker-1", label: "M1", time: 2.25 }],
+        markers: [{ id: "marker-1", label: "M1", note: "loop seam gets brittle", time: 2.25 }],
         loopRegion: { start: 1, end: 4 },
         source: "audio_deck",
         now: "2026-05-28T22:01:00.000Z",
@@ -39,7 +39,7 @@ describe("artifact playback state", () => {
     ).toEqual({
       metadata: {
         playback_state: {
-          markers: [{ id: "marker-1", label: "M1", time: 2.25 }],
+          markers: [{ id: "marker-1", label: "M1", note: "loop seam gets brittle", time: 2.25 }],
           loop_region: { start: 1, end: 4 },
           updated_at: "2026-05-28T22:01:00.000Z",
           source: "audio_deck",
@@ -51,8 +51,8 @@ describe("artifact playback state", () => {
   });
 
   it("creates a stable signature for local dirty-state checks", () => {
-    expect(playbackStateSignature([{ id: "m", label: "M", time: 2.12345 }], { start: 1, end: 2 })).toBe(
-      '{"markers":[{"id":"m","label":"M","time":2.123}],"loopRegion":{"start":1,"end":2}}',
+    expect(playbackStateSignature([{ id: "m", label: "M", note: "check tail", time: 2.12345 }], { start: 1, end: 2 })).toBe(
+      '{"markers":[{"id":"m","label":"M","time":2.123,"note":"check tail"}],"loopRegion":{"start":1,"end":2}}',
     );
   });
 });
