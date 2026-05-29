@@ -487,7 +487,7 @@ export function bundleDomainSections(summary: Record<string, unknown> | undefine
         ["primary", basename(tensorFiles[0])],
       ],
       files: tensorFiles,
-      items: tensorFiles.slice(0, 5).map((file) => ({ label: basename(file), meta: "conditioning tensor" })),
+      items: tensorFiles.slice(0, 5).map((file) => ({ label: basename(file) ?? file, meta: "conditioning tensor" })),
     });
   }
   const training = objectValue(summary.training);
@@ -500,7 +500,7 @@ export function bundleDomainSections(summary: Record<string, unknown> | undefine
         ["primary", basename(checkpointFiles[0])],
       ],
       files: checkpointFiles,
-      items: checkpointFiles.slice(0, 5).map((file) => ({ label: basename(file), meta: checkpointKind(file) })),
+      items: checkpointFiles.slice(0, 5).map((file) => ({ label: basename(file) ?? file, meta: checkpointKind(file) })),
     });
   }
   return sections.filter((section) => section.rows.some(([, value]) => value !== undefined && value !== null && value !== "") || section.files?.length);
