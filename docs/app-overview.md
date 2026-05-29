@@ -81,7 +81,11 @@ fresh session starts cleanly. Result families can be inspected as a compact
 branch surface with source references, per-artifact playback, A/B assignment,
 sortable alpha-sweep promotion controls, job progress, replay, and fork
 actions. Forked recipes show changed fields and per-parameter reset controls
-before submit.
+before submit. The session tray also shows a data-backed workspace pulse for
+active takes, result families, job activity, listening decisions, and archive
+volume. Its focus hint points to real next actions such as monitoring a run,
+opening the next undecided take, recovering an archived artifact, or archiving a
+crowded session.
 
 Read-heavy workbench state can now be loaded through the TypeScript tRPC
 control plane. This is enabled by setting `VITE_SA3_CONTROL_PLANE_URL` or by
@@ -171,6 +175,11 @@ the descriptor shifts for keepers so prompt-search listening notes become
 research feedback rather than isolated labels. Prompt-search panels also show
 first-pass prompt memory across generated takes, grouping keeper/maybe/reject
 decisions by prompt text across runs.
+Bundle domain cards now promote parsed sweep outputs, memory hits, vector NPZ
+contents, soft-prompt tensors, and training checkpoints into native rows and
+item lists. They are still inspectors rather than full editors, but they make
+script-backed modes legible without pretending unavailable routing or graph
+behavior exists.
 Jobs and artifacts with the same recipe are grouped as result families in the
 right rail with run metrics when the job reports them; prompt-candidate
 generations are grouped under their search bundle instead of scattering as
@@ -229,8 +238,10 @@ Confirmed in the current codebase:
   artifact vitals, embedded bundle-audio playback and promotion, prompt-search
   scorer controls, candidate-family bundle reading, durable listening decision
   controls, prompt-search decision summaries, prompt memory, Operator Studio
-  local presets with visible diffs, bundle workflow signals, sibling sweep
-  comparison, data-backed specimen lineage threads, and the first native
+  local presets with visible diffs, bundle workflow signals, richer domain
+  cards for memory/sweep/vector/soft-prompt/training bundles, sibling sweep
+  comparison, data-backed specimen lineage threads, a session workspace pulse,
+  playback playlist navigation, local waveform markers, and the first native
   geometry-audit recipe.
 - Core app surfaces are now split into focused modules for audio playback,
   artifact display, job progress, result families, recipe forks, and bundle
@@ -249,8 +260,8 @@ Still partial:
 - Type-specific readers for profiles, vectors, soft prompts, training outputs,
   sweeps, memory collections, and geometry audits now receive backend-parsed
   summaries, first-pass metrics/plot discovery, embedded image/audio rendering,
-  and recipe-input actions, but still need richer domain-specific controls for
-  each bundle type.
+  recipe-input actions, workflow hints, and first-pass domain item cards, but
+  still need richer domain-specific controls for each bundle type.
 - Memory-query bundles expose preview rows and donor/A-B reuse actions, but
   still need richer dataset browsing, preview audio for non-local children, and
   style-reference promotion.

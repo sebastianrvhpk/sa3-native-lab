@@ -52,9 +52,17 @@ field, an artifact relationship, or an explicitly documented future capability.
   output artifacts when artifact IDs arrive, reducing the silent-run feel.
 - The specimen lineage thread is data-backed by artifacts, jobs, result
   families, and A/B assignment instead of decorative routing.
+- The session tray now has a tested workspace pulse for active takes, families,
+  job state, listening decisions, archive volume, and the next real focus
+  action.
+- The listening bench now has a tested recent-take playlist cursor and local
+  waveform markers in addition to playback, loop, A/B, and decision controls.
 - Prompt search is no longer only a script adapter: it has a native recipe path,
   scorer metadata, generated takes, lineage, descriptor deltas, listening
   decisions, decision summaries, and first-pass prompt memory.
+- Bundle inspectors now surface parsed sweep outputs, memory hits, vector NPZs,
+  soft-prompt tensors, and training checkpoints as domain cards instead of only
+  file inventory.
 - Operator Studio has browser-local presets with visible diff and revert
   behavior.
 - The docs already cover app overview, Colab capability mapping, triage status,
@@ -114,7 +122,9 @@ that every experiment can be trusted, replayed, compared, and reused.
 - Python API/runtime behavior around artifacts, jobs, recipes, operators,
   app contracts, and selected experiment adapters.
 - Frontend logic for bundle inspection, prompt-search helper behavior, decision
-  summaries, prompt memory, operator presets, and form/data transforms.
+  summaries, prompt memory, operator presets, playback markers, audition
+  cursors, session workspace summaries, operator-spec coverage, and form/data
+  transforms.
 - Control-plane procedures for workbench reads, job lifecycle, recipe actions,
   artifact inspection, family loading, archive actions, and event bridging.
 - Build-level confidence for the React/Vite frontend.
@@ -129,9 +139,12 @@ that every experiment can be trusted, replayed, compared, and reused.
   but full mode coverage is still incomplete.
 - Component tests for all mode-specific recipe panels once they become more
   domain-specific.
-- Integration tests for session/archive/replay flows as first-class workflows.
-- Playback-specific tests for loop regions, A/B behavior, generated-take
-  promotion, and session playlists.
+- Browser/integration tests for session/archive/replay flows as first-class
+  workflows. The derived workspace model has unit coverage; the live UI flow
+  still needs more end-to-end coverage.
+- Playback-specific browser tests for loop regions, A/B behavior,
+  generated-take promotion, marker editing, and session playlists. The core
+  marker and playlist helpers now have unit coverage.
 - Performance or runtime-cost tests for Medium/MPS prompt-search scorer paths.
 - Tests that protect against token or credential leakage in logs, command
   context, and error tails.
@@ -169,8 +182,9 @@ that every experiment can be trusted, replayed, compared, and reused.
 - Browser-local presets are useful but not shareable or durable across machines.
 - Job events are much better than silent jobs, but the live source still leans
   on polling underneath the control-plane bridge.
-- The queue/archive/session model is present but not yet the primary creative
-  organization surface.
+- The queue/archive/session model is becoming a primary creative organization
+  surface through the workspace pulse, but archive recovery and long-session
+  cleanup still need deeper end-to-end workflows.
 
 ### Not Bad Code, But Incomplete Architecture
 
@@ -212,7 +226,8 @@ instead of invisible friction.
 ### P1: Session And Archive As Creative Workflow
 
 1. Promote workspace/session/run/family/artifact into the app's default mental
-   model.
+   model. A first data-backed workspace pulse is implemented; the next step is
+   browser-tested recovery and archive flows.
 2. Reduce queue clutter by making active session, archive, generated families,
    and reusable outputs distinct surfaces.
 3. Make "new session", "archive session", "recover result", "fork run", and
@@ -226,7 +241,9 @@ instead of invisible friction.
 
 1. Upgrade playback into a creative comparison instrument.
 2. Add richer loop, marker, region, A/B, take-stack, and session-playlist
-   behaviors where they directly improve listening decisions.
+   behaviors where they directly improve listening decisions. Local markers and
+   playlist cursor helpers are implemented; editable marker/region workflows
+   remain next.
 3. Consider wavesurfer.js when regions, zoom, marker editing, and waveform
    interaction become central enough to justify the dependency.
 4. Tie listening decisions back into prompt-search, sweeps, memory reuse, and
@@ -235,7 +252,9 @@ instead of invisible friction.
 ### P1: Bundle And Mode-Specific Inspectors
 
 1. Add richer inspectors for vectors, profiles, soft prompts, prompt search,
-   sweeps, memory collections, geometry reports, and training outputs.
+   sweeps, memory collections, geometry reports, and training outputs. First
+   domain item cards exist for sweeps, memory, vectors, soft prompts, and
+   training bundles.
 2. Keep zip/file inventory available, but do not make it the primary interface
    when a domain-specific summary exists.
 3. Add prompt-search layer/alpha comparisons and Medium/MPS scorer-setting
