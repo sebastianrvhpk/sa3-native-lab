@@ -4048,6 +4048,130 @@ audio {
   gap: 7px;
 }
 
+.workspace-pulse {
+  display: grid;
+  gap: 8px;
+}
+
+.workspace-focus {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  gap: 6px 10px;
+  align-items: center;
+  padding: 9px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgb(255 255 255 / 0.64), rgb(85 198 199 / 0.13)),
+    rgb(255 255 255 / 0.34);
+}
+
+.workspace-focus.listen {
+  background:
+    linear-gradient(135deg, rgb(85 198 199 / 0.16), rgb(201 238 72 / 0.18), rgb(255 255 255 / 0.56)),
+    rgb(255 255 255 / 0.34);
+}
+
+.workspace-focus.run {
+  background:
+    linear-gradient(135deg, rgb(143 91 210 / 0.15), rgb(234 74 162 / 0.12), rgb(255 255 255 / 0.58)),
+    rgb(255 255 255 / 0.34);
+}
+
+.workspace-focus.archive,
+.workspace-focus.recover {
+  background:
+    linear-gradient(135deg, rgb(243 168 60 / 0.18), rgb(85 198 199 / 0.12), rgb(255 255 255 / 0.58)),
+    rgb(255 255 255 / 0.34);
+}
+
+.workspace-focus span {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.workspace-focus strong {
+  min-width: 0;
+  color: var(--ink);
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+}
+
+.workspace-focus button {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 7px;
+  box-shadow: none;
+  background: rgb(255 255 255 / 0.62);
+}
+
+.workspace-pulse-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.workspace-pulse-node {
+  min-width: 0;
+  min-height: 72px;
+  display: grid;
+  align-content: start;
+  gap: 3px;
+  padding: 8px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 0.4);
+}
+
+.workspace-pulse-node.take {
+  background: linear-gradient(145deg, rgb(85 198 199 / 0.18), rgb(143 91 210 / 0.12), rgb(255 255 255 / 0.48));
+}
+
+.workspace-pulse-node.family {
+  background: linear-gradient(145deg, rgb(201 238 72 / 0.2), rgb(85 198 199 / 0.12), rgb(255 255 255 / 0.5));
+}
+
+.workspace-pulse-node.job {
+  background: linear-gradient(145deg, rgb(143 91 210 / 0.17), rgb(234 74 162 / 0.12), rgb(255 255 255 / 0.48));
+}
+
+.workspace-pulse-node.decision {
+  background: linear-gradient(145deg, rgb(243 168 60 / 0.18), rgb(201 238 72 / 0.14), rgb(255 255 255 / 0.5));
+}
+
+.workspace-pulse-node.archive {
+  background: linear-gradient(145deg, rgb(45 51 52 / 0.08), rgb(85 198 199 / 0.1), rgb(255 255 255 / 0.54));
+}
+
+.workspace-pulse-node span,
+.workspace-pulse-node small {
+  min-width: 0;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.workspace-pulse-node span {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+}
+
+.workspace-pulse-node strong {
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.workspace-pulse-node small {
+  font-size: 0.64rem;
+  line-height: 1.25;
+}
+
 .session-block {
   display: grid;
   gap: 8px;
@@ -4598,5 +4722,16 @@ audio {
 
   .recipe-fields {
     grid-template-columns: 1fr;
+  }
+
+  .workspace-focus,
+  .workspace-pulse-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .workspace-focus button {
+    grid-row: auto;
+    grid-column: auto;
+    justify-self: start;
   }
 }

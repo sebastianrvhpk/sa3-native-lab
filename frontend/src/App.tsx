@@ -110,6 +110,7 @@ import {
   type RecipeField,
   type RecipeValue,
 } from "./recipeFormModel";
+import { summarizeSessionWorkspace, workspaceFocus, workspacePulseRows, type WorkspaceFocus, type WorkspacePulseRow } from "./sessionWorkspace";
 import { useBenchStore } from "./store";
 import type {
   ArtifactRecord,
@@ -2225,6 +2226,12 @@ function SessionTray({
   const archiveArtifactRows = sortNewest(filteredArchiveArtifacts).slice(0, 10);
   const archiveJobRows = filterActive ? [] : sortNewestJobs(archivedJobs).slice(0, 10);
   const activeJobs = runningJobs.slice(0, 3);
+  const workspaceSummary = useMemo(
+    () => summarizeSessionWorkspace({ artifacts, archivedArtifacts, jobs, archivedJobs, families, runningJobs, selectedId }),
+    [artifacts, archivedArtifacts, jobs, archivedJobs, families, runningJobs, selectedId],
+  );
+  const pulseRows = useMemo(() => workspacePulseRows(workspaceSummary), [workspaceSummary]);
+  const focus = useMemo(() => workspaceFocus(workspaceSummary), [workspaceSummary]);
 
   return (
     <div className="session-tray">
@@ -2250,6 +2257,8 @@ function SessionTray({
           </button>
         </div>
       </div>
+
+      <WorkspacePulse rows={pulseRows} focus={focus} onSelect={onSelect} />
 
       {activeJobs.length ? (
         <div className="session-block">
@@ -2327,6 +2336,42 @@ function SessionTray({
         </div>
       </details>
     </div>
+  );
+}
+
+function WorkspacePulse({
+  rows,
+  focus,
+  onSelect,
+}: {
+  rows: WorkspacePulseRow[];
+  focus: WorkspaceFocus;
+  onSelect: (artifactId: string | null) => void;
+}) {
+  return (
+    <section className="workspace-pulse" aria-label="Workspace pulse">
+      <div className={`workspace-focus ${focus.tone}`}>
+        <span>
+          <CircleDot size={14} />
+          {focus.label}
+        </span>
+        <strong>{focus.detail}</strong>
+        {focus.artifactId ? (
+          <button type="button" onClick={() => onSelect(focus.artifactId ?? null)}>
+            Open
+          </button>
+        ) : null}
+      </div>
+      <div className="workspace-pulse-grid">
+        {rows.map((row) => (
+          <div key={row.key} className={`workspace-pulse-node ${row.tone}`}>
+            <span>{row.label}</span>
+            <strong>{row.value}</strong>
+            <small>{row.detail}</small>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 
