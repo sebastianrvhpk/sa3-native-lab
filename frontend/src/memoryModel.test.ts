@@ -34,8 +34,8 @@ describe("memoryModel", () => {
     }));
 
     expect(actions).toEqual(expect.arrayContaining([
-      expect.objectContaining({ id: "direction_path", label: "Use Direction", mode: "experiment.style_direction.generate" }),
-      expect.objectContaining({ id: "vectors_path", label: "Sweep Vectors", mode: "experiment.alpha_sweep" }),
+      expect.objectContaining({ id: "direction_path", label: "Use direction", mode: "experiment.style_direction.generate" }),
+      expect.objectContaining({ id: "vectors_path", label: "Sweep vectors", mode: "experiment.alpha_sweep" }),
     ]));
   });
 

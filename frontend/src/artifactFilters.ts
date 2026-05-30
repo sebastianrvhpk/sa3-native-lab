@@ -1,10 +1,13 @@
 import type { ResultFamily } from "./controlPlane";
 import { listeningDecision, type ListeningDecision } from "./listeningDecision";
+import { memoryReuseIntentFromArtifact, memoryRoleFromArtifact, type MemoryReuseIntent, type MemoryRole } from "./memoryModel";
 import type { ArtifactKind, ArtifactRecord, JobRecord, OperatorName, Recipe } from "./types";
 
 export type ArtifactDecisionFilter = "all" | ListeningDecision | "undecided";
 export type ArtifactKindFilter = "all" | ArtifactKind;
 export type ArtifactLineageFilter = "all" | "source" | "derived" | "has_sources";
+export type ArtifactMemoryRoleFilter = "all" | MemoryRole;
+export type ArtifactReuseIntentFilter = "all" | MemoryReuseIntent;
 
 export interface ArtifactFilterState {
   query: string;
@@ -15,6 +18,8 @@ export interface ArtifactFilterState {
   operator: string;
   familyId: string;
   lineage: ArtifactLineageFilter;
+  memoryRole: ArtifactMemoryRoleFilter;
+  reuseIntent: ArtifactReuseIntentFilter;
 }
 
 export interface ArtifactFilterOption {
@@ -37,6 +42,8 @@ export const emptyArtifactFilters: ArtifactFilterState = {
   operator: "",
   familyId: "",
   lineage: "all",
+  memoryRole: "all",
+  reuseIntent: "all",
 };
 
 export function artifactFiltersActive(filters: ArtifactFilterState): boolean {
@@ -48,7 +55,9 @@ export function artifactFiltersActive(filters: ArtifactFilterState): boolean {
       || filters.model
       || filters.operator
       || filters.familyId
-      || filters.lineage !== "all",
+      || filters.lineage !== "all"
+      || filters.memoryRole !== "all"
+      || filters.reuseIntent !== "all",
   );
 }
 
@@ -70,6 +79,8 @@ export function filterArtifacts(
     if (filters.operator && artifactOperator(artifact, recipe) !== filters.operator) return false;
     if (filters.familyId && family?.familyId !== filters.familyId) return false;
     if (!artifactLineageMatches(artifact, filters.lineage)) return false;
+    if (filters.memoryRole !== "all" && memoryRoleFromArtifact(artifact) !== filters.memoryRole) return false;
+    if (filters.reuseIntent !== "all" && memoryReuseIntentFromArtifact(artifact) !== filters.reuseIntent) return false;
     if (needle && !artifactSearchText(artifact, recipe, family).includes(needle)) return false;
     return true;
   });
@@ -86,6 +97,8 @@ export function artifactFilterOptions(
   const models = new Map<string, number>();
   const operators = new Map<string, number>();
   const families = new Map<string, { label: string; count: number }>();
+  const memoryRoles = new Map<string, number>();
+  const reuseIntents = new Map<string, number>();
 
   for (const artifact of artifacts) {
     const recipe = index.recipeById.get(artifact.recipe_id ?? "");
@@ -98,6 +111,10 @@ export function artifactFilterOptions(
     if (model) increment(models, model);
     const operator = artifactOperator(artifact, recipe);
     if (operator) increment(operators, operator);
+    const memoryRole = memoryRoleFromArtifact(artifact);
+    if (memoryRole) increment(memoryRoles, memoryRole);
+    const reuseIntent = memoryReuseIntentFromArtifact(artifact);
+    if (reuseIntent) increment(reuseIntents, reuseIntent);
     if (family) {
       const existing = families.get(family.familyId);
       families.set(family.familyId, {
@@ -113,6 +130,8 @@ export function artifactFilterOptions(
     kinds: mapOptions(kinds),
     models: mapOptions(models),
     operators: mapOptions(operators),
+    memoryRoles: mapOptions(memoryRoles),
+    reuseIntents: mapOptions(reuseIntents),
     families: [...families.entries()]
       .map(([value, item]) => ({ value, label: item.label, count: item.count }))
       .sort(compareOptions),
@@ -168,6 +187,8 @@ function artifactSearchText(artifact: ArtifactRecord, recipe: Recipe | undefined
     artifact.file?.filename,
     artifactModel(artifact, recipe),
     artifactOperator(artifact, recipe),
+    memoryRoleFromArtifact(artifact),
+    memoryReuseIntentFromArtifact(artifact)?.replaceAll("_", " "),
     recipe?.backend,
     family?.familyId,
     family ? familyFilterLabel(family) : "",

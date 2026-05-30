@@ -313,11 +313,25 @@ instead of invisible friction.
    where the existing annotation model can persist it.
 5. Inspect is more contextual: sound, gesture, branch, activity, and material
    count details are progressively disclosed instead of primary.
+6. Source and Memory now share a richer product layer: source rows can show
+   current, anchor, source, donor, remembered, imported, take, and bundle roles,
+   and Memory can be filtered by role and reuse intent alongside kind, tags,
+   notes, and listening decision.
+7. The take strip is now a stronger listening queue with keep/maybe/reject,
+   remember, continue, and branch actions beside playback.
+8. Bundle-to-gesture promotion now comes from one shared model so Memory and
+   bundle Inspect expose the same real recipe-field paths.
+9. Gesture orchestration now has a first named hook boundary in
+   `useGestureWorkbench` for active gesture, Tune form state, donor/source
+   reuse, next-action routing, prompt seeding, and bundle reuse.
 
 ### Deferred With Reason
 
-1. P1.8 gesture orchestration extraction is deferred until memory, branch, and
-   next-action semantics settle enough to justify a named hook contract.
+1. P1.8 deeper gesture orchestration extraction is partially complete:
+   `useGestureWorkbench` owns active gesture, Tune form state, donor/source
+   reuse, next-action routing, prompt seeding, and bundle reuse. Submit
+   mutations, archive/recover persistence, and preset persistence remain at
+   the app edge until their contract is clearer.
 2. P1.9 app-native tRPC state is deferred because the frontend can now express
    current sound, gestures, pending takes, branches, and memory without adding a
    new server contract in this pass.
@@ -335,17 +349,18 @@ instead of invisible friction.
 
 ### Next Queue
 
-1. Extract a `useGestureWorkbench` only after one more pass validates action
-   semantics across Memory, Branch, Pending Take, and Tune.
-2. Add component tests for branch-card actions and memory-role/reuse editing
-   once the action vocabulary has settled.
-3. Promote the take strip toward a real listening queue with keep/maybe/reject,
-   remember, branch, and continue-from-selected controls.
-4. Add memory browser filters for role, reuse intent, tags, notes, kind, and
-   decision before considering vector retrieval.
+1. Decide whether submit readiness, active/pending take selection, and landing
+   side effects should join `useGestureWorkbench` or remain app-edge state.
+2. Promote source selection further: current source, remembered material, donor
+   source, and bundle-derived source should become one reusable product surface.
+3. Continue listening review: branch trajectory playback, selected-take
+   favorites, and playlist-level remember/branch/continue shortcuts.
+4. Expand Memory browsing only with stored metadata first: role, reuse intent,
+   tags, notes, kind, decision, and source lineage. Do not add vector retrieval
+   until these semantics are stable.
 5. Continue bundle-to-gesture promotion for profiles, directions, sweeps,
-   memory indexes, and promoted audio only where existing bundle inspectors have
-   real use paths.
+   memory indexes, promoted audio, datasets, soft prompts, and checkpoints only
+   where existing backend use paths exist.
 
 ## Definition Of Done For The Next Implementation Loop
 

@@ -51,6 +51,15 @@ the desired interface grammar:
   legacy result-family contract.
 - `tuneFieldGroups.ts`: product-layer primary/advanced/inspect grouping over
   backend-derived field configs.
+- `sourceModel.ts`: product-facing source, anchor, donor, remembered, imported,
+  take, and bundle roles over stored material.
+- `bundleReuseModel.ts`: shared bundle-to-gesture reuse paths for profiles,
+  directions, sweeps, prompt-search prompts, memory bundles, datasets, soft
+  prompts, and training checkpoints where existing recipe fields support them.
+- `useGestureWorkbench.ts`: named frontend orchestration hook for active
+  gesture, Tune form state, donor/source reuse, next-action routing, prompt
+  seeding, and bundle reuse. App-level submit mutations and persistence side
+  effects still stay in `App.tsx`.
 - `gestureStrip.tsx`, `tuneDrawer.tsx`, `pendingTakesPanel.tsx`: first-pass
   instrument components for choosing the next move, tuning only the active
   gesture, and keeping job state near takes instead of exposing jobs as the

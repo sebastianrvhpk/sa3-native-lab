@@ -456,6 +456,24 @@ label {
   font-size: 0.75rem;
 }
 
+.artifact-row .source-role-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.artifact-row .source-role-strip i {
+  padding: 2px 5px;
+  border: 1px solid var(--hair);
+  border-radius: 999px;
+  color: var(--ink);
+  background: rgb(255 255 255 / 0.5);
+  font-size: 0.58rem;
+  font-style: normal;
+  line-height: 1.1;
+}
+
 .tiny-wave,
 .large-wave {
   display: flex;
@@ -5329,6 +5347,7 @@ audio {
 
 .audition-stack-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
   justify-content: flex-end;
 }
@@ -5343,6 +5362,10 @@ audio {
   background: rgb(255 255 255 / 0.62);
   box-shadow: none;
   font-size: 0.64rem;
+}
+
+.audition-stack .listening-decision-controls {
+  grid-column: 1 / -1;
 }
 
 .artifact-badge.audio {

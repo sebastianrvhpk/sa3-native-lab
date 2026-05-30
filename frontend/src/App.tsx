@@ -66,8 +66,6 @@ import {
   buildLatentDecodePayload,
   buildLatentEncodePayload,
   buildOperatorParams,
-  defaultFieldForm,
-  defaultDecoderForGenerationModel,
   experimentReady,
   fieldKeys,
   fillMissingFieldDefaults,
@@ -78,16 +76,17 @@ import {
   operatorUsesDonor,
   withOperatorSpecFields,
   type GenerationMode,
-  type RecipeValue,
 } from "./recipeFormModel";
 import { artifactArchivePayload, artifactRecoveryPayload } from "./sessionRecovery";
 import { SessionTray } from "./sessionPanel";
+import { buildProductSources, type ProductSource } from "./sourceModel";
 import { SpecCoverage, SpecCoveragePair } from "./specCoverage";
 import { Specimen } from "./specimenPanel";
 import { BackendPills, InlineJobStatus, ReadinessPanel, RunMonitor } from "./statusPanels";
 import { useBenchStore } from "./store";
 import { TuneDrawer } from "./tuneDrawer";
 import { withTuneFieldGroups } from "./tuneFieldGroups";
+import { useGestureWorkbench } from "./useGestureWorkbench";
 import type {
   ArtifactRecord,
   HealthResponse,
@@ -99,8 +98,6 @@ import type {
 } from "./types";
 import type { PromptCandidateGenerationRequest } from "./bundleInspector";
 import {
-  defaultExperimentForm,
-  defaultGenerationForm,
   defaultOperatorForm,
   experimentCatalog,
   experimentModes,
@@ -109,7 +106,6 @@ import {
   generationControlKeys,
   generationModes,
   generationSeedFallback,
-  isExperimentMode,
   isLatentOperatorMode,
   operatorCatalog,
   operatorModes,
@@ -158,18 +154,9 @@ export function App() {
     refetchInterval: 1500,
   });
 
-  const [generationMode, setGenerationMode] = useState<GenerationMode>("generate.text_to_audio");
-  const [generationForm, setGenerationForm] = useState<Record<string, RecipeValue>>(() => defaultGenerationForm("generate.text_to_audio"));
-  const [sameForm, setSameForm] = useState<Record<string, RecipeValue>>(() => defaultFieldForm(sameConfig));
-  const [operator, setOperator] = useState<LatentOperatorMode>("latent.cyclic_roll");
-  const [operatorForm, setOperatorForm] = useState<Record<string, RecipeValue>>(() => defaultOperatorForm("latent.cyclic_roll"));
-  const [activeGestureId, setActiveGestureId] = useState<GestureId>("make");
-  const [donorArtifactId, setDonorArtifactId] = useState("");
   const [operatorPresets, setOperatorPresets] = useState<OperatorPreset[]>(() => loadOperatorPresets());
   const [operatorPresetName, setOperatorPresetName] = useState("");
   const [selectedOperatorPresetId, setSelectedOperatorPresetId] = useState("");
-  const [experimentMode, setExperimentMode] = useState<ExperimentMode>("experiment.audio_style_vectors");
-  const [experimentForm, setExperimentForm] = useState<Record<string, RecipeValue>>(() => defaultExperimentForm("experiment.audio_style_vectors"));
   const [liveJobsById, setLiveJobsById] = useState<Record<string, JobRecord>>({});
   const [forkTarget, setForkTarget] = useState<Recipe | null>(null);
   const [inspectedFamilyId, setInspectedFamilyId] = useState<string | null>(null);
@@ -187,6 +174,53 @@ export function App() {
   const audioArtifacts = allArtifacts.filter((item) => item.kind === "audio");
   const latentArtifacts = allArtifacts.filter((item) => item.kind === "latent");
   const bundleArtifacts = allArtifacts.filter((item) => item.kind === "bundle");
+  const gestureWorkbench = useGestureWorkbench({
+    allArtifacts,
+    selectedArtifact,
+    selectArtifact,
+    setCompare,
+    artifactPathForField,
+  });
+  const {
+    activeGestureId,
+    generationMode,
+    setGenerationMode,
+    generationForm,
+    setGenerationForm,
+    sameForm,
+    setSameForm,
+    operator,
+    setOperator,
+    operatorForm,
+    setOperatorForm,
+    donorArtifactId,
+    setDonorArtifactId,
+    experimentMode,
+    experimentForm,
+    setExperimentForm,
+    selectGesture: selectWorkbenchGesture,
+    selectOperatorMode: selectWorkbenchOperatorMode,
+    selectExperimentMode,
+    setExperimentField,
+    setGenerationField,
+    setSameField,
+    setOperatorField,
+    applyNextAction: applyWorkbenchNextAction,
+    useArtifactAsDonor: useWorkbenchArtifactAsDonor,
+    useBundleInRecipe,
+    usePromptCandidate,
+  } = gestureWorkbench;
+  const sourceRows = useMemo(
+    () =>
+      buildProductSources(visibleArtifacts, {
+        activeSessionId,
+        currentArtifactId: selectedArtifact?.artifact_id ?? null,
+        anchorArtifactId: compare.a,
+        sourceArtifactId: compare.b,
+        donorArtifactId,
+      }),
+    [activeSessionId, compare.a, compare.b, donorArtifactId, selectedArtifact?.artifact_id, visibleArtifacts],
+  );
   const serverJobs = workbenchState?.jobs ?? jobs.data ?? [];
   const allJobs = mergeJobRecords(serverJobs, Object.values(liveJobsById));
   const sessionJobs = workbenchState?.sessionJobs ?? (activeSessionId
@@ -550,26 +584,6 @@ export function App() {
     [latentArtifacts, selectedArtifact],
   );
 
-  const setExperimentField = (key: string, value: RecipeValue) => {
-    setExperimentForm((current) => ({ ...current, [key]: value }));
-  };
-
-  const setGenerationField = (key: string, value: RecipeValue) => {
-    setGenerationForm((current) => {
-      const next = { ...current, [key]: value };
-      if (key === "model") next.decoder = defaultDecoderForGenerationModel(value);
-      return next;
-    });
-  };
-
-  const setSameField = (key: string, value: RecipeValue) => {
-    setSameForm((current) => ({ ...current, [key]: value }));
-  };
-
-  const setOperatorField = (key: string, value: RecipeValue) => {
-    setOperatorForm((current) => ({ ...current, [key]: value }));
-  };
-
   const updateOperatorPresets = (next: OperatorPreset[]) => {
     persistOperatorPresets(next);
     setOperatorPresets(next);
@@ -611,67 +625,32 @@ export function App() {
   };
 
   const selectOperatorMode = (mode: LatentOperatorMode) => {
-    setOperator(mode);
-    setOperatorForm(defaultOperatorForm(mode));
-    setDonorArtifactId("");
+    selectWorkbenchOperatorMode(mode);
     setSelectedOperatorPresetId("");
     setOperatorPresetName("");
   };
 
-  const selectExperimentMode = (mode: ExperimentMode) => {
-    setExperimentMode(mode);
-    setExperimentForm(defaultExperimentForm(mode));
-  };
-
   const selectGesture = (gestureId: GestureId) => {
-    setActiveGestureId(gestureId);
     const gesture = gestureById(gestureId);
-    if (gesture.defaultGenerationMode) {
-      setGenerationMode(gesture.defaultGenerationMode);
-      setGenerationForm(defaultGenerationForm(gesture.defaultGenerationMode));
-    }
+    selectWorkbenchGesture(gestureId);
     if (gesture.defaultOperatorMode) {
-      selectOperatorMode(gesture.defaultOperatorMode);
-    }
-    if (gesture.defaultExperimentMode) {
-      selectExperimentMode(gesture.defaultExperimentMode);
+      setSelectedOperatorPresetId("");
+      setOperatorPresetName("");
     }
   };
 
   const applyNextAction = (action: ProductNextAction) => {
-    if (!action.available) return;
-    if (action.gestureId) selectGesture(action.gestureId);
-    if (action.generationMode) {
-      setGenerationMode(action.generationMode);
-      setGenerationForm(defaultGenerationForm(action.generationMode));
-    }
-    if (action.operatorMode) {
-      selectOperatorMode(action.operatorMode);
-    }
-    if (action.experimentMode && isExperimentMode(action.experimentMode)) {
-      setExperimentMode(action.experimentMode);
-      setExperimentForm({
-        ...defaultExperimentForm(action.experimentMode),
-        ...(selectedArtifact && action.fieldKey
-          ? { [action.fieldKey]: action.value ?? artifactPathForField(selectedArtifact, action.fieldKey) }
-          : {}),
-      });
-      setActiveGestureId("steer");
-    }
-    if (action.kind === "remember") {
-      setActiveGestureId("remember");
+    applyWorkbenchNextAction(action);
+    if (action.operatorMode || (action.gestureId && gestureById(action.gestureId).defaultOperatorMode)) {
+      setSelectedOperatorPresetId("");
+      setOperatorPresetName("");
     }
   };
 
   const useArtifactAsDonor = (artifactId: string) => {
-    const artifact = allArtifacts.find((item) => item.artifact_id === artifactId);
-    if (!artifact || artifact.kind !== "latent") return;
-    const currentConfig = operatorCatalog.find((item) => item.value === operator) ?? operatorCatalog[0];
-    if (!operatorUsesDonor(currentConfig, operatorForm)) {
-      setOperator("latent.graft");
-      setOperatorForm(defaultOperatorForm("latent.graft"));
-    }
-    setDonorArtifactId(artifactId);
+    useWorkbenchArtifactAsDonor(artifactId);
+    setSelectedOperatorPresetId("");
+    setOperatorPresetName("");
   };
 
   const applyMemoryAction = (artifact: ArtifactRecord, action: MemoryReuseAction) => {
@@ -680,45 +659,22 @@ export function App() {
       recoverArtifact.mutate(artifact);
       return;
     }
-    if (action.intent === "source") {
-      selectArtifact(artifact.artifact_id);
-      if (artifact.kind === "audio") setCompare("b", artifact.artifact_id);
-      selectGesture(artifact.kind === "latent" ? "morph" : "continue");
-      return;
-    }
-    if (action.intent === "anchor") {
-      setCompare("a", artifact.artifact_id);
-      selectArtifact(artifact.artifact_id);
-      return;
-    }
-    if (action.intent === "donor") {
-      useArtifactAsDonor(artifact.artifact_id);
-      setActiveGestureId("borrow_texture");
-      return;
-    }
-    if (action.intent === "prompt_seed") {
-      usePromptCandidate(action.value ?? artifact.prompt ?? artifact.label ?? artifact.notes ?? "");
-      setActiveGestureId("make");
-      return;
-    }
-    if (action.intent === "advanced_gesture" && action.fieldKey && action.mode && isExperimentMode(action.mode)) {
-      useBundleInRecipe(action.fieldKey, action.value ?? artifactPathForField(artifact, action.fieldKey), action.mode);
-      setActiveGestureId("steer");
+    const handled = gestureWorkbench.applyMemoryAction(artifact, action);
+    if (handled && action.intent === "donor") {
+      setSelectedOperatorPresetId("");
+      setOperatorPresetName("");
     }
   };
 
-  const useBundleInRecipe = (fieldKey: string, path: string, mode: string) => {
-    if (!isExperimentMode(mode)) return;
-    setExperimentMode(mode);
-    setExperimentForm({
-      ...defaultExperimentForm(mode),
-      [fieldKey]: path,
-    });
+  const branchFromArtifact = (artifact: ArtifactRecord) => {
+    const recipe = artifact.recipe_id ? allJobs.find((job) => job.recipe.recipe_id === artifact.recipe_id)?.recipe ?? null : null;
+    if (recipe) setForkTarget(recipe);
   };
 
-  const usePromptCandidate = (candidatePrompt: string) => {
-    setGenerationMode("generate.text_to_audio");
-    setGenerationForm((current) => ({ ...current, prompt: candidatePrompt }));
+  const continueFromArtifact = (artifact: ArtifactRecord) => {
+    selectArtifact(artifact.artifact_id);
+    if (artifact.kind === "audio") setCompare("b", artifact.artifact_id);
+    selectGesture(artifact.kind === "latent" ? "morph" : "continue");
   };
 
   const runPromptCandidate = (candidate: PromptCandidateGenerationRequest) => {
@@ -1048,7 +1004,7 @@ export function App() {
             </label>
           </div>
           <ArtifactStack
-            artifacts={visibleArtifacts}
+            sources={sourceRows}
             selectedId={selectedArtifact?.artifact_id ?? null}
             onSelect={selectArtifact}
             apiBase={apiBase}
@@ -1119,8 +1075,14 @@ export function App() {
             artifacts={sessionArtifacts}
             selectedId={selectedArtifact?.artifact_id ?? null}
             apiBase={apiBase}
+            activeSessionId={activeSessionId}
+            archivingArtifactId={archiveArtifact.isPending ? archiveArtifact.variables?.artifact.artifact_id ?? null : null}
             onSelect={selectArtifact}
             onCompare={setCompare}
+            onAnnotate={(artifactId, payload) => annotateArtifact.mutate({ artifactId, payload })}
+            onRemember={(artifact) => archiveArtifact.mutate({ artifact, source: "take_strip" })}
+            onContinue={continueFromArtifact}
+            onBranch={branchFromArtifact}
           />
           <PendingTakesPanel
             takes={pendingTakes}
@@ -1210,17 +1172,17 @@ export function App() {
 }
 
 function ArtifactStack({
-  artifacts,
+  sources,
   selectedId,
   onSelect,
   apiBase,
 }: {
-  artifacts: ArtifactRecord[];
+  sources: ProductSource[];
   selectedId: string | null;
   onSelect: (id: string) => void;
   apiBase: string;
 }) {
-  if (!artifacts.length) {
+  if (!sources.length) {
     return (
       <div className="empty-panel">
         <Upload size={22} />
@@ -1230,7 +1192,9 @@ function ArtifactStack({
   }
   return (
     <div className="artifact-stack">
-      {artifacts.map((artifact) => (
+      {sources.map((source) => {
+        const artifact = source.artifact;
+        return (
         <button
           key={artifact.artifact_id}
           className={`artifact-row ${selectedId === artifact.artifact_id ? "selected" : ""}`}
@@ -1238,12 +1202,20 @@ function ArtifactStack({
         >
           <ArtifactIcon artifact={artifact} />
           <div>
-            <strong>{artifactName(artifact)}</strong>
-            <span>{artifactMeta(artifact)}</span>
+            <strong>{source.label}</strong>
+            <span>{source.detail}</span>
+            {source.roleLabels.length ? (
+              <small className="source-role-strip">
+                {source.roleLabels.slice(0, 3).map((role) => (
+                  <i key={role}>{role}</i>
+                ))}
+              </small>
+            ) : null}
           </div>
           {artifact.kind === "audio" ? <TinyWave artifact={artifact} apiBase={apiBase} /> : null}
         </button>
-      ))}
+        );
+      })}
     </div>
   );
 }

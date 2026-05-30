@@ -22,7 +22,7 @@ describe("nextActionModel", () => {
     const bundleActions = nextActionsForArtifact(testArtifact({ kind: "bundle", metadata: { operator: "experiment.audio_style_vectors" } }));
     expect(bundleActions).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: "inspect", label: "Inspect" }),
-      expect.objectContaining({ id: "vectors_path", label: "Sweep Vectors" }),
+      expect.objectContaining({ id: "vectors_path", label: "Sweep vectors" }),
     ]));
   });
 

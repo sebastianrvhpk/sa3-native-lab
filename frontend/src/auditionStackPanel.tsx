@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { SkipBack, SkipForward } from "lucide-react";
+import { Archive, GitFork, Route, SkipBack, SkipForward } from "lucide-react";
 
 import {
   auditionCursor,
@@ -9,22 +9,35 @@ import {
   auditionStackRows,
   type AuditionSequenceMode,
 } from "./auditionStack";
+import type { ArtifactAnnotationPayload } from "./api";
 import { AudioDeck } from "./audioDeck";
-import { ListeningDecisionBadge } from "./listeningDecision";
+import { ListeningDecisionBadge, ListeningDecisionControls } from "./listeningDecision";
 import type { ArtifactRecord } from "./types";
 
 export function AuditionStackPanel({
   artifacts,
   selectedId,
   apiBase,
+  activeSessionId,
+  archivingArtifactId,
   onSelect,
   onCompare,
+  onAnnotate,
+  onRemember,
+  onContinue,
+  onBranch,
 }: {
   artifacts: ArtifactRecord[];
   selectedId: string | null;
   apiBase: string;
+  activeSessionId: string | null;
+  archivingArtifactId: string | null;
   onSelect: (artifactId: string) => void;
   onCompare: (slot: "a" | "b", artifactId: string | null) => void;
+  onAnnotate: (artifactId: string, payload: ArtifactAnnotationPayload) => void;
+  onRemember: (artifact: ArtifactRecord) => void;
+  onContinue: (artifact: ArtifactRecord) => void;
+  onBranch: (artifact: ArtifactRecord) => void;
 }) {
   const [sequenceMode, setSequenceMode] = useState<AuditionSequenceMode>("recent");
   const rows = auditionStackRows(artifacts, 8, sequenceMode, selectedId);
@@ -88,9 +101,32 @@ export function AuditionStackPanel({
               <ListeningDecisionBadge artifact={artifact} />
             </button>
             <AudioDeck artifact={artifact} apiBase={apiBase} compact />
+            <ListeningDecisionControls artifact={artifact} source="take_strip" compact onDecide={onAnnotate} />
             <div className="audition-stack-actions">
               <button type="button" onClick={() => onCompare("a", row.artifactId)} title="Pin take as anchor">Anchor</button>
               <button type="button" onClick={() => onCompare("b", row.artifactId)} title="Pin take as source">Source</button>
+              <button type="button" onClick={() => onContinue(artifact)} title="Continue from this take">
+                <Route size={13} />
+                Continue
+              </button>
+              <button
+                type="button"
+                disabled={!artifact.recipe_id}
+                onClick={() => onBranch(artifact)}
+                title={artifact.recipe_id ? "Branch from this take" : "No gesture recipe to branch"}
+              >
+                <GitFork size={13} />
+                Branch
+              </button>
+              <button
+                type="button"
+                disabled={!activeSessionId || artifact.session_id !== activeSessionId || archivingArtifactId === artifact.artifact_id}
+                onClick={() => onRemember(artifact)}
+                title="Remember this take"
+              >
+                <Archive size={13} />
+                {archivingArtifactId === artifact.artifact_id ? "Remembering" : "Remember"}
+              </button>
             </div>
           </article>
         );

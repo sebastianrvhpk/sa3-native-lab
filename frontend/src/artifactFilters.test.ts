@@ -12,7 +12,7 @@ describe("artifact filters", () => {
       recipeId: "recipe_take",
       sourceIds: ["art_bundle"],
       tags: ["keeper", "bright"],
-      metadata: { listening_decision: "keeper", model: "medium" },
+      metadata: { listening_decision: "keeper", model: "medium", memory_role: "loop", reuse_intent: "source" },
     });
     const rejected = audioArtifact("art_rejected", {
       label: "dull take",
@@ -37,6 +37,8 @@ describe("artifact filters", () => {
     expect(filterArtifacts(artifacts, filters({ familyId: family.familyId }), context).map(id)).toEqual(["art_keeper"]);
     expect(filterArtifacts(artifacts, filters({ lineage: "has_sources" }), context).map(id)).toEqual(["art_keeper"]);
     expect(filterArtifacts(artifacts, filters({ lineage: "source" }), context).map(id)).toEqual(["art_source"]);
+    expect(filterArtifacts(artifacts, filters({ memoryRole: "loop" }), context).map(id)).toEqual(["art_keeper"]);
+    expect(filterArtifacts(artifacts, filters({ reuseIntent: "source" }), context).map(id)).toEqual(["art_keeper"]);
     expect(filterArtifacts(artifacts, filters({ query: "prompt candidates" }), context).map(id)).toEqual(["art_keeper"]);
   });
 
@@ -45,12 +47,12 @@ describe("artifact filters", () => {
       audioArtifact("art_keeper", {
         recipeId: "recipe_take",
         tags: ["keeper"],
-        metadata: { listening_decision: "keeper" },
+        metadata: { listening_decision: "keeper", memory_role: "keeper", reuse_intent: "source" },
       }),
       audioArtifact("art_maybe", {
         recipeId: "recipe_take",
         tags: ["maybe"],
-        metadata: { listening_decision: "maybe" },
+        metadata: { listening_decision: "maybe", memory_role: "texture", reuse_intent: "donor" },
       }),
     ];
     const options = artifactFilterOptions(artifacts, {
@@ -64,6 +66,14 @@ describe("artifact filters", () => {
     ]);
     expect(options.models).toEqual([{ value: "medium", label: "medium", count: 2 }]);
     expect(options.operators).toEqual([{ value: "generate.text_to_audio", label: "generate.text_to_audio", count: 2 }]);
+    expect(options.memoryRoles).toEqual([
+      { value: "keeper", label: "keeper", count: 1 },
+      { value: "texture", label: "texture", count: 1 },
+    ]);
+    expect(options.reuseIntents).toEqual([
+      { value: "donor", label: "donor", count: 1 },
+      { value: "source", label: "source", count: 1 },
+    ]);
     expect(options.families).toEqual([{ value: "prompt-candidates:bundle", label: "prompt candidates", count: 2 }]);
   });
 });

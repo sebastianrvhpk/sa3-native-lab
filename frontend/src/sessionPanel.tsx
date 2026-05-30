@@ -11,6 +11,8 @@ import {
   type ArtifactFilterState,
   type ArtifactKindFilter,
   type ArtifactLineageFilter,
+  type ArtifactMemoryRoleFilter,
+  type ArtifactReuseIntentFilter,
 } from "./artifactFilters";
 import { ArtifactIcon } from "./artifactDisplay";
 import { artifactMeta, artifactName, sortNewest, sortNewestJobs } from "./artifactUtils";
@@ -355,6 +357,20 @@ function ArtifactFilterPanel({
             { value: "has_sources", label: "has source", count: 0 },
           ]}
           onChange={(lineage) => update({ lineage: (lineage || "all") as ArtifactLineageFilter })}
+        />
+        <FilterSelect
+          label="Role"
+          value={filters.memoryRole === "all" ? "" : filters.memoryRole}
+          allLabel="any role"
+          options={options.memoryRoles}
+          onChange={(memoryRole) => update({ memoryRole: (memoryRole || "all") as ArtifactMemoryRoleFilter })}
+        />
+        <FilterSelect
+          label="Reuse"
+          value={filters.reuseIntent === "all" ? "" : filters.reuseIntent}
+          allLabel="any reuse"
+          options={options.reuseIntents.map((option) => ({ ...option, label: option.label.replaceAll("_", " ") }))}
+          onChange={(reuseIntent) => update({ reuseIntent: (reuseIntent || "all") as ArtifactReuseIntentFilter })}
         />
         <FilterSelect
           label="Tag"

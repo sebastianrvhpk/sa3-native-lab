@@ -298,6 +298,10 @@ Confirmed in the current codebase:
   pending-take landing, branch summaries, and Tune field grouping. Branch UI is
   product-language first, while raw job IDs, recipe IDs, backend details, logs,
   and material counts are behind Inspect/Settings/details.
+- The next consolidation pass adds a product source model, role/reuse-intent
+  memory filters, take-strip listening queue actions for keep/maybe/reject,
+  remember, continue, and branch, shared bundle-to-gesture reuse semantics, and
+  a named `useGestureWorkbench` hook for gesture/Tune/action state.
 - Artifact manifest writes are atomic, reducing transient JSON-read races during
   annotation, remember, and recovery workflows.
 - Core app surfaces are now split into focused modules for audio playback,

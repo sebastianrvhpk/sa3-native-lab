@@ -1,3 +1,4 @@
+import { bundleReuseActionsForContext } from "./bundleReuseModel";
 import { gestureForOperator, type GestureId } from "./gestureModel";
 import type { ArtifactRecord, OperatorName } from "./types";
 
@@ -184,45 +185,20 @@ export function memoryActionsForArtifact(
 export function bundleMemoryActions(artifact: ArtifactRecord): MemoryReuseAction[] {
   if (artifact.kind !== "bundle") return [];
   const operator = typeof artifact.metadata.operator === "string" ? artifact.metadata.operator : "";
+  const kind = typeof artifact.metadata.bundle_kind === "string" ? artifact.metadata.bundle_kind : "";
   const gestureId = gestureForOperator((operator || "experiment.audio_style_vectors") as OperatorName);
-  const actions: MemoryReuseAction[] = [];
-  const push = (id: string, label: string, fieldKey: string, mode: string, value?: string) => {
-    actions.push({
-      id,
-      label,
-      description: "Send this remembered bundle into an existing Advanced Gesture path.",
-      intent: "advanced_gesture",
-      available: true,
-      disabledReason: null,
-      gestureId,
-      fieldKey,
-      mode,
-      value,
-    });
-  };
-  if (operator.includes("style_profile") || operator.includes("positive_style_profile")) {
-    push("profile_path", "Use Profile", "profile_path", "experiment.style_profile.generate");
-    push("target_memory_path", "Use Memory", "target_memory_path", "experiment.style_profile.build");
-  }
-  if (operator.includes("vectors") || operator.includes("direction")) {
-    push("vectors_path", "Sweep Vectors", "vectors_path", "experiment.alpha_sweep");
-    push("direction_path", "Use Direction", "direction_path", "experiment.style_direction.generate");
-  }
-  if (operator.includes("prompt_search")) {
-    const seed = promptSeedFromMemory(artifact);
-    push("prompt_sweep", "Use Prompt In Sweep", "prompt", "experiment.alpha_sweep", seed ?? undefined);
-  }
-  if (operator.includes("memory")) {
-    push("memory_target", "Use Target Memory", "target_memory_path", "experiment.style_profile.build");
-    push("memory_reference", "Use Reference", "reference_memory_path", "experiment.style_profile.build");
-  }
-  if (operator.includes("dataset.pre_encode")) {
-    push("encoded_dataset", "Use Dataset", "encoded_dir", "training.lora");
-  }
-  if (operator.includes("lora")) {
-    push("lora_checkpoint", "Use Checkpoint", "lora_checkpoint", "training.lora");
-  }
-  return actions;
+  return bundleReuseActionsForContext({ kind, operator, prompt: promptSeedFromMemory(artifact) }).map((action) => ({
+    id: action.fieldKey,
+    label: action.label,
+    description: "Send this remembered bundle into an existing Advanced Gesture path.",
+    intent: "advanced_gesture",
+    available: true,
+    disabledReason: null,
+    gestureId,
+    fieldKey: action.fieldKey,
+    mode: action.mode,
+    value: action.value,
+  }));
 }
 
 export function memoryRoleLabel(role: MemoryRole | null): string {
