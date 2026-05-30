@@ -1,9 +1,17 @@
-import { memoryReuseIntentFromArtifact, memoryRoleFromArtifact, memoryRoleLabel, type MemoryReuseIntent, type MemoryRole } from "./memoryModel";
+import {
+  memoryActionsForArtifact,
+  memoryReuseIntentFromArtifact,
+  memoryRoleFromArtifact,
+  memoryRoleLabel,
+  type MemoryReuseAction,
+  type MemoryReuseIntent,
+  type MemoryRole,
+} from "./memoryModel";
 import { artifactMeta, artifactName, sortNewest } from "./artifactUtils";
 import type { ArtifactRecord } from "./types";
 
 export type ProductSourceKind = "sound" | "latent" | "bundle" | "material";
-export type ProductSourceRole = "current" | "anchor" | "source" | "donor" | "remembered" | "imported" | "take" | "bundle";
+export type ProductSourceRole = "current" | "anchor" | "source" | "donor" | "remembered" | "imported" | "take" | "bundle" | "bundle_derived";
 
 export interface ProductSource {
   id: string;
@@ -16,6 +24,7 @@ export interface ProductSource {
   roleLabels: string[];
   memoryRole: MemoryRole | null;
   reuseIntent: MemoryReuseIntent | null;
+  actions: MemoryReuseAction[];
   isCurrent: boolean;
   isRemembered: boolean;
 }
@@ -32,7 +41,7 @@ export function buildProductSources(
   artifacts: readonly ArtifactRecord[],
   context: ProductSourceContext = {},
 ): ProductSource[] {
-  return sortNewest([...artifacts]).map((artifact) => productSourceFromArtifact(artifact, context));
+  return sortNewest(dedupeArtifacts(artifacts)).map((artifact) => productSourceFromArtifact(artifact, context));
 }
 
 export function productSourceFromArtifact(
@@ -53,6 +62,7 @@ export function productSourceFromArtifact(
     roleLabels: roles.map((role) => productSourceRoleLabel(role, memoryRole, reuseIntent)),
     memoryRole,
     reuseIntent,
+    actions: memoryActionsForArtifact(artifact, { activeSessionId: context.activeSessionId }),
     isCurrent: artifact.artifact_id === context.currentArtifactId,
     isRemembered: sourceIsRemembered(artifact, context.activeSessionId),
   };
@@ -70,6 +80,7 @@ export function productSourceRoleLabel(
   if (role === "remembered") return memoryRole ? `memory: ${memoryRoleLabel(memoryRole)}` : "memory";
   if (role === "imported") return "imported";
   if (role === "bundle") return reuseIntent ? `bundle: ${reuseIntent.replaceAll("_", " ")}` : "bundle";
+  if (role === "bundle_derived") return "bundle audio";
   return "take";
 }
 
@@ -81,6 +92,7 @@ function productSourceRoles(artifact: ArtifactRecord, context: ProductSourceCont
   if (artifact.artifact_id === context.donorArtifactId) roles.push("donor");
   if (sourceIsRemembered(artifact, context.activeSessionId)) roles.push("remembered");
   if (artifact.kind === "bundle") roles.push("bundle");
+  if (artifact.metadata.promoted_from_bundle === true) roles.push("bundle_derived");
   if (!artifact.recipe_id && artifact.kind === "audio") roles.push("imported");
   if (artifact.recipe_id) roles.push("take");
   return dedupeRoles(roles);
@@ -107,4 +119,13 @@ function sourceIsRemembered(artifact: ArtifactRecord, activeSessionId?: string |
 
 function dedupeRoles(roles: ProductSourceRole[]): ProductSourceRole[] {
   return [...new Set(roles)];
+}
+
+function dedupeArtifacts(artifacts: readonly ArtifactRecord[]): ArtifactRecord[] {
+  const seen = new Set<string>();
+  return artifacts.filter((artifact) => {
+    if (seen.has(artifact.artifact_id)) return false;
+    seen.add(artifact.artifact_id);
+    return true;
+  });
 }

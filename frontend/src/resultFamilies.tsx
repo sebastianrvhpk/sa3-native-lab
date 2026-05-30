@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
-import { Archive, Gauge, GitFork, Repeat, Search } from "lucide-react";
+import { Archive, Gauge, GitFork, Repeat, Route, Search, SkipBack, SkipForward } from "lucide-react";
 
 import { ArtifactIcon } from "./artifactDisplay";
 import type { ArtifactAnnotationPayload } from "./api";
 import { artifactMeta, artifactName, formatFamilyStamp, sortNewest, sortNewestJobs } from "./artifactUtils";
 import { AudioDeck } from "./audioDeck";
+import { branchListeningCursor } from "./branchListeningModel";
 import { branchMeta, branchSummaryForFamily } from "./branchModel";
 import type { ResultFamily } from "./controlPlane";
 import { JobProgress, type JobActionHandlers } from "./jobProgress";
@@ -97,6 +98,8 @@ export function FamilyDetailPanel({
   onAnnotate,
   onReplayRecipe,
   onForkRecipe,
+  onContinueArtifact,
+  onBranchArtifact,
   onArchiveArtifact,
   onCancelJob,
   onRetryJob,
@@ -115,6 +118,8 @@ export function FamilyDetailPanel({
   onAnnotate: (artifactId: string, payload: ArtifactAnnotationPayload) => void;
   onReplayRecipe: (recipeId: string) => void;
   onForkRecipe: (recipe: Recipe) => void;
+  onContinueArtifact?: (artifact: ArtifactRecord) => void;
+  onBranchArtifact?: (artifact: ArtifactRecord) => void;
   onArchiveArtifact: (artifact: ArtifactRecord) => void;
 } & JobActionHandlers) {
   if (!family) {
@@ -128,6 +133,7 @@ export function FamilyDetailPanel({
   const sweepEntries = buildSweepEntries(family, familyArtifacts);
   const siblingSweeps = findSiblingSweepFamilies(family, families);
   const summary = branchSummaryForFamily(family, artifacts);
+  const branchCursor = branchListeningCursor(familyArtifacts, selectedId);
 
   return (
     <section className="family-detail">
@@ -164,6 +170,18 @@ export function FamilyDetailPanel({
           Branch
         </button>
       </div>
+      {branchCursor.takes.length ? (
+        <div className="branch-listening-transport" aria-label="Branch listening trajectory">
+          <span>Branch trajectory</span>
+          <strong>{branchCursor.positionLabel}</strong>
+          <button type="button" disabled={!branchCursor.previous} onClick={() => branchCursor.previous && onSelect(branchCursor.previous.artifact_id)} title="Previous branch take">
+            <SkipBack size={13} />
+          </button>
+          <button type="button" disabled={!branchCursor.next} onClick={() => branchCursor.next && onSelect(branchCursor.next.artifact_id)} title="Next branch take">
+            <SkipForward size={13} />
+          </button>
+        </div>
+      ) : null}
       {sweepEntries.length ? (
         <SweepFamilyBand entries={sweepEntries} onSelect={onSelect} onCompare={onCompare} onForkRecipe={() => onForkRecipe(family.recipe)} />
       ) : null}
@@ -191,8 +209,30 @@ export function FamilyDetailPanel({
                 <>
                   <AudioDeck artifact={artifact} apiBase={apiBase} compact />
                   <div className="family-artifact-actions">
-                    <button type="button" onClick={() => onCompare("a", artifact.artifact_id)}>Anchor</button>
-                    <button type="button" onClick={() => onCompare("b", artifact.artifact_id)}>Source</button>
+                    <button type="button" onClick={() => { onSelect(artifact.artifact_id); onCompare("a", artifact.artifact_id); }}>Anchor</button>
+                    <button type="button" onClick={() => { onSelect(artifact.artifact_id); onCompare("b", artifact.artifact_id); }}>Source</button>
+                    <button
+                      type="button"
+                      disabled={!onContinueArtifact}
+                      onClick={() => {
+                        onSelect(artifact.artifact_id);
+                        onContinueArtifact?.(artifact);
+                      }}
+                    >
+                      <Route size={13} />
+                      Continue
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!artifact.recipe_id || !onBranchArtifact}
+                      onClick={() => {
+                        onSelect(artifact.artifact_id);
+                        onBranchArtifact?.(artifact);
+                      }}
+                    >
+                      <GitFork size={13} />
+                      Branch
+                    </button>
                     <button
                       type="button"
                       aria-label="Remember sound"
@@ -203,7 +243,15 @@ export function FamilyDetailPanel({
                       <Archive size={13} />
                     </button>
                   </div>
-                  <ListeningDecisionControls artifact={artifact} source="family_detail" compact onDecide={onAnnotate} />
+                  <ListeningDecisionControls
+                    artifact={artifact}
+                    source="family_detail"
+                    compact
+                    onDecide={(artifactId, payload) => {
+                      onSelect(artifactId);
+                      onAnnotate(artifactId, payload);
+                    }}
+                  />
                 </>
               ) : null}
             </article>

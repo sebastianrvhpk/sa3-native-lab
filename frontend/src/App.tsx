@@ -22,10 +22,9 @@ import {
   type InpaintPayload,
   type RecipeForkPayload,
 } from "./api";
-import { ArtifactBadge, ArtifactIcon } from "./artifactDisplay";
-import { artifactMeta, artifactName, sortNewest } from "./artifactUtils";
+import { ArtifactBadge } from "./artifactDisplay";
+import { artifactName } from "./artifactUtils";
 import { AuditionStackPanel } from "./auditionStackPanel";
-import { TinyWave } from "./audioDeck";
 import { ComparePanel } from "./comparePanel";
 import { createControlPlaneClient, DEFAULT_CONTROL_PLANE_URL, type ResultFamily, type WorkbenchState } from "./controlPlane";
 import { ForkRecipePanel } from "./forkRecipePanel";
@@ -79,7 +78,8 @@ import {
 } from "./recipeFormModel";
 import { artifactArchivePayload, artifactRecoveryPayload } from "./sessionRecovery";
 import { SessionTray } from "./sessionPanel";
-import { buildProductSources, type ProductSource } from "./sourceModel";
+import { buildProductSources } from "./sourceModel";
+import { SourceShelf } from "./sourceShelf";
 import { SpecCoverage, SpecCoveragePair } from "./specCoverage";
 import { Specimen } from "./specimenPanel";
 import { BackendPills, InlineJobStatus, ReadinessPanel, RunMonitor } from "./statusPanels";
@@ -170,6 +170,9 @@ export function App() {
     ? allArtifacts.filter((item) => item.session_id === activeSessionId)
     : allArtifacts.filter((item) => createdAfter(item.created_at, sessionStartedAt)));
   const visibleArtifacts = sessionArtifacts;
+  const archiveArtifacts = workbenchState?.archiveArtifacts ?? (activeSessionId
+    ? allArtifacts.filter((item) => item.session_id !== activeSessionId)
+    : allArtifacts.filter((item) => !createdAfter(item.created_at, sessionStartedAt)));
   const selectedArtifact = allArtifacts.find((item) => item.artifact_id === selectedArtifactId) ?? workbenchState?.selectedArtifact ?? visibleArtifacts[0] ?? null;
   const audioArtifacts = allArtifacts.filter((item) => item.kind === "audio");
   const latentArtifacts = allArtifacts.filter((item) => item.kind === "latent");
@@ -212,14 +215,14 @@ export function App() {
   } = gestureWorkbench;
   const sourceRows = useMemo(
     () =>
-      buildProductSources(visibleArtifacts, {
+      buildProductSources([...visibleArtifacts, ...archiveArtifacts], {
         activeSessionId,
         currentArtifactId: selectedArtifact?.artifact_id ?? null,
         anchorArtifactId: compare.a,
         sourceArtifactId: compare.b,
         donorArtifactId,
       }),
-    [activeSessionId, compare.a, compare.b, donorArtifactId, selectedArtifact?.artifact_id, visibleArtifacts],
+    [activeSessionId, archiveArtifacts, compare.a, compare.b, donorArtifactId, selectedArtifact?.artifact_id, visibleArtifacts],
   );
   const serverJobs = workbenchState?.jobs ?? jobs.data ?? [];
   const allJobs = mergeJobRecords(serverJobs, Object.values(liveJobsById));
@@ -229,9 +232,6 @@ export function App() {
   const archiveJobs = workbenchState?.archiveJobs ?? (activeSessionId
     ? allJobs.filter((item) => item.recipe.session_id !== activeSessionId)
     : allJobs.filter((item) => !createdAfter(item.created_at, sessionStartedAt)));
-  const archiveArtifacts = workbenchState?.archiveArtifacts ?? (activeSessionId
-    ? allArtifacts.filter((item) => item.session_id !== activeSessionId)
-    : allArtifacts.filter((item) => !createdAfter(item.created_at, sessionStartedAt)));
   const runningJobs = workbenchState?.runningJobs ?? allJobs.filter(isJobActive);
   const pendingTakes = useMemo(
     () =>
@@ -988,7 +988,7 @@ export function App() {
           <div className="rail-head">
             <div>
               <span className="eyebrow">Sources</span>
-              <strong>{visibleArtifacts.length} session materials</strong>
+              <strong>{sourceRows.length} source options</strong>
             </div>
             <label className="icon-button" title="Import audio">
               <Upload size={18} />
@@ -1003,11 +1003,12 @@ export function App() {
               />
             </label>
           </div>
-          <ArtifactStack
+          <SourceShelf
             sources={sourceRows}
             selectedId={selectedArtifact?.artifact_id ?? null}
-            onSelect={selectArtifact}
             apiBase={apiBase}
+            onSelect={selectArtifact}
+            onUseAction={(source, action) => applyMemoryAction(source.artifact, action)}
           />
         </aside>
 
@@ -1127,6 +1128,8 @@ export function App() {
             onAnnotate={(artifactId, payload) => annotateArtifact.mutate({ artifactId, payload })}
             onReplayRecipe={(recipeId) => replayRecipeMutation.mutate(recipeId)}
             onForkRecipe={setForkTarget}
+            onContinueArtifact={continueFromArtifact}
+            onBranchArtifact={branchFromArtifact}
             onArchiveArtifact={(artifact) => archiveArtifact.mutate({ artifact, source: "family_detail" })}
             onCancelJob={(job) => cancelJobMutation.mutate(job.job_id)}
             onRetryJob={(job) => retryJobMutation.mutate(job.job_id)}
@@ -1168,55 +1171,6 @@ export function App() {
         </aside>
       </section>
     </main>
-  );
-}
-
-function ArtifactStack({
-  sources,
-  selectedId,
-  onSelect,
-  apiBase,
-}: {
-  sources: ProductSource[];
-  selectedId: string | null;
-  onSelect: (id: string) => void;
-  apiBase: string;
-}) {
-  if (!sources.length) {
-    return (
-      <div className="empty-panel">
-        <Upload size={22} />
-        <strong>Import audio</strong>
-      </div>
-    );
-  }
-  return (
-    <div className="artifact-stack">
-      {sources.map((source) => {
-        const artifact = source.artifact;
-        return (
-        <button
-          key={artifact.artifact_id}
-          className={`artifact-row ${selectedId === artifact.artifact_id ? "selected" : ""}`}
-          onClick={() => onSelect(artifact.artifact_id)}
-        >
-          <ArtifactIcon artifact={artifact} />
-          <div>
-            <strong>{source.label}</strong>
-            <span>{source.detail}</span>
-            {source.roleLabels.length ? (
-              <small className="source-role-strip">
-                {source.roleLabels.slice(0, 3).map((role) => (
-                  <i key={role}>{role}</i>
-                ))}
-              </small>
-            ) : null}
-          </div>
-          {artifact.kind === "audio" ? <TinyWave artifact={artifact} apiBase={apiBase} /> : null}
-        </button>
-        );
-      })}
-    </div>
   );
 }
 

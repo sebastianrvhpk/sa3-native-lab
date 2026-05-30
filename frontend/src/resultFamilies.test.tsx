@@ -68,6 +68,8 @@ describe("FamilyDetailPanel", () => {
     const onInspectFamily = vi.fn();
     const onForkRecipe = vi.fn();
     const onAnnotate = vi.fn();
+    const onContinueArtifact = vi.fn();
+    const onBranchArtifact = vi.fn();
     const family = sweepFamily();
     const sibling = sweepFamily({
       recipe_id: "recipe_sibling",
@@ -98,6 +100,8 @@ describe("FamilyDetailPanel", () => {
           onAnnotate={onAnnotate}
           onReplayRecipe={vi.fn()}
           onForkRecipe={onForkRecipe}
+          onContinueArtifact={onContinueArtifact}
+          onBranchArtifact={onBranchArtifact}
           onArchiveArtifact={vi.fn()}
         />
       </QueryClientProvider>,
@@ -105,6 +109,7 @@ describe("FamilyDetailPanel", () => {
 
     expect(screen.getByLabelText("Alpha sweep variants")).toBeInTheDocument();
     expect(screen.getByLabelText("Alpha sweep metric table")).toBeInTheDocument();
+    expect(screen.getByLabelText("Branch listening trajectory")).toHaveTextContent("1/2 · alpha_neg4p00");
     expect(screen.getByText("alpha -4")).toBeInTheDocument();
     expect(screen.getByText("alpha +4")).toBeInTheDocument();
     expect(screen.getByText("0.32")).toBeInTheDocument();
@@ -120,7 +125,10 @@ describe("FamilyDetailPanel", () => {
       .find((element): element is HTMLElement => Boolean(element));
     expect(negativeArtifact).not.toBeNull();
     await user.click(within(negativeArtifact as HTMLElement).getByRole("button", { name: /keep/i }));
+    await user.click(within(negativeArtifact as HTMLElement).getByRole("button", { name: /Continue/i }));
+    await user.click(within(negativeArtifact as HTMLElement).getByRole("button", { name: /Branch/i }));
     await user.click(within(negativeVariant as HTMLElement).getByTitle("Branch from the sweep gesture"));
+    await user.click(within(screen.getByLabelText("Branch listening trajectory")).getByTitle("Next branch take"));
     await user.click(within(screen.getByLabelText("Sort sweep variants")).getByRole("button", { name: "score" }));
     await user.click(within(screen.getByLabelText("Sibling sweep comparison")).getByRole("button", { name: /inspect/i }));
 
@@ -132,6 +140,9 @@ describe("FamilyDetailPanel", () => {
       tags: ["keeper"],
       metadata: expect.objectContaining({ listening_decision: "keeper", listening_decision_source: "family_detail" }),
     }));
+    expect(onContinueArtifact).toHaveBeenCalledWith(artifacts[1]);
+    expect(onBranchArtifact).toHaveBeenCalledWith(artifacts[1]);
+    expect(onSelect).toHaveBeenCalledWith("art_pos");
     expect(onInspectFamily).toHaveBeenCalledWith("recipe_sibling");
     expect(onForkRecipe).toHaveBeenCalledWith(family.recipe);
   });

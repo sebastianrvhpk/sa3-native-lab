@@ -12,6 +12,7 @@ import {
   type ArtifactKindFilter,
   type ArtifactLineageFilter,
   type ArtifactMemoryRoleFilter,
+  type ArtifactNotesFilter,
   type ArtifactReuseIntentFilter,
 } from "./artifactFilters";
 import { ArtifactIcon } from "./artifactDisplay";
@@ -355,8 +356,19 @@ function ArtifactFilterPanel({
             { value: "source", label: "source", count: 0 },
             { value: "derived", label: "derived", count: 0 },
             { value: "has_sources", label: "has source", count: 0 },
+            { value: "from_bundle", label: "from bundle", count: 0 },
           ]}
           onChange={(lineage) => update({ lineage: (lineage || "all") as ArtifactLineageFilter })}
+        />
+        <FilterSelect
+          label="Notes"
+          value={filters.notes === "all" ? "" : filters.notes}
+          allLabel="any notes"
+          options={[
+            { value: "with_notes", label: "with notes", count: 0 },
+            { value: "without_notes", label: "no notes", count: 0 },
+          ]}
+          onChange={(notes) => update({ notes: (notes || "all") as ArtifactNotesFilter })}
         />
         <FilterSelect
           label="Role"

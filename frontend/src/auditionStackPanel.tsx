@@ -99,20 +99,29 @@ export function AuditionStackPanel({
               <span>{row.label}</span>
               <small>{row.sequence} · {row.origin} · {row.meta}</small>
               <ListeningDecisionBadge artifact={artifact} />
+              {selectedId === row.artifactId ? <i className="selected-take-label">selected take</i> : null}
             </button>
             <AudioDeck artifact={artifact} apiBase={apiBase} compact />
-            <ListeningDecisionControls artifact={artifact} source="take_strip" compact onDecide={onAnnotate} />
+            <ListeningDecisionControls
+              artifact={artifact}
+              source="take_strip"
+              compact
+              onDecide={(artifactId, payload) => {
+                onSelect(artifactId);
+                onAnnotate(artifactId, payload);
+              }}
+            />
             <div className="audition-stack-actions">
-              <button type="button" onClick={() => onCompare("a", row.artifactId)} title="Pin take as anchor">Anchor</button>
-              <button type="button" onClick={() => onCompare("b", row.artifactId)} title="Pin take as source">Source</button>
-              <button type="button" onClick={() => onContinue(artifact)} title="Continue from this take">
+              <button type="button" onClick={() => { onSelect(row.artifactId); onCompare("a", row.artifactId); }} title="Pin take as anchor">Anchor</button>
+              <button type="button" onClick={() => { onSelect(row.artifactId); onCompare("b", row.artifactId); }} title="Pin take as source">Source</button>
+              <button type="button" onClick={() => { onSelect(row.artifactId); onContinue(artifact); }} title="Continue from this take">
                 <Route size={13} />
                 Continue
               </button>
               <button
                 type="button"
                 disabled={!artifact.recipe_id}
-                onClick={() => onBranch(artifact)}
+                onClick={() => { onSelect(row.artifactId); onBranch(artifact); }}
                 title={artifact.recipe_id ? "Branch from this take" : "No gesture recipe to branch"}
               >
                 <GitFork size={13} />
@@ -121,7 +130,7 @@ export function AuditionStackPanel({
               <button
                 type="button"
                 disabled={!activeSessionId || artifact.session_id !== activeSessionId || archivingArtifactId === artifact.artifact_id}
-                onClick={() => onRemember(artifact)}
+                onClick={() => { onSelect(row.artifactId); onRemember(artifact); }}
                 title="Remember this take"
               >
                 <Archive size={13} />

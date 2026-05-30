@@ -5,9 +5,10 @@ import type { ArtifactKind, ArtifactRecord, JobRecord, OperatorName, Recipe } fr
 
 export type ArtifactDecisionFilter = "all" | ListeningDecision | "undecided";
 export type ArtifactKindFilter = "all" | ArtifactKind;
-export type ArtifactLineageFilter = "all" | "source" | "derived" | "has_sources";
+export type ArtifactLineageFilter = "all" | "source" | "derived" | "has_sources" | "from_bundle";
 export type ArtifactMemoryRoleFilter = "all" | MemoryRole;
 export type ArtifactReuseIntentFilter = "all" | MemoryReuseIntent;
+export type ArtifactNotesFilter = "all" | "with_notes" | "without_notes";
 
 export interface ArtifactFilterState {
   query: string;
@@ -20,6 +21,7 @@ export interface ArtifactFilterState {
   lineage: ArtifactLineageFilter;
   memoryRole: ArtifactMemoryRoleFilter;
   reuseIntent: ArtifactReuseIntentFilter;
+  notes: ArtifactNotesFilter;
 }
 
 export interface ArtifactFilterOption {
@@ -44,6 +46,7 @@ export const emptyArtifactFilters: ArtifactFilterState = {
   lineage: "all",
   memoryRole: "all",
   reuseIntent: "all",
+  notes: "all",
 };
 
 export function artifactFiltersActive(filters: ArtifactFilterState): boolean {
@@ -57,7 +60,8 @@ export function artifactFiltersActive(filters: ArtifactFilterState): boolean {
       || filters.familyId
       || filters.lineage !== "all"
       || filters.memoryRole !== "all"
-      || filters.reuseIntent !== "all",
+      || filters.reuseIntent !== "all"
+      || filters.notes !== "all",
   );
 }
 
@@ -78,9 +82,10 @@ export function filterArtifacts(
     if (filters.model && artifactModel(artifact, recipe) !== filters.model) return false;
     if (filters.operator && artifactOperator(artifact, recipe) !== filters.operator) return false;
     if (filters.familyId && family?.familyId !== filters.familyId) return false;
-    if (!artifactLineageMatches(artifact, filters.lineage)) return false;
+    if (!artifactLineageMatches(artifact, filters.lineage, index)) return false;
     if (filters.memoryRole !== "all" && memoryRoleFromArtifact(artifact) !== filters.memoryRole) return false;
     if (filters.reuseIntent !== "all" && memoryReuseIntentFromArtifact(artifact) !== filters.reuseIntent) return false;
+    if (!artifactNotesMatches(artifact, filters.notes)) return false;
     if (needle && !artifactSearchText(artifact, recipe, family).includes(needle)) return false;
     return true;
   });
@@ -154,6 +159,7 @@ function artifactFilterIndex(artifacts: ArtifactRecord[], context: ArtifactFilte
     recipeById.set(job.recipe.recipe_id, job.recipe);
   }
   const artifactIds = new Set(artifacts.map((artifact) => artifact.artifact_id));
+  const artifactById = new Map(artifacts.map((artifact) => [artifact.artifact_id, artifact]));
   const familyByArtifactId = new Map<string, ResultFamily>();
   for (const family of context.families ?? []) {
     for (const artifactId of family.artifactIds) {
@@ -161,7 +167,7 @@ function artifactFilterIndex(artifacts: ArtifactRecord[], context: ArtifactFilte
     }
     recipeById.set(family.recipe.recipe_id, family.recipe);
   }
-  return { recipeById, familyByArtifactId };
+  return { recipeById, familyByArtifactId, artifactById };
 }
 
 function artifactDecisionMatches(artifact: ArtifactRecord, filter: ArtifactDecisionFilter) {
@@ -170,11 +176,21 @@ function artifactDecisionMatches(artifact: ArtifactRecord, filter: ArtifactDecis
   return filter === "undecided" ? !decision : decision === filter;
 }
 
-function artifactLineageMatches(artifact: ArtifactRecord, filter: ArtifactLineageFilter) {
+function artifactLineageMatches(artifact: ArtifactRecord, filter: ArtifactLineageFilter, index: ReturnType<typeof artifactFilterIndex>) {
   if (filter === "all") return true;
   if (filter === "source") return !artifact.recipe_id && artifact.source_artifact_ids.length === 0;
   if (filter === "derived") return Boolean(artifact.recipe_id);
+  if (filter === "from_bundle") {
+    return artifact.metadata.promoted_from_bundle === true
+      || artifact.source_artifact_ids.some((sourceId) => index.artifactById.get(sourceId)?.kind === "bundle");
+  }
   return artifact.source_artifact_ids.length > 0;
+}
+
+function artifactNotesMatches(artifact: ArtifactRecord, filter: ArtifactNotesFilter) {
+  if (filter === "all") return true;
+  const hasNotes = Boolean(artifact.notes?.trim());
+  return filter === "with_notes" ? hasNotes : !hasNotes;
 }
 
 function artifactSearchText(artifact: ArtifactRecord, recipe: Recipe | undefined, family: ResultFamily | undefined) {
@@ -192,6 +208,7 @@ function artifactSearchText(artifact: ArtifactRecord, recipe: Recipe | undefined
     recipe?.backend,
     family?.familyId,
     family ? familyFilterLabel(family) : "",
+    ...artifact.source_artifact_ids,
     ...artifact.tags,
   ]
     .filter(Boolean)

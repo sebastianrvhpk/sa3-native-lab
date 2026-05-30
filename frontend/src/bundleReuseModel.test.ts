@@ -25,4 +25,18 @@ describe("bundleReuseModel", () => {
   it("dedupes kind and operator matches for the same real path", () => {
     expect(bundleReuseActionsForContext({ kind: "vectors", operator: "experiment.style_direction.generate" })).toHaveLength(2);
   });
+
+  it("keeps profile, memory, and checkpoint promotions on supported recipe fields", () => {
+    expect(bundleReuseActionsForContext({ kind: "profile" })).toEqual([
+      { label: "Use as profile", fieldKey: "profile_path", mode: "experiment.style_profile.generate" },
+      { label: "Use memory", fieldKey: "target_memory_path", mode: "experiment.style_profile.build" },
+    ]);
+    expect(bundleReuseActionsForContext({ kind: "memory" })).toEqual([
+      { label: "Use as target memory", fieldKey: "target_memory_path", mode: "experiment.style_profile.build" },
+      { label: "Use as reference", fieldKey: "reference_memory_path", mode: "experiment.style_profile.build" },
+    ]);
+    expect(bundleReuseActionsForContext({ kind: "training" })).toEqual([
+      { label: "Use checkpoint", fieldKey: "lora_checkpoint", mode: "training.lora" },
+    ]);
+  });
 });

@@ -32,14 +32,17 @@ describe("sourceModel", () => {
       roles: ["donor", "remembered", "take"],
       reuseIntent: "donor",
     });
+    expect(sources.find((source) => source.artifactId === "art_donor")?.actions.some((action) => action.intent === "donor" && action.available)).toBe(true);
   });
 
-  it("marks source imports and reusable bundles without raw artifact wording", () => {
+  it("marks source imports, promoted bundle audio, and reusable bundles without raw artifact wording", () => {
     const source = productSourceFromArtifact(testArtifact({ kind: "audio", recipe_id: null }), { activeSessionId: "sess_1" });
+    const promoted = productSourceFromArtifact(testArtifact({ kind: "audio", metadata: { promoted_from_bundle: true } }), { activeSessionId: "sess_1" });
     const bundle = productSourceFromArtifact(testArtifact({ kind: "bundle", metadata: { reuse_intent: "advanced_gesture" } }), { activeSessionId: "sess_1" });
 
     expect(source.roles).toContain("imported");
     expect(source.kind).toBe("sound");
+    expect(promoted.roleLabels).toContain("bundle audio");
     expect(bundle.roleLabels).toContain("bundle: advanced gesture");
     expect(bundle.kind).toBe("bundle");
   });

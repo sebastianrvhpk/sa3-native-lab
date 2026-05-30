@@ -12,6 +12,7 @@ describe("artifact filters", () => {
       recipeId: "recipe_take",
       sourceIds: ["art_bundle"],
       tags: ["keeper", "bright"],
+      notes: "works as a loop",
       metadata: { listening_decision: "keeper", model: "medium", memory_role: "loop", reuse_intent: "source" },
     });
     const rejected = audioArtifact("art_rejected", {
@@ -36,9 +37,12 @@ describe("artifact filters", () => {
     expect(filterArtifacts(artifacts, filters({ model: "medium", operator: "generate.text_to_audio" }), context).map(id)).toEqual(["art_keeper"]);
     expect(filterArtifacts(artifacts, filters({ familyId: family.familyId }), context).map(id)).toEqual(["art_keeper"]);
     expect(filterArtifacts(artifacts, filters({ lineage: "has_sources" }), context).map(id)).toEqual(["art_keeper"]);
+    expect(filterArtifacts(artifacts, filters({ lineage: "from_bundle" }), context).map(id)).toEqual(["art_keeper"]);
     expect(filterArtifacts(artifacts, filters({ lineage: "source" }), context).map(id)).toEqual(["art_source"]);
     expect(filterArtifacts(artifacts, filters({ memoryRole: "loop" }), context).map(id)).toEqual(["art_keeper"]);
     expect(filterArtifacts(artifacts, filters({ reuseIntent: "source" }), context).map(id)).toEqual(["art_keeper"]);
+    expect(filterArtifacts(artifacts, filters({ notes: "with_notes" }), context).map(id)).toEqual(["art_keeper"]);
+    expect(filterArtifacts(artifacts, filters({ notes: "without_notes" }), context).map(id)).toEqual(["art_source", "art_rejected", "art_bundle"]);
     expect(filterArtifacts(artifacts, filters({ query: "prompt candidates" }), context).map(id)).toEqual(["art_keeper"]);
   });
 
@@ -144,6 +148,7 @@ function audioArtifact(
     label?: string | null;
     recipeId?: string | null;
     sourceIds?: string[];
+    notes?: string | null;
     tags?: string[];
     metadata?: Record<string, unknown>;
   } = {},
@@ -159,7 +164,7 @@ function audioArtifact(
     recipe_id: overrides.recipeId,
     label: overrides.label ?? artifactId,
     prompt: null,
-    notes: null,
+    notes: overrides.notes ?? null,
     tags: overrides.tags ?? [],
     metadata: overrides.metadata ?? {},
     session_id: "sess",

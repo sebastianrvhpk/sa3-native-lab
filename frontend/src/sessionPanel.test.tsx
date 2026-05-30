@@ -96,6 +96,34 @@ describe("SessionTray", () => {
     expect(onUseMemoryAction).toHaveBeenCalledWith(archived, expect.objectContaining({ intent: "anchor" }));
   });
 
+  it("filters memory by notes and bundle-derived lineage", async () => {
+    const user = userEvent.setup();
+    const bundleMemory = testArtifact({
+      artifact_id: "art_bundle_memory",
+      label: "Bundle Memory",
+      session_id: null,
+      notes: "keeper from sweep bundle",
+      metadata: { promoted_from_bundle: true },
+    });
+    const plainMemory = testArtifact({
+      artifact_id: "art_plain_memory",
+      label: "Plain Memory",
+      session_id: null,
+      notes: null,
+    });
+
+    renderSessionTray({
+      artifacts: [],
+      archivedArtifacts: [bundleMemory, plainMemory],
+    });
+
+    await user.selectOptions(screen.getByLabelText("Filter notes"), "with_notes");
+    await user.selectOptions(screen.getByLabelText("Filter lineage"), "from_bundle");
+
+    expect(screen.getByText("Bundle Memory")).toBeInTheDocument();
+    expect(screen.queryByText("Plain Memory")).not.toBeInTheDocument();
+  });
+
   it("disables session archive while a job is active", () => {
     renderSessionTray({
       runningJobs: [testJob({ job_id: "job_running", status: "running", progress: 0.3 })],

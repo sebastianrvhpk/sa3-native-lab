@@ -17,6 +17,7 @@ describe("AuditionStackPanel", () => {
     const onRemember = vi.fn();
     const onContinue = vi.fn();
     const onBranch = vi.fn();
+    const onSelect = vi.fn();
 
     render(
       <AuditionStackPanel
@@ -25,7 +26,7 @@ describe("AuditionStackPanel", () => {
         apiBase="http://api.test"
         activeSessionId="sess_1"
         archivingArtifactId={null}
-        onSelect={vi.fn()}
+        onSelect={onSelect}
         onCompare={vi.fn()}
         onAnnotate={onAnnotate}
         onRemember={onRemember}
@@ -36,6 +37,7 @@ describe("AuditionStackPanel", () => {
 
     const row = screen.getByText("Queue Take").closest("article");
     expect(row).not.toBeNull();
+    expect(within(row as HTMLElement).getByText("selected take")).toBeInTheDocument();
     await user.click(within(row as HTMLElement).getByRole("button", { name: /Keep/ }));
     await user.click(within(row as HTMLElement).getByRole("button", { name: /Continue/ }));
     await user.click(within(row as HTMLElement).getByRole("button", { name: /Branch/ }));
@@ -44,6 +46,7 @@ describe("AuditionStackPanel", () => {
     expect(onAnnotate).toHaveBeenCalledWith("art_take", expect.objectContaining({
       metadata: expect.objectContaining({ listening_decision: "keeper", listening_decision_source: "take_strip" }),
     }));
+    expect(onSelect).toHaveBeenCalledWith("art_take");
     expect(onContinue).toHaveBeenCalledWith(take);
     expect(onBranch).toHaveBeenCalledWith(take);
     expect(onRemember).toHaveBeenCalledWith(take);
