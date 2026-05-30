@@ -19,6 +19,7 @@ import type { ResultFamily } from "./controlPlane";
 import { JobProgress, type JobActionHandlers } from "./jobProgress";
 import { shortOperatorName } from "./jobUtils";
 import { ListeningDecisionBadge } from "./listeningDecision";
+import { memoryActionsForArtifact, memoryRoleFromArtifact, memoryRoleLabel, type MemoryReuseAction } from "./memoryModel";
 import { archivableSessionArtifacts, recoverableArchiveArtifacts } from "./sessionRecovery";
 import { summarizeSessionWorkspace, workspaceFocus, workspacePulseRows, type WorkspaceFocus, type WorkspacePulseRow } from "./sessionWorkspace";
 import type { ArtifactRecord, JobRecord, OperatorName, SessionRecord } from "./types";
@@ -44,6 +45,7 @@ export function SessionTray({
   onArchiveSession,
   onRecoverArtifact,
   onArchiveArtifact,
+  onUseMemoryAction,
   onCancelJob,
   onRetryJob,
 }: {
@@ -67,6 +69,7 @@ export function SessionTray({
   onArchiveSession: () => void;
   onRecoverArtifact: (artifact: ArtifactRecord) => void;
   onArchiveArtifact: (artifact: ArtifactRecord) => void;
+  onUseMemoryAction?: (artifact: ArtifactRecord, action: MemoryReuseAction) => void;
 } & JobActionHandlers) {
   const [artifactFilters, setArtifactFilters] = useState<ArtifactFilterState>(emptyArtifactFilters);
   const filterContext = useMemo(() => ({ jobs: [...jobs, ...archivedJobs], families }), [jobs, archivedJobs, families]);
@@ -198,6 +201,8 @@ export function SessionTray({
               selected={artifact.artifact_id === selectedId}
               apiBase={apiBase}
               onSelect={onSelect}
+              memoryActions={memoryActionsForArtifact(artifact, { activeSessionId }).filter((item) => item.intent !== "recover")}
+              onMemoryAction={onUseMemoryAction ? (action) => onUseMemoryAction(artifact, action) : undefined}
               action={
                 recoverableIds.has(artifact.artifact_id)
                   ? {
@@ -327,16 +332,16 @@ function ArtifactFilterPanel({
           onChange={(model) => update({ model })}
         />
         <FilterSelect
-          label="Operator"
+          label="Gesture"
           value={filters.operator}
-          allLabel="any operator"
+          allLabel="any gesture"
           options={options.operators.map((option) => ({ ...option, label: shortOperatorName(option.value as OperatorName) }))}
           onChange={(operator) => update({ operator })}
         />
         <FilterSelect
-          label="Family"
+          label="Branch"
           value={filters.familyId}
-          allLabel="any family"
+          allLabel="any branch"
           options={options.families}
           onChange={(familyId) => update({ familyId })}
         />
@@ -397,6 +402,8 @@ function SessionArtifactRow({
   apiBase,
   onSelect,
   action,
+  memoryActions,
+  onMemoryAction,
 }: {
   artifact: ArtifactRecord;
   selected: boolean;
@@ -407,7 +414,10 @@ function SessionArtifactRow({
     disabled?: boolean;
     onAction: () => void;
   };
+  memoryActions?: readonly MemoryReuseAction[];
+  onMemoryAction?: (action: MemoryReuseAction) => void;
 }) {
+  const memoryRole = memoryRoleFromArtifact(artifact);
   return (
     <article className={`session-artifact ${selected ? "selected" : ""}`}>
       <button type="button" className="session-artifact-main" onClick={() => onSelect(artifact.artifact_id)}>
@@ -423,9 +433,25 @@ function SessionArtifactRow({
               ))}
             </span>
           ) : null}
+          {memoryRole ? <span className="memory-role">role: {memoryRoleLabel(memoryRole)}</span> : null}
         </div>
         {artifact.kind === "audio" ? <TinyWave artifact={artifact} apiBase={apiBase} /> : null}
       </button>
+      {memoryActions?.length ? (
+        <div className="memory-reuse-actions" aria-label={`${artifact.label ?? artifact.artifact_id} memory reuse actions`}>
+          {memoryActions.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              disabled={!item.available || !onMemoryAction}
+              title={item.disabledReason ?? item.description}
+              onClick={() => onMemoryAction?.(item)}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
       {action ? (
         <button type="button" className="session-artifact-action" disabled={action.disabled} onClick={action.onAction}>
           {action.label}

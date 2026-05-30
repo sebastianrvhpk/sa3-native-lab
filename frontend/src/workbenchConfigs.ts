@@ -195,17 +195,17 @@ export const dspCenterOptions = [
 ] as const;
 
 export const operatorModes = [
-  { value: "latent.cyclic_roll", label: "cyclic roll" },
-  { value: "latent.blur", label: "latent blur" },
-  { value: "latent.dsp", label: "latent DSP" },
-  { value: "latent.graft", label: "latent graft" },
-  { value: "latent.renoise", label: "latent renoise" },
+  { value: "latent.cyclic_roll", label: "Roll" },
+  { value: "latent.blur", label: "Blur" },
+  { value: "latent.dsp", label: "DSP / Reroute" },
+  { value: "latent.graft", label: "Borrow Texture" },
+  { value: "latent.renoise", label: "Renoise" },
 ] as const;
 
 export const operatorCatalog: readonly OperatorConfig[] = [
   {
     value: "latent.cyclic_roll",
-    label: "Cyclic roll",
+    label: "Roll",
     family: "Loop",
     maturity: "lab",
     defaultBackend: "torch_mps",
@@ -219,7 +219,7 @@ export const operatorCatalog: readonly OperatorConfig[] = [
   },
   {
     value: "latent.blur",
-    label: "Latent blur",
+    label: "Blur",
     family: "Blur",
     maturity: "lab",
     defaultBackend: "torch_mps",
@@ -247,7 +247,7 @@ export const operatorCatalog: readonly OperatorConfig[] = [
   },
   {
     value: "latent.dsp",
-    label: "Latent DSP",
+    label: "DSP / Reroute",
     family: "DSP",
     maturity: "lab",
     defaultBackend: "torch_mps",
@@ -278,7 +278,7 @@ export const operatorCatalog: readonly OperatorConfig[] = [
   },
   {
     value: "latent.graft",
-    label: "Latent graft",
+    label: "Borrow Texture",
     family: "Graft",
     maturity: "lab",
     defaultBackend: "torch_mps",
@@ -296,7 +296,7 @@ export const operatorCatalog: readonly OperatorConfig[] = [
   },
   {
     value: "latent.renoise",
-    label: "Latent renoise",
+    label: "Renoise",
     family: "Renoise",
     maturity: "lab",
     defaultBackend: "torch_cpu",

@@ -32,7 +32,10 @@ import { ForkRecipePanel } from "./forkRecipePanel";
 import { buildGestureOptions, gestureById, type GestureId } from "./gestureModel";
 import { GestureStrip } from "./gestureStrip";
 import { isJobActive, landingArtifactId } from "./jobUtils";
+import { type MemoryReuseAction } from "./memoryModel";
 import { ModeAtlas } from "./modeAtlas";
+import { nextActionsForArtifact, type ProductNextAction } from "./nextActionModel";
+import { NextActionsPanel } from "./nextActionsPanel";
 import { OperatorPresetRack } from "./operatorPresetRack";
 import {
   createOperatorPreset,
@@ -84,6 +87,7 @@ import { Specimen } from "./specimenPanel";
 import { BackendPills, InlineJobStatus, ReadinessPanel, RunMonitor } from "./statusPanels";
 import { useBenchStore } from "./store";
 import { TuneDrawer } from "./tuneDrawer";
+import { withTuneFieldGroups } from "./tuneFieldGroups";
 import type {
   ArtifactRecord,
   HealthResponse,
@@ -541,6 +545,10 @@ export function App() {
   const canRunExperiment = experimentReady(activeExperiment, experimentForm, selectedArtifact);
   const gestureOptions = useMemo(() => buildGestureOptions(selectedArtifact), [selectedArtifact]);
   const activeGesture = gestureOptions.find((gesture) => gesture.id === activeGestureId) ?? gestureOptions[0] ?? buildGestureOptions(null)[0]!;
+  const currentNextActions = useMemo(
+    () => nextActionsForArtifact(selectedArtifact, { donorLatents: latentArtifacts }),
+    [latentArtifacts, selectedArtifact],
+  );
 
   const setExperimentField = (key: string, value: RecipeValue) => {
     setExperimentForm((current) => ({ ...current, [key]: value }));
@@ -630,6 +638,31 @@ export function App() {
     }
   };
 
+  const applyNextAction = (action: ProductNextAction) => {
+    if (!action.available) return;
+    if (action.gestureId) selectGesture(action.gestureId);
+    if (action.generationMode) {
+      setGenerationMode(action.generationMode);
+      setGenerationForm(defaultGenerationForm(action.generationMode));
+    }
+    if (action.operatorMode) {
+      selectOperatorMode(action.operatorMode);
+    }
+    if (action.experimentMode && isExperimentMode(action.experimentMode)) {
+      setExperimentMode(action.experimentMode);
+      setExperimentForm({
+        ...defaultExperimentForm(action.experimentMode),
+        ...(selectedArtifact && action.fieldKey
+          ? { [action.fieldKey]: action.value ?? artifactPathForField(selectedArtifact, action.fieldKey) }
+          : {}),
+      });
+      setActiveGestureId("steer");
+    }
+    if (action.kind === "remember") {
+      setActiveGestureId("remember");
+    }
+  };
+
   const useArtifactAsDonor = (artifactId: string) => {
     const artifact = allArtifacts.find((item) => item.artifact_id === artifactId);
     if (!artifact || artifact.kind !== "latent") return;
@@ -639,6 +672,39 @@ export function App() {
       setOperatorForm(defaultOperatorForm("latent.graft"));
     }
     setDonorArtifactId(artifactId);
+  };
+
+  const applyMemoryAction = (artifact: ArtifactRecord, action: MemoryReuseAction) => {
+    if (!action.available) return;
+    if (action.intent === "recover") {
+      recoverArtifact.mutate(artifact);
+      return;
+    }
+    if (action.intent === "source") {
+      selectArtifact(artifact.artifact_id);
+      if (artifact.kind === "audio") setCompare("b", artifact.artifact_id);
+      selectGesture(artifact.kind === "latent" ? "morph" : "continue");
+      return;
+    }
+    if (action.intent === "anchor") {
+      setCompare("a", artifact.artifact_id);
+      selectArtifact(artifact.artifact_id);
+      return;
+    }
+    if (action.intent === "donor") {
+      useArtifactAsDonor(artifact.artifact_id);
+      setActiveGestureId("borrow_texture");
+      return;
+    }
+    if (action.intent === "prompt_seed") {
+      usePromptCandidate(action.value ?? artifact.prompt ?? artifact.label ?? artifact.notes ?? "");
+      setActiveGestureId("make");
+      return;
+    }
+    if (action.intent === "advanced_gesture" && action.fieldKey && action.mode && isExperimentMode(action.mode)) {
+      useBundleInRecipe(action.fieldKey, action.value ?? artifactPathForField(artifact, action.fieldKey), action.mode);
+      setActiveGestureId("steer");
+    }
   };
 
   const useBundleInRecipe = (fieldKey: string, path: string, mode: string) => {
@@ -677,7 +743,7 @@ export function App() {
             </label>
           </div>
           <RecipeFields
-            config={activeGenerationConfig}
+            config={withTuneFieldGroups(activeGenerationConfig, { gestureId: activeGesture.id, generationMode })}
             form={generationForm}
             artifacts={allArtifacts}
             selectedArtifact={selectedArtifact}
@@ -693,7 +759,7 @@ export function App() {
     if (activeGesture.tuneSource === "same") {
       return (
         <RecipeFields
-          config={activeSameConfig}
+          config={withTuneFieldGroups(activeSameConfig, { gestureId: activeGesture.id })}
           form={sameForm}
           artifacts={allArtifacts}
           selectedArtifact={selectedArtifact}
@@ -735,7 +801,7 @@ export function App() {
           />
           {operatorUsesDonor(activeOperatorConfig, operatorForm) ? (
             <label className="control-cell donor-cell">
-              Donor latent
+              <span>Texture donor</span>
               <select value={donorArtifactId} onChange={(event) => setDonorArtifactId(event.target.value)}>
                 <option value="">Select latent</option>
                 {latentArtifacts
@@ -746,10 +812,15 @@ export function App() {
                     </option>
                   ))}
               </select>
+              <small>
+                {latentArtifacts.filter((artifact) => artifact.artifact_id !== selectedArtifact?.artifact_id).length
+                  ? "Use a recovered or encoded latent as the donor texture."
+                  : "Encode or recover another latent before borrowing texture."}
+              </small>
             </label>
           ) : null}
           <RecipeFields
-            config={activeOperatorConfig}
+            config={withTuneFieldGroups(activeOperatorConfig, { gestureId: activeGesture.id, operatorMode: operator })}
             form={operatorForm}
             artifacts={allArtifacts}
             selectedArtifact={selectedArtifact}
@@ -792,7 +863,7 @@ export function App() {
             />
           ) : null}
           <RecipeFields
-            config={activeExperiment}
+            config={withTuneFieldGroups(activeExperiment, { gestureId: activeGesture.id, experimentMode })}
             form={experimentForm}
             artifacts={allArtifacts}
             selectedArtifact={selectedArtifact}
@@ -1017,13 +1088,17 @@ export function App() {
             onGeneratePrompt={runPromptCandidate}
             getArtifactPath={artifactPathForField}
           />
-          <RunMonitor
-            runningJobs={runningJobs}
-            latestJob={latestJobs[0] ?? null}
-            eventing={liveEventing}
-            onCancelJob={(job) => cancelJobMutation.mutate(job.job_id)}
-            onRetryJob={(job) => retryJobMutation.mutate(job.job_id)}
-          />
+          <NextActionsPanel actions={currentNextActions} onAction={applyNextAction} />
+          <details className="dev-drawer activity-drawer">
+            <summary>Inspect activity</summary>
+            <RunMonitor
+              runningJobs={runningJobs}
+              latestJob={latestJobs[0] ?? null}
+              eventing={liveEventing}
+              onCancelJob={(job) => cancelJobMutation.mutate(job.job_id)}
+              onRetryJob={(job) => retryJobMutation.mutate(job.job_id)}
+            />
+          </details>
 
           <div className="gesture-workbench">
             <TuneDrawer gesture={activeGesture} inspect={renderGestureInspect()} action={renderGestureAction()}>
@@ -1115,6 +1190,7 @@ export function App() {
             onArchiveSession={() => activeSession && archiveSession.mutate(activeSession)}
             onRecoverArtifact={(artifact) => recoverArtifact.mutate(artifact)}
             onArchiveArtifact={(artifact) => archiveArtifact.mutate({ artifact, source: "session_tray" })}
+            onUseMemoryAction={applyMemoryAction}
             onCancelJob={(job) => cancelJobMutation.mutate(job.job_id)}
             onRetryJob={(job) => retryJobMutation.mutate(job.job_id)}
           />

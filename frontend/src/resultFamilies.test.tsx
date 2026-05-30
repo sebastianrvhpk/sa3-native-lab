@@ -25,7 +25,7 @@ describe("FamilyDetailPanel", () => {
     );
 
     expect(screen.getByText("Prompt candidates")).toBeInTheDocument();
-    expect(screen.getByText("2 takes · 2 generations")).toBeInTheDocument();
+    expect(screen.getByText("2 takes · Make · 1 source")).toBeInTheDocument();
   });
 
   it("surfaces alpha sweep variants with anchor actions", async () => {
@@ -75,9 +75,9 @@ describe("FamilyDetailPanel", () => {
     expect(screen.getByText("alpha -4")).toBeInTheDocument();
     expect(screen.getByText("alpha +4")).toBeInTheDocument();
     expect(screen.getByText("0.32")).toBeInTheDocument();
-    expect(screen.getByText("best")).toBeInTheDocument();
+    expect(screen.getByText("highlight")).toBeInTheDocument();
     expect(screen.getByLabelText("Sibling sweep comparison")).toBeInTheDocument();
-    expect(screen.getByText("3 alphas · 2 artifacts · medium · seed 9")).toBeInTheDocument();
+    expect(screen.getByText("3 alphas · 2 takes · medium · seed 9")).toBeInTheDocument();
 
     const negativeVariant = screen.getByText("alpha -4").closest("article");
     expect(negativeVariant).not.toBeNull();
@@ -87,7 +87,7 @@ describe("FamilyDetailPanel", () => {
       .find((element): element is HTMLElement => Boolean(element));
     expect(negativeArtifact).not.toBeNull();
     await user.click(within(negativeArtifact as HTMLElement).getByRole("button", { name: /keep/i }));
-    await user.click(within(negativeVariant as HTMLElement).getByTitle("Fork the sweep recipe"));
+    await user.click(within(negativeVariant as HTMLElement).getByTitle("Branch from the sweep gesture"));
     await user.click(within(screen.getByLabelText("Sort sweep variants")).getByRole("button", { name: "score" }));
     await user.click(within(screen.getByLabelText("Sibling sweep comparison")).getByRole("button", { name: /inspect/i }));
 

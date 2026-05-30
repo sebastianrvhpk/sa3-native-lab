@@ -5,9 +5,9 @@ import { ArtifactIcon } from "./artifactDisplay";
 import type { ArtifactAnnotationPayload } from "./api";
 import { artifactMeta, artifactName, formatFamilyStamp, sortNewest, sortNewestJobs } from "./artifactUtils";
 import { AudioDeck } from "./audioDeck";
+import { branchMeta, branchSummaryForFamily } from "./branchModel";
 import type { ResultFamily } from "./controlPlane";
 import { JobProgress, type JobActionHandlers } from "./jobProgress";
-import { shortOperatorName } from "./jobUtils";
 import { listeningDecision, ListeningDecisionBadge, ListeningDecisionControls } from "./listeningDecision";
 import type { ArtifactRecord, JobRecord, Recipe } from "./types";
 
@@ -37,6 +37,7 @@ export function ResultFamilyPanel({
   return (
     <div className="family-stack">
       {families.slice(0, 5).map((family) => {
+        const summary = branchSummaryForFamily(family, artifacts);
         const latest = family.latestArtifactId ? artifactMap.get(family.latestArtifactId) ?? null : null;
         const familyArtifacts = family.artifactIds.map((artifactId) => artifactMap.get(artifactId)).filter((artifact): artifact is ArtifactRecord => Boolean(artifact));
         const selected = Boolean(latest && latest.artifact_id === selectedId);
@@ -45,14 +46,14 @@ export function ResultFamilyPanel({
           <article key={family.familyId} className={`family-row ${selected ? "selected" : ""} ${inspected ? "inspected" : ""}`}>
             <button type="button" onClick={() => { onInspectFamily(family.familyId); onSelect(latest?.artifact_id ?? null); }}>
               <div>
-                <strong>{familyTitle(family)}</strong>
-                <span>{familyMeta(family)}</span>
+                <strong>{summary.title}</strong>
+                <span>{branchMeta(summary)}</span>
               </div>
               <span className={`family-status ${family.status}`}>{family.status}</span>
             </button>
-            <div className="family-kinds" aria-label="Artifact kinds in family">
-              {family.artifactKinds.length ? (
-                family.artifactKinds.map((kind) => (
+            <div className="family-kinds" aria-label="Material kinds in branch">
+              {summary.kindLabels.length ? (
+                summary.kindLabels.map((kind) => (
                   <i key={kind} className={kind}>
                     {kind}
                   </i>
@@ -61,17 +62,16 @@ export function ResultFamilyPanel({
                 <i>empty</i>
               )}
             </div>
-            <MetricChips metrics={family.metrics} />
             <DecisionSummary artifacts={familyArtifacts} />
             <button type="button" className="family-replay" onClick={() => onInspectFamily(family.familyId)} title="Inspect branch takes and progress">
               <Search size={14} />
               Inspect
             </button>
-            <button type="button" className="family-replay" onClick={() => onReplayRecipe(family.recipeId)} title="Replay family recipe">
+            <button type="button" className="family-replay" onClick={() => onReplayRecipe(family.recipeId)} title="Do this branch gesture again">
               <Repeat size={14} />
               Do again
             </button>
-            <button type="button" className="family-replay" onClick={() => onForkRecipe(family.recipe)} title="Fork family recipe">
+            <button type="button" className="family-replay" onClick={() => onForkRecipe(family.recipe)} title="Branch from this path">
               <GitFork size={14} />
               Branch
             </button>
@@ -127,24 +127,25 @@ export function FamilyDetailPanel({
   const sourceArtifacts = sourceIds.map((artifactId) => artifactMap.get(artifactId)).filter((artifact): artifact is ArtifactRecord => Boolean(artifact));
   const sweepEntries = buildSweepEntries(family, familyArtifacts);
   const siblingSweeps = findSiblingSweepFamilies(family, families);
+  const summary = branchSummaryForFamily(family, artifacts);
 
   return (
     <section className="family-detail">
       <div className="family-detail-head">
         <div>
           <span className="eyebrow">Branch</span>
-          <strong>{familyTitle(family)}</strong>
+          <strong>{summary.title}</strong>
         </div>
         <span className={`family-status ${family.status}`}>{family.status}</span>
       </div>
       <div className="family-recipe-strip">
-        <span>{family.recipe.backend}</span>
-        {family.recipe.model ? <span>{family.recipe.model}</span> : null}
-        {family.recipe.seed !== null && family.recipe.seed !== undefined ? <span>seed {family.recipe.seed}</span> : null}
-        <span>{formatFamilyStamp(family.updatedAt)}</span>
+        <span>{summary.gestureLabel}</span>
+        <span>{summary.takesCount} take{summary.takesCount === 1 ? "" : "s"}</span>
+        <span>{summary.latestTakeLabel}</span>
+        <span>{summary.updatedLabel}</span>
       </div>
       {sourceArtifacts.length ? (
-        <div className="family-source-strip" aria-label="Family source artifacts">
+        <div className="family-source-strip" aria-label="Branch source material">
           {sourceArtifacts.slice(0, 3).map((artifact) => (
             <button key={artifact.artifact_id} type="button" onClick={() => onSelect(artifact.artifact_id)} title={artifactName(artifact)}>
               <ArtifactIcon artifact={artifact} />
@@ -208,23 +209,31 @@ export function FamilyDetailPanel({
             </article>
           ))
         ) : (
-          <div className="quiet-panel compact">No artifacts landed yet</div>
+          <div className="quiet-panel compact">No takes landed yet</div>
         )}
       </div>
-      {familyJobs.length ? (
-        <details className="family-job-drawer">
-          <summary>
-            <Gauge size={14} />
-            Gesture history
-            <span>{familyJobs.length}</span>
-          </summary>
+      <details className="family-job-drawer">
+        <summary>
+          <Gauge size={14} />
+          Inspect branch
+          <span>{familyJobs.length}</span>
+        </summary>
+        <dl className="branch-inspect-list">
+          {summary.inspectRows.map(([label, value]) => (
+            <div key={label}>
+              <dt>{label}</dt>
+              <dd>{value}</dd>
+            </div>
+          ))}
+        </dl>
+        {familyJobs.length ? (
           <div className="family-job-list">
             {familyJobs.map((job) => (
               <JobProgress key={job.job_id} job={job} compact onCancelJob={onCancelJob} onRetryJob={onRetryJob} />
             ))}
           </div>
-        </details>
-      ) : null}
+        ) : null}
+      </details>
     </section>
   );
 }
@@ -255,19 +264,6 @@ function DecisionSummary({ artifacts }: { artifacts: ArtifactRecord[] }) {
   );
 }
 
-function familyTitle(family: ResultFamily) {
-  if (family.familyId.startsWith("prompt-candidates:")) return "Prompt candidates";
-  return shortOperatorName(family.operator);
-}
-
-function familyMeta(family: ResultFamily) {
-  const artifactWord = `take${family.artifactIds.length === 1 ? "" : "s"}`;
-  const runWord = family.familyId.startsWith("prompt-candidates:")
-    ? `generation${family.jobIds.length === 1 ? "" : "s"}`
-    : `gesture${family.jobIds.length === 1 ? "" : "s"}`;
-  return `${family.artifactIds.length} ${artifactWord} · ${family.jobIds.length} ${runWord}`;
-}
-
 function SweepSiblingComparison({
   siblings,
   onInspectFamily,
@@ -291,7 +287,6 @@ function SweepSiblingComparison({
             <strong>{siblingSweepLabel(family)}</strong>
             <span>{siblingSweepMeta(family)}</span>
           </div>
-          <MetricChips metrics={family.metrics} />
           <div className="sweep-sibling-actions">
             <button type="button" disabled={!onInspectFamily} onClick={() => onInspectFamily?.(family.familyId)}>
               <Search size={13} />
@@ -299,11 +294,11 @@ function SweepSiblingComparison({
             </button>
             <button type="button" onClick={() => onReplayRecipe(family.recipeId)}>
               <Repeat size={13} />
-              Replay
+              Do again
             </button>
             <button type="button" onClick={() => onForkRecipe(family.recipe)}>
               <GitFork size={13} />
-              Fork
+              Branch
             </button>
           </div>
         </article>
@@ -353,7 +348,7 @@ function SweepFamilyBand({
             <button type="button" className="sweep-main" onClick={() => onSelect(entry.artifact.artifact_id)} title={artifactName(entry.artifact)}>
               <span>{entry.label}</span>
               <small>{artifactMeta(entry.artifact)}</small>
-              {entry.artifact.artifact_id === bestArtifactId ? <i>best</i> : null}
+              {entry.artifact.artifact_id === bestArtifactId ? <i>highlight</i> : null}
             </button>
             <div className="sweep-actions">
               <button type="button" onClick={() => onCompare("a", entry.artifact.artifact_id)} title="Pin this sweep variant as anchor">
@@ -362,7 +357,7 @@ function SweepFamilyBand({
               <button type="button" onClick={() => onCompare("b", entry.artifact.artifact_id)} title="Pin this sweep variant as source">
                 Source
               </button>
-              <button type="button" onClick={onForkRecipe} title="Fork the sweep recipe">
+              <button type="button" onClick={onForkRecipe} title="Branch from the sweep gesture">
                 <GitFork size={13} />
               </button>
             </div>
@@ -390,7 +385,7 @@ function SweepMetricTable({
     <div className="sweep-metric-table" aria-label="Alpha sweep metric table">
       <div className="sweep-metric-row header">
         <span>alpha</span>
-        <span>artifact</span>
+        <span>take</span>
         {metricKeys.map((key) => (
           <span key={key}>{prettyParamName(key)}</span>
         ))}
@@ -416,22 +411,6 @@ function SweepMetricTable({
             </button>
           </span>
         </div>
-      ))}
-    </div>
-  );
-}
-
-function MetricChips({ metrics }: { metrics: Record<string, unknown> }) {
-  const rows = ["result_count", "candidate_count", "metric", "return_code"]
-    .map((key) => [key, metrics[key]] as const)
-    .filter(([, value]) => value !== undefined && value !== null);
-  if (!rows.length) return null;
-  return (
-    <div className="metric-chips">
-      {rows.slice(0, 4).map(([key, value]) => (
-        <i key={key}>
-          {prettyParamName(key)}: {String(value)}
-        </i>
       ))}
     </div>
   );
@@ -615,5 +594,5 @@ function siblingSweepMeta(family: ResultFamily) {
   const alphas = parseAlphaList(family.recipe.params.alphas);
   const alphaText = alphas.length ? `${alphas.length} alphas` : "open alpha set";
   const seedText = family.recipe.seed !== null && family.recipe.seed !== undefined ? `seed ${family.recipe.seed}` : "no seed";
-  return `${alphaText} · ${family.artifactIds.length} artifacts · ${family.recipe.model ?? family.recipe.backend} · ${seedText}`;
+  return `${alphaText} · ${family.artifactIds.length} takes · ${family.recipe.model ?? family.recipe.backend} · ${seedText}`;
 }

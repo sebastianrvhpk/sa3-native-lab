@@ -8,6 +8,7 @@ import type { PromptCandidateGenerationRequest } from "./bundleInspector";
 import type { ResultFamily } from "./controlPlane";
 import { shortOperatorName } from "./jobUtils";
 import { artifactLineageModel, type CompareSlots } from "./lineageModel";
+import { memoryReuseIntentOptions, memoryRoleOptions, memoryReuseIntentFromArtifact, memoryRoleFromArtifact, type MemoryReuseIntent, type MemoryRole } from "./memoryModel";
 import type { ArtifactRecord, JobRecord, OperatorName, Recipe } from "./types";
 
 const BundleField = lazy(() => import("./bundleInspector").then((module) => ({ default: module.BundleField })));
@@ -103,7 +104,7 @@ export function Specimen({
       </div>
       <div className="specimen-info">
         <details className="inspect-drawer">
-          <summary>Inspect</summary>
+          <summary>Inspect sound</summary>
           <dl>
             <div>
               <dt>ID</dt>
@@ -248,12 +249,18 @@ function ArtifactAnnotationPanel({
   const [label, setLabel] = useState(artifact.label ?? "");
   const [tags, setTags] = useState(artifact.tags.join(", "));
   const [notes, setNotes] = useState(artifact.notes ?? "");
+  const [role, setRole] = useState<MemoryRole | "">(memoryRoleFromArtifact(artifact) ?? "");
+  const [reuseIntent, setReuseIntent] = useState<MemoryReuseIntent | "">(memoryReuseIntentFromArtifact(artifact) ?? "");
+  const [decision, setDecision] = useState(String(artifact.metadata.memory_decision ?? ""));
 
   useEffect(() => {
     setLabel(artifact.label ?? "");
     setTags(artifact.tags.join(", "));
     setNotes(artifact.notes ?? "");
-  }, [artifact.artifact_id, artifact.label, artifact.notes, artifact.tags]);
+    setRole(memoryRoleFromArtifact(artifact) ?? "");
+    setReuseIntent(memoryReuseIntentFromArtifact(artifact) ?? "");
+    setDecision(String(artifact.metadata.memory_decision ?? ""));
+  }, [artifact.artifact_id, artifact.label, artifact.metadata, artifact.notes, artifact.tags]);
 
   return (
     <div className="annotation-panel">
@@ -273,16 +280,49 @@ function ArtifactAnnotationPanel({
         Notes
         <textarea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="What should future-you remember?" />
       </label>
+      <div className="annotation-memory-grid">
+        <label>
+          Role
+          <select value={role} onChange={(event) => setRole(event.target.value as MemoryRole | "")}>
+            <option value="">choose role</option>
+            {memoryRoleOptions.map((item) => (
+              <option key={item.value} value={item.value}>{item.label}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Reuse
+          <select value={reuseIntent} onChange={(event) => setReuseIntent(event.target.value as MemoryReuseIntent | "")}>
+            <option value="">choose reuse</option>
+            {memoryReuseIntentOptions.map((item) => (
+              <option key={item.value} value={item.value}>{item.label}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Decision
+          <select value={decision} onChange={(event) => setDecision(event.target.value)}>
+            <option value="">undecided</option>
+            <option value="keeper">keeper</option>
+            <option value="maybe">maybe</option>
+            <option value="brittle">brittle</option>
+            <option value="reject">reject</option>
+          </select>
+        </label>
+      </div>
       <button
         type="button"
         className="annotation-save"
         disabled={saving}
         onClick={() =>
-          onSave(artifact.artifact_id, {
-            label: label.trim() || null,
-            notes: notes.trim() || null,
-            tags: parseTags(tags),
-          })
+          onSave(artifact.artifact_id, rememberAnnotationPayload({
+            label,
+            notes,
+            tags,
+            role,
+            reuseIntent,
+            decision,
+          }))
         }
       >
         {saving ? <LoaderCircle className="spin" size={15} /> : <Check size={15} />}
@@ -290,6 +330,46 @@ function ArtifactAnnotationPanel({
       </button>
     </div>
   );
+}
+
+function rememberAnnotationPayload({
+  label,
+  notes,
+  tags,
+  role,
+  reuseIntent,
+  decision,
+}: {
+  label: string;
+  notes: string;
+  tags: string;
+  role: MemoryRole | "";
+  reuseIntent: MemoryReuseIntent | "";
+  decision: string;
+}): ArtifactAnnotationPayload {
+  const metadata = rememberMetadata({ role, reuseIntent, decision });
+  return {
+    label: label.trim() || null,
+    notes: notes.trim() || null,
+    tags: parseTags(tags),
+    ...(metadata ? { metadata } : {}),
+  };
+}
+
+function rememberMetadata({
+  role,
+  reuseIntent,
+  decision,
+}: {
+  role: MemoryRole | "";
+  reuseIntent: MemoryReuseIntent | "";
+  decision: string;
+}) {
+  const metadata: Record<string, unknown> = {};
+  if (role) metadata.memory_role = role;
+  if (reuseIntent) metadata.reuse_intent = reuseIntent;
+  if (decision.trim()) metadata.memory_decision = decision.trim();
+  return Object.keys(metadata).length ? metadata : undefined;
 }
 
 function LatentField({ artifact }: { artifact: ArtifactRecord }) {
@@ -326,7 +406,7 @@ function LineageThread({
 }) {
   const nodes = artifactLineageModel({ artifact, sources, jobs, families, compare });
   return (
-    <div className="lineage-thread" aria-label="Artifact lineage">
+    <div className="lineage-thread" aria-label="Sound lineage">
       {nodes.map((node, index) => (
         <Fragment key={node.id}>
           {index ? <span className="thread-route" /> : null}

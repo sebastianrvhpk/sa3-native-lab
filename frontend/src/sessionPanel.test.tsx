@@ -69,6 +69,33 @@ describe("SessionTray", () => {
     expect(onRecoverArtifact).toHaveBeenCalledWith(archived);
   });
 
+  it("surfaces remembered material reuse controls", async () => {
+    const user = userEvent.setup();
+    const onUseMemoryAction = vi.fn();
+    const archived = testArtifact({
+      artifact_id: "art_memory",
+      label: "Remembered Loop",
+      session_id: null,
+      prompt: "soft remembered loop",
+      metadata: { memory_role: "loop" },
+    });
+
+    renderSessionTray({
+      artifacts: [],
+      archivedArtifacts: [archived],
+      onUseMemoryAction,
+    });
+
+    const row = screen.getByText("Remembered Loop").closest("article");
+    expect(row).not.toBeNull();
+    expect(within(row as HTMLElement).getByText("role: loop")).toBeInTheDocument();
+    await user.click(within(row as HTMLElement).getByRole("button", { name: "Use as Source" }));
+    await user.click(within(row as HTMLElement).getByRole("button", { name: "Anchor" }));
+
+    expect(onUseMemoryAction).toHaveBeenCalledWith(archived, expect.objectContaining({ intent: "source" }));
+    expect(onUseMemoryAction).toHaveBeenCalledWith(archived, expect.objectContaining({ intent: "anchor" }));
+  });
+
   it("disables session archive while a job is active", () => {
     renderSessionTray({
       runningJobs: [testJob({ job_id: "job_running", status: "running", progress: 0.3 })],
@@ -104,6 +131,7 @@ function renderSessionTray({
   onSelect = vi.fn(),
   onArchiveArtifact = vi.fn(),
   onRecoverArtifact = vi.fn(),
+  onUseMemoryAction = vi.fn(),
 }: Partial<Parameters<typeof SessionTray>[0]> = {}) {
   return render(
     <SessionTray
@@ -127,6 +155,7 @@ function renderSessionTray({
       onArchiveSession={vi.fn()}
       onRecoverArtifact={onRecoverArtifact}
       onArchiveArtifact={onArchiveArtifact}
+      onUseMemoryAction={onUseMemoryAction}
       onCancelJob={vi.fn()}
       onRetryJob={vi.fn()}
     />,

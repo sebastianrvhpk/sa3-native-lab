@@ -51,13 +51,13 @@ export function JobProgress({
       {canCancel || canRetry ? (
         <div className="job-actions">
           {canCancel ? (
-            <button type="button" onClick={() => onCancelJob?.(job)} title="Cancel job">
+            <button type="button" onClick={() => onCancelJob?.(job)} title="Cancel take">
               <X size={13} />
               Cancel
             </button>
           ) : null}
           {canRetry ? (
-            <button type="button" onClick={() => onRetryJob?.(job)} title="Retry job">
+            <button type="button" onClick={() => onRetryJob?.(job)} title="Retry take">
               <Repeat size={13} />
               Retry
             </button>
@@ -123,7 +123,7 @@ function phaseFromContract(phase: string): JobPhase | null {
 
 export function jobRecoveryHints(job: JobRecord): JobRecoveryHint[] {
   if (job.status === "cancelled") {
-    return [{ title: "Cancelled", detail: "The recipe is preserved; retry it when the current inputs are ready." }];
+    return [{ title: "Cancelled", detail: "The gesture is preserved; retry it when the current inputs are ready." }];
   }
   if (job.status !== "failed") return [];
 
@@ -136,7 +136,7 @@ export function jobRecoveryHints(job: JobRecord): JobRecoveryHint[] {
     hints.push({ title: "MLX setup", detail: "Run the local install or doctor flow so the Apple Silicon wrapper and venv are available." });
   }
   if (/(no such file|filenotfound|not found|missing required parameter|did not create output|path)/.test(text)) {
-    hints.push({ title: "Input or output path", detail: "Verify the selected artifact/path exists and that required bundle/audio fields are filled." });
+    hints.push({ title: "Input or output path", detail: "Verify the selected material/path exists and that required bundle/audio fields are filled." });
   }
   if (/(out of memory|oom|mps|metal|allocation)/.test(text)) {
     hints.push({ title: "Memory pressure", detail: "Try shorter duration, fewer steps, smaller batch size, or a CPU fallback for non-generation jobs." });
@@ -145,17 +145,17 @@ export function jobRecoveryHints(job: JobRecord): JobRecoveryHint[] {
     hints.push({ title: "Disk space", detail: "Free space in the Hugging Face cache or set HF_HOME to a larger volume before retrying." });
   }
   if (/exit code/.test(text)) {
-    hints.push({ title: "Subprocess failed", detail: "Open the log tail for the script output, adjust the recipe, then retry from the preserved job." });
+    hints.push({ title: "Subprocess failed", detail: "Open the log tail for the script output, adjust the gesture, then retry from the preserved take." });
   }
   if (!hints.length) {
-    hints.push({ title: "Review log tail", detail: "The recipe and parameters were saved; inspect the final log lines, then retry after correcting inputs." });
+    hints.push({ title: "Review log tail", detail: "The gesture parameters were saved; inspect the final log lines, then retry after correcting inputs." });
   }
   return dedupeHints(hints);
 }
 
 function artifactCountLabel(job: JobRecord) {
-  if (!job.artifact_ids.length) return "no artifacts yet";
-  return `${job.artifact_ids.length} artifact${job.artifact_ids.length === 1 ? "" : "s"}`;
+  if (!job.artifact_ids.length) return "no output yet";
+  return `${job.artifact_ids.length} output${job.artifact_ids.length === 1 ? "" : "s"}`;
 }
 
 function ProgressTrack({ job }: { job: JobRecord }) {

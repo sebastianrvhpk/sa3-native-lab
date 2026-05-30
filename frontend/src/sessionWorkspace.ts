@@ -100,9 +100,9 @@ export function workspacePulseRows(summary: SessionWorkspaceSummary): WorkspaceP
     },
     {
       key: "families",
-      label: "Families",
+      label: "Branches",
       value: String(summary.familyCount),
-      detail: "recipe groups",
+      detail: "creative paths",
       tone: "family",
     },
     {
@@ -168,7 +168,7 @@ export function workspaceFocus(summary: SessionWorkspaceSummary): WorkspaceFocus
   }
   return {
     label: "Ready",
-    detail: summary.familyCount ? "fork, replay, or run the next recipe" : "run a recipe to begin a family",
+    detail: summary.familyCount ? "branch, remember, or choose the next gesture" : "make a take to begin a branch",
     tone: "listen",
     artifactId: summary.latestAudioId,
   };

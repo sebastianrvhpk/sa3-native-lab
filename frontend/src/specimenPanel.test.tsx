@@ -52,7 +52,7 @@ describe("Specimen", () => {
     expect(screen.getByText("Warm Smoke Take")).toBeInTheDocument();
     expect(screen.getByText("recipe_take")).toBeInTheDocument();
     expect(screen.getByText("1.0s")).toBeInTheDocument();
-    expect(screen.getByLabelText("Artifact lineage")).toHaveTextContent("take");
+    expect(screen.getByLabelText("Sound lineage")).toHaveTextContent("take");
 
     await user.click(screen.getByRole("button", { name: "Anchor" }));
     await user.click(screen.getByRole("button", { name: "Source" }));
@@ -104,6 +104,26 @@ describe("Specimen", () => {
     expect(screen.getByLabelText("Notes")).toHaveValue("second note");
     await user.click(screen.getByRole("button", { name: /save annotation/i }));
     expect(onAnnotate).toHaveBeenLastCalledWith("art_second", expect.objectContaining({ label: "Second Take" }));
+  });
+
+  it("saves Remember role, reuse intent, and decision metadata when chosen", async () => {
+    const user = userEvent.setup();
+    const onAnnotate = vi.fn();
+
+    renderSpecimen({ onAnnotate });
+
+    await user.selectOptions(screen.getByLabelText("Role"), "texture");
+    await user.selectOptions(screen.getByLabelText("Reuse"), "donor");
+    await user.selectOptions(screen.getByLabelText("Decision"), "brittle");
+    await user.click(screen.getByRole("button", { name: /save annotation/i }));
+
+    expect(onAnnotate).toHaveBeenCalledWith("art_take", expect.objectContaining({
+      metadata: {
+        memory_role: "texture",
+        reuse_intent: "donor",
+        memory_decision: "brittle",
+      },
+    }));
   });
 
   it("disables archive when the selected artifact is outside the active session", () => {

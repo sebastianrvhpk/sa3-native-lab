@@ -113,10 +113,10 @@ export function ForkRecipePanel({
     <section className="fork-panel">
       <div className="fork-head">
         <div>
-          <span className="eyebrow">Fork Recipe</span>
+          <span className="eyebrow">Branch Gesture</span>
           <strong>{shortOperatorName(recipe.operator)}</strong>
         </div>
-        <button type="button" onClick={onClose} title="Close fork editor">
+        <button type="button" onClick={onClose} title="Close branch editor">
           <X size={15} />
         </button>
       </div>
@@ -161,7 +161,7 @@ export function ForkRecipePanel({
             />
           ))
         ) : (
-          <div className="quiet-panel compact">No params on this recipe</div>
+          <div className="quiet-panel compact">No gesture parameters</div>
         )}
       </div>
       <label className={`fork-notes ${(notes.trim() || "") !== (recipe.notes ?? "") ? "changed" : ""}`}>
@@ -170,7 +170,7 @@ export function ForkRecipePanel({
       </label>
       <button type="button" className="fork-submit" disabled={submitting} onClick={submit}>
         {submitting ? <LoaderCircle className="spin" size={15} /> : <GitFork size={15} />}
-        Fork with changes
+        Branch with changes
       </button>
     </section>
   );
@@ -178,7 +178,7 @@ export function ForkRecipePanel({
 
 function RecipeDiffSummary({ labels, onReset }: { labels: string[]; onReset: () => void }) {
   if (!labels.length) {
-    return <div className="recipe-diff-summary idle">No recipe changes yet</div>;
+    return <div className="recipe-diff-summary idle">No gesture changes yet</div>;
   }
   return (
     <div className="recipe-diff-summary">

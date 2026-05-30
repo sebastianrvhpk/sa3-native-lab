@@ -1,5 +1,6 @@
 import { LoaderCircle, Repeat, X } from "lucide-react";
 
+import { nextActionsForPendingTake } from "./nextActionModel";
 import type { PendingTake } from "./pendingTakeModel";
 import type { JobRecord } from "./types";
 
@@ -33,6 +34,10 @@ export function PendingTakesPanel({ takes, onCancelJob, onRetryJob }: PendingTak
               <span style={{ width: `${take.progressPercent}%` }} />
             </div>
             <p>{take.detail}</p>
+            <div className="pending-take-landing">
+              <span>{take.completionPhrase}</span>
+              <small>{take.recoverySuggestion ?? take.branchLabel}</small>
+            </div>
             <details className="inspect-mini">
               <summary>Inspect</summary>
               <dl>
@@ -42,8 +47,17 @@ export function PendingTakesPanel({ takes, onCancelJob, onRetryJob }: PendingTak
                 <dd>{take.inspect.operator}</dd>
                 <dt>Sources</dt>
                 <dd>{take.sourceIds.length ? take.sourceIds.join(", ") : "none"}</dd>
+                <dt>Landing</dt>
+                <dd>{take.landingArtifactId ?? "not landed"}</dd>
               </dl>
             </details>
+            <div className="pending-next-actions" aria-label={`${take.phrase} next actions`}>
+              {nextActionsForPendingTake(take).map((action) => (
+                <span key={action.id} title={action.disabledReason ?? action.description}>
+                  {action.label}
+                </span>
+              ))}
+            </div>
             {take.canCancel || take.canRetry ? (
               <div className="pending-take-actions">
                 {take.canCancel ? (

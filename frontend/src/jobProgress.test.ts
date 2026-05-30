@@ -26,7 +26,7 @@ describe("job recovery hints", () => {
   it("keeps cancelled jobs retryable without pretending they failed", () => {
     expect(job({ status: "cancelled" }).status).toBe("cancelled");
     expect(jobRecoveryHints(job({ status: "cancelled" }))).toEqual([
-      { title: "Cancelled", detail: "The recipe is preserved; retry it when the current inputs are ready." },
+      { title: "Cancelled", detail: "The gesture is preserved; retry it when the current inputs are ready." },
     ]);
   });
 
