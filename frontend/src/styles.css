@@ -362,7 +362,7 @@ label {
 .operator-surface {
   padding: 20px;
   display: grid;
-  grid-template-rows: auto minmax(260px, 1fr) auto auto;
+  grid-template-rows: auto auto auto auto auto;
   gap: 18px;
   border-left: 1px solid var(--line);
   border-right: 1px solid var(--line);
@@ -2262,6 +2262,287 @@ audio {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
   gap: 12px;
+}
+
+.gesture-workbench {
+  display: grid;
+  gap: 12px;
+}
+
+.gesture-strip,
+.tune-drawer,
+.pending-takes-panel {
+  border: 1px solid rgb(45 51 52 / 0.72);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle, rgb(45 51 52 / 0.055) 0.9px, transparent 1.2px) 0 0 / 14px 14px,
+    linear-gradient(135deg, rgb(255 255 255 / 0.66), rgb(229 230 222 / 0.7)),
+    var(--panel);
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.5) inset,
+    0 14px 30px rgb(32 34 35 / 0.07);
+}
+
+.gesture-strip {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.gesture-strip-head,
+.pending-takes-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.gesture-buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  gap: 8px;
+}
+
+.gesture-buttons button {
+  min-width: 0;
+  min-height: 82px;
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  gap: 4px;
+  align-content: start;
+  justify-items: start;
+  padding: 9px;
+  text-align: left;
+  background:
+    linear-gradient(135deg, rgb(255 255 255 / 0.62), rgb(85 198 199 / 0.1)),
+    rgb(255 255 255 / 0.48);
+}
+
+.gesture-buttons button:nth-child(3n + 1) {
+  background:
+    linear-gradient(135deg, rgb(243 168 60 / 0.18), rgb(143 91 210 / 0.13)),
+    rgb(255 255 255 / 0.5);
+}
+
+.gesture-buttons button:nth-child(3n + 2) {
+  background:
+    linear-gradient(135deg, rgb(201 238 72 / 0.18), rgb(85 198 199 / 0.14)),
+    rgb(255 255 255 / 0.5);
+}
+
+.gesture-buttons button.active {
+  border-color: var(--line);
+  box-shadow:
+    0 0 0 2px rgb(201 238 72 / 0.55) inset,
+    0 0 0 5px rgb(85 198 199 / 0.14);
+}
+
+.gesture-buttons span {
+  color: var(--ink);
+  font-weight: 760;
+  font-family: var(--label-font);
+}
+
+.gesture-buttons small {
+  color: var(--muted);
+  font-size: 0.66rem;
+  line-height: 1.25;
+}
+
+.tune-drawer {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  position: relative;
+  overflow: hidden;
+}
+
+.tune-drawer::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 5px;
+  background: linear-gradient(180deg, var(--chartreuse), var(--cyan), var(--violet));
+}
+
+.tune-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  gap: 12px;
+  align-items: start;
+}
+
+.tune-head h2 {
+  margin: 2px 0 2px;
+  font-size: clamp(1.25rem, 2vw, 1.9rem);
+  letter-spacing: 0;
+}
+
+.tune-head p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.gesture-state {
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  padding: 0 10px;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  background: rgb(255 255 255 / 0.52);
+}
+
+.gesture-state.ready {
+  background: linear-gradient(135deg, rgb(201 238 72 / 0.25), rgb(85 198 199 / 0.18));
+}
+
+.gesture-state.blocked {
+  background: linear-gradient(135deg, rgb(243 168 60 / 0.2), rgb(234 74 162 / 0.12));
+}
+
+.gesture-blocked {
+  grid-auto-flow: column;
+  gap: 8px;
+  place-content: center;
+}
+
+.tune-details {
+  display: grid;
+  gap: 10px;
+}
+
+.tune-details > summary {
+  justify-self: start;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  padding: 0 11px;
+  background: rgb(255 255 255 / 0.52);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.tune-body {
+  display: grid;
+  gap: 12px;
+}
+
+.gesture-mode-grid {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr);
+  gap: 8px;
+}
+
+.gesture-action {
+  display: grid;
+  gap: 8px;
+}
+
+.gesture-action > button {
+  min-height: 46px;
+}
+
+.tune-drawer select,
+.tune-drawer input {
+  min-width: 0;
+}
+
+.remember-gesture-panel {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgb(201 238 72 / 0.14), rgb(85 198 199 / 0.1));
+}
+
+.remember-gesture-panel p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.pending-takes-panel {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+}
+
+.pending-takes-list {
+  display: grid;
+  gap: 8px;
+}
+
+.pending-take {
+  display: grid;
+  gap: 7px;
+  padding: 9px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgb(243 168 60 / 0.12), rgb(85 198 199 / 0.1)), rgb(255 255 255 / 0.5);
+}
+
+.pending-take-main {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) max-content;
+  gap: 8px;
+  align-items: center;
+}
+
+.pending-take-main strong,
+.pending-take-main small,
+.pending-take p {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pending-take-main strong {
+  display: block;
+  color: var(--ink);
+}
+
+.pending-take-main small,
+.pending-take p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.pending-take-main em {
+  color: var(--ink);
+  font-style: normal;
+  font-weight: 780;
+}
+
+.inspect-mini > summary {
+  width: max-content;
+  min-height: 26px;
+  color: var(--muted);
+  background: rgb(255 255 255 / 0.46);
+}
+
+.inspect-mini dl {
+  margin-top: 8px;
+  grid-template-columns: max-content minmax(0, 1fr);
+  font-size: 0.72rem;
+}
+
+.pending-take-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pending-take-actions button {
+  min-height: 28px;
+  padding: 0 8px;
+  font-size: 0.68rem;
 }
 
 .experiment-band {
@@ -4968,8 +5249,13 @@ audio {
   }
 
   .specimen,
-  .action-bands {
+  .action-bands,
+  .gesture-buttons {
     grid-template-columns: 1fr;
+  }
+
+  .gesture-buttons {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .experiment-band {
@@ -4981,7 +5267,8 @@ audio {
   }
 
   .recipe-mode-grid,
-  .operator-mode-grid {
+  .operator-mode-grid,
+  .tune-head {
     grid-template-columns: 1fr;
   }
 

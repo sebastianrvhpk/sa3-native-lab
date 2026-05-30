@@ -2,18 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Activity,
-  AudioLines,
   Box,
   Braces,
   FileAudio,
-  FlaskConical,
   GitFork,
   LoaderCircle,
   Play,
   Settings,
-  SlidersHorizontal,
   Upload,
-  Wand2,
   Waves,
 } from "lucide-react";
 
@@ -33,7 +29,9 @@ import { TinyWave } from "./audioDeck";
 import { ComparePanel } from "./comparePanel";
 import { createControlPlaneClient, DEFAULT_CONTROL_PLANE_URL, type ResultFamily, type WorkbenchState } from "./controlPlane";
 import { ForkRecipePanel } from "./forkRecipePanel";
-import { isJobActive, landingArtifactId, shortOperatorName } from "./jobUtils";
+import { buildGestureOptions, gestureById, type GestureId } from "./gestureModel";
+import { GestureStrip } from "./gestureStrip";
+import { isJobActive, landingArtifactId } from "./jobUtils";
 import { ModeAtlas } from "./modeAtlas";
 import { OperatorPresetRack } from "./operatorPresetRack";
 import {
@@ -57,6 +55,8 @@ import {
 import { PromptSearchPresetRack } from "./promptSearchRack";
 import { RecipeFields } from "./RecipeFields";
 import { FamilyDetailPanel, ResultFamilyPanel } from "./resultFamilies";
+import { pendingTakesFromJobs } from "./pendingTakeModel";
+import { PendingTakesPanel } from "./pendingTakesPanel";
 import {
   buildExperimentPayload,
   buildGenerationPayload,
@@ -83,6 +83,7 @@ import { SpecCoverage, SpecCoveragePair } from "./specCoverage";
 import { Specimen } from "./specimenPanel";
 import { BackendPills, InlineJobStatus, ReadinessPanel, RunMonitor } from "./statusPanels";
 import { useBenchStore } from "./store";
+import { TuneDrawer } from "./tuneDrawer";
 import type {
   ArtifactRecord,
   HealthResponse,
@@ -158,6 +159,7 @@ export function App() {
   const [sameForm, setSameForm] = useState<Record<string, RecipeValue>>(() => defaultFieldForm(sameConfig));
   const [operator, setOperator] = useState<LatentOperatorMode>("latent.cyclic_roll");
   const [operatorForm, setOperatorForm] = useState<Record<string, RecipeValue>>(() => defaultOperatorForm("latent.cyclic_roll"));
+  const [activeGestureId, setActiveGestureId] = useState<GestureId>("make");
   const [donorArtifactId, setDonorArtifactId] = useState("");
   const [operatorPresets, setOperatorPresets] = useState<OperatorPreset[]>(() => loadOperatorPresets());
   const [operatorPresetName, setOperatorPresetName] = useState("");
@@ -193,6 +195,15 @@ export function App() {
     ? allArtifacts.filter((item) => item.session_id !== activeSessionId)
     : allArtifacts.filter((item) => !createdAfter(item.created_at, sessionStartedAt)));
   const runningJobs = workbenchState?.runningJobs ?? allJobs.filter(isJobActive);
+  const pendingTakes = useMemo(
+    () =>
+      pendingTakesFromJobs(
+        sessionJobs
+          .filter((job) => isJobActive(job) || ((job.status === "failed" || job.status === "cancelled") && !job.artifact_ids.length))
+          .slice(0, 4),
+      ),
+    [sessionJobs],
+  );
   const resultFamilies = workbenchState?.resultFamilies ?? buildResultFamilies(allArtifacts, allJobs);
   const sessionResultFamilies = workbenchState?.sessionResultFamilies ?? filterFamiliesForWork(resultFamilies, sessionArtifacts, sessionJobs);
   const inspectedFamily = sessionResultFamilies.find((family) => family.familyId === inspectedFamilyId) ?? sessionResultFamilies[0] ?? null;
@@ -528,6 +539,8 @@ export function App() {
   });
 
   const canRunExperiment = experimentReady(activeExperiment, experimentForm, selectedArtifact);
+  const gestureOptions = useMemo(() => buildGestureOptions(selectedArtifact), [selectedArtifact]);
+  const activeGesture = gestureOptions.find((gesture) => gesture.id === activeGestureId) ?? gestureOptions[0] ?? buildGestureOptions(null)[0]!;
 
   const setExperimentField = (key: string, value: RecipeValue) => {
     setExperimentForm((current) => ({ ...current, [key]: value }));
@@ -602,6 +615,21 @@ export function App() {
     setExperimentForm(defaultExperimentForm(mode));
   };
 
+  const selectGesture = (gestureId: GestureId) => {
+    setActiveGestureId(gestureId);
+    const gesture = gestureById(gestureId);
+    if (gesture.defaultGenerationMode) {
+      setGenerationMode(gesture.defaultGenerationMode);
+      setGenerationForm(defaultGenerationForm(gesture.defaultGenerationMode));
+    }
+    if (gesture.defaultOperatorMode) {
+      selectOperatorMode(gesture.defaultOperatorMode);
+    }
+    if (gesture.defaultExperimentMode) {
+      selectExperimentMode(gesture.defaultExperimentMode);
+    }
+  };
+
   const useArtifactAsDonor = (artifactId: string) => {
     const artifact = allArtifacts.find((item) => item.artifact_id === artifactId);
     if (!artifact || artifact.kind !== "latent") return;
@@ -630,6 +658,275 @@ export function App() {
   const runPromptCandidate = (candidate: PromptCandidateGenerationRequest) => {
     usePromptCandidate(candidate.prompt);
     generatePromptCandidate.mutate(candidate);
+  };
+
+  const renderGestureTune = () => {
+    if (activeGesture.tuneSource === "generation") {
+      return (
+        <>
+          <div className="gesture-mode-grid">
+            <label>
+              Generation move
+              <select value={generationMode} onChange={(event) => setGenerationMode(event.target.value as GenerationMode)}>
+                {generationModes.map((mode) => (
+                  <option key={mode.value} value={mode.value}>
+                    {mode.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <RecipeFields
+            config={activeGenerationConfig}
+            form={generationForm}
+            artifacts={allArtifacts}
+            selectedArtifact={selectedArtifact}
+            onChange={setGenerationField}
+            getArtifactLabel={artifactName}
+            getArtifactPath={artifactPathForField}
+          />
+          {generationNeedsSource && !generationSource ? <div className="quiet-panel compact">Select an audio sound for this gesture.</div> : null}
+        </>
+      );
+    }
+
+    if (activeGesture.tuneSource === "same") {
+      return (
+        <RecipeFields
+          config={activeSameConfig}
+          form={sameForm}
+          artifacts={allArtifacts}
+          selectedArtifact={selectedArtifact}
+          onChange={setSameField}
+          getArtifactLabel={artifactName}
+          getArtifactPath={artifactPathForField}
+        />
+      );
+    }
+
+    if (activeGesture.tuneSource === "operator") {
+      return (
+        <>
+          <div className="recipe-mode-grid operator-mode-grid">
+            <label>
+              Latent move
+              <select value={operator} onChange={(event) => selectOperatorMode(event.target.value as LatentOperatorMode)}>
+                {operatorModes.map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <span className={`recipe-chip ${activeOperatorConfig.maturity}`}>{activeOperatorConfig.family}</span>
+            <span className={`recipe-chip ${activeOperatorConfig.maturity}`}>{activeOperatorConfig.maturity}</span>
+          </div>
+          <OperatorPresetRack
+            presets={activeOperatorPresets}
+            selectedPreset={selectedOperatorPreset}
+            selectedPresetId={selectedOperatorPresetId}
+            presetName={operatorPresetName}
+            diffRows={operatorPresetDiffs}
+            onSelectPreset={applyOperatorPreset}
+            onChangePresetName={setOperatorPresetName}
+            onSavePreset={saveOperatorPreset}
+            onResetPreset={() => selectedOperatorPreset && applyOperatorPreset(selectedOperatorPreset.id)}
+            onDeletePreset={removeOperatorPreset}
+          />
+          {operatorUsesDonor(activeOperatorConfig, operatorForm) ? (
+            <label className="control-cell donor-cell">
+              Donor latent
+              <select value={donorArtifactId} onChange={(event) => setDonorArtifactId(event.target.value)}>
+                <option value="">Select latent</option>
+                {latentArtifacts
+                  .filter((artifact) => artifact.artifact_id !== selectedArtifact?.artifact_id)
+                  .map((artifact) => (
+                    <option key={artifact.artifact_id} value={artifact.artifact_id}>
+                      {artifactName(artifact)}
+                    </option>
+                  ))}
+              </select>
+            </label>
+          ) : null}
+          <RecipeFields
+            config={activeOperatorConfig}
+            form={operatorForm}
+            artifacts={allArtifacts}
+            selectedArtifact={selectedArtifact}
+            onChange={setOperatorField}
+            getArtifactPath={artifactPathForField}
+            getArtifactLabel={artifactName}
+          />
+        </>
+      );
+    }
+
+    if (activeGesture.tuneSource === "experiment") {
+      return (
+        <>
+          <div className="recipe-mode-grid">
+            <label>
+              Experiment
+              <select value={experimentMode} onChange={(event) => selectExperimentMode(event.target.value as ExperimentMode)}>
+                {experimentModes.map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <span className={`recipe-chip ${activeExperiment.maturity}`}>{activeExperiment.family}</span>
+            <span className={`recipe-chip ${activeExperiment.maturity}`}>{activeExperiment.maturity}</span>
+          </div>
+          {activeExperiment.value === "experiment.prompt_search" ? (
+            <PromptSearchPresetRack
+              presets={promptSearchPresets}
+              vocabularySets={promptSearchVocabularySets}
+              axisSets={promptSearchAxisSets}
+              historyRows={promptSearchHistoryRows(allArtifacts)}
+              scorer={experimentForm.scorer}
+              onApply={(presetId) => setExperimentForm((current) => applyPromptSearchPreset(current, presetId))}
+              onApplyVocabulary={(setId) => setExperimentForm((current) => applyPromptSearchVocabularySet(current, setId))}
+              onApplyAxis={(setId) => setExperimentForm((current) => applyPromptSearchAxisSet(current, setId))}
+              onUseHistoryPrompt={(prompt) => setExperimentForm((current) => ({ ...current, seed_prompt: prompt }))}
+            />
+          ) : null}
+          <RecipeFields
+            config={activeExperiment}
+            form={experimentForm}
+            artifacts={allArtifacts}
+            selectedArtifact={selectedArtifact}
+            onChange={setExperimentField}
+            getArtifactPath={artifactPathForField}
+            getArtifactLabel={artifactName}
+          />
+        </>
+      );
+    }
+
+    return (
+      <div className="remember-gesture-panel">
+        <strong>{selectedArtifact ? artifactName(selectedArtifact) : "No current material"}</strong>
+        <p>Remember saves the current material into Memory so it can be recovered, used as a source, or kept out of the active session.</p>
+      </div>
+    );
+  };
+
+  const renderGestureInspect = () => {
+    if (activeGesture.tuneSource === "generation") {
+      return <SpecCoverage spec={activeGenerateSpec} controlledKeys={generationControlKeys(generationMode)} />;
+    }
+    if (activeGesture.tuneSource === "same") {
+      return <SpecCoveragePair specs={[sameEncodeSpec, sameDecodeSpec]} controlledKeys={[sameEncodeControlKeys, sameDecodeControlKeys]} />;
+    }
+    if (activeGesture.tuneSource === "operator") {
+      return <SpecCoverage spec={activeOperatorSpec} controlledKeys={fieldKeys(activeOperatorConfig)} />;
+    }
+    if (activeGesture.tuneSource === "experiment") {
+      return (
+        <>
+          <SpecCoverage spec={activeExperimentSpec} controlledKeys={fieldKeys(activeExperiment)} />
+          <details className="dev-drawer nested">
+            <summary>Developer mode map</summary>
+            <ModeAtlas modes={modeAtlasRows} activeOperator={activeExperiment.value} />
+          </details>
+        </>
+      );
+    }
+    return null;
+  };
+
+  const renderGestureAction = () => {
+    if (activeGesture.tuneSource === "generation") {
+      return (
+        <>
+          <button className="primary-action" onClick={() => generate.mutate()} disabled={!activeGesture.available || !canGenerate || generate.isPending || Boolean(generateJob)}>
+            {generate.isPending || generateJob ? <LoaderCircle className="spin" size={18} /> : <Play size={18} />}
+            {generateJob ? activeGesture.progressPhrase : generate.isPending ? "Queueing take" : generationButtonLabel(activeGesture.id, generationMode)}
+          </button>
+          <InlineJobStatus
+            job={generateJob}
+            onCancelJob={(job) => cancelJobMutation.mutate(job.job_id)}
+            onRetryJob={(job) => retryJobMutation.mutate(job.job_id)}
+          />
+        </>
+      );
+    }
+
+    if (activeGesture.id === "encode") {
+      return (
+        <>
+          <button disabled={!activeGesture.available || !selectedArtifact || selectedArtifact.kind !== "audio" || encode.isPending || Boolean(encodeJob)} onClick={() => selectedArtifact && encode.mutate(selectedArtifact)}>
+            {encode.isPending || encodeJob ? <LoaderCircle className="spin" size={17} /> : <Box size={17} />}
+            {encodeJob ? "Encoding latent" : "Encode current sound"}
+          </button>
+          <InlineJobStatus
+            job={encodeJob}
+            onCancelJob={(job) => cancelJobMutation.mutate(job.job_id)}
+            onRetryJob={(job) => retryJobMutation.mutate(job.job_id)}
+          />
+        </>
+      );
+    }
+
+    if (activeGesture.id === "decode") {
+      return (
+        <>
+          <button disabled={!activeGesture.available || !selectedArtifact || selectedArtifact.kind !== "latent" || decode.isPending || Boolean(decodeJob)} onClick={() => selectedArtifact && decode.mutate(selectedArtifact)}>
+            {decode.isPending || decodeJob ? <LoaderCircle className="spin" size={17} /> : <Waves size={17} />}
+            {decodeJob ? "Decoding sound" : "Decode latent"}
+          </button>
+          <InlineJobStatus
+            job={decodeJob}
+            onCancelJob={(job) => cancelJobMutation.mutate(job.job_id)}
+            onRetryJob={(job) => retryJobMutation.mutate(job.job_id)}
+          />
+        </>
+      );
+    }
+
+    if (activeGesture.tuneSource === "operator") {
+      return (
+        <>
+          <button className="primary-action" disabled={!activeGesture.available || !canRunOperator || runOperator.isPending || Boolean(operatorJob)} onClick={() => selectedArtifact && runOperator.mutate(selectedArtifact)}>
+            {runOperator.isPending || operatorJob ? <LoaderCircle className="spin" size={18} /> : <GitFork size={17} />}
+            {operatorJob ? activeGesture.progressPhrase : "Apply gesture"}
+          </button>
+          <InlineJobStatus
+            job={operatorJob}
+            onCancelJob={(job) => cancelJobMutation.mutate(job.job_id)}
+            onRetryJob={(job) => retryJobMutation.mutate(job.job_id)}
+          />
+        </>
+      );
+    }
+
+    if (activeGesture.tuneSource === "experiment") {
+      return (
+        <>
+          <button className="primary-action" disabled={!activeGesture.available || !canRunExperiment || runExperiment.isPending || Boolean(experimentJob)} onClick={() => runExperiment.mutate()}>
+            {runExperiment.isPending || experimentJob ? <LoaderCircle className="spin" size={18} /> : <Play size={18} />}
+            {experimentJob ? activeGesture.progressPhrase : "Run gesture"}
+          </button>
+          <InlineJobStatus
+            job={experimentJob}
+            onCancelJob={(job) => cancelJobMutation.mutate(job.job_id)}
+            onRetryJob={(job) => retryJobMutation.mutate(job.job_id)}
+          />
+        </>
+      );
+    }
+
+    return (
+      <button
+        className="primary-action"
+        disabled={!selectedArtifact || archiveArtifact.isPending}
+        onClick={() => selectedArtifact && archiveArtifact.mutate({ artifact: selectedArtifact, source: "remember_gesture" })}
+      >
+        {archiveArtifact.isPending ? <LoaderCircle className="spin" size={18} /> : <Box size={17} />}
+        {archiveArtifact.isPending ? "Remembering" : "Remember current sound"}
+      </button>
+    );
   };
 
   return (
@@ -696,6 +993,8 @@ export function App() {
             {selectedArtifact ? <ArtifactBadge artifact={selectedArtifact} /> : null}
           </div>
 
+          <GestureStrip gestures={gestureOptions} activeId={activeGesture.id} onSelect={selectGesture} />
+
           <Specimen
             artifact={selectedArtifact}
             artifacts={allArtifacts}
@@ -726,208 +1025,10 @@ export function App() {
             onRetryJob={(job) => retryJobMutation.mutate(job.job_id)}
           />
 
-          <div className="action-bands">
-            <div className="band">
-              <div className="band-title">
-                <Wand2 size={18} />
-                <span>Make / Continue</span>
-              </div>
-              <details className="contract-details">
-                <summary>Inspect contract</summary>
-                <SpecCoverage spec={activeGenerateSpec} controlledKeys={generationControlKeys(generationMode)} />
-              </details>
-              <div className="segmented">
-                {generationModes.map((mode) => (
-                  <button key={mode.value} className={generationMode === mode.value ? "active" : ""} onClick={() => setGenerationMode(mode.value)}>
-                    {mode.label}
-                  </button>
-                ))}
-              </div>
-              <RecipeFields
-                config={activeGenerationConfig}
-                form={generationForm}
-                artifacts={allArtifacts}
-                selectedArtifact={selectedArtifact}
-                onChange={setGenerationField}
-                getArtifactLabel={artifactName}
-                getArtifactPath={artifactPathForField}
-              />
-              {generationNeedsSource && !generationSource ? <div className="quiet-panel compact">Select an audio artifact to use this mode.</div> : null}
-              <button className="primary-action" onClick={() => generate.mutate()} disabled={!canGenerate || generate.isPending || Boolean(generateJob)}>
-                {generate.isPending || generateJob ? <LoaderCircle className="spin" size={18} /> : <Play size={18} />}
-                {generateJob ? "Making take" : generate.isPending ? "Queueing take" : generationMode === "generate.text_to_audio" ? "Make sound" : "Continue sound"}
-              </button>
-              <InlineJobStatus
-                job={generateJob}
-                onCancelJob={(job) => cancelJobMutation.mutate(job.job_id)}
-                onRetryJob={(job) => retryJobMutation.mutate(job.job_id)}
-              />
-            </div>
-
-            <div className="band">
-              <div className="band-title">
-                <AudioLines size={18} />
-                <span>Encode / Decode</span>
-              </div>
-              <details className="contract-details">
-                <summary>Inspect contract</summary>
-                <SpecCoveragePair specs={[sameEncodeSpec, sameDecodeSpec]} controlledKeys={[sameEncodeControlKeys, sameDecodeControlKeys]} />
-              </details>
-              <RecipeFields
-                config={activeSameConfig}
-                form={sameForm}
-                artifacts={allArtifacts}
-                selectedArtifact={selectedArtifact}
-                onChange={setSameField}
-                getArtifactLabel={artifactName}
-                getArtifactPath={artifactPathForField}
-              />
-              <div className="two-actions">
-                <button disabled={!selectedArtifact || selectedArtifact.kind !== "audio" || encode.isPending || Boolean(encodeJob)} onClick={() => selectedArtifact && encode.mutate(selectedArtifact)}>
-                  {encode.isPending || encodeJob ? <LoaderCircle className="spin" size={17} /> : <Box size={17} />}
-                  {encodeJob ? "Encoding" : "Encode"}
-                </button>
-                <button disabled={!selectedArtifact || selectedArtifact.kind !== "latent" || decode.isPending || Boolean(decodeJob)} onClick={() => selectedArtifact && decode.mutate(selectedArtifact)}>
-                  {decode.isPending || decodeJob ? <LoaderCircle className="spin" size={17} /> : <Waves size={17} />}
-                  {decodeJob ? "Decoding" : "Decode"}
-                </button>
-              </div>
-              <InlineJobStatus
-                job={encodeJob ?? decodeJob}
-                onCancelJob={(job) => cancelJobMutation.mutate(job.job_id)}
-                onRetryJob={(job) => retryJobMutation.mutate(job.job_id)}
-              />
-            </div>
-
-            <div className="band operator-band">
-              <div className="band-title">
-                <SlidersHorizontal size={18} />
-                <span>Latent Gestures</span>
-              </div>
-              <div className="recipe-mode-grid operator-mode-grid">
-                <label>
-                  Latent move
-                  <select value={operator} onChange={(event) => selectOperatorMode(event.target.value as LatentOperatorMode)}>
-                    {operatorModes.map((item) => (
-                      <option key={item.value} value={item.value}>
-                        {item.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <span className={`recipe-chip ${activeOperatorConfig.maturity}`}>{activeOperatorConfig.family}</span>
-                <span className={`recipe-chip ${activeOperatorConfig.maturity}`}>{activeOperatorConfig.maturity}</span>
-              </div>
-              <details className="contract-details">
-                <summary>Inspect contract</summary>
-                <SpecCoverage spec={activeOperatorSpec} controlledKeys={fieldKeys(activeOperatorConfig)} />
-              </details>
-              <OperatorPresetRack
-                presets={activeOperatorPresets}
-                selectedPreset={selectedOperatorPreset}
-                selectedPresetId={selectedOperatorPresetId}
-                presetName={operatorPresetName}
-                diffRows={operatorPresetDiffs}
-                onSelectPreset={applyOperatorPreset}
-                onChangePresetName={setOperatorPresetName}
-                onSavePreset={saveOperatorPreset}
-                onResetPreset={() => selectedOperatorPreset && applyOperatorPreset(selectedOperatorPreset.id)}
-                onDeletePreset={removeOperatorPreset}
-              />
-              {operatorUsesDonor(activeOperatorConfig, operatorForm) ? (
-                <label className="control-cell donor-cell">
-                  Donor latent
-                  <select value={donorArtifactId} onChange={(event) => setDonorArtifactId(event.target.value)}>
-                    <option value="">Select latent</option>
-                    {latentArtifacts
-                      .filter((artifact) => artifact.artifact_id !== selectedArtifact?.artifact_id)
-                      .map((artifact) => (
-                        <option key={artifact.artifact_id} value={artifact.artifact_id}>
-                          {artifactName(artifact)}
-                        </option>
-                      ))}
-                  </select>
-                </label>
-              ) : null}
-              <RecipeFields
-                config={activeOperatorConfig}
-                form={operatorForm}
-                artifacts={allArtifacts}
-                selectedArtifact={selectedArtifact}
-                onChange={setOperatorField}
-                getArtifactPath={artifactPathForField}
-                getArtifactLabel={artifactName}
-              />
-              <button className="primary-action" disabled={!canRunOperator || runOperator.isPending || Boolean(operatorJob)} onClick={() => selectedArtifact && runOperator.mutate(selectedArtifact)}>
-                {runOperator.isPending || operatorJob ? <LoaderCircle className="spin" size={18} /> : <GitFork size={17} />}
-                {operatorJob ? "Gesture running" : "Apply gesture"}
-              </button>
-              <InlineJobStatus
-                job={operatorJob}
-                onCancelJob={(job) => cancelJobMutation.mutate(job.job_id)}
-                onRetryJob={(job) => retryJobMutation.mutate(job.job_id)}
-              />
-            </div>
-
-            <div className="band experiment-band">
-              <div className="band-title">
-                <FlaskConical size={18} />
-                <span>Advanced Gestures</span>
-              </div>
-              <div className="recipe-mode-grid">
-                <label>
-                  Experiment
-                  <select value={experimentMode} onChange={(event) => selectExperimentMode(event.target.value as ExperimentMode)}>
-                    {experimentModes.map((item) => (
-                      <option key={item.value} value={item.value}>
-                        {item.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <span className={`recipe-chip ${activeExperiment.maturity}`}>{activeExperiment.family}</span>
-                <span className={`recipe-chip ${activeExperiment.maturity}`}>{activeExperiment.maturity}</span>
-              </div>
-              <details className="contract-details">
-                <summary>Inspect contract</summary>
-                <SpecCoverage spec={activeExperimentSpec} controlledKeys={fieldKeys(activeExperiment)} />
-              </details>
-              {activeExperiment.value === "experiment.prompt_search" ? (
-                <PromptSearchPresetRack
-                  presets={promptSearchPresets}
-                  vocabularySets={promptSearchVocabularySets}
-                  axisSets={promptSearchAxisSets}
-                  historyRows={promptSearchHistoryRows(allArtifacts)}
-                  scorer={experimentForm.scorer}
-                  onApply={(presetId) => setExperimentForm((current) => applyPromptSearchPreset(current, presetId))}
-                  onApplyVocabulary={(setId) => setExperimentForm((current) => applyPromptSearchVocabularySet(current, setId))}
-                  onApplyAxis={(setId) => setExperimentForm((current) => applyPromptSearchAxisSet(current, setId))}
-                  onUseHistoryPrompt={(prompt) => setExperimentForm((current) => ({ ...current, seed_prompt: prompt }))}
-                />
-              ) : null}
-              <RecipeFields
-                config={activeExperiment}
-                form={experimentForm}
-                artifacts={allArtifacts}
-                selectedArtifact={selectedArtifact}
-                onChange={setExperimentField}
-                getArtifactPath={artifactPathForField}
-                getArtifactLabel={artifactName}
-              />
-              <button className="primary-action" disabled={!canRunExperiment || runExperiment.isPending || Boolean(experimentJob)} onClick={() => runExperiment.mutate()}>
-                {runExperiment.isPending || experimentJob ? <LoaderCircle className="spin" size={18} /> : <Play size={18} />}
-                {experimentJob ? "Gesture running" : "Run gesture"}
-              </button>
-              <InlineJobStatus
-                job={experimentJob}
-                onCancelJob={(job) => cancelJobMutation.mutate(job.job_id)}
-                onRetryJob={(job) => retryJobMutation.mutate(job.job_id)}
-              />
-              <details className="dev-drawer">
-                <summary>Developer mode map</summary>
-                <ModeAtlas modes={modeAtlasRows} activeOperator={activeExperiment.value} />
-              </details>
-            </div>
+          <div className="gesture-workbench">
+            <TuneDrawer gesture={activeGesture} inspect={renderGestureInspect()} action={renderGestureAction()}>
+              {renderGestureTune()}
+            </TuneDrawer>
           </div>
         </section>
 
@@ -945,6 +1046,11 @@ export function App() {
             apiBase={apiBase}
             onSelect={selectArtifact}
             onCompare={setCompare}
+          />
+          <PendingTakesPanel
+            takes={pendingTakes}
+            onCancelJob={(job) => cancelJobMutation.mutate(job.job_id)}
+            onRetryJob={(job) => retryJobMutation.mutate(job.job_id)}
           />
           {forkTarget ? (
             <ForkRecipePanel
@@ -1096,4 +1202,10 @@ function readinessChecksFromHealth(health: HealthResponse | undefined): Readines
       message: backend.message ?? backend.device ?? backend.backend,
     })),
   ];
+}
+
+function generationButtonLabel(gestureId: GestureId, mode: GenerationMode) {
+  if (gestureId === "vary") return "Vary sound";
+  if (gestureId === "continue") return mode === "generate.inpaint" ? "Inpaint sound" : "Continue sound";
+  return mode === "generate.text_to_audio" ? "Make sound" : "Make from source";
 }
