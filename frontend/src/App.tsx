@@ -5,19 +5,13 @@ import {
   AudioLines,
   Box,
   Braces,
-  Check,
-  CircleAlert,
   FileAudio,
   FlaskConical,
-  Gauge,
   GitFork,
   LoaderCircle,
   Play,
   Plus,
   Repeat,
-  Search,
-  SkipBack,
-  SkipForward,
   SlidersHorizontal,
   Upload,
   Wand2,
@@ -36,14 +30,12 @@ import {
 } from "./api";
 import { ArtifactBadge, ArtifactIcon } from "./artifactDisplay";
 import { artifactMeta, artifactName, sortNewest } from "./artifactUtils";
-import { auditionCursor, auditionKeyboardTarget, auditionPositionLabel, auditionSequenceOptions, auditionStackRows, type AuditionSequenceMode } from "./auditionStack";
-import { AudioDeck, TinyWave } from "./audioDeck";
+import { AuditionStackPanel } from "./auditionStackPanel";
+import { TinyWave } from "./audioDeck";
 import { ComparePanel } from "./comparePanel";
 import { createControlPlaneClient, DEFAULT_CONTROL_PLANE_URL, type ResultFamily, type WorkbenchState } from "./controlPlane";
 import { ForkRecipePanel } from "./forkRecipePanel";
-import { JobProgress, type JobActionHandlers } from "./jobProgress";
 import { isJobActive, landingArtifactId, shortOperatorName } from "./jobUtils";
-import { ListeningDecisionBadge } from "./listeningDecision";
 import { ModeAtlas } from "./modeAtlas";
 import { specCoverageSummary, specPairCoverageSummary } from "./operatorSpecCoverage";
 import {
@@ -63,13 +55,9 @@ import {
   promptSearchAxisSets,
   promptSearchHistoryRows,
   promptSearchPresets,
-  promptSearchScorerNote,
   promptSearchVocabularySets,
-  type PromptSearchAxisSet,
-  type PromptSearchHistoryRow,
-  type PromptSearchPreset,
-  type PromptSearchVocabularySet,
 } from "./promptSearchPresets";
+import { PromptSearchPresetRack } from "./promptSearchRack";
 import { RecipeFields } from "./RecipeFields";
 import { FamilyDetailPanel, ResultFamilyPanel } from "./resultFamilies";
 import {
@@ -95,12 +83,12 @@ import {
 import { artifactArchivePayload, artifactRecoveryPayload } from "./sessionRecovery";
 import { SessionTray } from "./sessionPanel";
 import { Specimen } from "./specimenPanel";
+import { BackendPills, InlineJobStatus, ReadinessPanel, RunMonitor } from "./statusPanels";
 import { useBenchStore } from "./store";
 import type {
   ArtifactRecord,
   HealthResponse,
   JobRecord,
-  ModelStatus,
   OperatorName,
   OperatorSpec,
   ReadinessCheck,
@@ -1015,189 +1003,6 @@ export function App() {
   );
 }
 
-function PromptSearchPresetRack({
-  presets,
-  vocabularySets,
-  axisSets,
-  historyRows,
-  scorer,
-  onApply,
-  onApplyVocabulary,
-  onApplyAxis,
-  onUseHistoryPrompt,
-}: {
-  presets: readonly PromptSearchPreset[];
-  vocabularySets: readonly PromptSearchVocabularySet[];
-  axisSets: readonly PromptSearchAxisSet[];
-  historyRows: readonly PromptSearchHistoryRow[];
-  scorer: RecipeValue | undefined;
-  onApply: (presetId: string) => void;
-  onApplyVocabulary: (setId: string) => void;
-  onApplyAxis: (setId: string) => void;
-  onUseHistoryPrompt: (prompt: string) => void;
-}) {
-  const note = promptSearchScorerNote(scorer);
-  return (
-    <div className="prompt-search-guide">
-      <div className="prompt-search-preset-rack" aria-label="Prompt search presets">
-        {presets.map((preset) => (
-          <button key={preset.id} type="button" onClick={() => onApply(preset.id)} title={preset.intent}>
-            <Search aria-hidden="true" size={13} />
-            <span>{preset.label}</span>
-            <small>{preset.modeLabel} · {preset.cost}</small>
-          </button>
-        ))}
-      </div>
-      <div className={`prompt-search-scorer-note ${note.maturity}`}>
-        <strong>{note.label}</strong>
-        <span>{note.cost}</span>
-        <p>{note.guidance}</p>
-      </div>
-      <div className="prompt-search-token-tools" aria-label="Prompt search vocabulary tools">
-        <div>
-          <strong>Vocabulary</strong>
-          <span>{vocabularySets.length} sets</span>
-        </div>
-        <div className="prompt-search-tool-buttons">
-          {vocabularySets.map((set) => (
-            <button key={set.id} type="button" onClick={() => onApplyVocabulary(set.id)} title={set.terms}>
-              <Wand2 aria-hidden="true" size={13} />
-              <span>{set.label}</span>
-              <small>{set.focus}</small>
-            </button>
-          ))}
-        </div>
-        <div>
-          <strong>Axes</strong>
-          <span>Mode 3</span>
-        </div>
-        <div className="prompt-search-tool-buttons">
-          {axisSets.map((set) => (
-            <button key={set.id} type="button" onClick={() => onApplyAxis(set.id)} title={set.axes}>
-              <SlidersHorizontal aria-hidden="true" size={13} />
-              <span>{set.label}</span>
-              <small>{set.focus}</small>
-            </button>
-          ))}
-        </div>
-      </div>
-      {historyRows.length ? (
-        <div className="prompt-search-history" aria-label="Prompt search history">
-          <div>
-            <strong>Prompt history</strong>
-            <span>{historyRows.length} prompts</span>
-          </div>
-          {historyRows.slice(0, 4).map((row) => (
-            <button key={row.prompt} type="button" onClick={() => onUseHistoryPrompt(row.prompt)} title={row.latestNote ?? row.prompt}>
-              <span>{row.prompt}</span>
-              <small>{row.keeper}K · {row.maybe}M · {row.rejected}R · {row.total} take{row.total === 1 ? "" : "s"}</small>
-            </button>
-          ))}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function AuditionStackPanel({
-  artifacts,
-  selectedId,
-  apiBase,
-  onSelect,
-  onCompare,
-}: {
-  artifacts: ArtifactRecord[];
-  selectedId: string | null;
-  apiBase: string;
-  onSelect: (artifactId: string) => void;
-  onCompare: (slot: "a" | "b", artifactId: string | null) => void;
-}) {
-  const [sequenceMode, setSequenceMode] = useState<AuditionSequenceMode>("recent");
-  const rows = auditionStackRows(artifacts, 8, sequenceMode, selectedId);
-  const cursor = auditionCursor(artifacts, selectedId, 8, sequenceMode);
-  const position = auditionPositionLabel(artifacts, selectedId, 8, sequenceMode);
-  if (!rows.length) return null;
-  const moveSelection = (key: string) => {
-    const target = auditionKeyboardTarget(artifacts, selectedId, key, 8, sequenceMode);
-    if (!target) return false;
-    onSelect(target.artifact_id);
-    return true;
-  };
-  return (
-    <div
-      className="audition-stack"
-      aria-label="Session audition stack"
-      tabIndex={0}
-      onKeyDown={(event) => {
-        if (!moveSelection(event.key)) return;
-        event.preventDefault();
-      }}
-    >
-      <div className="audition-stack-head">
-        <div>
-          <span className="eyebrow">Audition</span>
-          <strong>{position}</strong>
-        </div>
-        <label className="audition-sequence">
-          <span>Sequence</span>
-          <select value={sequenceMode} onChange={(event) => setSequenceMode(event.target.value as AuditionSequenceMode)}>
-            {auditionSequenceOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div className="audition-transport">
-          <button type="button" disabled={!cursor.previous} onClick={() => cursor.previous && onSelect(cursor.previous.artifact_id)} title="Previous take">
-            <SkipBack size={14} />
-          </button>
-          <button type="button" disabled={!cursor.next} onClick={() => cursor.next && onSelect(cursor.next.artifact_id)} title="Next take">
-            <SkipForward size={14} />
-          </button>
-          <button type="button" disabled={!cursor.selected} onClick={() => cursor.selected && onCompare("a", cursor.selected.artifact_id)} title="Send selected take to A">
-            A
-          </button>
-          <button type="button" disabled={!cursor.selected} onClick={() => cursor.selected && onCompare("b", cursor.selected.artifact_id)} title="Send selected take to B">
-            B
-          </button>
-        </div>
-      </div>
-      {rows.map((row) => {
-        const artifact = artifacts.find((item) => item.artifact_id === row.artifactId);
-        if (!artifact) return null;
-        return (
-          <article key={row.artifactId} className={selectedId === row.artifactId ? "selected" : ""}>
-            <button type="button" onClick={() => onSelect(row.artifactId)} title={row.prompt ?? row.label}>
-              <span>{row.label}</span>
-              <small>{row.sequence} · {row.origin} · {row.meta}</small>
-              <ListeningDecisionBadge artifact={artifact} />
-            </button>
-            <AudioDeck artifact={artifact} apiBase={apiBase} compact />
-            <div className="audition-stack-actions">
-              <button type="button" onClick={() => onCompare("a", row.artifactId)} title="Send take to comparison slot A">A</button>
-              <button type="button" onClick={() => onCompare("b", row.artifactId)} title="Send take to comparison slot B">B</button>
-            </div>
-          </article>
-        );
-      })}
-    </div>
-  );
-}
-
-function BackendPills({ backends }: { backends: ModelStatus[] }) {
-  return (
-    <div className="backend-pills">
-      {backends.map((backend) => (
-        <span key={backend.backend} className={backend.available ? "ready" : "offline"} title={backend.message ?? backend.backend}>
-          {backend.available ? <Check size={14} /> : <CircleAlert size={14} />}
-          {backend.backend}
-        </span>
-      ))}
-    </div>
-  );
-}
-
 function ArtifactStack({
   artifacts,
   selectedId,
@@ -1234,85 +1039,6 @@ function ArtifactStack({
         </button>
       ))}
     </div>
-  );
-}
-
-function RunMonitor({
-  runningJobs,
-  latestJob,
-  eventing = false,
-  onCancelJob,
-  onRetryJob,
-}: {
-  runningJobs: JobRecord[];
-  latestJob: JobRecord | null;
-  eventing?: boolean;
-} & JobActionHandlers) {
-  const monitorJobs = runningJobs.length ? runningJobs.slice(0, 3) : latestJob ? [latestJob] : [];
-  if (!monitorJobs.length) {
-    return (
-      <div className="run-monitor idle">
-        <div>
-          <span className="eyebrow">Run Monitor</span>
-          <strong>Ready</strong>
-        </div>
-        <span className="monitor-state">idle</span>
-      </div>
-    );
-  }
-
-  const busy = runningJobs.length > 0;
-  return (
-    <div className={`run-monitor ${busy ? "busy" : "idle"}`}>
-      <div className="run-monitor-head">
-        <div>
-          <span className="eyebrow">Run Monitor</span>
-          <strong>{busy ? `${runningJobs.length} active job${runningJobs.length === 1 ? "" : "s"}` : "Last run"}</strong>
-        </div>
-        <span className={`monitor-state ${eventing ? "live" : ""}`}>{busy ? (eventing ? "live events" : "running") : latestJob?.status ?? "idle"}</span>
-      </div>
-      <div className="monitor-jobs">
-        {monitorJobs.map((job) => (
-          <JobProgress key={job.job_id} job={job} compact={monitorJobs.length > 1} onCancelJob={onCancelJob} onRetryJob={onRetryJob} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function InlineJobStatus({ job, onCancelJob, onRetryJob }: { job: JobRecord | null | undefined } & JobActionHandlers) {
-  if (!job) return null;
-  return (
-    <div className="inline-job-status">
-      <JobProgress job={job} compact onCancelJob={onCancelJob} onRetryJob={onRetryJob} />
-    </div>
-  );
-}
-
-function ReadinessPanel({ checks }: { checks: ReadinessCheck[] }) {
-  const rows = priorityReadinessChecks(checks);
-  const errorCount = checks.filter((check) => check.status === "error").length;
-  const warnCount = checks.filter((check) => check.status === "warn").length;
-  const state = errorCount ? "error" : warnCount ? "warn" : "ok";
-  return (
-    <details className={`readiness-panel ${state}`}>
-      <summary>
-        <span>
-          <Gauge size={15} />
-          Readiness
-        </span>
-        <strong>{state}</strong>
-      </summary>
-      <div className="readiness-list">
-        {rows.map((check) => (
-          <div key={check.name} className={`readiness-row ${check.status}`}>
-            <span>{readinessLabel(check.name)}</span>
-            <strong>{check.status}</strong>
-            <small title={check.detail ?? check.message}>{check.message}</small>
-          </div>
-        ))}
-      </div>
-    </details>
   );
 }
 
@@ -1465,21 +1191,4 @@ function readinessChecksFromHealth(health: HealthResponse | undefined): Readines
       message: backend.message ?? backend.device ?? backend.backend,
     })),
   ];
-}
-
-function priorityReadinessChecks(checks: ReadinessCheck[]) {
-  const priority = ["artifact-root", "hf-auth", "mlx-medium-weights", "same-l-access", "backend:mlx", "backend:torch_mps"];
-  const byName = new Map(checks.map((check) => [check.name, check]));
-  const selected = priority.map((name) => byName.get(name)).filter((check): check is ReadinessCheck => Boolean(check));
-  const urgent = checks.filter((check) => (check.status === "error" || check.status === "warn") && !priority.includes(check.name));
-  return [...selected, ...urgent].slice(0, 7);
-}
-
-function readinessLabel(name: string) {
-  return name
-    .replace("backend:", "")
-    .replace("hf-auth", "HF auth")
-    .replace("mlx-medium-weights", "MLX medium")
-    .replace("same-l-access", "SAME-L")
-    .replace("artifact-root", "Artifacts");
 }
