@@ -203,11 +203,14 @@ For the broader stack direction and promotion triggers, see
    signals: vector bundle, profile, prompt search, soft prompt, training output,
    sweep, memory collection, and geometry audit.
 
-7. Continue extracting app surfaces from `App.tsx`.
-   Audio playback, artifact display, job progress, result families, recipe
-   forks, and bundle inspection are split out. Next extraction targets are
-   `Specimen`, `SessionTray`, operator bands, and Recipe Studio before adding
-   Storybook or MSW scenarios.
+7. Continue extraction only where the contract is named.
+   `App.tsx` is now a composition root: configs, workbench model helpers,
+   specimen, session tray, compare, mode atlas, audition stack, prompt-search
+   rack, operator presets, readiness/status panels, spec coverage, playback,
+   result families, recipe forks, and bundle inspection are split out. Next
+   extraction targets are the generation/SAME/operator/recipe action bands, but
+   only after their state and handler contracts can be named cleanly. Storybook
+   and MSW scenarios are now justified for the extracted panels.
 
 ## Verification Plan
 

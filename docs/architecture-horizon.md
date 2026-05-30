@@ -24,6 +24,33 @@ memory, lineage, and exploratory control.
   regions where artifacts have real audio.
 - pytest, Node test, TypeScript build, and Playwright smoke.
 
+## Frontend Boundary Snapshot
+
+`frontend/src/App.tsx` is now a composition root instead of the app's component
+library. It owns high-level query/mutation wiring, backend/control-plane
+switching, form state, payload orchestration, top-level layout, and cross-domain
+handlers.
+
+The extracted frontend modules now carry the stable seams:
+
+- `workbenchConfigs.ts`: static mode/config/default catalogs.
+- `workbenchModel.ts`: pure job, result-family, event, status, and filtering
+  helpers with focused tests.
+- `specimenPanel.tsx`: selected artifact playback/inspection, annotation,
+  bundle lazy-loading, vitals, and lineage thread.
+- `sessionPanel.tsx`: session tray, workspace pulse, archive recovery, and
+  artifact filters.
+- `comparePanel.tsx`, `modeAtlas.tsx`, `auditionStackPanel.tsx`: A/B display,
+  Colab parity atlas, and sequence-aware listening stack.
+- `promptSearchRack.tsx`, `operatorPresetRack.tsx`, `statusPanels.tsx`,
+  `specCoverage.tsx`: reusable control/readiness widgets.
+- `bundleInspector.tsx`: still lazy-loaded so bundle-heavy inspectors do not
+  bloat the first interaction path.
+
+Remaining frontend extraction should be driven by behavior, not cosmetics:
+extract the main generation/SAME/operator/recipe action bands only when their
+state and handler contracts are clean enough to name without hiding complexity.
+
 ## Near Horizon
 
 | Area | Preferred Stack | Promotion Trigger |
@@ -38,7 +65,7 @@ memory, lineage, and exploratory control.
 | Area | Preferred Stack | Promotion Trigger |
 | --- | --- | --- |
 | Motion | Motion for React | Use causal transitions for queued/running/produced states, lineage forks, A/B promotion, and result-family expansion. |
-| Component lab | Storybook | UI pieces are extracted from `App.tsx` and need visual QA across job, artifact, form, empty, and error states. |
+| Component lab | Storybook | Extracted panels now need visual QA across job, artifact, form, empty, archive, and error states. |
 | Persistence | Drizzle and Postgres | Sessions, jobs, recipes, annotations, lineage, presets, result families, and job events outgrow JSON manifests. |
 | Local Postgres | PGlite | We need lightweight local or test Postgres behavior without requiring a running database service. |
 | Vectors | pgvector inside Postgres | Latent/audio summary vectors become useful for memory search, donor suggestions, continuation references, or texture/rhythm retrieval. |
@@ -72,4 +99,4 @@ memory, lineage, and exploratory control.
 2. Vitest, Testing Library, and MSW for fast contract and component tests.
 3. More tRPC/Zod procedures for resumable job events, family actions, archive
    mutations, and backend-parsed artifact inspectors.
-4. Storybook once the extracted app surfaces need visual regression coverage.
+4. Storybook for extracted panels once component fixtures are representative.

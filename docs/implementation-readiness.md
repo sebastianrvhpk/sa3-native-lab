@@ -80,6 +80,12 @@ field, an artifact relationship, or an explicitly documented future capability.
   cards instead of only file inventory.
 - Operator Studio has browser-local presets with visible diff and revert
   behavior.
+- The frontend has completed a de-monolith pass. `App.tsx` is now the
+  composition root for query/mutation wiring, form state, payload orchestration,
+  and cross-domain handlers. Static configs, workbench/result-family model
+  helpers, specimen/listening UI, session/archive UI, comparison, mode atlas,
+  prompt search rack, operator preset rack, readiness/status panels, audition
+  stack, and spec coverage widgets live in typed modules with clearer ownership.
 - The docs already cover app overview, Colab capability mapping, triage status,
   architecture horizon, control-plane direction, improvement roadmap, and
   codebase review.
@@ -159,6 +165,10 @@ that every experiment can be trusted, replayed, compared, and reused.
 - Browser/integration tests for session/archive/replay flows as first-class
   workflows. The derived workspace model and archive recovery payload have unit
   coverage; the live UI flow still needs more end-to-end coverage.
+- Component-level tests for the newly extracted panels. The model/config/helper
+  seams have focused tests, and the production build protects the extracted UI
+  imports, but panel fixtures for specimen, session tray, status panels, and
+  prompt/preset controls should come next.
 - Playback-specific browser tests for loop regions, A/B behavior,
   generated-take promotion, marker editing, persisted cues, and session
   playlists. The core marker, playback-state persistence payload, loop nudge,
@@ -204,6 +214,10 @@ that every experiment can be trusted, replayed, compared, and reused.
   surface through the workspace pulse, artifact recovery, and direct artifact
   archive actions, but long-session cleanup still needs deeper end-to-end
   workflows.
+- The frontend root is much healthier, but the main action bands still combine
+  layout, readiness, and handler wiring in `App.tsx`. Extract those only after
+  the action-band state contracts are named clearly enough to avoid vague hook
+  wrappers.
 
 ### Not Bad Code, But Incomplete Architecture
 
@@ -255,6 +269,8 @@ instead of invisible friction.
    clearer product model.
 4. Move useful archive/search actions through tRPC when client-side filtering
    stops being enough.
+5. Add browser-level coverage for the extracted session tray archive/recovery
+   workflow now that it has a stable component boundary.
 
 ### P1: Playback And Listening Bench
 
