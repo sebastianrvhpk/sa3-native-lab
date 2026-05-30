@@ -100,6 +100,23 @@ progressive disclosure.
   one gesture strip and one scoped Tune surface rather than appearing as four
   simultaneous form panels. Active or interrupted jobs are translated into
   pending/failed take cards in the Takes / Branches rail.
+- The priority-queue product loop pass adds product-domain models for memory
+  reuse, landed-take next actions, pending-take landing, branch summaries, and
+  Tune field grouping. Remembered audio/latent/bundle material can now be used
+  as source, anchor, donor, prompt seed, Advanced Gesture input, or recovered
+  into the active session where existing backend paths support it.
+- Selected takes now expose a `Next` affordance beside Current Sound. Audio
+  takes suggest Continue, Vary, Encode, and Remember; latent takes suggest
+  Decode, Morph, Borrow Texture, and Remember; bundles surface Inspect plus
+  available bundle-to-gesture reuse actions. These actions select the matching
+  Gesture/Tune state instead of sending users back to a dashboard.
+- Branches are reframed as creative paths with source, gesture, latest take,
+  take count, status, do-again, branch, remember, and Inspect details. Raw job
+  IDs, recipe IDs, backend fields, logs, and material counts remain available
+  through Inspect/Settings/details instead of leading the primary view.
+- JSON manifest writes are now atomic, which makes annotation, remember, and
+  recovery less race-prone when the browser polls artifact state during a
+  workflow.
 - Extracted panel coverage now includes focused Testing Library tests for the
   specimen panel, session tray, status panels, prompt-search rack, operator
   preset rack, and spec-coverage widgets.
@@ -186,7 +203,11 @@ branched, and inspected without making the user operate the machinery first.
   cleanup, and session-level archive/new-session state. The committed playback
   smoke covers annotation persistence, cue persistence,
   sequence modes, SessionTray artifact archive/recovery, screenshots, and
-  mobile overflow.
+  mobile overflow. The committed first-use smoke now gates the product loop:
+  Current Sound, Gestures, Make, Tune, pending/failed take language, Next
+  actions, Remember, Branch, Memory reuse as Source/Anchor, recovery,
+  Settings/Inspect demotion, desktop and mobile screenshots, and no mobile
+  horizontal overflow.
 - Component-level tests for mode-specific recipe panels once they become more
   domain-specific. The extracted specimen/session/status/prompt/preset/spec
   panels now have focused fixtures.
@@ -252,98 +273,73 @@ instead of invisible friction.
 
 ## Priority Queue
 
-### P0: Capability Truth And Reproducibility
+### Completed In This Product-Loop Pass
 
-1. Build a notebook parity matrix that maps every Colab section/cell/function
-   to a local API path, UI surface, parameters, artifacts, and tests.
-2. Define "complete mode" criteria: all required params visible, advanced params
-   reachable, defaults known, output artifacts typed, provenance stored, replay
-   or fork available, and test coverage present.
-3. Continue migrating parameter truth into backend specs and shared contracts.
-   This pass expanded script adapter specs and moved Generate/SAME forms onto
-   spec-derived fields; the remaining work is full mode-by-mode coverage and
-   richer type-specific readers.
-4. Ensure every run stores model, backend, seed, duration, prompt-probe/operator,
-   source IDs, params, logs, and output artifact IDs.
+1. P0.1 Memory reuse: active Memory actions now cover use as Source, Anchor,
+   latent donor for Borrow Texture, prompt seed, bundle-to-Advanced-Gesture
+   reuse, and recovery into the current session. No vector search or new
+   persistence layer was added.
+2. P0.2 Landed-take next actions: selected audio, latent, bundle, pending, and
+   failed states now produce context-aware `Next` actions that select the right
+   Gesture/Tune state.
+3. P0.3 First-use smoke: `npm run smoke:first-use --prefix frontend` is the
+   product-health browser gate for Current Sound -> Gesture -> Pending Take ->
+   Listen -> Branch / Remember / Tune, with desktop/mobile screenshots and
+   overflow checks.
+4. P0.4 Pending-take landing: pending cards now carry source IDs, produced
+   outputs, landing artifact, completion phrase, branch label, suggested next
+   gestures, cancel/retry/inspect availability, and failure recovery copy.
+5. P0.5 Branch reframe: result-family UI is now branch-language first. Raw
+   recipe/job/backend/metric details are behind Inspect.
+6. P0.6 Tune scope reduction: Make, Continue/Vary, Encode/Decode, Morph, and
+   Steer use product-layer primary/advanced/inspect field grouping while still
+   preserving backend `ui_fields` as parameter truth.
 
-### P0: Runtime Trust
+### P1 Work Landed Where It Was Enabled By P0
 
-1. Preserve richer safe command/stderr context for failures without exposing
-   credentials.
-2. Make progress stages legible for every long-running path: queued,
-   preflight, model setup, scoring/sampling, decoding, writing, indexing, done.
-   Job records now persist `phase`; continue adding exact phases to newly
-   migrated script paths as they become native.
-3. Add runtime-cost notes where Medium/MPS paths can be slow or memory-heavy.
-4. Keep readiness checks honest for HF auth, weights, cache space, MLX setup,
-   SAME-L access, and optional extras.
+1. Gesture-specific Tune layouts have a first pass for Make, Continue/Vary,
+   Encode/Decode, Morph/Borrow Texture, and Steer submodes.
+2. Morph uses product labels Roll, Blur, DSP/Reroute, Borrow Texture, and
+   Renoise, with backend operator names retained behind Inspect.
+3. Borrow Texture now explains donor availability and points to encode/import or
+   recovered memory when no donor exists.
+4. Remember annotations now include role, reuse intent, and decision metadata
+   where the existing annotation model can persist it.
+5. Inspect is more contextual: sound, gesture, branch, activity, and material
+   count details are progressively disclosed instead of primary.
 
-### P1: Session And Memory As Creative Workflow
+### Deferred With Reason
 
-1. Promote current sound, takes, branches, and memory into the app's default
-   mental model. A first data-backed workspace pulse and archive recovery path
-   are implemented, and the playback smoke now covers SessionTray artifact
-   archive/recovery. The next step is browser-tested replay/fork and
-   session-level memory/new-session behavior.
-2. Reduce queue clutter by making active session, archive, generated families,
-   and reusable outputs distinct surfaces.
-3. Make "new session", "remember session", "recover sound", "branch", and
-   "promote material" feel like native creative actions. Successful jobs now
-   land on their newest artifact, but session/workspace recovery still needs a
-   clearer product model.
-4. Move useful archive/search actions through tRPC when client-side filtering
-   stops being enough.
-5. Add browser-level coverage for the extracted session tray archive/recovery
-   workflow now that it has a stable component boundary.
+1. P1.8 gesture orchestration extraction is deferred until memory, branch, and
+   next-action semantics settle enough to justify a named hook contract.
+2. P1.9 app-native tRPC state is deferred because the frontend can now express
+   current sound, gestures, pending takes, branches, and memory without adding a
+   new server contract in this pass.
+3. P1.10 broader contract truth cleanup remains incremental: backend
+   `ui_fields` stay parameter truth; the new frontend helpers are layout and
+   product overlays only.
+4. P1.11 deeper workspace modeling is deferred beyond the memory/branch/pending
+   pieces used by this loop.
+5. P2 listening/review items are documented as next queue. Better playlist
+   review, waveform regions, branch listening, memory browser filters, deeper
+   bundle promotion, and mode-specific inspectors need more design and should
+   not be decorative add-ons.
+6. Postgres, pgvector, Temporal, React Flow, Tauri, Storybook, DuckDB,
+   OpenTelemetry, and 3D remain out of scope for this pass.
 
-### P1: Playback And Current Sound
+### Next Queue
 
-1. Upgrade playback into a creative listening instrument.
-2. Add richer loop, marker, region, take-stack, and session-playlist
-   behaviors where they directly improve listening decisions. Local markers,
-   marker notes, playlist cursor helpers, loop-edge nudging, marker deletion,
-   keyboardable audition navigation, persisted cue annotations, WaveSurfer zoom,
-   draggable loop regions, and SessionTray archive/recovery
-   browser coverage are implemented; richer playlist sequencing remains next.
-3. Keep wavesurfer.js focused on real listening work: zoom, loop regions,
-   marker editing, scrubbing, and future region annotations.
-4. Tie listening decisions back into prompt-search, sweeps, memory reuse, and
-   artifact recovery.
-
-### P1: Bundle And Mode-Specific Inspectors
-
-1. Add richer inspectors for vectors, profiles, soft prompts, prompt search,
-   sweeps, memory collections, geometry reports, and training outputs. First
-   domain item cards exist for sweeps, memory, vectors, soft prompts, and
-   training bundles.
-2. Keep zip/file inventory available, but do not make it the primary interface
-   when a domain-specific summary exists.
-3. Add prompt-search layer/alpha branch views and Medium/MPS probe-setting
-   notes before adding another prompt objective.
-
-### P2: Research Cognition
-
-1. Add deeper memory/dataset browsing over encoded SAME artifacts, including
-   preview audio where possible.
-2. Add latent region and channel controls where operators manipulate time,
-   channel, masks, or donor regions.
-3. Add real lineage graph views only when graph edges correspond to actual
-   recipe/source/output relationships. The current specimen thread already uses
-   real artifact/job/family/A-B state; React Flow should wait until users need
-   a larger interactive graph.
-4. Add labelled probes and control-head recipes after the core parity and
-   playback loop are more stable.
-
-### P3: Portfolio Hardening
-
-1. Keep docs honest about what is confirmed, partial, inferred, or speculative.
-2. Add screenshots or short captures of real workflows once surfaces stabilize.
-3. Add Storybook after more components are extracted and need visual QA.
-4. Add Postgres/Drizzle after session, annotation, preset, lineage, and job
-   event semantics are stable enough to deserve a database.
-5. Add pgvector only when there is a concrete creative retrieval workflow such
-   as donor suggestions, texture/rhythm search, continuation retrieval, or
-   latent neighborhood browsing.
+1. Extract a `useGestureWorkbench` only after one more pass validates action
+   semantics across Memory, Branch, Pending Take, and Tune.
+2. Add component tests for branch-card actions and memory-role/reuse editing
+   once the action vocabulary has settled.
+3. Promote the take strip toward a real listening queue with keep/maybe/reject,
+   remember, branch, and continue-from-selected controls.
+4. Add memory browser filters for role, reuse intent, tags, notes, kind, and
+   decision before considering vector retrieval.
+5. Continue bundle-to-gesture promotion for profiles, directions, sweeps,
+   memory indexes, and promoted audio only where existing bundle inspectors have
+   real use paths.
 
 ## Definition Of Done For The Next Implementation Loop
 

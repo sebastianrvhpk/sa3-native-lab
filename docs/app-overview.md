@@ -72,23 +72,23 @@ defaults, bounds, select options, required flags, and advanced flags, while the
 frontend form model builds typed generation and encode/decode payloads. This
 keeps everyday parameters such as duration, seed, model, decoder, init noise,
 inpaint range, SAME chunking, prompts, and notes visible without maintaining a
-separate hand-written payload surface. The bench also has a compact Take Status strip that
-surfaces active jobs, percent progress, persisted phase labels, artifact counts,
-live event snapshots, heartbeat diagnostics, elapsed time, cancellation, retry,
+separate hand-written payload surface. An Inspect activity drawer keeps active
+jobs, percent progress, persisted phase labels, output counts, live event
+snapshots, heartbeat diagnostics, elapsed time, cancellation, retry,
 the latest backend message, and recovery hints for common failures such as gated
 Hugging Face access, missing MLX setup, path mistakes, subprocess exits, and
 memory pressure. Successful jobs automatically land the workbench on their
 newest produced artifact when the runtime reports artifact IDs. Selected
 artifacts can be labeled, tagged, annotated, marked keeper/maybe/rejected from
 listening surfaces, replayed from their recipe, inspected by kind, and recovered
-later with filters for decision, kind, model, operator, result family, tag,
+later with filters for decision, kind, model, gesture, branch, tag,
 text, and source lineage. A session can be archived into the background while a
-fresh session starts cleanly. Result families can currently be inspected as a
-compact branch surface with source references, per-artifact playback, sortable
+fresh session starts cleanly. Branches, backed by result-family records, can
+currently be inspected as compact creative paths with source references, per-take playback, sortable
 alpha-sweep controls, job progress, replay, and fork actions. Forked recipes
 show changed fields and per-parameter reset controls
 before submit. The session tray also shows a data-backed workspace pulse for
-active takes, result families, job activity, listening decisions, and archive
+active takes, branches, job activity, listening decisions, and archive
 volume. Its focus hint points to real next actions such as monitoring a run,
 opening the next undecided take, recovering an archived artifact, or archiving a
 crowded session. Playback markers and loop regions persist as artifact
@@ -98,6 +98,21 @@ recovered into the active session through the archive drawer; active artifacts
 can also be archived directly from the specimen, session tray, and result-family
 surfaces. Both flows use the annotation contract to move `session_id` and record
 source/target session metadata.
+
+The current product loop is now explicit:
+
+```text
+Current Sound -> Gesture -> Pending Take -> Listen -> Branch / Remember / Tune
+```
+
+Remembered material is active, not just archived. Audio can be reused as Source
+or Anchor, latent material can become a Borrow Texture donor, remembered
+prompt/label/notes can seed Make, reusable bundles can feed existing Advanced
+Gesture paths, and archived materials can be recovered into the active session.
+Selected landed takes also show a `Next` affordance: audio suggests Continue,
+Vary, Encode, and Remember; latent suggests Decode, Morph, Borrow Texture, and
+Remember; bundles keep technical details behind Inspect while exposing real
+reuse actions where a bundle path already exists.
 
 Read-heavy workbench state can now be loaded through the TypeScript tRPC
 control plane. This is enabled by setting `VITE_SA3_CONTROL_PLANE_URL` or by
@@ -115,14 +130,15 @@ depends only on transient in-memory state.
 
 Latent Gestures expose direct latent operators as native controls:
 
-- cyclic roll
-- latent blur
-- latent DSP
-- latent graft
-- latent renoise
+- Roll
+- Blur
+- DSP/Reroute
+- Borrow Texture
+- Renoise
 
 Every visible control maps to an executable request parameter. Donor-latent
-selection appears only for graft or DSP modes that need a donor.
+selection appears only for Borrow Texture or DSP/Reroute modes that need a
+donor.
 Latent Gestures also have a first-pass local preset rack: named browser-local
 parameter sets can be saved, reloaded, updated, or deleted per operator mode so
 repeatable latent explorations do not require rebuilding a form by hand. When a
@@ -193,9 +209,9 @@ contents, soft-prompt tensors, and training checkpoints into native rows and
 item lists. They are still inspectors rather than full editors, but they make
 script-backed modes legible without pretending unavailable routing or graph
 behavior exists.
-Jobs and artifacts with the same recipe are grouped as result families in the
-right rail with run metrics when the job reports them; the product target is to
-present those groups as branches. Prompt-candidate generations are grouped
+Jobs and artifacts with the same recipe are grouped as branch records in the
+right rail, backed by the legacy result-family contract; raw run metrics remain
+inspect details when the job reports them. Prompt-candidate generations are grouped
 under their search bundle instead of scattering as unrelated text-to-audio rows.
 Memory query bundle previews expose ranked hits that can be selected, played
 when audio, or reused as latent donors when the hit is a latent artifact.
@@ -220,6 +236,11 @@ vector bundle or prompt.
   smoke for the listening/session loop: Playwright writes marker notes and loop
   cues, verifies lineage-backed wave-bus state, checks archive/recovery, and
   captures desktop/mobile screenshots.
+- `npm run smoke:first-use --prefix frontend` is the committed product-health
+  smoke for the first-use instrument loop: Current Sound, Gestures, Make, Tune,
+  pending/failed take language, Next actions, Remember, Branch, Memory reuse as
+  Source/Anchor, recovery, Settings/Inspect demotion, screenshots, and mobile
+  overflow.
 - `uv run sa3-lab smoke-mlx-medium --json` verifies the slow Medium/MLX path is
   gated by default; `SA3_RUN_MLX_SMOKE=1 uv run sa3-lab smoke-mlx-medium --run
   --duration 1 --steps 2 --json` submits the authenticated real model smoke.
@@ -250,7 +271,7 @@ Confirmed in the current codebase:
   only implemented paths (`lexical_probe` and `sa3_flow_probe`).
 - Artifact annotation and archive search are implemented for labels, notes,
   tags, durable keeper/maybe/reject listening decisions, artifact kind, model,
-  operator, result family, and source lineage.
+  gesture, branch, and source lineage.
 - tRPC workbench, readiness, job lifecycle, recipe replay/fork, artifact
   inspection, result-family procedures, and job-event subscriptions are
   implemented behind the control-plane launch flag.
@@ -273,8 +294,14 @@ Confirmed in the current codebase:
   regions, per-marker deletion, loop-edge nudging, data-backed archive actions,
   marker notes, committed browser coverage for SessionTray
   artifact archive/recovery, and the first native geometry-audit recipe.
+- Product-domain frontend models now cover memory reuse, next actions,
+  pending-take landing, branch summaries, and Tune field grouping. Branch UI is
+  product-language first, while raw job IDs, recipe IDs, backend details, logs,
+  and material counts are behind Inspect/Settings/details.
+- Artifact manifest writes are atomic, reducing transient JSON-read races during
+  annotation, remember, and recovery workflows.
 - Core app surfaces are now split into focused modules for audio playback,
-  artifact display, job progress, result families, recipe forks, and bundle
+  artifact display, job progress, branches/result families, recipe forks, and bundle
   inspection.
 - The frontend builds and the Python test suite passes locally.
 

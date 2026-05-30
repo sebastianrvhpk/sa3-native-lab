@@ -41,10 +41,22 @@ the desired interface grammar:
   backend operator mappings, progress phrases, and availability reasons.
 - `pendingTakeModel.ts`: product-facing translation of `JobRecord` into
   pending/failed take state for the Takes flow.
+- `memoryModel.ts`: product-facing remembered material, roles, reuse intent,
+  source mappings, and available memory actions over existing artifacts.
+- `nextActionModel.ts`: context-aware `Next` actions for landed artifacts,
+  pending/failed takes, and branches.
+- `pendingTakeLandingModel.ts`: landing artifact selection, completion phrases,
+  branch labels, retry/cancel/inspect availability, and failure recovery copy.
+- `branchModel.ts`: branch summaries and inspect-only technical rows over the
+  legacy result-family contract.
+- `tuneFieldGroups.ts`: product-layer primary/advanced/inspect grouping over
+  backend-derived field configs.
 - `gestureStrip.tsx`, `tuneDrawer.tsx`, `pendingTakesPanel.tsx`: first-pass
   instrument components for choosing the next move, tuning only the active
   gesture, and keeping job state near takes instead of exposing jobs as the
   primary noun.
+- `nextActionsPanel.tsx`: the Current Sound-adjacent affordance that turns a
+  selected take into a suggested next gesture, remember action, or inspect path.
 - `workbenchConfigs.ts`: static mode/config/default catalogs.
 - `workbenchModel.ts`: pure job, result-family, event, status, and filtering
   helpers with focused tests.
@@ -52,17 +64,17 @@ the desired interface grammar:
   bundle lazy-loading, vitals, and lineage thread.
 - `sessionPanel.tsx`: session tray, workspace pulse, archive recovery, and
   artifact filters.
-- `comparePanel.tsx`, `modeAtlas.tsx`, `auditionStackPanel.tsx`: legacy
-  compare display, Colab parity atlas, and sequence-aware listening stack. The
-  compare surface should be removed or reframed as anchors/pinned sources in
-  the rescue pass.
+- `comparePanel.tsx`, `modeAtlas.tsx`, `auditionStackPanel.tsx`: anchor/source
+  listening slots, Colab parity atlas kept off the primary loop, and
+  sequence-aware listening stack.
 - `promptSearchRack.tsx`, `operatorPresetRack.tsx`, `statusPanels.tsx`,
   `specCoverage.tsx`: reusable control/readiness widgets.
 - `bundleInspector.tsx`: still lazy-loaded so bundle-heavy inspectors do not
   bloat the first interaction path.
 
 Current focused component coverage exists for `gestureModel.ts`,
-`pendingTakeModel.ts`, `specimenPanel.tsx`,
+`pendingTakeModel.ts`, `memoryModel.ts`, `nextActionModel.ts`,
+`tuneFieldGroups.ts`, `nextActionsPanel.tsx`, `specimenPanel.tsx`,
 `sessionPanel.tsx`, `statusPanels.tsx`, `promptSearchRack.tsx`,
 `operatorPresetRack.tsx`, and `specCoverage.tsx`. The next frontend extraction
 should therefore target memory/branch reuse semantics and app-shaped control

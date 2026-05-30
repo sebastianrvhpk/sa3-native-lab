@@ -384,6 +384,40 @@ Still open:
 - Pending takes currently translate jobs in the UI; the tRPC/workbench control
   plane should eventually return pending-take-shaped state directly.
 
+### Current status after priority-queue product loop
+
+The core loop is now implemented in the frontend product layer:
+
+```text
+Current Sound -> Gesture -> Pending Take -> Listen -> Branch / Remember / Tune
+```
+
+New domain helpers translate backend records into instrument concepts:
+
+- `memoryModel.ts`: remembered material, role/reuse intent, source mapping,
+  available reuse actions, and disabled reasons.
+- `nextActionModel.ts`: context-aware actions for selected audio, latent,
+  bundle, pending/failed take, and branch state.
+- `pendingTakeLandingModel.ts`: landing artifact, completion phrase, branch
+  label, recovery suggestion, and next-gesture hints for pending take cards.
+- `branchModel.ts`: branch summaries and inspect-only technical rows for
+  former result-family groups.
+- `tuneFieldGroups.ts`: primary, advanced, and inspect-only Tune grouping over
+  existing backend-derived field configs.
+
+The remaining open items above are partially resolved: landed takes now suggest
+next gestures, Memory can be reused as source/anchor/donor/prompt seed or
+recovered, branch UI is creative-path language first, and Tune exposes fewer
+primary fields for Make, Continue/Vary, Encode/Decode, Morph, and Steer. The
+unfinished work is deeper orchestration extraction, richer listening review,
+memory browsing/filtering, and bundle-specific promotion after the action
+semantics stabilize.
+
+The product-health browser gate is now
+`npm run smoke:first-use --prefix frontend`. It verifies the first-use path,
+Memory reuse, recovery, Branch, Remember, Settings/Inspect demotion, desktop and
+mobile screenshots, and mobile overflow.
+
 ### Slice 1: Language correction
 
 - Remove CLAP from product docs/frontend notes.
