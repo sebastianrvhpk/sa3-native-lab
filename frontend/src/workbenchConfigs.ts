@@ -92,7 +92,6 @@ export const promptSearchModeOptions = [
 export const promptSearchScorerOptions = [
   { value: "lexical_probe", label: "lexical probe" },
   { value: "sa3_flow_probe", label: "SA3 flow probe" },
-  { value: "clap", label: "CLAP queued" },
 ] as const;
 
 export const velocityConventionOptions = [
@@ -455,7 +454,7 @@ export const experimentCatalog: readonly ExperimentConfig[] = [
       { key: "prompt", label: "Prompt", type: "text", defaultValue: "audio texture" },
       { key: "model", label: "SA3 model", type: "select", defaultValue: "medium", options: sa3ModelOptions },
       ...generationFields(),
-      { key: "init_noise_level", label: "Init noise", type: "number", defaultValue: 0.35, min: 0, step: 0.05, advanced: true },
+      { key: "init_noise_level", label: "Init noise", type: "number", defaultValue: 0.35, min: 0.01, step: 0.05, advanced: true },
       { key: "layers", label: "Layers", type: "text", advanced: true },
       { key: "limit", label: "Limit", type: "number", defaultValue: 0, min: 0, step: 1, advanced: true },
       ...torchAdvancedFields(),
@@ -694,7 +693,7 @@ export const generationCatalog: readonly GenerationConfig[] = [
       { key: "model", label: "Model", type: "select", defaultValue: "medium", options: audioModels.map(({ value, label }) => ({ value, label })) },
       { key: "duration_seconds", label: "Seconds", type: "number", defaultValue: 5, min: 0.5, max: 120, step: 0.5 },
       { key: "steps", label: "Steps", type: "number", defaultValue: 8, min: 1, max: 256, step: 1 },
-      { key: "init_noise_level", label: "Init noise", type: "number", defaultValue: 0.7, min: 0, max: 1, step: 0.05 },
+      { key: "init_noise_level", label: "Init noise", type: "number", defaultValue: 0.7, min: 0.01, max: 1, step: 0.05 },
       { key: "seed", label: "Seed", type: "number", defaultValue: 7, step: 1 },
       { key: "cfg_scale", label: "CFG", type: "number", defaultValue: 1, min: 0, step: 0.1 },
       { key: "apg_scale", label: "APG", type: "number", defaultValue: 1, min: 0, step: 0.1 },
@@ -710,7 +709,7 @@ export const generationCatalog: readonly GenerationConfig[] = [
       { key: "model", label: "Model", type: "select", defaultValue: "medium", options: audioModels.map(({ value, label }) => ({ value, label })) },
       { key: "duration_seconds", label: "Seconds", type: "number", defaultValue: 5, min: 0.5, max: 120, step: 0.5 },
       { key: "steps", label: "Steps", type: "number", defaultValue: 8, min: 1, max: 256, step: 1 },
-      { key: "init_noise_level", label: "Init noise", type: "number", defaultValue: 0.7, min: 0, max: 1, step: 0.05 },
+      { key: "init_noise_level", label: "Init noise", type: "number", defaultValue: 0.7, min: 0.01, max: 1, step: 0.05 },
       { key: "inpaint_start_seconds", label: "Inpaint start", type: "number", defaultValue: 0, min: 0, step: 0.1 },
       { key: "inpaint_end_seconds", label: "Inpaint end", type: "number", defaultValue: 2, min: 0.1, step: 0.1 },
       { key: "seed", label: "Seed", type: "number", defaultValue: 7, step: 1 },

@@ -118,7 +118,7 @@ FIELD_HINTS: dict[str, dict[str, Any]] = {
     "seed": {"type": "number", "step": 1, "description": "Deterministic seed when the backend/script supports seeded runs."},
     "cfg_scale": {"type": "number", "default": 1.0, "min": 0.0, "step": 0.1},
     "apg_scale": {"type": "number", "default": 1.0, "min": 0.0, "step": 0.1},
-    "init_noise_level": {"type": "number", "default": 0.7, "min": 0.0, "max": 1.0, "step": 0.05},
+    "init_noise_level": {"type": "number", "default": 0.7, "min": 0.01, "max": 1.0, "step": 0.05},
     "inpaint_start_seconds": {"type": "number", "default": 0.0, "min": 0.0, "step": 0.1},
     "inpaint_end_seconds": {"type": "number", "default": 2.0, "min": 0.1, "step": 0.1},
     "chunked": {"type": "checkbox", "default": False, "advanced": True},
@@ -155,7 +155,7 @@ FIELD_HINTS: dict[str, dict[str, Any]] = {
     "exclude_self": {"type": "checkbox", "default": True},
     "optimization_steps": {"type": "number", "default": 100, "min": 1, "step": 1},
     "search_mode": {"type": "select", "default": "beam", "options": ["beam", "greedy", "coordinate"], "description": "Prompt search strategy used by the native probe scorer."},
-    "scorer": {"type": "select", "default": "lexical_probe", "options": ["lexical_probe", "sa3_flow_probe", "clap"], "description": "Prompt objective. SA3 flow loads the Medium model; CLAP is reserved for a later adapter."},
+    "scorer": {"type": "select", "default": "lexical_probe", "options": ["lexical_probe", "sa3_flow_probe"], "description": "Prompt objective. SA3 flow loads the Medium model; CLAP remains future work."},
     "seed_prompt": {"type": "text", "default": "audio texture", "description": "Starting text for prompt search or soft-prompt optimization."},
     "vocabulary": {"type": "text", "default": ", ".join(DEFAULT_PROMPT_SEARCH_VOCABULARY), "advanced": True},
     "tokens_generated": {"type": "number", "default": 4, "min": 1, "max": 32, "step": 1},
@@ -512,7 +512,7 @@ class RuntimeDispatcher:
                 params={
                     "target_audio_path": "file|null",
                     "seed_prompt": "str|null",
-                    "scorer": "lexical_probe|sa3_flow_probe|clap",
+                    "scorer": "lexical_probe|sa3_flow_probe",
                     "search_mode": "beam|greedy|coordinate",
                     "vocabulary": "csv",
                     "tokens_generated": "int",
@@ -523,6 +523,7 @@ class RuntimeDispatcher:
                     "candidate_batch_size": "int|null",
                     "prefix": "str|null",
                     "suffix": "str|null",
+                    "separator": "str",
                     "modifier_axes": "csv|null",
                     "model": "medium|small-music|small-sfx|null",
                     "duration_seconds": "float|null",
@@ -542,7 +543,7 @@ class RuntimeDispatcher:
                     "seed": "int|null",
                 },
                 produces=[ArtifactKind.BUNDLE],
-                status="implemented with lexical and optional SA3 flow probe scorer; CLAP scorer queued",
+                status="implemented with lexical and optional SA3 flow probe scorer",
             ),
             *self._script_operator_specs(),
         ]
@@ -1373,7 +1374,7 @@ class RuntimeDispatcher:
         elif scorer_kind == "clap":
             raise RuntimeError("CLAP prompt scorer is not implemented yet; choose lexical_probe or sa3_flow_probe.")
         else:
-            raise ValueError("prompt search scorer must be 'lexical_probe', 'sa3_flow_probe', or 'clap'")
+            raise ValueError("prompt search scorer must be 'lexical_probe' or 'sa3_flow_probe'")
 
         context.set_progress(0.20, f"running {search_mode} prompt search with {scorer_kind}", phase="scoring")
         if search_mode == "coordinate":

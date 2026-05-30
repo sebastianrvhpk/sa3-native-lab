@@ -351,7 +351,7 @@ class TextGenerateRequest(ContractModel):
 
 class AudioToAudioRequest(TextGenerateRequest):
     source_artifact_id: str
-    init_noise_level: float = Field(default=0.7, gt=0.0)
+    init_noise_level: float = Field(default=0.7, ge=0.01)
 
 
 class InpaintRequest(AudioToAudioRequest):

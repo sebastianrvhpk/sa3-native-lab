@@ -406,6 +406,8 @@ def test_operator_specs_cover_typed_request_params(tmp_path):
     assert text_ui_fields["model"].default == "medium"
     assert [option.value for option in text_ui_fields["model"].options] == ["sm-music", "sm-sfx", "medium"]
     assert text_ui_fields["backend"].default == BackendName.MLX
+    audio_to_audio_ui_fields = {field.key: field for field in specs[OperatorName.AUDIO_TO_AUDIO].ui_fields}
+    assert audio_to_audio_ui_fields["init_noise_level"].min == 0.01
 
     alpha_ui_fields = {field.key: field for field in specs[OperatorName.EXPERIMENT_ALPHA_SWEEP].ui_fields}
     assert alpha_ui_fields["vectors_path"].required is True
@@ -421,8 +423,9 @@ def test_operator_specs_cover_typed_request_params(tmp_path):
 
     prompt_ui_fields = {field.key: field for field in specs[OperatorName.EXPERIMENT_PROMPT_SEARCH].ui_fields}
     assert [option.value for option in prompt_ui_fields["search_mode"].options] == ["beam", "greedy", "coordinate"]
-    assert [option.value for option in prompt_ui_fields["scorer"].options] == ["lexical_probe", "sa3_flow_probe", "clap"]
+    assert [option.value for option in prompt_ui_fields["scorer"].options] == ["lexical_probe", "sa3_flow_probe"]
     assert prompt_ui_fields["target_audio_path"].artifact_kinds == [ArtifactKind.AUDIO]
+    assert prompt_ui_fields["separator"].default == " "
     assert prompt_ui_fields["tokens_generated"].default == 4
     assert prompt_ui_fields["score_samples"].default == 1
     assert specs[OperatorName.EXPERIMENT_PROMPT_SEARCH].backends == [BackendName.CPU, BackendName.TORCH_MPS, BackendName.TORCH_CPU]

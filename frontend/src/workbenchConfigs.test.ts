@@ -9,6 +9,7 @@ import {
   isExperimentMode,
   isLatentOperatorMode,
   operatorCatalog,
+  promptSearchScorerOptions,
   sameConfig,
 } from "./workbenchConfigs";
 
@@ -48,5 +49,6 @@ describe("workbench configs", () => {
     expect(generationControlKeys("generate.inpaint")).toContain("inpaint_start_seconds");
     expect(generationControlKeys("generate.audio_to_audio")).toContain("init_noise_level");
     expect(generationControlKeys("generate.text_to_audio")).not.toContain("init_noise_level");
+    expect(promptSearchScorerOptions.map((option) => option.value)).toEqual(["lexical_probe", "sa3_flow_probe"]);
   });
 });
