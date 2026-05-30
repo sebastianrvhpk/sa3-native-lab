@@ -103,8 +103,34 @@ def create_fixture(*, artifact_root: Path, fixtures_dir: Path) -> dict[str, str]
         artifact_ids=[take.artifact_id],
         metrics={"duration_seconds": 1.0},
     )
+    pending_recipe = Recipe(
+        operator=OperatorName.AUDIO_TO_AUDIO,
+        backend=BackendName.MLX,
+        inputs={"source": source.artifact_id},
+        params={
+            "prompt": "warm smoke pulse variation",
+            "duration_seconds": 1.0,
+            "steps": 4,
+            "init_noise_level": 0.35,
+            "model": "medium",
+            "decoder": "same-l",
+        },
+        model="medium",
+        seed=23,
+        session_id=session.session_id,
+    )
+    pending_job = JobRecord(
+        status=JobStatus.RUNNING,
+        recipe=pending_recipe,
+        progress=0.35,
+        phase="sampling",
+        message="fixture pending take",
+        artifact_ids=[],
+        metrics={},
+    )
     store.jobs_dir.mkdir(parents=True, exist_ok=True)
     (store.jobs_dir / f"{job.job_id}.json").write_text(json.dumps(job.model_dump(mode="json"), indent=2), encoding="utf-8")
+    (store.jobs_dir / f"{pending_job.job_id}.json").write_text(json.dumps(pending_job.model_dump(mode="json"), indent=2), encoding="utf-8")
 
     return {
         "artifact_root": str(artifact_root),
@@ -113,6 +139,7 @@ def create_fixture(*, artifact_root: Path, fixtures_dir: Path) -> dict[str, str]
         "take_artifact_id": take.artifact_id,
         "archived_artifact_id": archived.artifact_id,
         "job_id": job.job_id,
+        "pending_job_id": pending_job.job_id,
     }
 
 

@@ -80,6 +80,12 @@ try {
   await page.goto(frontendUrl, { waitUntil: "networkidle", timeout: 30000 });
   await expect(page.getByText("What do you want to do with this sound next?")).toBeVisible();
   await expect(page.locator(".surface-head .eyebrow", { hasText: "Current Sound" })).toBeVisible();
+  await expect(page.getByLabel("Gestures")).toBeVisible();
+  await expect(page.locator(".gesture-buttons button", { hasText: "Make" }).first()).toBeVisible();
+  await expect(page.getByLabel("Make tune")).toBeVisible();
+  await expect(page.locator(".tune-details > summary", { hasText: "Tune" })).toBeVisible();
+  await expect(page.locator(".pending-takes-panel")).toContainText("Pending Takes");
+  await expect(page.locator(".pending-takes-panel")).toContainText(/Continuing sound|Take failed/);
   await expect(page.locator(".audition-stack .eyebrow", { hasText: "Takes" })).toBeVisible();
   await page.getByRole("button", { name: /Warm Smoke Take/ }).first().click();
   await expect(page.getByRole("heading", { name: "Warm Smoke Take" })).toBeVisible();
@@ -177,9 +183,14 @@ async function playbackState(baseUrl, artifactId) {
 }
 
 async function artifact(baseUrl, artifactId) {
-  const response = await fetch(`${baseUrl}/artifacts/${artifactId}/inspect`);
-  if (!response.ok) throw new Error(`inspect failed ${response.status}`);
-  return (await response.json()).artifact;
+  let lastStatus = "none";
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const response = await fetch(`${baseUrl}/artifacts/${artifactId}/inspect`);
+    lastStatus = String(response.status);
+    if (response.ok) return (await response.json()).artifact;
+    await new Promise((resolve) => setTimeout(resolve, 120));
+  }
+  throw new Error(`inspect failed ${lastStatus}`);
 }
 
 function spawnProcess(label, command, args, options) {
