@@ -55,21 +55,24 @@ Important endpoints:
 - `POST /recipes/{recipe_id}/replay`
 - `POST /recipes/{recipe_id}/fork`
 
-### Listening Bench
+### Current Sound And Gestures
 
 The React app in `frontend/` is the working interface. Today it supports
 artifact selection, waveform inspection, audio playback, WaveSurfer-backed
 waveform zoom, draggable loop regions, playback-rate checks, MLX generation,
-SAME encode/decode, latent-operator runs, Recipe Studio, Mode Atlas, and job
-polling. The next interface pass should reframe these as current sound,
-gestures, takes, branches, tuning, and memory instead of exposing engineering
-nouns first. Generate and SAME controls are
+SAME encode/decode, latent-operator runs, Advanced Gestures, Mode Atlas, and job
+polling. The first product rescue implementation now reframes those paths
+through Current Sound plus a gesture strip: Make, Continue, Vary, Steer,
+Borrow Texture, Encode, Decode, Morph, and Remember. Selecting a gesture opens
+one scoped Tune surface backed by existing forms and payload builders, while
+contract/spec and mode-atlas details sit behind Inspect. Generate and SAME
+controls are
 now native schema-driven forms: the backend `/operators/specs` contract supplies
 defaults, bounds, select options, required flags, and advanced flags, while the
 frontend form model builds typed generation and encode/decode payloads. This
 keeps everyday parameters such as duration, seed, model, decoder, init noise,
 inpaint range, SAME chunking, prompts, and notes visible without maintaining a
-separate hand-written payload surface. The bench also has a Run Monitor that
+separate hand-written payload surface. The bench also has a compact Take Status strip that
 surfaces active jobs, percent progress, persisted phase labels, artifact counts,
 live event snapshots, heartbeat diagnostics, elapsed time, cancellation, retry,
 the latest backend message, and recovery hints for common failures such as gated
@@ -108,9 +111,9 @@ plane replays missed journal snapshots before resuming live polling. The event
 bridge still uses polling as its live source, but refresh/reconnect no longer
 depends only on transient in-memory state.
 
-### Operator Studio
+### Latent Gestures
 
-Operator Studio exposes direct latent operators as native controls:
+Latent Gestures expose direct latent operators as native controls:
 
 - cyclic roll
 - latent blur
@@ -120,15 +123,15 @@ Operator Studio exposes direct latent operators as native controls:
 
 Every visible control maps to an executable request parameter. Donor-latent
 selection appears only for graft or DSP modes that need a donor.
-Operator Studio also has a first-pass local preset rack: named browser-local
+Latent Gestures also have a first-pass local preset rack: named browser-local
 parameter sets can be saved, reloaded, updated, or deleted per operator mode so
 repeatable latent explorations do not require rebuilding a form by hand. When a
 preset is selected, the UI now shows parameter and donor-latent drift from the
 saved setting and can revert the current controls back to that preset.
 
-### Recipe Studio
+### Advanced Gestures
 
-Recipe Studio wraps the notebook/script experiments as background recipes. It
+Advanced Gestures wrap the notebook/script experiments as background recipes. It
 covers style vectors, style profiles, residual vectors, alpha sweeps, prompt
 search, soft prompts, dataset pre-encoding, local latent-memory query, local
 SAME geometry audit, and LoRA training.
@@ -170,7 +173,7 @@ gives it peaks, playback, lineage, recipe provenance, annotations, and reuse in
 the rest of the app. Bundle readers now show compact workflow signals for real
 available affordances: recipe actions, playable audio, lineage, plots, metrics,
 prompt candidates, memory hits, sweep variants, tensors, checkpoints, and
-geometry stats. Reusable bundle types expose native Recipe Studio actions such
+geometry stats. Reusable bundle types expose native Advanced Gesture actions such
 as use as profile, sweep vectors, use direction, use prompt in sweep, use soft
 prompt, use memory, and use checkpoint. Prompt-search bundles expose candidate
 prompts as a small listening bench: a candidate can be used as the main
@@ -231,7 +234,7 @@ Confirmed in the current codebase:
 - Backend contracts and runtime defaults target SA3 Medium/SAME-L.
 - `/colab/modes` keeps the notebook migration visible.
 - Direct latent operators run as typed jobs over stored latent artifacts.
-- Script-backed Colab experiments are reachable from Recipe Studio.
+- Script-backed Colab experiments are reachable from Advanced Gestures.
 - Local latent-memory query is reachable as a CPU recipe over stored latent
   artifacts.
 - Local SAME geometry audit is reachable as a CPU recipe over stored latent
@@ -261,7 +264,7 @@ Confirmed in the current codebase:
   inspectors, bundle metrics, inline plot/image previews, and kind-specific
   artifact vitals, embedded bundle-audio playback and promotion, prompt-search
   probe controls, candidate-family bundle reading, durable listening decision
-  controls, prompt-search decision summaries, prompt memory, Operator Studio
+  controls, prompt-search decision summaries, prompt memory, Latent Gestures
   local presets with visible diffs, bundle workflow signals, richer domain
   cards for memory/sweep/vector/soft-prompt/training bundles, sibling sweep
   comparison, data-backed specimen lineage threads, a session workspace pulse,

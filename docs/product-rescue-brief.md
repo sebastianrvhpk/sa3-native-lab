@@ -353,6 +353,37 @@ Still open:
 - The visual motif should keep getting closer to source -> gesture -> take ->
   memory relationships instead of decorative dashboard framing.
 
+### Current status after gesture model pass
+
+The app now has frontend product-domain models for `Gesture` and `PendingTake`.
+The primary action area is no longer four simultaneous panels for generation,
+SAME, latent operators, and script experiments. The first screen exposes a
+single gesture strip:
+
+```text
+Make / Continue / Vary / Steer / Borrow Texture / Encode / Decode / Morph / Remember
+```
+
+Selecting a gesture reveals a scoped Tune surface backed by the existing
+schema-driven form and payload builders. Raw contract/spec and mode atlas
+details remain reachable through Inspect rather than being first-order product
+controls. Job records are translated into pending/failed take cards in the
+Takes / Branches flow, while the compact global Take Status remains only a
+safety/status strip.
+
+Still open:
+
+- Gesture selection is now real, but deeper gesture chaining is not: a finished
+  take should suggest the next useful gestures from its kind, source, and
+  lineage.
+- Memory is still mostly archive/recovery plus anchors. It needs reuse actions
+  such as use as source, donor, prompt seed, or branch context where the
+  backend already supports those paths.
+- Tune is scoped to one gesture, but some gestures still expose dense
+  parameter sets inherited from backend/script forms.
+- Pending takes currently translate jobs in the UI; the tRPC/workbench control
+  plane should eventually return pending-take-shaped state directly.
+
 ### Slice 1: Language correction
 
 - Remove CLAP from product docs/frontend notes.

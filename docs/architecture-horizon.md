@@ -37,6 +37,14 @@ language is being corrected by `docs/product-rescue-brief.md`, so some module
 names still reflect legacy implementation nouns and should not be treated as
 the desired interface grammar:
 
+- `gestureModel.ts`: product gesture definitions, source requirements,
+  backend operator mappings, progress phrases, and availability reasons.
+- `pendingTakeModel.ts`: product-facing translation of `JobRecord` into
+  pending/failed take state for the Takes flow.
+- `gestureStrip.tsx`, `tuneDrawer.tsx`, `pendingTakesPanel.tsx`: first-pass
+  instrument components for choosing the next move, tuning only the active
+  gesture, and keeping job state near takes instead of exposing jobs as the
+  primary noun.
 - `workbenchConfigs.ts`: static mode/config/default catalogs.
 - `workbenchModel.ts`: pure job, result-family, event, status, and filtering
   helpers with focused tests.
@@ -53,15 +61,16 @@ the desired interface grammar:
 - `bundleInspector.tsx`: still lazy-loaded so bundle-heavy inspectors do not
   bloat the first interaction path.
 
-Current focused component coverage exists for `specimenPanel.tsx`,
+Current focused component coverage exists for `gestureModel.ts`,
+`pendingTakeModel.ts`, `specimenPanel.tsx`,
 `sessionPanel.tsx`, `statusPanels.tsx`, `promptSearchRack.tsx`,
 `operatorPresetRack.tsx`, and `specCoverage.tsx`. The next frontend extraction
-should therefore target action-band model helpers, not another broad component
-split.
+should therefore target memory/branch reuse semantics and app-shaped control
+plane state, not another broad component split.
 
 Remaining frontend extraction should be driven by behavior, not cosmetics:
-extract the main generation/SAME/operator/recipe action bands only when their
-state and handler contracts are clean enough to name without hiding complexity.
+continue shrinking root orchestration only when gesture, pending-take, memory,
+and branch state contracts are clean enough to name without hiding complexity.
 
 ## Near Horizon
 

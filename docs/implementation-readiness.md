@@ -86,7 +86,7 @@ progressive disclosure.
   encoded dataset manifests, profile aggregates, direction NPZ metadata,
   geometry artifacts, soft-prompt tensors, and training checkpoints as domain
   cards instead of only file inventory.
-- Operator Studio has browser-local presets with visible diff and revert
+- Latent Gestures have browser-local presets with visible diff and revert
   behavior.
 - The frontend has completed a de-monolith pass. `App.tsx` is now the
   composition root for query/mutation wiring, form state, payload orchestration,
@@ -94,6 +94,12 @@ progressive disclosure.
   helpers, specimen/listening UI, session/archive UI, comparison, mode atlas,
   prompt search rack, operator preset rack, readiness/status panels, audition
   stack, and spec coverage widgets live in typed modules with clearer ownership.
+- The first product-domain rescue pass after that split adds explicit
+  `Gesture` and `PendingTake` frontend models. Generation, SAME, latent
+  operators, experiments, and remember/archive actions are now selected through
+  one gesture strip and one scoped Tune surface rather than appearing as four
+  simultaneous form panels. Active or interrupted jobs are translated into
+  pending/failed take cards in the Takes / Branches rail.
 - Extracted panel coverage now includes focused Testing Library tests for the
   specimen panel, session tray, status panels, prompt-search rack, operator
   preset rack, and spec-coverage widgets.
@@ -212,7 +218,7 @@ branched, and inspected without making the user operate the machinery first.
 ### Risk Areas
 
 - Frontend field schemas are still partly duplicated in TypeScript. Backend
-  `ui_fields` now drive Generate, SAME, Operator Studio, and Recipe Studio
+  `ui_fields` now drive Generate, SAME, Latent Gestures, and Advanced Gestures
   defaults/options/bounds, but static catalogs still carry layout, labels, and
   some parameter assumptions.
 - `RuntimeDispatcher` still owns too many responsibilities and should continue
@@ -229,10 +235,11 @@ branched, and inspected without making the user operate the machinery first.
   surface through the workspace pulse, artifact recovery, and direct artifact
   archive actions, but long-session cleanup still needs deeper end-to-end
   workflows.
-- The frontend root is much healthier, but the main action bands still combine
-  layout, readiness, and handler wiring in `App.tsx`. Extract those only after
-  the action-band state contracts are named clearly enough to avoid vague hook
-  wrappers.
+- The frontend root is much healthier, and the main action bands now have
+  named product models. `App.tsx` still owns too much action orchestration
+  because mutation handlers, active gesture state, and form state are not yet
+  extracted into a clean `useGestureWorkbench`-style contract. Do that only
+  once memory/branch reuse semantics are clearer.
 
 ### Not Bad Code, But Incomplete Architecture
 
@@ -289,7 +296,7 @@ instead of invisible friction.
 5. Add browser-level coverage for the extracted session tray archive/recovery
    workflow now that it has a stable component boundary.
 
-### P1: Playback And Listening Bench
+### P1: Playback And Current Sound
 
 1. Upgrade playback into a creative listening instrument.
 2. Add richer loop, marker, region, take-stack, and session-playlist
