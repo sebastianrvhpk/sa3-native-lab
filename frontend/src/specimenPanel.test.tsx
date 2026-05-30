@@ -54,8 +54,8 @@ describe("Specimen", () => {
     expect(screen.getByText("1.0s")).toBeInTheDocument();
     expect(screen.getByLabelText("Artifact lineage")).toHaveTextContent("take");
 
-    await user.click(screen.getByRole("button", { name: "A" }));
-    await user.click(screen.getByRole("button", { name: "B" }));
+    await user.click(screen.getByRole("button", { name: "Anchor" }));
+    await user.click(screen.getByRole("button", { name: "Source" }));
     await user.click(screen.getByRole("button", { name: "Replay recipe" }));
     await user.click(screen.getByRole("button", { name: "Fork recipe" }));
     await user.click(screen.getByRole("button", { name: "Archive artifact" }));

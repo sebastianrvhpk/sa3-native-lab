@@ -28,7 +28,7 @@ describe("FamilyDetailPanel", () => {
     expect(screen.getByText("2 takes · 2 generations")).toBeInTheDocument();
   });
 
-  it("surfaces alpha sweep variants with A/B promotion actions", async () => {
+  it("surfaces alpha sweep variants with anchor actions", async () => {
     const user = userEvent.setup();
     const onCompare = vi.fn();
     const onSelect = vi.fn();
@@ -81,7 +81,7 @@ describe("FamilyDetailPanel", () => {
 
     const negativeVariant = screen.getByText("alpha -4").closest("article");
     expect(negativeVariant).not.toBeNull();
-    await user.click(within(negativeVariant as HTMLElement).getByRole("button", { name: "A" }));
+    await user.click(within(negativeVariant as HTMLElement).getByRole("button", { name: "Anchor" }));
     const negativeArtifact = screen.getAllByText("alpha_neg4p00")
       .map((element) => element.closest(".family-artifact"))
       .find((element): element is HTMLElement => Boolean(element));

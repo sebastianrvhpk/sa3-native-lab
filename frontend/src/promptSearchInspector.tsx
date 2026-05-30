@@ -165,13 +165,13 @@ export function PromptSearchCandidatePanel({
                     <AudioDeck artifact={take} apiBase={apiBase} compact />
                     <PromptTakeDescriptorDelta apiBase={apiBase} target={targetArtifact} take={take} />
                     <div className="prompt-generated-actions">
-                      <button type="button" onClick={() => onCompare("a", take.artifact_id)} title="Send generated take to comparison slot A">
+                      <button type="button" onClick={() => onCompare("a", take.artifact_id)} title="Pin generated take as anchor">
                         <FlaskConical aria-hidden="true" size={12} />
-                        A
+                        Anchor
                       </button>
-                      <button type="button" onClick={() => onCompare("b", take.artifact_id)} title="Send generated take to comparison slot B">
+                      <button type="button" onClick={() => onCompare("b", take.artifact_id)} title="Pin generated take as source">
                         <FlaskConical aria-hidden="true" size={12} />
-                        B
+                        Source
                       </button>
                     </div>
                     <ListeningDecisionControls artifact={take} source="prompt_candidate_bench" onDecide={onAnnotate} />

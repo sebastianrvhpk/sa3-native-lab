@@ -3,7 +3,7 @@ import type { ResultFamily } from "./controlPlane";
 import { shortOperatorName } from "./jobUtils";
 import type { ArtifactRecord, JobRecord } from "./types";
 
-export type LineageNodeKind = "origin" | "source" | "recipe" | "job" | "current" | "family" | "compare";
+export type LineageNodeKind = "origin" | "source" | "recipe" | "job" | "current" | "family" | "anchor";
 
 export interface LineageNode {
   id: string;
@@ -87,13 +87,13 @@ export function artifactLineageModel({
     });
   }
 
-  const slot = compare.a === artifact.artifact_id ? "A" : compare.b === artifact.artifact_id ? "B" : null;
+  const slot = compare.a === artifact.artifact_id ? "Anchor" : compare.b === artifact.artifact_id ? "Source" : null;
   if (slot) {
     nodes.push({
       id: `compare:${slot}`,
-      kind: "compare",
-      label: `A/B ${slot}`,
-      title: `Comparison slot ${slot}`,
+      kind: "anchor",
+      label: slot,
+      title: `Pinned ${slot.toLowerCase()}`,
     });
   }
 

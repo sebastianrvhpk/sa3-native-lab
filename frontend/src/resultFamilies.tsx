@@ -190,8 +190,8 @@ export function FamilyDetailPanel({
                 <>
                   <AudioDeck artifact={artifact} apiBase={apiBase} compact />
                   <div className="family-artifact-actions">
-                    <button type="button" onClick={() => onCompare("a", artifact.artifact_id)}>A</button>
-                    <button type="button" onClick={() => onCompare("b", artifact.artifact_id)}>B</button>
+                    <button type="button" onClick={() => onCompare("a", artifact.artifact_id)}>Anchor</button>
+                    <button type="button" onClick={() => onCompare("b", artifact.artifact_id)}>Source</button>
                     <button
                       type="button"
                       aria-label="Archive artifact"
@@ -358,11 +358,11 @@ function SweepFamilyBand({
               {entry.artifact.artifact_id === bestArtifactId ? <i>best</i> : null}
             </button>
             <div className="sweep-actions">
-              <button type="button" onClick={() => onCompare("a", entry.artifact.artifact_id)} title="Promote this sweep variant to A">
-                A
+              <button type="button" onClick={() => onCompare("a", entry.artifact.artifact_id)} title="Pin this sweep variant as anchor">
+                Anchor
               </button>
-              <button type="button" onClick={() => onCompare("b", entry.artifact.artifact_id)} title="Promote this sweep variant to B">
-                B
+              <button type="button" onClick={() => onCompare("b", entry.artifact.artifact_id)} title="Pin this sweep variant as source">
+                Source
               </button>
               <button type="button" onClick={onForkRecipe} title="Fork the sweep recipe">
                 <GitFork size={13} />
@@ -397,7 +397,7 @@ function SweepMetricTable({
           <span key={key}>{prettyParamName(key)}</span>
         ))}
         <span>duration</span>
-        <span>promote</span>
+        <span>pin</span>
       </div>
       {entries.map((entry) => (
         <div key={entry.artifact.artifact_id} className={`sweep-metric-row ${entry.artifact.artifact_id === bestArtifactId ? "promoted" : ""}`}>
@@ -410,11 +410,11 @@ function SweepMetricTable({
           ))}
           <span>{entry.artifact.audio ? `${formatMetricValue(entry.artifact.audio.duration_seconds)}s` : "n/a"}</span>
           <span className="sweep-table-actions">
-            <button type="button" onClick={() => onCompare("a", entry.artifact.artifact_id)} title="Promote to A">
-              A
+            <button type="button" onClick={() => onCompare("a", entry.artifact.artifact_id)} title="Pin as anchor">
+              Anchor
             </button>
-            <button type="button" onClick={() => onCompare("b", entry.artifact.artifact_id)} title="Promote to B">
-              B
+            <button type="button" onClick={() => onCompare("b", entry.artifact.artifact_id)} title="Pin as source">
+              Source
             </button>
           </span>
         </div>

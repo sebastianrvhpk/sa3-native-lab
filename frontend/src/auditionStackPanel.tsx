@@ -69,11 +69,11 @@ export function AuditionStackPanel({
           <button type="button" disabled={!cursor.next} onClick={() => cursor.next && onSelect(cursor.next.artifact_id)} title="Next take">
             <SkipForward size={14} />
           </button>
-          <button type="button" disabled={!cursor.selected} onClick={() => cursor.selected && onCompare("a", cursor.selected.artifact_id)} title="Send selected take to A">
-            A
+          <button type="button" disabled={!cursor.selected} onClick={() => cursor.selected && onCompare("a", cursor.selected.artifact_id)} title="Pin selected take as anchor">
+            Anchor
           </button>
-          <button type="button" disabled={!cursor.selected} onClick={() => cursor.selected && onCompare("b", cursor.selected.artifact_id)} title="Send selected take to B">
-            B
+          <button type="button" disabled={!cursor.selected} onClick={() => cursor.selected && onCompare("b", cursor.selected.artifact_id)} title="Pin selected take as source">
+            Source
           </button>
         </div>
       </div>
@@ -89,8 +89,8 @@ export function AuditionStackPanel({
             </button>
             <AudioDeck artifact={artifact} apiBase={apiBase} compact />
             <div className="audition-stack-actions">
-              <button type="button" onClick={() => onCompare("a", row.artifactId)} title="Send take to comparison slot A">A</button>
-              <button type="button" onClick={() => onCompare("b", row.artifactId)} title="Send take to comparison slot B">B</button>
+              <button type="button" onClick={() => onCompare("a", row.artifactId)} title="Pin take as anchor">Anchor</button>
+              <button type="button" onClick={() => onCompare("b", row.artifactId)} title="Pin take as source">Source</button>
             </div>
           </article>
         );

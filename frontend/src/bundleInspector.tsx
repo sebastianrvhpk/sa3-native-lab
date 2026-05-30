@@ -843,10 +843,10 @@ function BundlePreview({
                     Select
                   </button>
                   <button type="button" disabled={localArtifact?.kind !== "audio"} onClick={() => localArtifact && onCompare("a", localArtifact.artifact_id)}>
-                    A
+                    Anchor
                   </button>
                   <button type="button" disabled={localArtifact?.kind !== "audio"} onClick={() => localArtifact && onCompare("b", localArtifact.artifact_id)}>
-                    B
+                    Source
                   </button>
                   <button type="button" disabled={localArtifact?.kind !== "latent"} onClick={() => localArtifact && onUseAsDonor(localArtifact.artifact_id)}>
                     Donor

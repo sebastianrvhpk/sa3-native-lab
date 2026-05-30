@@ -9,10 +9,10 @@ export function ComparePanel({ a, b, apiBase }: { a: ArtifactRecord | null; b: A
     <div className="compare-panel">
       <div className="band-title">
         <FlaskConical size={18} />
-        <span>A/B</span>
+        <span>Anchors</span>
       </div>
-      <CompareSlot label="A" artifact={a} apiBase={apiBase} />
-      <CompareSlot label="B" artifact={b} apiBase={apiBase} />
+      <CompareSlot label="Anchor" artifact={a} apiBase={apiBase} />
+      <CompareSlot label="Source" artifact={b} apiBase={apiBase} />
     </div>
   );
 }
@@ -27,7 +27,7 @@ function CompareSlot({ label, artifact, apiBase }: { label: string; artifact: Ar
           <AudioDeck artifact={artifact} apiBase={apiBase} compact />
         </div>
       ) : (
-        <span className="muted">empty</span>
+        <span className="muted">not pinned</span>
       )}
     </div>
   );

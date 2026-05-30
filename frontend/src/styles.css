@@ -1579,7 +1579,7 @@ button.thread-node:hover {
   color: #21746b;
 }
 
-.thread-node.compare {
+.thread-node.anchor {
   color: #b13784;
   border-color: rgb(177 55 132 / 0.35);
 }
@@ -1727,10 +1727,16 @@ dd {
 
 .specimen-actions {
   display: grid;
-  grid-template-columns: repeat(4, 40px);
+  grid-template-columns: repeat(2, minmax(68px, 1fr)) repeat(4, 40px);
   gap: 8px;
   align-items: center;
   justify-content: end;
+}
+
+.specimen-actions button:nth-child(-n + 2) {
+  min-width: 0;
+  padding: 0 8px;
+  font-size: 0.72rem;
 }
 
 .artifact-vitals {
@@ -3996,7 +4002,7 @@ audio {
 .sweep-metric-row {
   width: 100%;
   display: grid;
-  grid-template-columns: 52px minmax(0, 1fr) repeat(3, minmax(54px, max-content)) minmax(58px, max-content) minmax(64px, max-content);
+  grid-template-columns: 52px minmax(0, 1fr) repeat(3, minmax(54px, max-content)) minmax(58px, max-content) minmax(124px, max-content);
   align-items: center;
   gap: 7px;
   border: 0;
@@ -4047,9 +4053,9 @@ audio {
 }
 
 .sweep-table-actions button {
-  width: 26px;
+  min-width: 58px;
   min-height: 24px;
-  padding: 0;
+  padding: 0 6px;
   border-radius: 5px;
   box-shadow: none;
   font-size: 0.66rem;
@@ -4780,10 +4786,11 @@ audio {
 }
 
 .audition-stack-actions button {
-  width: 31px;
+  width: auto;
+  min-width: 58px;
   min-height: 28px;
   border-radius: 999px;
-  padding: 0;
+  padding: 0 8px;
   color: var(--ink);
   background: rgb(255 255 255 / 0.62);
   box-shadow: none;

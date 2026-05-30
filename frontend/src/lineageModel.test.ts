@@ -5,7 +5,7 @@ import type { ResultFamily } from "./controlPlane";
 import type { ArtifactRecord, JobRecord, Recipe } from "./types";
 
 describe("artifact lineage model", () => {
-  it("maps source, recipe, job, family, and compare slot into data-backed nodes", () => {
+  it("maps source, recipe, job, family, and anchor into data-backed nodes", () => {
     const source = artifact("art_source", "audio", null);
     const current = artifact("art_take", "audio", "recipe_generate", [source.artifact_id]);
     const recipe = recipeRecord("recipe_generate", "generate.audio_to_audio");
@@ -26,7 +26,7 @@ describe("artifact lineage model", () => {
       ["job", "done"],
       ["current", "audio"],
       ["family", "1 take"],
-      ["compare", "A/B A"],
+      ["anchor", "Anchor"],
     ]);
   });
 

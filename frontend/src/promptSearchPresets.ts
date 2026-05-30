@@ -85,7 +85,7 @@ export const promptSearchPresets: readonly PromptSearchPreset[] = [
   {
     id: "medium-flow-check",
     label: "Medium flow check",
-    modeLabel: "Flow scorer",
+    modeLabel: "Flow probe",
     cost: "slow MPS",
     intent: "Small model-backed score probe for promising targets.",
     fields: {
@@ -120,15 +120,8 @@ export const promptSearchScorerNotes: readonly PromptSearchScorerNote[] = [
     scorer: "sa3_flow_probe",
     label: "SA3 flow probe",
     cost: "slow MPS",
-    guidance: "Use on short targets or promising candidates. Keep score samples low until the take comparison has enough evidence.",
+    guidance: "Use on short targets or promising candidates. Keep score samples low until the take branch has enough listened evidence.",
     maturity: "probe",
-  },
-  {
-    scorer: "clap",
-    label: "CLAP",
-    cost: "queued",
-    guidance: "Reserved behind the scorer contract. Add only after Medium flow comparisons produce enough listened examples.",
-    maturity: "queued",
   },
 ];
 

@@ -122,10 +122,10 @@ export function Specimen({
         </dl>
         <div className="specimen-actions">
           <button disabled={artifact.kind !== "audio"} onClick={() => onCompare("a", artifact.artifact_id)}>
-            A
+            Anchor
           </button>
           <button disabled={artifact.kind !== "audio"} onClick={() => onCompare("b", artifact.artifact_id)}>
-            B
+            Source
           </button>
           <button
             type="button"

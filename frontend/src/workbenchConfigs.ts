@@ -490,7 +490,7 @@ export const experimentCatalog: readonly ExperimentConfig[] = [
       { key: "target_audio_path", label: "Target audio", type: "artifact-path", artifactKinds: ["audio"] },
       { key: "seed_prompt", label: "Seed prompt", type: "text", defaultValue: "audio texture" },
       { key: "search_mode", label: "Search mode", type: "select", defaultValue: "beam", options: promptSearchModeOptions },
-      { key: "scorer", label: "Scorer", type: "select", defaultValue: "lexical_probe", options: promptSearchScorerOptions },
+      { key: "scorer", label: "Prompt probe", type: "select", defaultValue: "lexical_probe", options: promptSearchScorerOptions },
       { key: "model", label: "SA3 model", type: "select", defaultValue: "medium", options: sa3ModelOptions },
       {
         key: "duration_seconds",

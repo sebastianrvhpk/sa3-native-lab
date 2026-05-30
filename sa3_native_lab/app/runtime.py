@@ -154,8 +154,8 @@ FIELD_HINTS: dict[str, dict[str, Any]] = {
     "metric": {"type": "select", "default": "cosine", "options": ["cosine", "euclidean"]},
     "exclude_self": {"type": "checkbox", "default": True},
     "optimization_steps": {"type": "number", "default": 100, "min": 1, "step": 1},
-    "search_mode": {"type": "select", "default": "beam", "options": ["beam", "greedy", "coordinate"], "description": "Prompt search strategy used by the native probe scorer."},
-    "scorer": {"type": "select", "default": "lexical_probe", "options": ["lexical_probe", "sa3_flow_probe"], "description": "Prompt objective. SA3 flow loads the Medium model; CLAP remains future work."},
+    "search_mode": {"type": "select", "default": "beam", "options": ["beam", "greedy", "coordinate"], "description": "Prompt search strategy used by the native prompt probe."},
+    "scorer": {"type": "select", "default": "lexical_probe", "options": ["lexical_probe", "sa3_flow_probe"], "description": "Prompt probe. SA3 flow loads the Medium model."},
     "seed_prompt": {"type": "text", "default": "audio texture", "description": "Starting text for prompt search or soft-prompt optimization."},
     "vocabulary": {"type": "text", "default": ", ".join(DEFAULT_PROMPT_SEARCH_VOCABULARY), "advanced": True},
     "tokens_generated": {"type": "number", "default": 4, "min": 1, "max": 32, "step": 1},
@@ -543,7 +543,7 @@ class RuntimeDispatcher:
                     "seed": "int|null",
                 },
                 produces=[ArtifactKind.BUNDLE],
-                status="implemented with lexical and optional SA3 flow probe scorer",
+                status="implemented with lexical and optional SA3 flow prompt probe",
             ),
             *self._script_operator_specs(),
         ]
@@ -1371,10 +1371,8 @@ class RuntimeDispatcher:
                 seed=seed,
             )
             scorer = lambda prompt: batch_scorer([prompt])[0]
-        elif scorer_kind == "clap":
-            raise RuntimeError("CLAP prompt scorer is not implemented yet; choose lexical_probe or sa3_flow_probe.")
         else:
-            raise ValueError("prompt search scorer must be 'lexical_probe' or 'sa3_flow_probe'")
+            raise ValueError("prompt search probe must be 'lexical_probe' or 'sa3_flow_probe'")
 
         context.set_progress(0.20, f"running {search_mode} prompt search with {scorer_kind}", phase="scoring")
         if search_mode == "coordinate":

@@ -190,7 +190,7 @@ describe("recipe form model", () => {
       fields: [
         { key: "target_audio_path", label: "Target audio", type: "artifact-path", artifactKinds: ["audio"] },
         { key: "search_mode", label: "Search mode", type: "select", defaultValue: "beam" },
-        { key: "scorer", label: "Scorer", type: "select", defaultValue: "lexical_probe" },
+        { key: "scorer", label: "Prompt probe", type: "select", defaultValue: "lexical_probe" },
         { key: "model", label: "SA3 model", type: "select", defaultValue: "medium" },
         { key: "duration_seconds", label: "Duration", type: "number" },
         { key: "tokens_generated", label: "Tokens", type: "number", defaultValue: 4 },

@@ -83,10 +83,10 @@ try {
   await expect(page.locator(".operator-surface.has-selection")).toBeVisible();
   await expect(page.locator(".wave-bus.has-sources.has-job.has-family").first()).toBeVisible();
 
-  await page.locator(".specimen").getByRole("button", { name: "A", exact: true }).click();
+  await page.locator(".specimen").getByRole("button", { name: "Anchor", exact: true }).click();
   await page.getByRole("button", { name: /Source Pulse/ }).first().click();
   await expect(page.getByRole("heading", { name: "Source Pulse" })).toBeVisible();
-  await page.locator(".specimen").getByRole("button", { name: "B", exact: true }).click();
+  await page.locator(".specimen").getByRole("button", { name: "Source", exact: true }).click();
   await expect(page.locator(".compare-panel .compare-slot").nth(0)).toContainText("Warm Smoke Take");
   await expect(page.locator(".compare-panel .compare-slot").nth(1)).toContainText("Source Pulse");
 
