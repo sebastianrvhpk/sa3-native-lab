@@ -86,6 +86,13 @@ field, an artifact relationship, or an explicitly documented future capability.
   helpers, specimen/listening UI, session/archive UI, comparison, mode atlas,
   prompt search rack, operator preset rack, readiness/status panels, audition
   stack, and spec coverage widgets live in typed modules with clearer ownership.
+- Extracted panel coverage now includes focused Testing Library tests for the
+  specimen panel, session tray, status panels, prompt-search rack, operator
+  preset rack, and spec-coverage widgets.
+- The prompt-search contract now exposes the `separator` parameter in backend
+  specs, and only currently implemented scorers (`lexical_probe` and
+  `sa3_flow_probe`) are selectable. CLAP remains documented future work rather
+  than a runnable UI option.
 - The docs already cover app overview, Colab capability mapping, triage status,
   architecture horizon, control-plane direction, improvement roadmap, and
   codebase review.
@@ -162,17 +169,18 @@ that every experiment can be trusted, replayed, compared, and reused.
   but full mode coverage is still incomplete.
 - Component tests for all mode-specific recipe panels once they become more
   domain-specific.
-- Browser/integration tests for session/archive/replay flows as first-class
-  workflows. The derived workspace model and archive recovery payload have unit
-  coverage; the live UI flow still needs more end-to-end coverage.
-- Component-level tests for the newly extracted panels. The model/config/helper
-  seams have focused tests, and the production build protects the extracted UI
-  imports, but panel fixtures for specimen, session tray, status panels, and
-  prompt/preset controls should come next.
-- Playback-specific browser tests for loop regions, A/B behavior,
-  generated-take promotion, marker editing, persisted cues, and session
-  playlists. The core marker, playback-state persistence payload, loop nudge,
-  delete, and playlist helpers now have unit coverage.
+- Browser/integration tests for replay/fork flows, archive review, long-session
+  cleanup, and session-level archive/new-session state. The committed playback
+  smoke covers A/B assignment, annotation persistence, cue persistence,
+  sequence modes, SessionTray artifact archive/recovery, screenshots, and
+  mobile overflow.
+- Component-level tests for mode-specific recipe panels once they become more
+  domain-specific. The extracted specimen/session/status/prompt/preset/spec
+  panels now have focused fixtures.
+- Playback-specific browser tests for generated-take promotion, richer playlist
+  sequencing, and future region-export workflows. Marker notes, loop regions,
+  A/B assignment, persisted cues, and tray archive/recovery now have committed
+  browser coverage.
 - Performance or runtime-cost tests for Medium/MPS prompt-search scorer paths.
 - Tests that protect against token or credential leakage in logs, command
   context, and error tails.
@@ -260,7 +268,9 @@ instead of invisible friction.
 
 1. Promote workspace/session/run/family/artifact into the app's default mental
    model. A first data-backed workspace pulse and archive recovery path are
-   implemented; the next step is browser-tested archive/replay/fork flows.
+   implemented, and the playback smoke now covers SessionTray artifact
+   archive/recovery. The next step is browser-tested replay/fork and
+   session-level archive/new-session behavior.
 2. Reduce queue clutter by making active session, archive, generated families,
    and reusable outputs distinct surfaces.
 3. Make "new session", "archive session", "recover result", "fork run", and
@@ -277,10 +287,10 @@ instead of invisible friction.
 1. Upgrade playback into a creative comparison instrument.
 2. Add richer loop, marker, region, A/B, take-stack, and session-playlist
    behaviors where they directly improve listening decisions. Local markers,
-   playlist cursor helpers, loop-edge nudging, marker deletion, keyboardable
-   audition navigation, persisted cue annotations, WaveSurfer zoom, and
-   draggable loop regions are implemented; marker notes and richer playlist
-   sequencing remain next.
+   marker notes, playlist cursor helpers, loop-edge nudging, marker deletion,
+   keyboardable audition navigation, persisted cue annotations, WaveSurfer zoom,
+   draggable loop regions, A/B assignment, and SessionTray archive/recovery
+   browser coverage are implemented; richer playlist sequencing remains next.
 3. Keep wavesurfer.js focused on real listening work: zoom, loop regions,
    marker editing, scrubbing, and future region annotations.
 4. Tie listening decisions back into prompt-search, sweeps, memory reuse, and

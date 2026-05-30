@@ -48,8 +48,11 @@ For the broader stack direction and promotion triggers, see
    recent takes can be selected, played compactly, inspected with their
    listening decision badge, and routed directly into A/B slots. The main
    specimen player now persists markers and loop regions as artifact
-   annotations and uses WaveSurfer for zoom plus draggable loop edits. Next
-   playback work should add marker notes and explicit playlist sequencing.
+   annotations, supports marker notes, uses WaveSurfer for zoom plus draggable
+   loop edits, and has committed browser coverage for A/B assignment, cue
+   persistence, annotation persistence, and SessionTray artifact
+   archive/recovery. Next playback work should add explicit playlist/session
+   sequencing.
 
 2. Deepen result-family views for sweeps.
    Recipe families now appear with metrics, a detail panel, per-result playback,
@@ -122,7 +125,8 @@ For the broader stack direction and promotion triggers, see
 4. Prompt/residual comparison bench.
    Prompt search now exists as `experiment.prompt_search` with beam, greedy, and
    coordinate modes, `lexical_probe` fallback, and optional `sa3_flow_probe`
-   scoring over Medium flow losses. A tiny authenticated Medium/MPS smoke run
+   scoring over Medium flow losses. The UI/spec only expose implemented
+   scorers; CLAP remains future work. A tiny authenticated Medium/MPS smoke run
    succeeded locally on short target audio. Prompt candidates can now launch
    MLX text-to-audio jobs with lineage back to the search bundle; generated
    takes are grouped under the prompt-search family and can be played, sent to

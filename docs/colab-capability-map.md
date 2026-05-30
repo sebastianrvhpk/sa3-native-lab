@@ -33,7 +33,7 @@ smoke tests, but they are not the app default.
 | Prompt residual vectors | `scripts/extract_sa3_vectors.py` | `/experiments/run`, Recipe Studio | script-job adapter with native controls |
 | Audio residual vectors | `scripts/extract_audio_residual_vectors.py` | `/experiments/run`, Recipe Studio | script-job adapter with native controls |
 | Residual alpha sweep | `scripts/run_sa3_alpha_sweep.py` | `/experiments/run`, Recipe Studio | script-job adapter with native controls |
-| Prompt search | `latent_audio_primitives.prompt_optimization`, `latent_audio_primitives.flow_prompt` | `/experiments/run`, Recipe Studio | native recipe with `lexical_probe` fallback and optional `sa3_flow_probe`; CLAP queued |
+| Prompt search | `latent_audio_primitives.prompt_optimization`, `latent_audio_primitives.flow_prompt` | `/experiments/run`, Recipe Studio | native recipe with `lexical_probe` fallback and optional `sa3_flow_probe`; CLAP remains future work |
 | Soft prompt optimize/generate | `scripts/optimize_sa3_soft_prompt.py`, `scripts/generate_sa3_with_soft_prompt.py` | `/experiments/run`, Recipe Studio | script-job adapter with native controls |
 | Dataset pre-encode | `scripts/pre_encode_dataset.py` | `/experiments/run`, Recipe Studio | script-job adapter with native controls |
 | SAME geometry audit | `latent_audio_primitives.geometry.geometry_report` | `/experiments/run`, Recipe Studio | implemented for local latent artifacts |
@@ -83,8 +83,8 @@ validation, runtime-cost notes, and richer candidate comparison. The first
 candidate-comparison slice now shows target-vs-take descriptor deltas for
 generated prompt-search takes and summarizes those deltas against saved
 keeper/maybe/reject decisions. Prompt memory also groups generated prompt takes
-by prompt text across runs. CLAP or hybrid scoring remains a future adapter
-behind the same `scorer` field.
+by prompt text across runs. CLAP or hybrid scoring remains a future adapter,
+but it is not exposed as a runnable scorer until implemented.
 
 ## Next Promotion Targets
 

@@ -239,8 +239,9 @@ Confirmed in the current codebase:
   lineage, inline playback, A/B assignment, target-vs-take descriptor deltas,
   saved listening decisions, and a first-pass decision-study summary that
   correlates listened choices with descriptor shifts. Generated prompt takes are
-  also grouped into a prompt-memory summary across runs. CLAP remains queued
-  behind the same explicit scorer field.
+  also grouped into a prompt-memory summary across runs. The selectable scorer
+  field exposes only implemented paths (`lexical_probe` and `sa3_flow_probe`);
+  CLAP remains future work.
 - Artifact annotation and archive search are implemented for labels, notes,
   tags, durable keeper/maybe/reject listening decisions, artifact kind, model,
   operator, result family, and source lineage.
@@ -264,7 +265,8 @@ Confirmed in the current codebase:
   archive artifact recovery, keyboardable playback playlist navigation, local
   waveform markers, persisted playback cues, WaveSurfer zoom and draggable loop
   regions, per-marker deletion, loop-edge nudging, data-backed archive actions,
-  and the first native geometry-audit recipe.
+  marker notes, committed browser coverage for A/B assignment and SessionTray
+  artifact archive/recovery, and the first native geometry-audit recipe.
 - Core app surfaces are now split into focused modules for audio playback,
   artifact display, job progress, result families, recipe forks, and bundle
   inspection.
@@ -289,8 +291,9 @@ Still partial:
   style-reference promotion.
 - Playback is now beyond the basic browser player, with playlist navigation,
   persisted markers, marker deletion, WaveSurfer zoom, draggable loop regions,
-  region persistence, and loop-edge nudging. It still needs marker notes,
-  richer playlist sequencing, and broader browser-level playback tests.
+  region persistence, marker notes, A/B browser coverage, SessionTray
+  archive/recovery browser coverage, and loop-edge nudging. It still needs
+  richer playlist sequencing and future region-export workflows.
 - Multi-output sweeps have family grouping, metrics, direct playback, explicit
   A/B promotion controls, recipe fork deltas, inspected metric summaries, best
   candidate marking, saved listening decisions, sort controls, a compact

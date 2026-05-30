@@ -22,7 +22,8 @@ memory, lineage, and exploratory control.
 - tRPC and Zod control plane for app-shaped contracts.
 - wavesurfer.js for playback zoom, persisted markers, and editable loop
   regions where artifacts have real audio.
-- pytest, Node test, TypeScript build, and Playwright smoke.
+- pytest, Vitest/Testing Library, TypeScript build, and committed Playwright
+  smoke scripts.
 
 ## Frontend Boundary Snapshot
 
@@ -47,6 +48,12 @@ The extracted frontend modules now carry the stable seams:
 - `bundleInspector.tsx`: still lazy-loaded so bundle-heavy inspectors do not
   bloat the first interaction path.
 
+Current focused component coverage exists for `specimenPanel.tsx`,
+`sessionPanel.tsx`, `statusPanels.tsx`, `promptSearchRack.tsx`,
+`operatorPresetRack.tsx`, and `specCoverage.tsx`. The next frontend extraction
+should therefore target action-band model helpers, not another broad component
+split.
+
 Remaining frontend extraction should be driven by behavior, not cosmetics:
 extract the main generation/SAME/operator/recipe action bands only when their
 state and handler contracts are clean enough to name without hiding complexity.
@@ -57,7 +64,7 @@ state and handler contracts are clean enough to name without hiding complexity.
 | --- | --- | --- |
 | Controls | React Aria Components | Continue replacing remaining bespoke selects, dialogs, tabs, menus, tooltips, and tables with accessible primitives that can keep the custom visual language. |
 | Forms | TanStack Form | Expand the current form foundation so backend `ui_fields` drive validation, readiness, and repeatable payload building. |
-| Testing | Vitest, Testing Library, MSW, Playwright | Add fast unit/component tests for payload builders and mocked API/tRPC states while keeping Playwright for real app flows. |
+| Testing | Vitest, Testing Library, MSW, Playwright | Keep expanding component and contract fixtures around extracted panels, then add MSW when mocked API/tRPC states become easier than hand-built fixtures. |
 | App contract | tRPC and Zod | Harden job-event subscriptions and move family actions, archive flows, and deeper artifact inspectors behind app-level procedures when they need UI-shaped data. |
 
 ## Middle Horizon
@@ -96,7 +103,8 @@ state and handler contracts are clean enough to name without hiding complexity.
 ## Next Promotion Candidates
 
 1. React Aria Components for accessible controls.
-2. Vitest, Testing Library, and MSW for fast contract and component tests.
+2. MSW for mocked API/tRPC component states after the current fixture helpers
+   become repetitive.
 3. More tRPC/Zod procedures for resumable job events, family actions, archive
    mutations, and backend-parsed artifact inspectors.
 4. Storybook for extracted panels once component fixtures are representative.
