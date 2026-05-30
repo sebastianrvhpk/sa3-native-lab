@@ -8,6 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "test": "vitest run",
     "smoke:local": "node scripts/smoke-local.mjs",
+    "smoke:first-use": "node scripts/smoke-first-use.mjs",
     "smoke:playback-session": "node scripts/smoke-playback-session.mjs",
     "preview": "vite preview --host 127.0.0.1"
   },

@@ -128,9 +128,37 @@ def create_fixture(*, artifact_root: Path, fixtures_dir: Path) -> dict[str, str]
         artifact_ids=[],
         metrics={},
     )
+    failed_recipe = Recipe(
+        operator=OperatorName.AUDIO_TO_AUDIO,
+        backend=BackendName.MLX,
+        inputs={"source": "missing-source.wav"},
+        params={
+            "prompt": "broken smoke continuation",
+            "duration_seconds": 1.0,
+            "steps": 4,
+            "init_noise_level": 0.45,
+            "model": "medium",
+            "decoder": "same-l",
+        },
+        model="medium",
+        seed=29,
+        session_id=session.session_id,
+    )
+    failed_job = JobRecord(
+        status=JobStatus.FAILED,
+        recipe=failed_recipe,
+        progress=0.0,
+        phase="failed",
+        message="fixture failed take",
+        artifact_ids=[],
+        metrics={},
+        logs=["FileNotFoundError: missing-source.wav"],
+        error="source file not found",
+    )
     store.jobs_dir.mkdir(parents=True, exist_ok=True)
     (store.jobs_dir / f"{job.job_id}.json").write_text(json.dumps(job.model_dump(mode="json"), indent=2), encoding="utf-8")
     (store.jobs_dir / f"{pending_job.job_id}.json").write_text(json.dumps(pending_job.model_dump(mode="json"), indent=2), encoding="utf-8")
+    (store.jobs_dir / f"{failed_job.job_id}.json").write_text(json.dumps(failed_job.model_dump(mode="json"), indent=2), encoding="utf-8")
 
     return {
         "artifact_root": str(artifact_root),
@@ -140,6 +168,7 @@ def create_fixture(*, artifact_root: Path, fixtures_dir: Path) -> dict[str, str]
         "archived_artifact_id": archived.artifact_id,
         "job_id": job.job_id,
         "pending_job_id": pending_job.job_id,
+        "failed_job_id": failed_job.job_id,
     }
 
 
