@@ -10,13 +10,10 @@ import {
   GitFork,
   LoaderCircle,
   Play,
-  Plus,
-  Repeat,
   SlidersHorizontal,
   Upload,
   Wand2,
   Waves,
-  X,
 } from "lucide-react";
 
 import modelImage from "../../stable-audio-3.png";
@@ -37,7 +34,7 @@ import { createControlPlaneClient, DEFAULT_CONTROL_PLANE_URL, type ResultFamily,
 import { ForkRecipePanel } from "./forkRecipePanel";
 import { isJobActive, landingArtifactId, shortOperatorName } from "./jobUtils";
 import { ModeAtlas } from "./modeAtlas";
-import { specCoverageSummary, specPairCoverageSummary } from "./operatorSpecCoverage";
+import { OperatorPresetRack } from "./operatorPresetRack";
 import {
   createOperatorPreset,
   deleteOperatorPreset,
@@ -46,7 +43,6 @@ import {
   persistOperatorPresets,
   upsertOperatorPreset,
   type OperatorPreset,
-  type OperatorPresetDiffRow,
 } from "./operatorPresets";
 import {
   applyPromptSearchAxisSet,
@@ -82,6 +78,7 @@ import {
 } from "./recipeFormModel";
 import { artifactArchivePayload, artifactRecoveryPayload } from "./sessionRecovery";
 import { SessionTray } from "./sessionPanel";
+import { SpecCoverage, SpecCoveragePair } from "./specCoverage";
 import { Specimen } from "./specimenPanel";
 import { BackendPills, InlineJobStatus, ReadinessPanel, RunMonitor } from "./statusPanels";
 import { useBenchStore } from "./store";
@@ -90,7 +87,6 @@ import type {
   HealthResponse,
   JobRecord,
   OperatorName,
-  OperatorSpec,
   ReadinessCheck,
   Recipe,
   SessionRecord,
@@ -1038,125 +1034,6 @@ function ArtifactStack({
           {artifact.kind === "audio" ? <TinyWave artifact={artifact} apiBase={apiBase} /> : null}
         </button>
       ))}
-    </div>
-  );
-}
-
-function OperatorPresetRack({
-  presets,
-  selectedPreset,
-  selectedPresetId,
-  presetName,
-  diffRows,
-  onSelectPreset,
-  onChangePresetName,
-  onSavePreset,
-  onResetPreset,
-  onDeletePreset,
-}: {
-  presets: OperatorPreset[];
-  selectedPreset: OperatorPreset | null;
-  selectedPresetId: string;
-  presetName: string;
-  diffRows: OperatorPresetDiffRow[];
-  onSelectPreset: (presetId: string) => void;
-  onChangePresetName: (name: string) => void;
-  onSavePreset: () => void;
-  onResetPreset: () => void;
-  onDeletePreset: () => void;
-}) {
-  const diffStatus = !selectedPreset ? "empty" : diffRows.length ? "changed" : "clean";
-  return (
-    <div className="operator-preset-stack">
-      <div className="operator-preset-rack" aria-label="Operator presets">
-        <label>
-          Preset
-          <select value={selectedPresetId} onChange={(event) => onSelectPreset(event.target.value)}>
-            <option value="">New preset</option>
-            {presets.map((preset) => (
-              <option key={preset.id} value={preset.id}>
-                {preset.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Name
-          <input
-            value={presetName}
-            onChange={(event) => onChangePresetName(event.target.value)}
-            placeholder={presets.length ? "save current params" : "name this setting"}
-          />
-        </label>
-        <button type="button" onClick={onSavePreset} title="Save current operator parameters">
-          <Plus aria-hidden="true" size={13} />
-          Save
-        </button>
-        <button type="button" onClick={onResetPreset} disabled={!selectedPreset || !diffRows.length} title="Revert current parameters to the selected preset">
-          <Repeat aria-hidden="true" size={13} />
-          Revert
-        </button>
-        <button type="button" onClick={onDeletePreset} disabled={!selectedPresetId} title="Delete selected operator preset">
-          <X aria-hidden="true" size={13} />
-          Delete
-        </button>
-      </div>
-      <div className={`operator-preset-diff ${diffStatus}`} aria-label="Operator preset diff">
-        <div className="operator-preset-diff-head">
-          <strong>{!selectedPreset ? "Preset diff" : diffRows.length ? `${diffRows.length} unsaved change${diffRows.length === 1 ? "" : "s"}` : "Matches preset"}</strong>
-          <small>{selectedPreset ? selectedPreset.name : "save or select a preset to compare params"}</small>
-        </div>
-        {diffRows.length ? (
-          <div className="operator-preset-diff-list">
-            {diffRows.slice(0, 4).map((row) => (
-              <span key={row.key} className={row.status} title={`${formatPresetValue(row.presetValue)} -> ${formatPresetValue(row.currentValue)}`}>
-                <b>{row.label}</b>
-                <i>{formatPresetValue(row.presetValue)}</i>
-                <em>{formatPresetValue(row.currentValue)}</em>
-              </span>
-            ))}
-          </div>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-function formatPresetValue(value: RecipeValue | null): string {
-  if (value === null || value === "") return "none";
-  if (typeof value === "number") return Number.isInteger(value) ? value.toString() : value.toFixed(3).replace(/0+$/, "").replace(/\.$/, "");
-  if (typeof value === "boolean") return value ? "on" : "off";
-  if (value.length > 18) return `${value.slice(0, 15)}...`;
-  return value;
-}
-
-function SpecCoverage({ spec, controlledKeys }: { spec: OperatorSpec | undefined; controlledKeys: readonly string[] }) {
-  const coverage = specCoverageSummary(spec, controlledKeys);
-  return (
-    <div className={`spec-coverage ${coverage.status}`}>
-      <span>{!spec ? "Spec pending" : coverage.missing.length ? `${coverage.missing.length} missing params` : "Spec covered"}</span>
-      <small>
-        {spec ? `${coverage.paramCount} params · ${spec.backends.join(", ")} · ${spec.status}` : "waiting for /operators/specs"}
-      </small>
-      {coverage.missing.length ? <em title={coverage.missing.join(", ")}>{coverage.missing.slice(0, 4).join(", ")}</em> : null}
-    </div>
-  );
-}
-
-function SpecCoveragePair({
-  specs,
-  controlledKeys,
-}: {
-  specs: readonly (OperatorSpec | undefined)[];
-  controlledKeys: readonly (readonly string[])[];
-}) {
-  const coverage = specPairCoverageSummary(specs, controlledKeys);
-  const readySpecs = specs.filter(Boolean) as OperatorSpec[];
-  return (
-    <div className={`spec-coverage ${coverage.status}`}>
-      <span>{readySpecs.length !== specs.length ? "Spec pending" : coverage.missing.length ? `${coverage.missing.length} missing params` : "Spec covered"}</span>
-      <small>{readySpecs.length ? `${coverage.paramCount} params · encode/decode` : "waiting for /operators/specs"}</small>
-      {coverage.missing.length ? <em title={coverage.missing.join(", ")}>{coverage.missing.slice(0, 4).join(", ")}</em> : null}
     </div>
   );
 }
