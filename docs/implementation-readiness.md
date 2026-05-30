@@ -313,25 +313,37 @@ instead of invisible friction.
    where the existing annotation model can persist it.
 5. Inspect is more contextual: sound, gesture, branch, activity, and material
    count details are progressively disclosed instead of primary.
-6. Source and Memory now share a richer product layer: source rows can show
-   current, anchor, source, donor, remembered, imported, take, and bundle roles,
-   and Memory can be filtered by role and reuse intent alongside kind, tags,
-   notes, and listening decision.
+6. Source and Memory now share a unified product source shelf: current source,
+   remembered material, donor latent, imported audio, promoted bundle audio, and
+   reusable bundles all route through the same source-action path backed by the
+   memory/source models.
 7. The take strip is now a stronger listening queue with keep/maybe/reject,
-   remember, continue, and branch actions beside playback.
+   remember, continue, and branch actions beside playback. Row actions first
+   select the clicked take so Continue/Branch/Remember and listening decisions
+   route from the material the user is acting on.
 8. Bundle-to-gesture promotion now comes from one shared model so Memory and
-   bundle Inspect expose the same real recipe-field paths.
+   bundle Inspect expose the same real recipe-field paths. Promoted bundle audio
+   becomes normal source material after the existing backend promotion path
+   creates an audio artifact.
 9. Gesture orchestration now has a first named hook boundary in
    `useGestureWorkbench` for active gesture, Tune form state, donor/source
    reuse, next-action routing, prompt seeding, and bundle reuse.
+10. Branch detail now has a playable trajectory cursor over landed audio takes
+    and per-take Continue, Branch, Remember, and keeper/maybe/reject actions
+    where existing recipes and audio artifacts support them.
+11. Memory browsing has explicit stored-metadata filters for role, reuse intent,
+    tags, notes, kind, listening decision, and source lineage, including
+    bundle-derived audio. No vector search or new persistence layer was added.
 
 ### Deferred With Reason
 
-1. P1.8 deeper gesture orchestration extraction is partially complete:
+1. P1.8 deeper gesture orchestration extraction is intentionally bounded:
    `useGestureWorkbench` owns active gesture, Tune form state, donor/source
    reuse, next-action routing, prompt seeding, and bundle reuse. Submit
-   mutations, archive/recover persistence, and preset persistence remain at
-   the app edge until their contract is clearer.
+   readiness, pending-take selection, landing side effects, archive/recover
+   persistence, and preset persistence remain in `App.tsx` because they still
+   coordinate React Query mutations, websocket/tRPC job events, and storage
+   side effects. Pulling them into the hook would make the boundary less clear.
 2. P1.9 app-native tRPC state is deferred because the frontend can now express
    current sound, gestures, pending takes, branches, and memory without adding a
    new server contract in this pass.
@@ -340,27 +352,28 @@ instead of invisible friction.
    product overlays only.
 4. P1.11 deeper workspace modeling is deferred beyond the memory/branch/pending
    pieces used by this loop.
-5. P2 listening/review items are documented as next queue. Better playlist
-   review, waveform regions, branch listening, memory browser filters, deeper
-   bundle promotion, and mode-specific inspectors need more design and should
-   not be decorative add-ons.
+5. P2 listening/review items are documented as next queue. Richer playlist
+   review, waveform regions, mode-specific inspectors, and deeper branch-review
+   workflows need more design and should not be decorative add-ons.
 6. Postgres, pgvector, Temporal, React Flow, Tauri, Storybook, DuckDB,
    OpenTelemetry, and 3D remain out of scope for this pass.
 
 ### Next Queue
 
-1. Decide whether submit readiness, active/pending take selection, and landing
-   side effects should join `useGestureWorkbench` or remain app-edge state.
-2. Promote source selection further: current source, remembered material, donor
-   source, and bundle-derived source should become one reusable product surface.
-3. Continue listening review: branch trajectory playback, selected-take
-   favorites, and playlist-level remember/branch/continue shortcuts.
-4. Expand Memory browsing only with stored metadata first: role, reuse intent,
-   tags, notes, kind, decision, and source lineage. Do not add vector retrieval
-   until these semantics are stable.
-5. Continue bundle-to-gesture promotion for profiles, directions, sweeps,
-   memory indexes, promoted audio, datasets, soft prompts, and checkpoints only
-   where existing backend use paths exist.
+1. Decide whether submit readiness should ever move into a smaller action
+   object, but keep mutation and landing side effects at the app edge until the
+   job-event contract is simpler.
+2. Turn the source shelf into a reusable picker inside Tune fields where it
+   would replace generic artifact selects without hiding backend-supported
+   paths.
+3. Continue listening review with playlist-level keep/maybe/reject summaries,
+   branch trajectory favorites, and branch-from-selected shortcuts only where
+   they reduce repeated clicks.
+4. Design mode-specific Inspect panels for profiles, directions, geometry,
+   datasets, residual vectors, prompt search, and soft prompts using existing
+   bundle summaries.
+5. Revisit app-native tRPC state only if it removes frontend orchestration
+   complexity; otherwise keep the current control-plane read shape.
 
 ## Definition Of Done For The Next Implementation Loop
 

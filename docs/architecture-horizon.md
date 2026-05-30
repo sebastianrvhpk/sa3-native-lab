@@ -49,10 +49,17 @@ the desired interface grammar:
   branch labels, retry/cancel/inspect availability, and failure recovery copy.
 - `branchModel.ts`: branch summaries and inspect-only technical rows over the
   legacy result-family contract.
+- `branchListeningModel.ts`: branch trajectory ordering and previous/next
+  cursor state for landed audio takes.
 - `tuneFieldGroups.ts`: product-layer primary/advanced/inspect grouping over
   backend-derived field configs.
 - `sourceModel.ts`: product-facing source, anchor, donor, remembered, imported,
-  take, and bundle roles over stored material.
+  take, promoted bundle audio, and bundle roles over stored material, plus
+  source actions backed by existing memory reuse paths.
+- `sourceShelf.tsx`: the unified Source surface for selecting and reusing
+  current material, memory, donors, imports, and bundle-derived audio.
+- `artifactFilters.ts`: metadata-only Memory browser filters for role, reuse
+  intent, tags, notes, kind, decision, and source lineage.
 - `bundleReuseModel.ts`: shared bundle-to-gesture reuse paths for profiles,
   directions, sweeps, prompt-search prompts, memory bundles, datasets, soft
   prompts, and training checkpoints where existing recipe fields support them.

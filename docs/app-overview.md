@@ -105,10 +105,13 @@ The current product loop is now explicit:
 Current Sound -> Gesture -> Pending Take -> Listen -> Branch / Remember / Tune
 ```
 
-Remembered material is active, not just archived. Audio can be reused as Source
-or Anchor, latent material can become a Borrow Texture donor, remembered
-prompt/label/notes can seed Make, reusable bundles can feed existing Advanced
-Gesture paths, and archived materials can be recovered into the active session.
+Remembered material is active, not just archived. The Sources shelf now routes
+current material, remembered material, donor latents, imported audio, promoted
+bundle audio, and reusable bundles through one product action path. Audio can
+be reused as Source or Anchor, latent material can become a Borrow Texture
+donor, remembered prompt/label/notes can seed Make, reusable bundles can feed
+existing Advanced Gesture paths, and archived materials can be recovered into
+the active session.
 Selected landed takes also show a `Next` affordance: audio suggests Continue,
 Vary, Encode, and Remember; latent suggests Decode, Morph, Borrow Texture, and
 Remember; bundles keep technical details behind Inspect while exposing real
@@ -298,10 +301,14 @@ Confirmed in the current codebase:
   pending-take landing, branch summaries, and Tune field grouping. Branch UI is
   product-language first, while raw job IDs, recipe IDs, backend details, logs,
   and material counts are behind Inspect/Settings/details.
-- The next consolidation pass adds a product source model, role/reuse-intent
-  memory filters, take-strip listening queue actions for keep/maybe/reject,
-  remember, continue, and branch, shared bundle-to-gesture reuse semantics, and
-  a named `useGestureWorkbench` hook for gesture/Tune/action state.
+- The latest consolidation pass adds a unified product Source shelf,
+  role/reuse-intent/notes/source-lineage memory filters, selected-take queue
+  actions for keep/maybe/reject, remember, continue, and branch, branch
+  trajectory listening controls, shared bundle-to-gesture reuse semantics, and
+  a named `useGestureWorkbench` hook for gesture/Tune/action state. Submit
+  mutations, pending landing side effects, and archive/recover persistence stay
+  in `App.tsx` for now because they coordinate backend mutations and job-event
+  subscriptions.
 - Artifact manifest writes are atomic, reducing transient JSON-read races during
   annotation, remember, and recovery workflows.
 - Core app surfaces are now split into focused modules for audio playback,
