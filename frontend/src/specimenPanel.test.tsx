@@ -1,3 +1,4 @@
+import type { ComponentProps } from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -114,7 +115,7 @@ describe("Specimen", () => {
 
 interface SpecimenFixtureOptions {
   artifact?: ReturnType<typeof testArtifact>;
-  onAnnotate?: ReturnType<typeof vi.fn>;
+  onAnnotate?: ComponentProps<typeof Specimen>["onAnnotate"];
 }
 
 function renderSpecimen(overrides: SpecimenFixtureOptions = {}) {
