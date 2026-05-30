@@ -328,6 +328,31 @@ The backend can keep precise nouns, but the UI should translate them:
 
 ## Migration Plan
 
+### Current status after first-screen rescue
+
+As of the first interface rescue implementation pass, slices 1 and 2 are
+partially implemented in the app:
+
+- Primary visible language now centers on Current Sound, Sources, Takes /
+  Branches, Session Memory, Latent Gestures, Advanced Gestures, and Anchors.
+- API base, backend readiness, contract/spec coverage, material counts, mode
+  atlas, and raw metadata are moved behind Settings, Inspect, or developer
+  disclosure affordances.
+- The current sound/player and take strip are promoted above raw branch/admin
+  panels.
+- CLAP and A/B are not product-facing concepts; remaining mentions in this
+  document describe the audit history and migration rationale.
+
+Still open:
+
+- A real gesture strip/tuning drawer should replace the remaining form-heavy
+  action wall.
+- Running jobs should become pending takes inside the take/branch flow instead
+  of relying on a compact global status strip.
+- Memory and anchors need deeper reuse actions, not just better names.
+- The visual motif should keep getting closer to source -> gesture -> take ->
+  memory relationships instead of decorative dashboard framing.
+
 ### Slice 1: Language correction
 
 - Remove CLAP from product docs/frontend notes.
