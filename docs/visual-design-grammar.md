@@ -1,9 +1,13 @@
 # Visual Design Grammar
 
 This document translates the visual references into app semantics for SA3
-Native Lab. The goal is not to copy the images literally. The goal is to make
-the local instrument feel tactile, playful, and expressive while every strong
-visual motif still maps to real app state.
+Native Lab. It should be read together with
+`docs/product-rescue-brief.md`, which is now the product authority for the
+interface rescue.
+
+The goal is not to copy the images literally. The goal is to make the local
+instrument feel tactile, playful, and expressive while every strong visual motif
+still maps to real app state.
 
 ## Reference Reading
 
@@ -28,8 +32,8 @@ play something real.
 | Paper grain and folds | Research notebook / local lab surface | Global page background and panel texture. |
 | Gradient cells | Parameterized controls, operators, presets, bundle affordances | Recipe fields, operator controls, prompt-search tools, bundle workflow chips. |
 | Dark bordered modules | Executable surfaces or inspectable artifact groups | Operator Studio, Recipe Studio, specimen surface, audition stack, result families. |
-| Thin grey lines | Real lineage, source relationships, or low-priority lab-surface flow | `LineageThread` nodes backed by source artifacts, recipe/job, current artifact, result family, and A/B slot; subtle non-interactive workbench background only. |
-| Nodes / dots | Artifact/source/decision branch points | Data-backed lineage rows, decision memory, prompt history, A/B routes. |
+| Thin grey lines | Real lineage, source relationships, or low-priority lab-surface flow | Source -> gesture -> take -> memory/branch relationships; subtle non-interactive workbench background only. |
+| Nodes / dots | Source/take/decision branch points | Data-backed lineage rows, decision memory, prompt history, branch points, anchors. |
 | Transport wheel | Playback or macro execution control | AudioDeck play button only for now. |
 | Rainbow waveform lane | Perceptual listening axis | AudioDeck WaveSurfer surface, persisted markers, draggable loop region, and compact audition playback. |
 | Grid clusters | Mode/operator families or dense parameter sets | RecipeFields, Operator Studio, prompt search presets. |
@@ -47,9 +51,9 @@ play something real.
 
 ## Layout Rules
 
-- The first viewport should still teach the actual workbench: source artifacts,
-  current specimen, controls, result families, and audition.
-- The current specimen and playback surface remain the main focal objects.
+- The first viewport should teach the actual instrument: current sound,
+  gestures, takes, and memory.
+- The current sound and playback surface remain the main focal objects.
 - Runtime/readiness state should stay available but visually subordinate.
 - Dense modules are acceptable when controls remain readable and stable.
 - Flow lines remain faint unless they correspond to real lineage or dependency.
@@ -57,11 +61,12 @@ play something real.
 ## Interaction Rules
 
 - Prompt-search preset/vocabulary/axis cells write directly to recipe params.
-- Audition-stack rows select real audio artifacts and can route them into A/B.
+- Take rows select real audio material and can be remembered, anchored, reused,
+  or opened as the current sound.
 - Bundle action cells should only appear when the bundle contains reusable data.
 - Current lineage threads must only render nodes that exist in app state:
-  source artifacts, producing recipe/job, current artifact, result family, or
-  A/B assignment.
+  source material, producing gesture/job, current sound, branch, or memory
+  assignment.
 - Future drag/routing interactions must create or inspect real recipe/source
   relationships, not just move decorative nodes.
 
@@ -81,14 +86,14 @@ The current stack is enough for the first visual pass:
 
 - CSS variables and pseudo layers for paper, watercolor gradients, and subtle
   flow fields.
-- React component state for real selected artifacts, prompt history, decisions,
-  recipes, and A/B slots.
+- React component state for real selected sounds, prompt history, decisions,
+  recipes, takes, branches, memory, and anchors.
 - Lucide icons for symbolic controls.
 
 Near-horizon additions should remain conditional:
 
-- Motion for React: causal transitions for queued/running/produced, A/B
-  promotion, lineage forked, and artifact selected.
+- Motion for React: causal transitions for queued/running/produced, sound
+  remembered, branch opened, and take selected.
 - wavesurfer.js: promoted for real listening work: waveform zoom, persisted
   markers, and editable loop regions.
 - React Flow: only when lineage edges become an interactive graph of real
@@ -100,7 +105,7 @@ Near-horizon additions should remain conditional:
 - Text remains readable on desktop and mobile.
 - Flow styling does not imply unavailable routing.
 - Play and audition controls become more visually central.
-- Prompt, operator, and recipe controls feel like instrument modules rather
-  than generic forms.
-- Strong visual routes can be audited against actual artifact/job/family/A-B
+- Prompt, latent, and recipe controls feel like gestures rather than generic
+  forms.
+- Strong visual routes can be audited against actual source/gesture/take/branch
   data.

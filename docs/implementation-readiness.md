@@ -4,26 +4,34 @@ This document is the current operating map for SA3 Native Lab before the next
 implementation loop. It consolidates the app objective, current maturity,
 engineering risks, test posture, and the next priority queue.
 
+Product correction: `docs/product-rescue-brief.md` is now the authority for the
+interface direction. The previous parity-dashboard gravity is explicitly not
+the product target.
+
 ## App Objective
 
-SA3 Native Lab is a local research instrument for Stable Audio 3 Medium and
-SAME-L. Its purpose is to turn Colab-style experimental cells into typed,
-replayable, inspectable workflows that run on local hardware, especially Apple
-Silicon through MLX where practical.
+SA3 Native Lab is a local AI sound instrument for Stable Audio 3 Medium and
+SAME-L. Its purpose is to make local model inference playable: start from a
+sound, prompt, latent, or remembered take; perform an expressive gesture; hear a
+new take; then branch, remember, tune, or continue.
 
-The app should not become a generic dashboard. The core act is listening and
-iterating on latent/audio experiments:
+The app should not become a generic dashboard, Colab parity wall, benchmark
+surface, job list, or raw operator catalog. The core act is listening and
+iterating:
 
 ```text
-prompt or source audio
+sound, prompt, latent, or memory
   -> SA3 Medium / SAME-L runtime
-  -> recipe, operator, scorer, or script experiment
-  -> artifact family
-  -> playback, comparison, annotation, lineage, replay, and reuse
+  -> gesture
+  -> take or branch
+  -> playback, memory, tuning, lineage, and reuse
 ```
 
 Every visible control should map to a backend parameter, a recorded recipe
 field, an artifact relationship, or an explicitly documented future capability.
+The first visible language should use `sound`, `take`, `gesture`, `source`,
+`anchor`, `memory`, and `branch`; engineering nouns should move behind
+progressive disclosure.
 
 ## Current State
 
@@ -38,10 +46,9 @@ field, an artifact relationship, or an explicitly documented future capability.
   script adapters, and filesystem-backed persistence.
 - The TypeScript tRPC control plane owns app-shaped reads and actions without
   replacing the Python model worker.
-- The React app is a real listening bench with artifacts, jobs, playback, A/B,
-  recipes, operators, bundle inspection, annotation, archive filters, result
-  families, prompt-search generated takes, decision summaries, and prompt
-  memory.
+- The React app is a real local workbench with playback, waveform markers,
+  schema-driven model controls, annotations, sessions, archive recovery, result
+  grouping, prompt-search generated takes, and prompt memory.
 - Backend `ui_fields` already reduce parameter drift by exposing defaults,
   bounds, options, required flags, advanced flags, and artifact-kind hints to
   the frontend.
@@ -50,14 +57,15 @@ field, an artifact relationship, or an explicitly documented future capability.
   text generation, audio-to-audio, inpaint, latent encode, and latent decode.
 - Job records persist explicit phases and the frontend lands on successful
   output artifacts when artifact IDs arrive, reducing the silent-run feel.
-- The specimen lineage thread is data-backed by artifacts, jobs, result
-  families, and A/B assignment instead of decorative routing.
+- The specimen lineage thread is data-backed by artifacts, jobs, and result
+  families instead of decorative routing. Its visible product language still
+  needs to move toward source -> gesture -> take -> branch/memory.
 - The session tray now has a tested workspace pulse for active takes, families,
   job state, listening decisions, archive volume, and the next real focus
   action. Archive artifacts can be recovered into the active session through a
   tested annotation/session reassignment path.
 - The listening bench now has a tested recent-take playlist cursor and local
-  waveform markers in addition to playback, loop, A/B, and decision controls.
+  waveform markers in addition to playback, loop, and decision controls.
   The player now supports marker deletion, relabeling after deletion, loop-edge
   nudging, marker notes, sequence-aware audition navigation, persisted playback
   annotations, WaveSurfer zoom, and draggable loop regions. The committed
@@ -72,7 +80,7 @@ field, an artifact relationship, or an explicitly documented future capability.
   submits a real `generate.text_to_audio` Medium recipe through the same job
   manager/runtime/storage path as the app.
 - Prompt search is no longer only a script adapter: it has a native recipe path,
-  scorer metadata, generated takes, lineage, descriptor deltas, listening
+  prompt-probe metadata, generated takes, lineage, descriptor deltas, listening
   decisions, decision summaries, and first-pass prompt memory.
 - Bundle inspectors now surface parsed sweep outputs, memory hits, vector NPZs,
   encoded dataset manifests, profile aggregates, direction NPZ metadata,
@@ -90,24 +98,23 @@ field, an artifact relationship, or an explicitly documented future capability.
   specimen panel, session tray, status panels, prompt-search rack, operator
   preset rack, and spec-coverage widgets.
 - The prompt-search contract now exposes the `separator` parameter in backend
-  specs, and only currently implemented scorers (`lexical_probe` and
-  `sa3_flow_probe`) are selectable. CLAP remains documented future work rather
-  than a runnable UI option.
+  specs, and only currently implemented prompt probes (`lexical_probe` and
+  `sa3_flow_probe`) are selectable.
 - The docs already cover app overview, Colab capability mapping, triage status,
   architecture horizon, control-plane direction, improvement roadmap, and
   codebase review.
 
 ### Current Maturity
 
-The app is in a strong prototype-to-instrument phase. It is not just a sketch,
-but it is also not yet a fully complete Colab replacement. The current system
-can run meaningful workflows and preserve useful provenance, but parity is still
-uneven across all modes, all parameters, all bundle types, and all session-level
-creative workflows.
+The app is in a strong runtime-prototype phase but a weak product-interface
+phase. It can run meaningful workflows and preserve useful provenance, but the
+visible app still feels too much like an engineering dashboard. The next work is
+an interface rescue, not more visible feature parity.
 
 The main engineering challenge is not choosing the stack. The stack direction is
-sound. The main challenge is finishing the contracts and interaction grammar so
-that every experiment can be trusted, replayed, compared, and reused.
+sound. The main challenge is translating backend precision into a creative
+instrument grammar so that every experiment can be played, tuned, remembered,
+branched, and inspected without making the user operate the machinery first.
 
 ## Documentation Status
 
@@ -171,7 +178,7 @@ that every experiment can be trusted, replayed, compared, and reused.
   domain-specific.
 - Browser/integration tests for replay/fork flows, archive review, long-session
   cleanup, and session-level archive/new-session state. The committed playback
-  smoke covers A/B assignment, annotation persistence, cue persistence,
+  smoke covers annotation persistence, cue persistence,
   sequence modes, SessionTray artifact archive/recovery, screenshots, and
   mobile overflow.
 - Component-level tests for mode-specific recipe panels once they become more
@@ -179,9 +186,9 @@ that every experiment can be trusted, replayed, compared, and reused.
   panels now have focused fixtures.
 - Playback-specific browser tests for generated-take promotion, richer playlist
   sequencing, and future region-export workflows. Marker notes, loop regions,
-  A/B assignment, persisted cues, and tray archive/recovery now have committed
+  persisted cues, and tray archive/recovery now have committed
   browser coverage.
-- Performance or runtime-cost tests for Medium/MPS prompt-search scorer paths.
+- Performance or runtime-cost tests for Medium/MPS prompt-search probe paths.
 - Tests that protect against token or credential leakage in logs, command
   context, and error tails.
 
@@ -249,7 +256,7 @@ instead of invisible friction.
    This pass expanded script adapter specs and moved Generate/SAME forms onto
    spec-derived fields; the remaining work is full mode-by-mode coverage and
    richer type-specific readers.
-4. Ensure every run stores model, backend, seed, duration, scorer/operator,
+4. Ensure every run stores model, backend, seed, duration, prompt-probe/operator,
    source IDs, params, logs, and output artifact IDs.
 
 ### P0: Runtime Trust
@@ -264,17 +271,17 @@ instead of invisible friction.
 4. Keep readiness checks honest for HF auth, weights, cache space, MLX setup,
    SAME-L access, and optional extras.
 
-### P1: Session And Archive As Creative Workflow
+### P1: Session And Memory As Creative Workflow
 
-1. Promote workspace/session/run/family/artifact into the app's default mental
-   model. A first data-backed workspace pulse and archive recovery path are
-   implemented, and the playback smoke now covers SessionTray artifact
+1. Promote current sound, takes, branches, and memory into the app's default
+   mental model. A first data-backed workspace pulse and archive recovery path
+   are implemented, and the playback smoke now covers SessionTray artifact
    archive/recovery. The next step is browser-tested replay/fork and
-   session-level archive/new-session behavior.
+   session-level memory/new-session behavior.
 2. Reduce queue clutter by making active session, archive, generated families,
    and reusable outputs distinct surfaces.
-3. Make "new session", "archive session", "recover result", "fork run", and
-   "promote artifact" feel like native creative actions. Successful jobs now
+3. Make "new session", "remember session", "recover sound", "branch", and
+   "promote material" feel like native creative actions. Successful jobs now
    land on their newest artifact, but session/workspace recovery still needs a
    clearer product model.
 4. Move useful archive/search actions through tRPC when client-side filtering
@@ -284,12 +291,12 @@ instead of invisible friction.
 
 ### P1: Playback And Listening Bench
 
-1. Upgrade playback into a creative comparison instrument.
-2. Add richer loop, marker, region, A/B, take-stack, and session-playlist
+1. Upgrade playback into a creative listening instrument.
+2. Add richer loop, marker, region, take-stack, and session-playlist
    behaviors where they directly improve listening decisions. Local markers,
    marker notes, playlist cursor helpers, loop-edge nudging, marker deletion,
    keyboardable audition navigation, persisted cue annotations, WaveSurfer zoom,
-   draggable loop regions, A/B assignment, and SessionTray archive/recovery
+   draggable loop regions, and SessionTray archive/recovery
    browser coverage are implemented; richer playlist sequencing remains next.
 3. Keep wavesurfer.js focused on real listening work: zoom, loop regions,
    marker editing, scrubbing, and future region annotations.
@@ -304,10 +311,8 @@ instead of invisible friction.
    training bundles.
 2. Keep zip/file inventory available, but do not make it the primary interface
    when a domain-specific summary exists.
-3. Add prompt-search layer/alpha comparisons and Medium/MPS scorer-setting
-   notes before adding another scorer objective.
-4. Add CLAP or hybrid scoring only when the prompt-search comparison workflow
-   can actually help judge it.
+3. Add prompt-search layer/alpha branch views and Medium/MPS probe-setting
+   notes before adding another prompt objective.
 
 ### P2: Research Cognition
 

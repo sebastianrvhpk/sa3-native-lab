@@ -1,20 +1,20 @@
 # SA3 Native Lab App Overview
 
-SA3 Native Lab is a local research instrument for exploring Stable Audio 3
-Medium and SAME-L latents without depending on Colab cell state. The app turns
-notebook experiments into typed background jobs, durable artifacts, and a
-listening-first interface.
+SA3 Native Lab is a local AI sound instrument for exploring Stable Audio 3
+Medium and SAME-L latents without depending on Colab cell state. The app should
+turn model inference into playable gestures over sounds, takes, branches, and
+memory. The product rescue direction lives in `docs/product-rescue-brief.md`.
 
 ## Current Thesis
 
-The app is a latent listening bench:
+The app target is an expressive sound surface:
 
 ```text
-prompt or source audio
+sound, prompt, latent, or memory
   -> SA3 Medium / SAME-L runtime
-  -> latent or script experiment
-  -> audio, latent, or bundle artifact
-  -> recipe, lineage, metrics, logs, and replayable parameters
+  -> creative gesture
+  -> take or branch
+  -> playback, tuning, memory, lineage, and reuse
 ```
 
 The target model family is SA3 Medium. Defaults use:
@@ -57,11 +57,13 @@ Important endpoints:
 
 ### Listening Bench
 
-The React app in `frontend/` is the working interface. It supports artifact
-selection, waveform inspection, audio playback, WaveSurfer-backed waveform
-zoom, draggable loop regions, playback-rate checks, A/B comparison, MLX
-generation, SAME encode/decode, latent-operator runs, Recipe Studio, Mode
-Atlas, and job polling. Generate and SAME controls are
+The React app in `frontend/` is the working interface. Today it supports
+artifact selection, waveform inspection, audio playback, WaveSurfer-backed
+waveform zoom, draggable loop regions, playback-rate checks, MLX generation,
+SAME encode/decode, latent-operator runs, Recipe Studio, Mode Atlas, and job
+polling. The next interface pass should reframe these as current sound,
+gestures, takes, branches, tuning, and memory instead of exposing engineering
+nouns first. Generate and SAME controls are
 now native schema-driven forms: the backend `/operators/specs` contract supplies
 defaults, bounds, select options, required flags, and advanced flags, while the
 frontend form model builds typed generation and encode/decode payloads. This
@@ -78,10 +80,10 @@ artifacts can be labeled, tagged, annotated, marked keeper/maybe/rejected from
 listening surfaces, replayed from their recipe, inspected by kind, and recovered
 later with filters for decision, kind, model, operator, result family, tag,
 text, and source lineage. A session can be archived into the background while a
-fresh session starts cleanly. Result families can be inspected as a compact
-branch surface with source references, per-artifact playback, A/B assignment,
-sortable alpha-sweep promotion controls, job progress, replay, and fork
-actions. Forked recipes show changed fields and per-parameter reset controls
+fresh session starts cleanly. Result families can currently be inspected as a
+compact branch surface with source references, per-artifact playback, sortable
+alpha-sweep controls, job progress, replay, and fork actions. Forked recipes
+show changed fields and per-parameter reset controls
 before submit. The session tray also shows a data-backed workspace pulse for
 active takes, result families, job activity, listening decisions, and archive
 volume. Its focus hint points to real next actions such as monitoring a run,
@@ -152,8 +154,9 @@ Artifacts are stored under `.sa3_lab/` by default. The app currently supports:
 Every run records a `Recipe` and `JobRecord` so results can be traced back to
 operator, backend, inputs, params, model, seed, logs, phase, and source
 artifacts. The specimen lineage thread is data-backed: it can show real source
-artifacts, the recipe/job that produced the current artifact, the result family
-it belongs to, and whether the artifact is currently assigned to an A/B slot.
+artifacts, the recipe/job that produced the current artifact, and the result
+family it belongs to. Product UI should translate this to source -> gesture ->
+take -> branch/memory.
 Artifacts can also carry user labels, notes, and tags for archive search.
 Bundle artifacts can be inspected through the API and UI to reveal their file
 inventory, embedded audio children, backend-parsed JSON/NPZ summaries, parsed
@@ -173,8 +176,8 @@ prompt, use memory, and use checkpoint. Prompt-search bundles expose candidate
 prompts as a small listening bench: a candidate can be used as the main
 generation prompt, sent to an alpha sweep, or rendered as MLX audio with lineage
 back to the bundle. Generated candidate takes appear inline beside the prompt,
-can be played immediately, assigned to A/B comparison slots, and marked
-keeper/maybe/rejected with optional listening notes. They also show compact
+can be played immediately and marked keeper/maybe/rejected with optional
+listening notes. They also show compact
 descriptor deltas against the prompt-search target audio for level, brightness,
 spectral motion, noise/flatness, and stereo width. A small decision-study panel
 summarizes listened/generated takes by keeper/maybe/reject state and averages
@@ -188,11 +191,12 @@ item lists. They are still inspectors rather than full editors, but they make
 script-backed modes legible without pretending unavailable routing or graph
 behavior exists.
 Jobs and artifacts with the same recipe are grouped as result families in the
-right rail with run metrics when the job reports them; prompt-candidate
-generations are grouped under their search bundle instead of scattering as
-unrelated text-to-audio rows. Memory query bundle previews expose ranked hits
-that can be selected, placed in A/B when audio, or reused as latent donors when
-the hit is a latent artifact. Encoded dataset bundles expose manifest/sidecar
+right rail with run metrics when the job reports them; the product target is to
+present those groups as branches. Prompt-candidate generations are grouped
+under their search bundle instead of scattering as unrelated text-to-audio rows.
+Memory query bundle previews expose ranked hits that can be selected, played
+when audio, or reused as latent donors when the hit is a latent artifact.
+Encoded dataset bundles expose manifest/sidecar
 counts, chunk timing, prompt coverage, latent files, and reuse into LoRA
 training. Alpha sweep families can also compare sibling sweep runs that share a
 vector bundle or prompt.
@@ -236,12 +240,11 @@ Confirmed in the current codebase:
   target audio artifact. It supports `lexical_probe` for cheap deterministic
   wiring and `sa3_flow_probe` for an optional Medium-backed flow-loss objective.
   Prompt-search candidates can be rendered as generated audio takes with
-  lineage, inline playback, A/B assignment, target-vs-take descriptor deltas,
-  saved listening decisions, and a first-pass decision-study summary that
-  correlates listened choices with descriptor shifts. Generated prompt takes are
-  also grouped into a prompt-memory summary across runs. The selectable scorer
-  field exposes only implemented paths (`lexical_probe` and `sa3_flow_probe`);
-  CLAP remains future work.
+  lineage, inline playback, target-vs-take descriptor deltas, saved listening
+  decisions, and a first-pass decision-study summary that correlates listened
+  choices with descriptor shifts. Generated prompt takes are also grouped into a
+  prompt-memory summary across runs. The selectable prompt probe field exposes
+  only implemented paths (`lexical_probe` and `sa3_flow_probe`).
 - Artifact annotation and archive search are implemented for labels, notes,
   tags, durable keeper/maybe/reject listening decisions, artifact kind, model,
   operator, result family, and source lineage.
@@ -252,12 +255,12 @@ Confirmed in the current codebase:
   readiness panel, a recipe fork
   editor with diffs and resets, result-family detail playback, memory-result
   reuse actions, alpha-sweep variant promotion with a compact metric table,
-  metric sorting, best-candidate marking, bundle-to-recipe reuse actions, job
+  metric sorting, branch highlighting, bundle-to-recipe reuse actions, job
   phase labels, artifact landing after successful jobs, job recovery hints,
   backend-derived operator field metadata, backend-parsed typed bundle
   inspectors, bundle metrics, inline plot/image previews, and kind-specific
   artifact vitals, embedded bundle-audio playback and promotion, prompt-search
-  scorer controls, candidate-family bundle reading, durable listening decision
+  probe controls, candidate-family bundle reading, durable listening decision
   controls, prompt-search decision summaries, prompt memory, Operator Studio
   local presets with visible diffs, bundle workflow signals, richer domain
   cards for memory/sweep/vector/soft-prompt/training bundles, sibling sweep
@@ -265,7 +268,7 @@ Confirmed in the current codebase:
   archive artifact recovery, keyboardable playback playlist navigation, local
   waveform markers, persisted playback cues, WaveSurfer zoom and draggable loop
   regions, per-marker deletion, loop-edge nudging, data-backed archive actions,
-  marker notes, committed browser coverage for A/B assignment and SessionTray
+  marker notes, committed browser coverage for SessionTray
   artifact archive/recovery, and the first native geometry-audit recipe.
 - Core app surfaces are now split into focused modules for audio playback,
   artifact display, job progress, result families, recipe forks, and bundle
@@ -275,7 +278,7 @@ Confirmed in the current codebase:
 Still partial:
 
 - Some Colab modes are mapped but not yet first-class native interactions.
-  Prompt-search modes now have a native recipe path and an SA3 flow-loss scorer,
+  Prompt-search modes now have a native recipe path and an SA3 flow-loss prompt probe,
   plus first-pass target/take descriptor deltas and listened-decision
   correlation plus prompt-memory grouping across runs. Mode 2/3/5 parity still
   needs richer layer/alpha comparison reports and clearer runtime-cost notes.
@@ -291,13 +294,13 @@ Still partial:
   style-reference promotion.
 - Playback is now beyond the basic browser player, with playlist navigation,
   persisted markers, marker deletion, WaveSurfer zoom, draggable loop regions,
-  region persistence, marker notes, A/B browser coverage, SessionTray
+  region persistence, marker notes, SessionTray
   archive/recovery browser coverage, and loop-edge nudging. It still needs
   richer playlist sequencing and future region-export workflows.
-- Multi-output sweeps have family grouping, metrics, direct playback, explicit
-  A/B promotion controls, recipe fork deltas, inspected metric summaries, best
-  candidate marking, saved listening decisions, sort controls, a compact
-  alpha/metric table, and sibling recipe comparison across separate sweep runs.
+- Multi-output sweeps have family grouping, metrics, direct playback, recipe
+  fork deltas, inspected metric summaries, branch highlighting, saved listening
+  decisions, sort controls, a compact alpha/metric table, and sibling recipe
+  comparison across separate sweep runs.
 - Live job events now reach React through the control plane when that path is
   enabled; the bridge replays Python's durable job journal and can later switch
   its live source to Python WebSocket without changing the UI contract.

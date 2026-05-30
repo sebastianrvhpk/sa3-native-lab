@@ -33,7 +33,7 @@ smoke tests, but they are not the app default.
 | Prompt residual vectors | `scripts/extract_sa3_vectors.py` | `/experiments/run`, Recipe Studio | script-job adapter with native controls |
 | Audio residual vectors | `scripts/extract_audio_residual_vectors.py` | `/experiments/run`, Recipe Studio | script-job adapter with native controls |
 | Residual alpha sweep | `scripts/run_sa3_alpha_sweep.py` | `/experiments/run`, Recipe Studio | script-job adapter with native controls |
-| Prompt search | `latent_audio_primitives.prompt_optimization`, `latent_audio_primitives.flow_prompt` | `/experiments/run`, Recipe Studio | native recipe with `lexical_probe` fallback and optional `sa3_flow_probe`; CLAP remains future work |
+| Prompt search | `latent_audio_primitives.prompt_optimization`, `latent_audio_primitives.flow_prompt` | `/experiments/run`, Recipe Studio | native recipe with `lexical_probe` fallback and optional `sa3_flow_probe` |
 | Soft prompt optimize/generate | `scripts/optimize_sa3_soft_prompt.py`, `scripts/generate_sa3_with_soft_prompt.py` | `/experiments/run`, Recipe Studio | script-job adapter with native controls |
 | Dataset pre-encode | `scripts/pre_encode_dataset.py` | `/experiments/run`, Recipe Studio | script-job adapter with native controls |
 | SAME geometry audit | `latent_audio_primitives.geometry.geometry_report` | `/experiments/run`, Recipe Studio | implemented for local latent artifacts |
@@ -70,8 +70,8 @@ decisions, and local recovery filters. Latent memory query is promoted from
 concept to recipe: selecting a latent artifact can produce a `memory_query.json`
 bundle ranked by cosine or
 Euclidean summary distance against other local latent artifacts. Those local
-memory hits are now actionable in the bundle preview: select the artifact, place
-audio hits in A/B, or reuse latent hits as donor latents.
+memory hits are now actionable in the bundle preview: select the artifact, play
+audio hits, or reuse latent hits as donor latents.
 
 Prompt search is now promoted from helper-only code to a native recipe:
 `experiment.prompt_search` runs beam, greedy, or coordinate hard-token search,
@@ -80,21 +80,18 @@ Studio. It keeps `lexical_probe` as a cheap fallback and adds `sa3_flow_probe`
 for Medium-backed flow-loss scoring against a target audio latent. This is still
 marked as a probe until the real Medium/MPS path has short-audio listening
 validation, runtime-cost notes, and richer candidate comparison. The first
-candidate-comparison slice now shows target-vs-take descriptor deltas for
+candidate branch slice now shows target-vs-take descriptor deltas for
 generated prompt-search takes and summarizes those deltas against saved
 keeper/maybe/reject decisions. Prompt memory also groups generated prompt takes
-by prompt text across runs. CLAP or hybrid scoring remains a future adapter,
-but it is not exposed as a runnable scorer until implemented.
+by prompt text across runs.
 
 ## Next Promotion Targets
 
 1. Add prompt-search sweep/layer comparisons and document the useful Medium/MPS
    score-sample/timestep settings.
-2. Add CLAP or hybrid prompt scoring only after the SA3 flow probe has a good
-   comparison workflow.
-3. Control-head recipes for Mode 12 and the labelled-probe part of Mode 15.
-4. Promote Operator Studio presets into backend history for shareable repeatable
+2. Control-head recipes for Mode 12 and the labelled-probe part of Mode 15.
+3. Promote Operator Studio presets into backend history for shareable repeatable
    latent explorations.
-5. Richer memory/dataset browsing, including preview audio for non-local children.
-6. Long-job controls for LoRA training: pause/resume, priority, and
+4. Richer memory/dataset browsing, including preview audio for non-local children.
+5. Long-job controls for LoRA training: pause/resume, priority, and
    resource-aware scheduling are not yet implemented.

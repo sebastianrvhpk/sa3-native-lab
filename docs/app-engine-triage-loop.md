@@ -29,7 +29,7 @@ source audio / prompt
 | P0 | Import audio and latent files | FastAPI multipart endpoints | Keep | API import test |
 | P1 | Direct latent `.npy` blur/DSP/graft/renoise/roll | `latent_audio_primitives` wrappers | Keep as lab mode | operator job tests |
 | P1 | SAME encode/decode endpoints | Torch/MPS model path | Keep | Real SAME-S MPS smoke and API jobs passed |
-| P1 | Result comparison/playback surface | `frontend/` listening bench | Keep first slice | Chrome smoke, A/B slots, API operator job |
+| P1 | Playback/take surface | `frontend/` listening bench | Keep first slice, reframe through product rescue | Browser smoke, API operator job |
 | P1 | Real audio waveform peaks | `/artifacts/{id}/peaks` + React Query waveform | Promote | storage/API tests, Chrome smoke |
 | P1 | Visible artifact lineage | selected artifact source IDs in the specimen bus | Keep as truthful connective tissue | Chrome smoke |
 | P1 | Colab experiment scripts as background recipes | `/experiments/run` + script-job adapter | Promote as bridge | focused app tests, frontend build |
@@ -47,8 +47,8 @@ source audio / prompt
 | P1 | Fork-with-edited-params UI | recipe-derived fork editor with diff/reset controls | Promote | frontend tests/build |
 | P1 | Bundle inspection and result families | `/artifacts/{id}/inspect` + `families.load` + result rail/detail panel | Promote | API tests, control-plane tests, frontend tests |
 | P1 | Typed bundle readers | backend `bundle_summary` parser + `BundleField` readers for memory/profile/vector/sweep/soft-prompt/training outputs, metrics, plot discovery, inline plot rendering, and recipe-input reuse | Promote | API tests, frontend tests/build |
-| P1 | Alpha-sweep family promotion | `FamilyDetailPanel` alpha variant band with explicit A/B promotion, sortable metric table, best-candidate marking, and sibling sweep comparison | Promote | frontend tests/build |
-| P1 | Prompt-candidate generation bench | Prompt-search bundle reader + text generation lineage metadata + grouped prompt-candidate result families, inline playback, A/B assignment, and durable keeper/maybe/reject listening decisions | Promote | frontend tests/build, control-plane family test |
+| P1 | Alpha-sweep branch surface | `FamilyDetailPanel` alpha variant band with sortable metric table, branch highlighting, and sibling sweep comparison | Promote, rename in product UI | frontend tests/build |
+| P1 | Prompt-candidate take bench | Prompt-search bundle reader + text generation lineage metadata + grouped prompt-candidate branches, inline playback, and durable keeper/maybe/reject listening decisions | Promote, rename in product UI | frontend tests/build, control-plane family test |
 | P1 | Prompt take descriptor deltas | `/artifacts/{target}/descriptor-comparison/{take}` + prompt-search generated-take delta strip | Promote first slice | storage/API tests, frontend tests/build |
 | P1 | Prompt decision correlation | prompt-search generated-take descriptor rows + durable listening decisions | Promote first slice | frontend tests/build |
 | P1 | Prompt decision memory | generated prompt-candidate takes grouped by prompt/decision across runs | Promote first slice | frontend tests/build |
@@ -61,7 +61,6 @@ source audio / prompt
 | P2 | SAME geometry audit | `geometry_report` + `experiment.geometry_audit` + bundle summary reader | Promote first slice | runtime test, frontend tests |
 | P2 | Prompt search probe | `experiment.prompt_search` + `prompt_optimization` helpers + prompt-search bundle reader | Promote as probe | runtime test, frontend tests |
 | P2 | SA3 flow prompt scoring | `latent_audio_primitives.flow_prompt` + `experiment.prompt_search.scorer=sa3_flow_probe` | Promote as explicit model-backed probe | flow-scorer primitive tests, runtime scorer-switch test, tiny authenticated Medium/MPS smoke |
-| P2 | CLAP / hybrid prompt scoring | queued scorer adapter behind the same scorer contract | Defer | future model-backed recipe tests |
 
 ## Acceptance Tests Per Pass
 
@@ -82,11 +81,9 @@ source audio / prompt
 3. Promote the artifact recovery filters into tRPC/control-plane procedures
    when archive volume or remote persistence makes client-side filtering too
    heavy.
-4. Add CLAP or hybrid scorer only after the SA3 flow prompt-candidate bench has
-   enough generated/listened examples to justify another scoring objective.
-5. Add control-head recipe adapters for Mode 12 and labelled-probe extensions
+4. Add control-head recipe adapters for Mode 12 and labelled-probe extensions
    for Mode 15.
-6. Continue shrinking frontend field drift until backend `ui_fields` can drive
+5. Continue shrinking frontend field drift until backend `ui_fields` can drive
    most controls without losing the instrument-specific layout.
 7. Promote useful Operator Studio presets into backend or Postgres-backed recipe
    history.

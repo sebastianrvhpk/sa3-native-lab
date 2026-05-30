@@ -93,7 +93,8 @@ The model then undergoes a final refinement stage to improve quality and reduce 
 
 - **Adversarial relativistic loss** — Trains the discriminator to tell if a latent is real or fake. Helps with perceptual quality.
 - **Contrastive loss** - Regularizes latent space so that paired prompts and audios are close together. This helps the discriminator be semantically aligned.
-- **[CLAP](https://github.com/LAION-AI/CLAP) loss** - Gives the generator an explicit text-alignment signal such that the generator improves both audio fidelity and prompt alignment.
+- **Auxiliary text-alignment loss** - Gives the generator an additional
+  semantic alignment signal while preserving audio fidelity.
 
 There are four Diffusion Transformer variants:
 

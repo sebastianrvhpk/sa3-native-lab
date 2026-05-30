@@ -1,7 +1,12 @@
 # SA3 Native Lab Improvement Roadmap
 
 This roadmap is a code-grounded triage queue for turning the current Colab
-migration into a stronger local research app.
+migration into a stronger local AI sound instrument.
+
+The immediate product direction is now governed by
+`docs/product-rescue-brief.md`: stop exposing parity as the primary UI, remove
+CLAP from product language, remove or reframe A/B comparison, and organize the
+app around current sound, gestures, takes, branches, tuning, and memory.
 
 For the consolidated current-state, engineering-health, test-posture, and
 definition-of-done document, see `docs/implementation-readiness.md`.
@@ -9,7 +14,31 @@ definition-of-done document, see `docs/implementation-readiness.md`.
 For the broader stack direction and promotion triggers, see
 `docs/architecture-horizon.md`.
 
-## P0: Trust And Runability
+## P0: Interface Rescue
+
+1. Correct product language.
+   Replace primary UI/docs language that centers artifacts, jobs, operators,
+   result families, A/B, scorers, and specs. The visible app should lead with
+   sound, take, gesture, source, anchor, memory, branch, tune, and inspect.
+
+2. Remove CLAP from product language.
+   CLAP is not part of the current repo's useful creative path and should not
+   appear as a queued option or roadmap promise in the app-facing language.
+
+3. Remove or reframe A/B.
+   The app should not ask which result wins. It should let the user pin anchors,
+   remember material, branch takes, and reuse sources.
+
+4. Rebuild first-screen hierarchy.
+   Current sound, takes, and gestures should dominate. Readiness, specs, raw
+   jobs, API settings, and mode parity should move behind settings or inspect
+   drawers.
+
+5. Attach progress to pending takes.
+   Jobs remain the backend contract, but the user should see a take being made
+   beside the sound, with cancel/retry/logs available from that pending take.
+
+## P1: Trust And Runability
 
 1. Harden live job-event transport.
    Typed job events now reach the UI through a tRPC/SSE control-plane bridge
@@ -41,23 +70,23 @@ For the broader stack direction and promotion triggers, see
    and alpha lists have first-pass validation. Next, make more complex controls
    fully schema-driven without losing the custom instrument layout.
 
-## P1: Exploration Speed
+## P2: Exploration Speed
 
 1. Playback composer.
    The result rail now has a first recent-audition stack for session audio:
    recent takes can be selected, played compactly, inspected with their
-   listening decision badge, and routed directly into A/B slots. The main
+   listening decision badge, and remembered or reused. The main
    specimen player now persists markers and loop regions as artifact
    annotations, supports marker notes, uses WaveSurfer for zoom plus draggable
-   loop edits, and has committed browser coverage for A/B assignment, cue
+   loop edits, and has committed browser coverage for cue
    persistence, annotation persistence, and SessionTray artifact
    archive/recovery. Next playback work should add explicit playlist/session
    sequencing.
 
 2. Deepen result-family views for sweeps.
    Recipe families now appear with metrics, a detail panel, per-result playback,
-   explicit A/B promotion, replay, fork actions, and a compact sweep metric
-   table with sort controls, best-candidate marking, and durable
+   replay, fork actions, and a compact sweep metric
+   table with sort controls, branch highlighting, and durable
    keeper/maybe/reject listening decisions on playable artifacts. Sibling
    alpha-sweep families are now compared in the family detail panel when they
    share a vector bundle or prompt. Session/archive filters now surface saved
@@ -65,12 +94,12 @@ For the broader stack direction and promotion triggers, see
    lineage. Prompt-search takes now expose first-pass target-vs-take descriptor
    deltas plus a decision-study summary over keeper/maybe/reject annotations;
    prompt memory now groups generated prompt-candidate decisions across runs.
-   Prompt-search bundles also compare generated takes across search runs by
-   scorer, mode, model, duration, prompt variety, and listening decisions. Next
-   they need richer sweep-family and layer/alpha comparisons. Recipe Studio now
+   Prompt-search bundles also summarize generated takes across search runs by
+   method, mode, model, duration, prompt variety, and listening decisions. Next
+   they need richer sweep-family and layer/alpha branch views. Recipe Studio now
    also has prompt-search presets for Mode 2 hard-token search, Mode 3 readable
-   prompt search, and a small Medium flow-score check, with active scorer-cost
-   guidance visible before the heavier scorer is selected. It also has
+   prompt search, and a small Medium flow-score check, with active cost
+   guidance visible before the heavier probe is selected. It also has
    vocabulary-set buttons, readable modifier-axis sets, and prompt-history reuse
    from previous generated takes, so Mode 2/3 prompt exploration is no longer
    only a raw parameter form.
@@ -97,20 +126,20 @@ For the broader stack direction and promotion triggers, see
    folders, prompt-search candidates, and LoRA checkpoints into Recipe Studio,
    and discovered image plots plus embedded audio files render through the
    bundle-file endpoint. Embedded bundle audio can now be promoted into normal
-   audio artifacts. Prompt-search bundles now show scorer metadata, compact
-   candidate families, inline generated takes, A/B assignment for candidate
-   audio, target/take descriptor deltas, and saved listening decisions with
-   notes. Bundle panels now show workflow signals for recipe actions, playable
+   audio artifacts. Prompt-search bundles now show probe metadata, compact
+   candidate families, inline generated takes, target/take descriptor deltas,
+   and saved listening decisions with notes. Bundle panels now show workflow
+   signals for recipe actions, playable
    audio, lineage, plots, metrics, candidates, memory hits, variants, tensors,
    checkpoints, and geometry stats. Next, vector/profile/soft-prompt/sweep/
    geometry/prompt-search bundles should expose deeper domain-specific controls
    without making the user inspect zip contents.
 
-## P2: Research Cognition
+## P3: Research Cognition
 
 1. Memory browser and query surface.
    Local latent-artifact nearest-neighbor query now exists as `memory.query`.
-   Bundle previews now allow selecting hits, A/B assignment for audio hits, and
+   Bundle previews now allow selecting hits, playback for audio hits, and
    donor reuse for latent hits. The next step is a richer browser for encoded
    SAME datasets, preview audio, tags, and style-reference promotion.
 
@@ -125,24 +154,22 @@ For the broader stack direction and promotion triggers, see
 4. Prompt/residual comparison bench.
    Prompt search now exists as `experiment.prompt_search` with beam, greedy, and
    coordinate modes, `lexical_probe` fallback, and optional `sa3_flow_probe`
-   scoring over Medium flow losses. The UI/spec only expose implemented
-   scorers; CLAP remains future work. A tiny authenticated Medium/MPS smoke run
-   succeeded locally on short target audio. Prompt candidates can now launch
-   MLX text-to-audio jobs with lineage back to the search bundle; generated
-   takes are grouped under the prompt-search family and can be played, sent to
-   A/B beside the candidate, marked keeper/maybe/rejected with notes, and
-   compared to the target through lightweight descriptor deltas. They can also be
+   checks over Medium flow losses. The UI/spec only expose implemented probes.
+   A tiny authenticated Medium/MPS smoke run succeeded locally on short target
+   audio. Prompt candidates can now launch MLX text-to-audio jobs with lineage
+   back to the search bundle; generated takes are grouped under the
+   prompt-search branch and can be played, marked keeper/maybe/rejected with
+   notes, and described through lightweight target/take descriptor deltas. They can also be
    summarized through a decision-study panel, grouped into prompt memory across
    runs, and recovered later through decision/model/operator/family filters. The
    next research step is richer layer/alpha comparison and runtime-cost notes.
-   CLAP or hybrid scoring belongs after that comparison workflow has real usage.
 
 5. Geometry and control probes.
    `experiment.geometry_audit` now produces a local latent geometry report
    bundle from saved SAME latents. The next research step is labelled
    observability/control probes rather than a decorative node graph.
 
-## P3: Interface Polish
+## P4: Interface Polish
 
 0. Visual grammar.
    The first reference-vibe pass now has a canonical grammar in
@@ -156,8 +183,8 @@ For the broader stack direction and promotion triggers, see
    controls, and panels that become too dense.
 
 2. Motion for causality.
-   Use motion only where it clarifies state changes: job queued to running,
-   artifact produced, lineage forked, A/B promoted.
+   Use motion only where it clarifies state changes: pending take created,
+   take landed, sound remembered, branch opened.
 
 3. Stronger reference language.
    The paper, gradient-cell, and routing visual language should continue to map

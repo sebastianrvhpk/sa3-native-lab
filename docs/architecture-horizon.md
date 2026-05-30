@@ -32,7 +32,10 @@ library. It owns high-level query/mutation wiring, backend/control-plane
 switching, form state, payload orchestration, top-level layout, and cross-domain
 handlers.
 
-The extracted frontend modules now carry the stable seams:
+The extracted frontend modules now carry the current stable seams. Product
+language is being corrected by `docs/product-rescue-brief.md`, so some module
+names still reflect legacy implementation nouns and should not be treated as
+the desired interface grammar:
 
 - `workbenchConfigs.ts`: static mode/config/default catalogs.
 - `workbenchModel.ts`: pure job, result-family, event, status, and filtering
@@ -41,8 +44,10 @@ The extracted frontend modules now carry the stable seams:
   bundle lazy-loading, vitals, and lineage thread.
 - `sessionPanel.tsx`: session tray, workspace pulse, archive recovery, and
   artifact filters.
-- `comparePanel.tsx`, `modeAtlas.tsx`, `auditionStackPanel.tsx`: A/B display,
-  Colab parity atlas, and sequence-aware listening stack.
+- `comparePanel.tsx`, `modeAtlas.tsx`, `auditionStackPanel.tsx`: legacy
+  compare display, Colab parity atlas, and sequence-aware listening stack. The
+  compare surface should be removed or reframed as anchors/pinned sources in
+  the rescue pass.
 - `promptSearchRack.tsx`, `operatorPresetRack.tsx`, `statusPanels.tsx`,
   `specCoverage.tsx`: reusable control/readiness widgets.
 - `bundleInspector.tsx`: still lazy-loaded so bundle-heavy inspectors do not
@@ -71,7 +76,7 @@ state and handler contracts are clean enough to name without hiding complexity.
 
 | Area | Preferred Stack | Promotion Trigger |
 | --- | --- | --- |
-| Motion | Motion for React | Use causal transitions for queued/running/produced states, lineage forks, A/B promotion, and result-family expansion. |
+| Motion | Motion for React | Use causal transitions for pending take creation, take landing, sound remembered, lineage forks, and branch expansion. |
 | Component lab | Storybook | Extracted panels now need visual QA across job, artifact, form, empty, archive, and error states. |
 | Persistence | Drizzle and Postgres | Sessions, jobs, recipes, annotations, lineage, presets, result families, and job events outgrow JSON manifests. |
 | Local Postgres | PGlite | We need lightweight local or test Postgres behavior without requiring a running database service. |

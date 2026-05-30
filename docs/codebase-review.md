@@ -16,11 +16,12 @@ and the next risks for turning the Colab experiments into a proper app.
   and errors are persisted.
 - Artifacts carry useful metadata: kind, file info, audio metadata, latent
   shape/rate, source artifact IDs, recipe ID, tags, and freeform metadata.
-- The frontend is no longer just a generic dashboard. It has a listening bench,
-  Operator Studio, Recipe Studio, Mode Atlas, job rail, artifact rail, waveform
-  peaks, region-loop playback, A/B slots, result-family inspection,
-  memory-hit reuse, archive-and-new sessions, and alpha-sweep promotion plus
-  recipe fork diff/reset controls.
+- The frontend is no longer just a generic dashboard, but it still needs the
+  interface rescue described in `docs/product-rescue-brief.md`. It has a
+  listening bench, Operator Studio, Recipe Studio, Mode Atlas, job rail,
+  artifact rail, waveform peaks, region-loop playback, result-family
+  inspection, memory-hit reuse, archive-and-new sessions, and alpha-sweep
+  controls plus recipe fork diff/reset controls.
 - A first TypeScript tRPC control plane exists in `apps/control-plane`; it owns
   app-shaped workbench reads plus job lifecycle, recipe, artifact, family, and
   archive procedures plus durable-journal-aware job-event subscriptions while
@@ -37,10 +38,10 @@ and the next risks for turning the Colab experiments into a proper app.
 - Bundle inspection promotes JSON/NPZ summaries, metric scalars, and plot/image
   discovery into typed reader rows. Reusable bundles can now populate Recipe
   Studio fields directly. Inline image plots now render from bundle artifacts,
-  and alpha sweep families have sortable metrics, best-candidate marking, and
-  A/B promotion from the table. Embedded bundle audio can be promoted into a
+  and alpha sweep families have sortable metrics and branch highlighting.
+  Embedded bundle audio can be promoted into a
   first-class audio artifact, and prompt-search bundles are parsed into native
-  scorer rows, candidate-family previews, generated-take decision summaries,
+  probe rows, candidate-family previews, generated-take decision summaries,
   prompt memory, workflow-signal chips, and prompt reuse actions.
 - Operator Studio now has browser-local presets for repeatable latent operator
   explorations, plus selected-preset diffs for changed params and donor latents.
@@ -63,11 +64,10 @@ and the next risks for turning the Colab experiments into a proper app.
   actions plus first-pass workflow signals, but vector/profile/prompt-search/
   soft-prompt-specific inspectors are still shallow.
 - `experiment.prompt_search` now has a deterministic `lexical_probe` fallback
-  and an optional `sa3_flow_probe` scorer. It should not be presented as mature
-  audio-text inversion until the real Medium/MPS scorer has listening
-  validation, cost notes, and layer/alpha comparison workflow. The candidate
-  comparison, decision-correlation, and prompt-memory slices exist, but CLAP is
-  still queued rather than implemented.
+  and an optional `sa3_flow_probe` prompt probe. It should not be presented as
+  mature audio-text inversion until the real Medium/MPS path has listening
+  validation, cost notes, and layer/alpha branch workflows. The candidate
+  branch, decision-correlation, and prompt-memory slices exist.
 - Long-running jobs have cancel/retry, but not pause/resume, priority,
   resource-aware scheduling, or resident worker reuse.
 - Error messages are now transformed into first-pass recovery hints, but command
