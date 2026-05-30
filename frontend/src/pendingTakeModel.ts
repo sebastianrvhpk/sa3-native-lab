@@ -1,5 +1,6 @@
-import { formatJobElapsed, isJobActive, progressPercent } from "./jobUtils";
+import { formatJobElapsed, progressPercent } from "./jobUtils";
 import { gestureById, gestureForOperator, gestureLabelForOperator } from "./gestureModel";
+import { pendingTakeLandingFromJob, type PendingTakeLanding } from "./pendingTakeLandingModel";
 import type { JobRecord, JobStatus, OperatorName } from "./types";
 
 export interface PendingTake {
@@ -13,6 +14,12 @@ export interface PendingTake {
   elapsed: string;
   sourceIds: string[];
   producedArtifactIds: string[];
+  landingArtifactId: string | null;
+  completionPhrase: string;
+  branchLabel: string;
+  suggestedNextGestureIds: PendingTakeLanding["suggestedNextGestureIds"];
+  recoverySuggestion: string | null;
+  landing: PendingTakeLanding;
   canCancel: boolean;
   canRetry: boolean;
   phrase: string;
@@ -28,6 +35,7 @@ export function pendingTakeFromJob(job: JobRecord): PendingTake {
   const gesture = gestureById(gestureId);
   const phrase = phraseForJob(job);
   const phase = job.phase?.replace(/[_-]+/g, " ") || phaseForStatus(job.status);
+  const landing = pendingTakeLandingFromJob(job);
   return {
     id: job.job_id,
     job,
@@ -37,12 +45,18 @@ export function pendingTakeFromJob(job: JobRecord): PendingTake {
     phase,
     progressPercent: progressPercent(job),
     elapsed: formatJobElapsed(job),
-    sourceIds: Object.values(job.recipe.inputs).filter(Boolean),
-    producedArtifactIds: job.artifact_ids,
-    canCancel: isJobActive(job),
-    canRetry: job.status === "failed" || job.status === "cancelled",
+    sourceIds: landing.sourceIds,
+    producedArtifactIds: landing.producedArtifactIds,
+    landingArtifactId: landing.landingArtifactId,
+    completionPhrase: landing.completionPhrase,
+    branchLabel: landing.branchLabel,
+    suggestedNextGestureIds: landing.suggestedNextGestureIds,
+    recoverySuggestion: landing.recoverySuggestion,
+    landing,
+    canCancel: landing.canCancel,
+    canRetry: landing.canRetry,
     phrase,
-    detail: job.message ?? job.logs.at(-1) ?? gesture.shortIntent,
+    detail: job.error ?? job.message ?? job.logs.at(-1) ?? gesture.shortIntent,
     inspect: {
       jobId: job.job_id,
       operator: job.recipe.operator,
