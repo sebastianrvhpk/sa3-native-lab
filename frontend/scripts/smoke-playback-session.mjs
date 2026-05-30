@@ -83,6 +83,25 @@ try {
   await expect(page.locator(".operator-surface.has-selection")).toBeVisible();
   await expect(page.locator(".wave-bus.has-sources.has-job.has-family").first()).toBeVisible();
 
+  await page.locator(".specimen").getByRole("button", { name: "A", exact: true }).click();
+  await page.getByRole("button", { name: /Source Pulse/ }).first().click();
+  await expect(page.getByRole("heading", { name: "Source Pulse" })).toBeVisible();
+  await page.locator(".specimen").getByRole("button", { name: "B", exact: true }).click();
+  await expect(page.locator(".compare-panel .compare-slot").nth(0)).toContainText("Warm Smoke Take");
+  await expect(page.locator(".compare-panel .compare-slot").nth(1)).toContainText("Source Pulse");
+
+  await page.getByRole("button", { name: /Warm Smoke Take/ }).first().click();
+  await expect(page.getByRole("heading", { name: "Warm Smoke Take" })).toBeVisible();
+  await page.locator(".annotation-panel").getByLabel("Label").fill("Warm Smoke Take");
+  await page.locator(".annotation-panel").getByLabel("Tags").fill("smoke-test, loop, favorite");
+  await page.locator(".annotation-panel").getByLabel("Notes").fill("browser annotation note");
+  await page.locator(".annotation-panel").getByRole("button", { name: "Save annotation" }).click();
+
+  await expect.poll(async () => {
+    const item = await artifact(apiBase, fixture.take_artifact_id);
+    return `${item.notes ?? "none"}:${(item.tags ?? []).join("|")}`;
+  }, { timeout: 6000 }).toBe("browser annotation note:smoke-test|loop|favorite");
+
   const deck = page.locator(".specimen .audio-deck").first();
   await expect(deck.locator(".wave-surfer-stage")).toBeVisible({ timeout: 10000 });
   const audioPosition = deck.getByRole("slider", { name: "Audio position" });
@@ -106,7 +125,9 @@ try {
   await page.getByLabel("Sequence").selectOption("open");
   await expect(page.locator(".audition-stack article").first()).toContainText("open");
 
-  await page.locator(".specimen").getByRole("button", { name: "Archive artifact" }).click();
+  const sessionTakeRow = page.locator(".session-tray .session-artifact", { hasText: "Warm Smoke Take" }).first();
+  await expect(sessionTakeRow).toBeVisible();
+  await sessionTakeRow.getByRole("button", { name: "Archive" }).click();
   await expect.poll(async () => {
     const item = await artifact(apiBase, fixture.take_artifact_id);
     return `${item.session_id ?? "null"}:${item.metadata?.archived_from_session_id ?? "none"}`;
