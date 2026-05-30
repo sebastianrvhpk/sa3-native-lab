@@ -28,6 +28,39 @@ describe("FamilyDetailPanel", () => {
     expect(screen.getByText("2 takes · Make · 1 source")).toBeInTheDocument();
   });
 
+  it("routes branch card inspect, repeat, and branch actions", async () => {
+    const user = userEvent.setup();
+    const family = sweepFamily();
+    const latest = audioArtifact("art_pos", "alpha_pos4p00.wav", "2026-05-27T15:02:00.000Z");
+    const onSelect = vi.fn();
+    const onInspectFamily = vi.fn();
+    const onReplayRecipe = vi.fn();
+    const onForkRecipe = vi.fn();
+
+    render(
+      <ResultFamilyPanel
+        families={[family]}
+        artifacts={[latest]}
+        selectedId={null}
+        inspectedFamilyId={null}
+        onSelect={onSelect}
+        onInspectFamily={onInspectFamily}
+        onReplayRecipe={onReplayRecipe}
+        onForkRecipe={onForkRecipe}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /Steer branch/i }));
+    await user.click(screen.getByRole("button", { name: "Inspect" }));
+    await user.click(screen.getByRole("button", { name: "Do again" }));
+    await user.click(screen.getByRole("button", { name: "Branch" }));
+
+    expect(onInspectFamily).toHaveBeenCalledWith(family.familyId);
+    expect(onSelect).toHaveBeenCalledWith("art_pos");
+    expect(onReplayRecipe).toHaveBeenCalledWith(family.recipeId);
+    expect(onForkRecipe).toHaveBeenCalledWith(family.recipe);
+  });
+
   it("surfaces alpha sweep variants with anchor actions", async () => {
     const user = userEvent.setup();
     const onCompare = vi.fn();

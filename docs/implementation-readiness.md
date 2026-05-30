@@ -186,6 +186,9 @@ branched, and inspected without making the user operate the machinery first.
   summaries, prompt memory, operator presets, playback markers, audition
   cursors, session workspace summaries, operator-spec coverage, and form/data
   transforms.
+- Product-loop frontend models now have focused coverage for memory reuse,
+  landed-take next actions, pending-take landing phrases, branch-card actions,
+  and Tune primary/advanced field grouping.
 - Control-plane procedures for workbench reads, job lifecycle, recipe actions,
   artifact inspection, family loading, archive actions, and event bridging.
 - Build-level confidence for the React/Vite frontend.
