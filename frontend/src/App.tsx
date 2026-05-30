@@ -7,7 +7,6 @@ import {
   Braces,
   Check,
   CircleAlert,
-  Database,
   FileAudio,
   FlaskConical,
   Gauge,
@@ -39,11 +38,13 @@ import { ArtifactBadge, ArtifactIcon } from "./artifactDisplay";
 import { artifactMeta, artifactName, sortNewest } from "./artifactUtils";
 import { auditionCursor, auditionKeyboardTarget, auditionPositionLabel, auditionSequenceOptions, auditionStackRows, type AuditionSequenceMode } from "./auditionStack";
 import { AudioDeck, TinyWave } from "./audioDeck";
+import { ComparePanel } from "./comparePanel";
 import { createControlPlaneClient, DEFAULT_CONTROL_PLANE_URL, type ResultFamily, type WorkbenchState } from "./controlPlane";
 import { ForkRecipePanel } from "./forkRecipePanel";
 import { JobProgress, type JobActionHandlers } from "./jobProgress";
 import { isJobActive, landingArtifactId, shortOperatorName } from "./jobUtils";
 import { ListeningDecisionBadge } from "./listeningDecision";
+import { ModeAtlas } from "./modeAtlas";
 import { specCoverageSummary, specPairCoverageSummary } from "./operatorSpecCoverage";
 import {
   createOperatorPreset,
@@ -100,7 +101,6 @@ import type {
   HealthResponse,
   JobRecord,
   ModelStatus,
-  NotebookMode,
   OperatorName,
   OperatorSpec,
   ReadinessCheck,
@@ -138,7 +138,6 @@ import {
   mergeJobRecords,
   parseJobEvent,
   primitiveMetadataValue,
-  statusClass,
 } from "./workbenchModel";
 
 export function App() {
@@ -1314,68 +1313,6 @@ function ReadinessPanel({ checks }: { checks: ReadinessCheck[] }) {
         ))}
       </div>
     </details>
-  );
-}
-
-function ComparePanel({ a, b, apiBase }: { a: ArtifactRecord | null; b: ArtifactRecord | null; apiBase: string }) {
-  return (
-    <div className="compare-panel">
-      <div className="band-title">
-        <FlaskConical size={18} />
-        <span>A/B</span>
-      </div>
-      <CompareSlot label="A" artifact={a} apiBase={apiBase} />
-      <CompareSlot label="B" artifact={b} apiBase={apiBase} />
-    </div>
-  );
-}
-
-function CompareSlot({ label, artifact, apiBase }: { label: string; artifact: ArtifactRecord | null; apiBase: string }) {
-  return (
-    <div className="compare-slot">
-      <strong>{label}</strong>
-      {artifact ? (
-        <div>
-          <span>{artifactName(artifact)}</span>
-          <AudioDeck artifact={artifact} apiBase={apiBase} compact />
-        </div>
-      ) : (
-        <span className="muted">empty</span>
-      )}
-    </div>
-  );
-}
-
-function ModeAtlas({ modes, activeOperator }: { modes: NotebookMode[]; activeOperator: OperatorName }) {
-  if (!modes.length) {
-    return null;
-  }
-  return (
-    <div className="mode-atlas">
-      <div className="mode-atlas-head">
-        <span>
-          <Database size={16} />
-          Colab Mode Atlas
-        </span>
-        <strong>{modes.length}</strong>
-      </div>
-      <div className="mode-atlas-list">
-        {modes.map((mode) => {
-          const active = mode.operators.includes(activeOperator);
-          return (
-            <article key={mode.mode_id} className={`mode-card ${active ? "active" : ""}`}>
-              <div>
-                <strong>
-                  {mode.mode_id}. {mode.title}
-                </strong>
-                <span>{mode.native_surface}</span>
-              </div>
-              <span className={`mode-status ${statusClass(mode.status)}`}>{mode.status}</span>
-            </article>
-          );
-        })}
-      </div>
-    </div>
   );
 }
 
