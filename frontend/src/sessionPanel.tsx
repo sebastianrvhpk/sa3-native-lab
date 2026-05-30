@@ -99,7 +99,7 @@ export function SessionTray({
     <div className="session-tray">
       <div className="session-head">
         <div>
-          <span className="eyebrow">Session</span>
+          <span className="eyebrow">Session Memory</span>
           <strong>{session?.name ?? formatSessionStamp(sessionStartedAt)}</strong>
         </div>
         <div className="session-actions">
@@ -111,11 +111,11 @@ export function SessionTray({
             type="button"
             className="session-new"
             onClick={onArchiveSession}
-            title="Archive this session and start a clean one"
+            title="Remember this session and start a clean one"
             disabled={!session || session.status === "archived" || creatingSession || archivingSession || activeJobs.length > 0}
           >
             {archivingSession ? <LoaderCircle className="spin" size={16} /> : <Archive size={16} />}
-            {archivingSession ? "Archiving" : "Archive"}
+            {archivingSession ? "Remembering" : "Remember"}
           </button>
         </div>
       </div>
@@ -124,7 +124,7 @@ export function SessionTray({
 
       {activeJobs.length ? (
         <div className="session-block">
-          <span className="session-label">Running</span>
+          <span className="session-label">Pending takes</span>
           {activeJobs.map((job) => (
             <JobProgress key={job.job_id} job={job} compact onCancelJob={onCancelJob} onRetryJob={onRetryJob} />
           ))}
@@ -155,7 +155,7 @@ export function SessionTray({
                 action={
                   archivableIds.has(artifact.artifact_id)
                     ? {
-                        label: archivingArtifactId === artifact.artifact_id ? "Archiving" : "Archive",
+                        label: archivingArtifactId === artifact.artifact_id ? "Remembering" : "Remember",
                         disabled: Boolean(archivingArtifactId),
                         onAction: () => onArchiveArtifact(artifact),
                       }
@@ -173,7 +173,7 @@ export function SessionTray({
         <details className="archive-drawer">
           <summary>
             <Gauge size={15} />
-            Session jobs
+            Gesture history
             <span>{jobs.length}</span>
           </summary>
           <div className="archive-list">
@@ -187,7 +187,7 @@ export function SessionTray({
       <details className="archive-drawer">
         <summary>
           <Database size={15} />
-          Archive
+          Memory
           <span>{filterActive ? `${filteredArchiveArtifacts.length}/${archivedArtifacts.length}` : archivedArtifacts.length + archivedJobs.length}</span>
         </summary>
         <div className="archive-list">
@@ -212,7 +212,7 @@ export function SessionTray({
           {archiveJobRows.map((job) => (
             <JobProgress key={job.job_id} job={job} compact onCancelJob={onCancelJob} onRetryJob={onRetryJob} />
           ))}
-          {!archiveArtifactRows.length && !archiveJobRows.length ? <div className="quiet-panel compact">{filterActive ? "No matching takes" : "Archive empty"}</div> : null}
+          {!archiveArtifactRows.length && !archiveJobRows.length ? <div className="quiet-panel compact">{filterActive ? "No matching takes" : "Memory empty"}</div> : null}
         </div>
       </details>
     </div>

@@ -78,6 +78,9 @@ try {
   page.on("pageerror", (error) => consoleErrors.push(error.message));
 
   await page.goto(frontendUrl, { waitUntil: "networkidle", timeout: 30000 });
+  await expect(page.getByText("What do you want to do with this sound next?")).toBeVisible();
+  await expect(page.locator(".surface-head .eyebrow", { hasText: "Current Sound" })).toBeVisible();
+  await expect(page.locator(".audition-stack .eyebrow", { hasText: "Takes" })).toBeVisible();
   await page.getByRole("button", { name: /Warm Smoke Take/ }).first().click();
   await expect(page.getByRole("heading", { name: "Warm Smoke Take" })).toBeVisible();
   await expect(page.locator(".operator-surface.has-selection")).toBeVisible();
@@ -127,13 +130,13 @@ try {
 
   const sessionTakeRow = page.locator(".session-tray .session-artifact", { hasText: "Warm Smoke Take" }).first();
   await expect(sessionTakeRow).toBeVisible();
-  await sessionTakeRow.getByRole("button", { name: "Archive" }).click();
+  await sessionTakeRow.getByRole("button", { name: "Remember" }).click();
   await expect.poll(async () => {
     const item = await artifact(apiBase, fixture.take_artifact_id);
     return `${item.session_id ?? "null"}:${item.metadata?.archived_from_session_id ?? "none"}`;
   }, { timeout: 6000 }).toBe(`null:${fixture.session_id}`);
 
-  await page.locator("summary", { hasText: "Archive" }).last().click();
+  await page.locator("summary", { hasText: "Memory" }).last().click();
   const archivedRow = page.locator(".session-artifact", { hasText: "Warm Smoke Take" }).first();
   await expect(archivedRow).toBeVisible();
   await archivedRow.getByRole("button", { name: "Recover" }).click();

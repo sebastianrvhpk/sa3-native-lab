@@ -162,7 +162,7 @@ label {
 .top-strip {
   height: 76px;
   display: grid;
-  grid-template-columns: minmax(250px, 1fr) minmax(280px, 460px) minmax(280px, auto);
+  grid-template-columns: minmax(250px, 1fr) minmax(280px, 520px) max-content;
   gap: 18px;
   align-items: center;
   border-bottom: 1px solid var(--line);
@@ -172,6 +172,66 @@ label {
     linear-gradient(180deg, rgb(248 246 239 / 0.92), rgb(232 232 224 / 0.84));
   backdrop-filter: blur(12px) saturate(1.05);
   box-shadow: 0 1px 0 rgb(255 255 255 / 0.62) inset;
+}
+
+.instrument-question {
+  min-width: 0;
+  justify-self: center;
+  color: var(--ink);
+  font-family: var(--display-font);
+  font-size: clamp(1rem, 1.4vw, 1.35rem);
+  font-weight: 720;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-panel {
+  position: relative;
+  justify-self: end;
+  z-index: 5;
+}
+
+.settings-panel > summary,
+.contract-details > summary,
+.dev-drawer > summary,
+.inspect-drawer > summary {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0 11px;
+  background: rgb(255 255 255 / 0.68);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 0.76rem;
+  list-style: none;
+}
+
+.settings-panel > summary::-webkit-details-marker,
+.contract-details > summary::-webkit-details-marker,
+.dev-drawer > summary::-webkit-details-marker,
+.inspect-drawer > summary::-webkit-details-marker {
+  display: none;
+}
+
+.settings-body {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: min(520px, calc(100vw - 36px));
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background:
+    radial-gradient(circle, rgb(45 51 52 / 0.06) 0.9px, transparent 1.2px) 0 0 / 14px 14px,
+    rgb(248 246 239 / 0.96);
+  box-shadow: var(--shadow);
 }
 
 .brand-mark {
@@ -219,6 +279,10 @@ label {
   grid-template-columns: 42px 1fr;
   align-items: center;
   gap: 8px;
+}
+
+.settings-body .api-field {
+  grid-template-columns: 58px 1fr;
 }
 
 .backend-pills {
@@ -1696,8 +1760,22 @@ button.thread-node:hover {
 .specimen-info {
   padding: 16px;
   display: grid;
-  grid-template-rows: 1fr auto;
+  grid-template-rows: auto auto 1fr;
   gap: 12px;
+}
+
+.inspect-drawer {
+  display: grid;
+  gap: 10px;
+}
+
+.inspect-drawer[open] {
+  border-bottom: 1px solid var(--line-soft);
+  padding-bottom: 10px;
+}
+
+.inspect-drawer > summary {
+  width: max-content;
 }
 
 dl {
@@ -1783,6 +1861,22 @@ dd {
   border-top: 1px solid var(--hair);
 }
 
+.annotation-title {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 2px;
+}
+
+.annotation-title strong {
+  color: var(--ink);
+  font-size: 0.9rem;
+}
+
+.annotation-title span {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
 .annotation-panel label {
   display: grid;
   gap: 5px;
@@ -1811,7 +1905,7 @@ dd {
   box-shadow: 0 0 0 3px rgba(53, 194, 180, 0.14);
 }
 
-.annotation-panel label:nth-child(3),
+.annotation-panel label:nth-of-type(3),
 .annotation-save {
   grid-column: 1 / -1;
 }
@@ -2311,6 +2405,20 @@ audio {
 
 .recipe-chip.danger {
   background: linear-gradient(135deg, rgb(243 168 60 / 0.26), rgb(234 74 162 / 0.16));
+}
+
+.contract-details,
+.dev-drawer {
+  display: grid;
+  gap: 8px;
+}
+
+.contract-details > summary,
+.dev-drawer > summary {
+  justify-self: start;
+  min-height: 30px;
+  color: var(--muted);
+  background: rgb(255 255 255 / 0.48);
 }
 
 .spec-coverage {
@@ -3071,13 +3179,14 @@ audio {
 .run-monitor {
   border: 1px solid var(--line);
   border-radius: 8px;
-  padding: 12px;
+  padding: 9px 11px;
   display: grid;
   gap: 10px;
   background:
     linear-gradient(135deg, rgb(255 255 255 / 0.64), rgb(229 230 222 / 0.58)),
     var(--panel);
-  box-shadow: var(--shadow);
+  box-shadow: none;
+  opacity: 0.92;
 }
 
 .run-monitor.busy {

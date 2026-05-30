@@ -56,9 +56,9 @@ describe("Specimen", () => {
 
     await user.click(screen.getByRole("button", { name: "Anchor" }));
     await user.click(screen.getByRole("button", { name: "Source" }));
-    await user.click(screen.getByRole("button", { name: "Replay recipe" }));
-    await user.click(screen.getByRole("button", { name: "Fork recipe" }));
-    await user.click(screen.getByRole("button", { name: "Archive artifact" }));
+    await user.click(screen.getByRole("button", { name: "Do again" }));
+    await user.click(screen.getByRole("button", { name: "Branch" }));
+    await user.click(screen.getByRole("button", { name: "Remember sound" }));
 
     expect(onCompare).toHaveBeenCalledWith("a", "art_take");
     expect(onCompare).toHaveBeenCalledWith("b", "art_take");
@@ -109,7 +109,7 @@ describe("Specimen", () => {
   it("disables archive when the selected artifact is outside the active session", () => {
     renderSpecimen({ artifact: testArtifact({ session_id: null }) });
 
-    expect(screen.getByRole("button", { name: "Archive artifact" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Remember sound" })).toBeDisabled();
   });
 });
 

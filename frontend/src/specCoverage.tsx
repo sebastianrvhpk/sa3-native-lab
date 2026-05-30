@@ -5,7 +5,7 @@ export function SpecCoverage({ spec, controlledKeys }: { spec: OperatorSpec | un
   const coverage = specCoverageSummary(spec, controlledKeys);
   return (
     <div className={`spec-coverage ${coverage.status}`}>
-      <span>{!spec ? "Spec pending" : coverage.missing.length ? `${coverage.missing.length} missing params` : "Spec covered"}</span>
+      <span>{!spec ? "Contract pending" : coverage.missing.length ? `${coverage.missing.length} missing fields` : "Contract covered"}</span>
       <small>
         {spec ? `${coverage.paramCount} params · ${spec.backends.join(", ")} · ${spec.status}` : "waiting for /operators/specs"}
       </small>
@@ -25,7 +25,7 @@ export function SpecCoveragePair({
   const readySpecs = specs.filter(Boolean) as OperatorSpec[];
   return (
     <div className={`spec-coverage ${coverage.status}`}>
-      <span>{readySpecs.length !== specs.length ? "Spec pending" : coverage.missing.length ? `${coverage.missing.length} missing params` : "Spec covered"}</span>
+      <span>{readySpecs.length !== specs.length ? "Contract pending" : coverage.missing.length ? `${coverage.missing.length} missing fields` : "Contract covered"}</span>
       <small>{readySpecs.length ? `${coverage.paramCount} params · encode/decode` : "waiting for /operators/specs"}</small>
       {coverage.missing.length ? <em title={coverage.missing.join(", ")}>{coverage.missing.slice(0, 4).join(", ")}</em> : null}
     </div>

@@ -10,6 +10,7 @@ import {
   GitFork,
   LoaderCircle,
   Play,
+  Settings,
   SlidersHorizontal,
   Upload,
   Wand2,
@@ -641,19 +642,29 @@ export function App() {
             <span>{healthData?.artifact_root ?? ".sa3_lab"}</span>
           </div>
         </div>
-        <div className="api-field">
-          <label htmlFor="api-base">API</label>
-          <input id="api-base" value={apiBase} onChange={(event) => setApiBase(event.target.value)} />
-        </div>
-        <BackendPills backends={healthData?.backends ?? []} />
+        <div className="instrument-question">What do you want to do with this sound next?</div>
+        <details className="settings-panel">
+          <summary>
+            <Settings size={17} />
+            Settings
+          </summary>
+          <div className="settings-body">
+            <div className="api-field">
+              <label htmlFor="api-base">API</label>
+              <input id="api-base" value={apiBase} onChange={(event) => setApiBase(event.target.value)} />
+            </div>
+            <BackendPills backends={healthData?.backends ?? []} />
+            <ReadinessPanel checks={readinessChecks} />
+          </div>
+        </details>
       </header>
 
       <section className="bench-grid">
         <aside className="source-rail">
           <div className="rail-head">
             <div>
-              <span className="eyebrow">Source</span>
-              <strong>{visibleArtifacts.length} session artifacts</strong>
+              <span className="eyebrow">Sources</span>
+              <strong>{visibleArtifacts.length} session materials</strong>
             </div>
             <label className="icon-button" title="Import audio">
               <Upload size={18} />
@@ -679,8 +690,8 @@ export function App() {
         <section className={`operator-surface ${selectedArtifact ? "has-selection" : "idle"}`}>
           <div className="surface-head">
             <div>
-              <span className="eyebrow">Listening Bench</span>
-              <h1>{selectedArtifact ? artifactName(selectedArtifact) : "No artifact selected"}</h1>
+              <span className="eyebrow">Current Sound</span>
+              <h1>{selectedArtifact ? artifactName(selectedArtifact) : "No sound selected"}</h1>
             </div>
             {selectedArtifact ? <ArtifactBadge artifact={selectedArtifact} /> : null}
           </div>
@@ -719,9 +730,12 @@ export function App() {
             <div className="band">
               <div className="band-title">
                 <Wand2 size={18} />
-                <span>Generate</span>
+                <span>Make / Continue</span>
               </div>
-              <SpecCoverage spec={activeGenerateSpec} controlledKeys={generationControlKeys(generationMode)} />
+              <details className="contract-details">
+                <summary>Inspect contract</summary>
+                <SpecCoverage spec={activeGenerateSpec} controlledKeys={generationControlKeys(generationMode)} />
+              </details>
               <div className="segmented">
                 {generationModes.map((mode) => (
                   <button key={mode.value} className={generationMode === mode.value ? "active" : ""} onClick={() => setGenerationMode(mode.value)}>
@@ -741,7 +755,7 @@ export function App() {
               {generationNeedsSource && !generationSource ? <div className="quiet-panel compact">Select an audio artifact to use this mode.</div> : null}
               <button className="primary-action" onClick={() => generate.mutate()} disabled={!canGenerate || generate.isPending || Boolean(generateJob)}>
                 {generate.isPending || generateJob ? <LoaderCircle className="spin" size={18} /> : <Play size={18} />}
-                {generateJob ? "MLX running" : generate.isPending ? "Queueing" : "Run MLX"}
+                {generateJob ? "Making take" : generate.isPending ? "Queueing take" : generationMode === "generate.text_to_audio" ? "Make sound" : "Continue sound"}
               </button>
               <InlineJobStatus
                 job={generateJob}
@@ -753,9 +767,12 @@ export function App() {
             <div className="band">
               <div className="band-title">
                 <AudioLines size={18} />
-                <span>SAME</span>
+                <span>Encode / Decode</span>
               </div>
-              <SpecCoveragePair specs={[sameEncodeSpec, sameDecodeSpec]} controlledKeys={[sameEncodeControlKeys, sameDecodeControlKeys]} />
+              <details className="contract-details">
+                <summary>Inspect contract</summary>
+                <SpecCoveragePair specs={[sameEncodeSpec, sameDecodeSpec]} controlledKeys={[sameEncodeControlKeys, sameDecodeControlKeys]} />
+              </details>
               <RecipeFields
                 config={activeSameConfig}
                 form={sameForm}
@@ -785,11 +802,11 @@ export function App() {
             <div className="band operator-band">
               <div className="band-title">
                 <SlidersHorizontal size={18} />
-                <span>Operator Studio</span>
+                <span>Latent Gestures</span>
               </div>
               <div className="recipe-mode-grid operator-mode-grid">
                 <label>
-                  Transform
+                  Latent move
                   <select value={operator} onChange={(event) => selectOperatorMode(event.target.value as LatentOperatorMode)}>
                     {operatorModes.map((item) => (
                       <option key={item.value} value={item.value}>
@@ -801,7 +818,10 @@ export function App() {
                 <span className={`recipe-chip ${activeOperatorConfig.maturity}`}>{activeOperatorConfig.family}</span>
                 <span className={`recipe-chip ${activeOperatorConfig.maturity}`}>{activeOperatorConfig.maturity}</span>
               </div>
-              <SpecCoverage spec={activeOperatorSpec} controlledKeys={fieldKeys(activeOperatorConfig)} />
+              <details className="contract-details">
+                <summary>Inspect contract</summary>
+                <SpecCoverage spec={activeOperatorSpec} controlledKeys={fieldKeys(activeOperatorConfig)} />
+              </details>
               <OperatorPresetRack
                 presets={activeOperatorPresets}
                 selectedPreset={selectedOperatorPreset}
@@ -840,7 +860,7 @@ export function App() {
               />
               <button className="primary-action" disabled={!canRunOperator || runOperator.isPending || Boolean(operatorJob)} onClick={() => selectedArtifact && runOperator.mutate(selectedArtifact)}>
                 {runOperator.isPending || operatorJob ? <LoaderCircle className="spin" size={18} /> : <GitFork size={17} />}
-                {operatorJob ? "Fork running" : "Fork latent"}
+                {operatorJob ? "Gesture running" : "Apply gesture"}
               </button>
               <InlineJobStatus
                 job={operatorJob}
@@ -852,11 +872,11 @@ export function App() {
             <div className="band experiment-band">
               <div className="band-title">
                 <FlaskConical size={18} />
-                <span>Recipe Studio</span>
+                <span>Advanced Gestures</span>
               </div>
               <div className="recipe-mode-grid">
                 <label>
-                  Mode
+                  Experiment
                   <select value={experimentMode} onChange={(event) => selectExperimentMode(event.target.value as ExperimentMode)}>
                     {experimentModes.map((item) => (
                       <option key={item.value} value={item.value}>
@@ -868,7 +888,10 @@ export function App() {
                 <span className={`recipe-chip ${activeExperiment.maturity}`}>{activeExperiment.family}</span>
                 <span className={`recipe-chip ${activeExperiment.maturity}`}>{activeExperiment.maturity}</span>
               </div>
-              <SpecCoverage spec={activeExperimentSpec} controlledKeys={fieldKeys(activeExperiment)} />
+              <details className="contract-details">
+                <summary>Inspect contract</summary>
+                <SpecCoverage spec={activeExperimentSpec} controlledKeys={fieldKeys(activeExperiment)} />
+              </details>
               {activeExperiment.value === "experiment.prompt_search" ? (
                 <PromptSearchPresetRack
                   presets={promptSearchPresets}
@@ -893,14 +916,17 @@ export function App() {
               />
               <button className="primary-action" disabled={!canRunExperiment || runExperiment.isPending || Boolean(experimentJob)} onClick={() => runExperiment.mutate()}>
                 {runExperiment.isPending || experimentJob ? <LoaderCircle className="spin" size={18} /> : <Play size={18} />}
-                {experimentJob ? "Recipe running" : "Run recipe"}
+                {experimentJob ? "Gesture running" : "Run gesture"}
               </button>
               <InlineJobStatus
                 job={experimentJob}
                 onCancelJob={(job) => cancelJobMutation.mutate(job.job_id)}
                 onRetryJob={(job) => retryJobMutation.mutate(job.job_id)}
               />
-              <ModeAtlas modes={modeAtlasRows} activeOperator={activeExperiment.value} />
+              <details className="dev-drawer">
+                <summary>Developer mode map</summary>
+                <ModeAtlas modes={modeAtlasRows} activeOperator={activeExperiment.value} />
+              </details>
             </div>
           </div>
         </section>
@@ -908,12 +934,18 @@ export function App() {
         <aside className="result-rail">
           <div className="rail-head">
             <div>
-              <span className="eyebrow">Result Family</span>
-              <strong>{sessionResultFamilies.length} families</strong>
+              <span className="eyebrow">Takes / Branches</span>
+              <strong>{sessionResultFamilies.length} branches</strong>
             </div>
             <Activity size={19} />
           </div>
-          <ReadinessPanel checks={readinessChecks} />
+          <AuditionStackPanel
+            artifacts={sessionArtifacts}
+            selectedId={selectedArtifact?.artifact_id ?? null}
+            apiBase={apiBase}
+            onSelect={selectArtifact}
+            onCompare={setCompare}
+          />
           {forkTarget ? (
             <ForkRecipePanel
               recipe={forkTarget}
@@ -981,18 +1013,14 @@ export function App() {
             onRetryJob={(job) => retryJobMutation.mutate(job.job_id)}
           />
           <ComparePanel a={compareA} b={compareB} apiBase={apiBase} />
-          <AuditionStackPanel
-            artifacts={sessionArtifacts}
-            selectedId={selectedArtifact?.artifact_id ?? null}
-            apiBase={apiBase}
-            onSelect={selectArtifact}
-            onCompare={setCompare}
-          />
-          <div className="mini-counts">
-            <span><FileAudio size={15} /> {audioArtifacts.length}</span>
-            <span><Braces size={15} /> {latentArtifacts.length}</span>
-            <span><Box size={15} /> {bundleArtifacts.length}</span>
-          </div>
+          <details className="dev-drawer">
+            <summary>Material counts</summary>
+            <div className="mini-counts">
+              <span><FileAudio size={15} /> {audioArtifacts.length}</span>
+              <span><Braces size={15} /> {latentArtifacts.length}</span>
+              <span><Box size={15} /> {bundleArtifacts.length}</span>
+            </div>
+          </details>
         </aside>
       </section>
     </main>

@@ -59,7 +59,7 @@ describe("SessionTray", () => {
 
     const activeRow = screen.getByText("Active Take").closest("article");
     expect(activeRow).not.toBeNull();
-    await user.click(within(activeRow as HTMLElement).getByRole("button", { name: "Archive" }));
+    await user.click(within(activeRow as HTMLElement).getByRole("button", { name: "Remember" }));
 
     const archivedRow = screen.getByText("Archived Take").closest("article");
     expect(archivedRow).not.toBeNull();
@@ -75,7 +75,7 @@ describe("SessionTray", () => {
       jobs: [testJob({ job_id: "job_running", status: "running", progress: 0.3 })],
     });
 
-    expect(screen.getByTitle("Archive this session and start a clean one")).toBeDisabled();
+    expect(screen.getByTitle("Remember this session and start a clean one")).toBeDisabled();
     expect(screen.getAllByTestId("job-job_running")).toHaveLength(2);
   });
 

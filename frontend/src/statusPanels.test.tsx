@@ -38,8 +38,8 @@ describe("status panels", () => {
 
     render(<RunMonitor runningJobs={[job]} latestJob={job} eventing onCancelJob={onCancelJob} onRetryJob={vi.fn()} />);
 
-    expect(screen.getByText("1 active job")).toBeInTheDocument();
-    expect(screen.getByText("live events")).toBeInTheDocument();
+    expect(screen.getByText("1 pending take")).toBeInTheDocument();
+    expect(screen.getByText("live progress")).toBeInTheDocument();
     expect(screen.getByText("diffusing")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Cancel" }));

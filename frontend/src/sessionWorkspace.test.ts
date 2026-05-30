@@ -88,7 +88,7 @@ describe("session workspace model", () => {
 
     expect(workspaceFocus(summary)).toEqual({
       label: "Recover take",
-      detail: "selected from archive",
+      detail: "selected from memory",
       tone: "recover",
     });
   });

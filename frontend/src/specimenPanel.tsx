@@ -102,24 +102,28 @@ export function Specimen({
         />
       </div>
       <div className="specimen-info">
-        <dl>
-          <div>
-            <dt>ID</dt>
-            <dd>{artifact.artifact_id}</dd>
-          </div>
-          <div>
-            <dt>Lineage</dt>
-            <dd>{artifact.source_artifact_ids.length || 0}</dd>
-          </div>
-          <div>
-            <dt>Recipe</dt>
-            <dd>{artifact.recipe_id ?? "source"}</dd>
-          </div>
-          <div>
-            <dt>Shape</dt>
-            <dd>{artifactShape(artifact)}</dd>
-          </div>
-        </dl>
+        <details className="inspect-drawer">
+          <summary>Inspect</summary>
+          <dl>
+            <div>
+              <dt>ID</dt>
+              <dd>{artifact.artifact_id}</dd>
+            </div>
+            <div>
+              <dt>Lineage</dt>
+              <dd>{artifact.source_artifact_ids.length || 0}</dd>
+            </div>
+            <div>
+              <dt>Recipe</dt>
+              <dd>{artifact.recipe_id ?? "source"}</dd>
+            </div>
+            <div>
+              <dt>Shape</dt>
+              <dd>{artifactShape(artifact)}</dd>
+            </div>
+          </dl>
+          <ArtifactVitals artifact={artifact} />
+        </details>
         <div className="specimen-actions">
           <button disabled={artifact.kind !== "audio"} onClick={() => onCompare("a", artifact.artifact_id)}>
             Anchor
@@ -129,32 +133,32 @@ export function Specimen({
           </button>
           <button
             type="button"
-            aria-label="Replay recipe"
+            aria-label="Do again"
             disabled={!artifact.recipe_id}
             onClick={() => {
               if (artifact.recipe_id) onReplayRecipe(artifact.recipe_id);
             }}
-            title="Replay recipe"
+            title="Do this gesture again"
           >
             <Repeat size={17} />
           </button>
           <button
             type="button"
-            aria-label="Fork recipe"
+            aria-label="Branch"
             disabled={!artifactRecipe}
             onClick={() => {
               if (artifactRecipe) onForkRecipe(artifactRecipe);
             }}
-            title="Fork recipe"
+            title="Branch from this gesture"
           >
             <GitFork size={17} />
           </button>
           <button
             type="button"
-            aria-label="Archive artifact"
+            aria-label="Remember sound"
             disabled={!canArchiveArtifact || archivingArtifactId === artifact.artifact_id}
             onClick={() => onArchiveArtifact(artifact)}
-            title="Archive artifact"
+            title="Move this sound to memory"
           >
             <Archive size={17} />
           </button>
@@ -162,7 +166,6 @@ export function Specimen({
             <Download size={17} />
           </a>
         </div>
-        <ArtifactVitals artifact={artifact} />
         <ArtifactAnnotationPanel artifact={artifact} saving={annotating} onSave={onAnnotate} />
       </div>
     </div>
@@ -254,6 +257,10 @@ function ArtifactAnnotationPanel({
 
   return (
     <div className="annotation-panel">
+      <div className="annotation-title">
+        <strong>Remember this sound</strong>
+        <span>name, tag, and note what matters</span>
+      </div>
       <label>
         Label
         <input value={label} onChange={(event) => setLabel(event.target.value)} placeholder="keeper, brittle, needs graft..." />

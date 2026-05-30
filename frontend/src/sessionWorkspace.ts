@@ -107,7 +107,7 @@ export function workspacePulseRows(summary: SessionWorkspaceSummary): WorkspaceP
     },
     {
       key: "jobs",
-      label: "Jobs",
+      label: "Gestures",
       value: summary.activeJobs ? String(summary.activeJobs) : String(summary.sessionJobs),
       detail: summary.activeJobs ? `${summary.runningJobs} running, ${summary.queuedJobs} queued` : `${summary.succeededJobs} done, ${summary.failedJobs} failed`,
       tone: "job",
@@ -121,9 +121,9 @@ export function workspacePulseRows(summary: SessionWorkspaceSummary): WorkspaceP
     },
     {
       key: "archive",
-      label: "Archive",
+      label: "Memory",
       value: String(summary.archiveItems),
-      detail: `${summary.archivedArtifacts} artifacts, ${summary.archivedJobs} jobs`,
+      detail: `${summary.archivedArtifacts} materials, ${summary.archivedJobs} gestures`,
       tone: "archive",
     },
   ];
@@ -147,7 +147,7 @@ export function workspaceFocus(summary: SessionWorkspaceSummary): WorkspaceFocus
   if (summary.selectedInArchive) {
     return {
       label: "Recover take",
-      detail: "selected from archive",
+      detail: "selected from memory",
       tone: "recover",
     };
   }
@@ -161,8 +161,8 @@ export function workspaceFocus(summary: SessionWorkspaceSummary): WorkspaceFocus
   }
   if (summary.takes >= 12 && summary.activeJobs === 0) {
     return {
-      label: "Archive ready",
-      detail: `${summary.takes} active artifacts can be cleared into a new session`,
+      label: "Memory ready",
+      detail: `${summary.takes} active materials can move into a new session`,
       tone: "archive",
     };
   }

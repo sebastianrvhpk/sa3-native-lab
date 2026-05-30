@@ -49,7 +49,7 @@ export function AuditionStackPanel({
     >
       <div className="audition-stack-head">
         <div>
-          <span className="eyebrow">Audition</span>
+          <span className="eyebrow">Takes</span>
           <strong>{position}</strong>
         </div>
         <label className="audition-sequence">

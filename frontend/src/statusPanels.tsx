@@ -32,7 +32,7 @@ export function RunMonitor({
     return (
       <div className="run-monitor idle">
         <div>
-          <span className="eyebrow">Run Monitor</span>
+          <span className="eyebrow">Take Status</span>
           <strong>Ready</strong>
         </div>
         <span className="monitor-state">idle</span>
@@ -45,10 +45,10 @@ export function RunMonitor({
     <div className={`run-monitor ${busy ? "busy" : "idle"}`}>
       <div className="run-monitor-head">
         <div>
-          <span className="eyebrow">Run Monitor</span>
-          <strong>{busy ? `${runningJobs.length} active job${runningJobs.length === 1 ? "" : "s"}` : "Last run"}</strong>
+          <span className="eyebrow">Take Status</span>
+          <strong>{busy ? `${runningJobs.length} pending take${runningJobs.length === 1 ? "" : "s"}` : "Last take"}</strong>
         </div>
-        <span className={`monitor-state ${eventing ? "live" : ""}`}>{busy ? (eventing ? "live events" : "running") : latestJob?.status ?? "idle"}</span>
+        <span className={`monitor-state ${eventing ? "live" : ""}`}>{busy ? (eventing ? "live progress" : "making") : latestJob?.status ?? "idle"}</span>
       </div>
       <div className="monitor-jobs">
         {monitorJobs.map((job) => (

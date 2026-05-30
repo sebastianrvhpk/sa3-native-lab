@@ -11,11 +11,11 @@ describe("SpecCoverage", () => {
     });
 
     const view = render(<SpecCoverage spec={spec} controlledKeys={["prompt", "duration_seconds", "seed"]} />);
-    expect(screen.getByText("Spec covered")).toBeInTheDocument();
+    expect(screen.getByText("Contract covered")).toBeInTheDocument();
     expect(screen.getByText("4 params · mlx · implemented")).toBeInTheDocument();
 
     view.rerender(<SpecCoverage spec={spec} controlledKeys={["prompt"]} />);
-    expect(screen.getByText("2 missing params")).toBeInTheDocument();
+    expect(screen.getByText("2 missing fields")).toBeInTheDocument();
     expect(screen.getByText("duration_seconds, seed")).toBeInTheDocument();
   });
 
@@ -32,10 +32,10 @@ describe("SpecCoverage", () => {
     });
 
     const view = render(<SpecCoveragePair specs={[encode, undefined]} controlledKeys={[["model", "chunked"], []]} />);
-    expect(screen.getByText("Spec pending")).toBeInTheDocument();
+    expect(screen.getByText("Contract pending")).toBeInTheDocument();
 
     view.rerender(<SpecCoveragePair specs={[encode, decode]} controlledKeys={[["model", "chunked"], ["model"]]} />);
-    expect(screen.getByText("1 missing params")).toBeInTheDocument();
+    expect(screen.getByText("1 missing fields")).toBeInTheDocument();
     expect(screen.getByText("notes")).toBeInTheDocument();
   });
 });

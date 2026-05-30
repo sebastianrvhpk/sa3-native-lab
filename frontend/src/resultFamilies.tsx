@@ -31,7 +31,7 @@ export function ResultFamilyPanel({
   onForkRecipe: (recipe: Recipe) => void;
 }) {
   if (!families.length) {
-    return <div className="quiet-panel compact">No result families yet</div>;
+    return <div className="quiet-panel compact">No branches yet</div>;
   }
   const artifactMap = new Map(artifacts.map((artifact) => [artifact.artifact_id, artifact]));
   return (
@@ -63,17 +63,17 @@ export function ResultFamilyPanel({
             </div>
             <MetricChips metrics={family.metrics} />
             <DecisionSummary artifacts={familyArtifacts} />
-            <button type="button" className="family-replay" onClick={() => onInspectFamily(family.familyId)} title="Inspect family artifacts and jobs">
+            <button type="button" className="family-replay" onClick={() => onInspectFamily(family.familyId)} title="Inspect branch takes and progress">
               <Search size={14} />
               Inspect
             </button>
             <button type="button" className="family-replay" onClick={() => onReplayRecipe(family.recipeId)} title="Replay family recipe">
               <Repeat size={14} />
-              Replay
+              Do again
             </button>
             <button type="button" className="family-replay" onClick={() => onForkRecipe(family.recipe)} title="Fork family recipe">
               <GitFork size={14} />
-              Fork
+              Branch
             </button>
           </article>
         );
@@ -118,7 +118,7 @@ export function FamilyDetailPanel({
   onArchiveArtifact: (artifact: ArtifactRecord) => void;
 } & JobActionHandlers) {
   if (!family) {
-    return <div className="quiet-panel compact">No family selected</div>;
+    return <div className="quiet-panel compact">No branch selected</div>;
   }
   const artifactMap = new Map(artifacts.map((artifact) => [artifact.artifact_id, artifact]));
   const familyArtifacts = sortNewest(family.artifactIds.map((artifactId) => artifactMap.get(artifactId)).filter((artifact): artifact is ArtifactRecord => Boolean(artifact)));
@@ -132,7 +132,7 @@ export function FamilyDetailPanel({
     <section className="family-detail">
       <div className="family-detail-head">
         <div>
-          <span className="eyebrow">Family Detail</span>
+          <span className="eyebrow">Branch</span>
           <strong>{familyTitle(family)}</strong>
         </div>
         <span className={`family-status ${family.status}`}>{family.status}</span>
@@ -156,11 +156,11 @@ export function FamilyDetailPanel({
       <div className="family-detail-actions">
         <button type="button" onClick={() => onReplayRecipe(family.recipeId)}>
           <Repeat size={14} />
-          Replay
+          Do again
         </button>
         <button type="button" onClick={() => onForkRecipe(family.recipe)}>
           <GitFork size={14} />
-          Fork
+          Branch
         </button>
       </div>
       {sweepEntries.length ? (
@@ -194,10 +194,10 @@ export function FamilyDetailPanel({
                     <button type="button" onClick={() => onCompare("b", artifact.artifact_id)}>Source</button>
                     <button
                       type="button"
-                      aria-label="Archive artifact"
+                      aria-label="Remember sound"
                       disabled={!activeSessionId || artifact.session_id !== activeSessionId || archivingArtifactId === artifact.artifact_id}
                       onClick={() => onArchiveArtifact(artifact)}
-                      title="Archive artifact"
+                      title="Move this sound to memory"
                     >
                       <Archive size={13} />
                     </button>
@@ -215,7 +215,7 @@ export function FamilyDetailPanel({
         <details className="family-job-drawer">
           <summary>
             <Gauge size={14} />
-            Jobs
+            Gesture history
             <span>{familyJobs.length}</span>
           </summary>
           <div className="family-job-list">
@@ -261,12 +261,10 @@ function familyTitle(family: ResultFamily) {
 }
 
 function familyMeta(family: ResultFamily) {
-  const artifactWord = family.familyId.startsWith("prompt-candidates:")
-    ? `take${family.artifactIds.length === 1 ? "" : "s"}`
-    : `artifact${family.artifactIds.length === 1 ? "" : "s"}`;
+  const artifactWord = `take${family.artifactIds.length === 1 ? "" : "s"}`;
   const runWord = family.familyId.startsWith("prompt-candidates:")
     ? `generation${family.jobIds.length === 1 ? "" : "s"}`
-    : `run${family.jobIds.length === 1 ? "" : "s"}`;
+    : `gesture${family.jobIds.length === 1 ? "" : "s"}`;
   return `${family.artifactIds.length} ${artifactWord} · ${family.jobIds.length} ${runWord}`;
 }
 

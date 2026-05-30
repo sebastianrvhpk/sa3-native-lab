@@ -9,26 +9,27 @@ const page = await browser.newPage({ viewport: { width: 1440, height: 960 } });
 try {
   await page.goto(baseUrl, { waitUntil: "networkidle", timeout: 30000 });
   await expect(page.getByText("SA3 Native Lab", { exact: true })).toBeVisible();
+  await expect(page.getByText("What do you want to do with this sound next?")).toBeVisible();
+  await expect(page.locator(".surface-head .eyebrow", { hasText: "Current Sound" })).toBeVisible();
   if (expectedApiBase) {
+    await page.locator("summary", { hasText: "Settings" }).click();
     await expect(page.getByRole("textbox", { name: "API" })).toHaveValue(expectedApiBase);
   }
-  await expect(page.locator(".surface-head .eyebrow", { hasText: "Listening Bench" })).toBeVisible();
-  await expect(page.getByText("Spec covered").first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Save annotation" })).toBeVisible();
   await page.getByRole("button", { name: "A2A" }).click();
   await expect(page.getByText("Init noise")).toBeVisible();
-  await expect(page.getByText("Spec covered").first()).toBeVisible();
+  await page.locator(".band", { hasText: "Make / Continue" }).locator("summary", { hasText: "Inspect contract" }).click();
+  await expect(page.getByText("Contract covered").first()).toBeVisible();
   await page.getByRole("button", { name: "Inpaint" }).click();
   await expect(page.getByText("Inpaint start")).toBeVisible();
-  await expect(page.getByText("Spec covered").first()).toBeVisible();
   await page.locator(".experiment-band select").first().selectOption("memory.query");
   await expect(page.getByText("Top K")).toBeVisible();
   await expect(page.getByRole("button", { name: /Play|Pause/ }).first()).toBeVisible();
   await expect(page.getByRole("slider", { name: "Audio position" }).first()).toBeVisible();
   await expect(page.getByRole("button", { name: "New" })).toBeVisible();
   await expect(page.getByRole("searchbox", { name: "Filter takes" })).toBeVisible();
-  await expect(page.locator("summary", { hasText: "Archive" })).toBeVisible();
-  await page.locator("summary", { hasText: "Archive" }).click();
+  await expect(page.locator("summary", { hasText: "Memory" })).toBeVisible();
+  await page.locator("summary", { hasText: "Memory" }).click();
   await expect(page.getByRole("combobox", { name: "Filter kind" })).toBeVisible();
   console.log(JSON.stringify({ ok: true, title: await page.title(), url: page.url() }));
 } finally {
