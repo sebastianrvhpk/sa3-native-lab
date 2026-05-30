@@ -31,12 +31,12 @@ play something real.
 | --- | --- | --- |
 | Paper grain and folds | Research notebook / local lab surface | Global page background and panel texture. |
 | Gradient cells | Parameterized controls, operators, presets, bundle affordances | Recipe fields, operator controls, prompt-search tools, bundle workflow chips. |
-| Dark bordered modules | Executable surfaces or inspectable artifact groups | Operator Studio, Recipe Studio, specimen surface, audition stack, result families. |
+| Dark bordered modules | Executable surfaces or inspectable material groups | Tune drawer, specimen surface, audition stack, branches, Memory shelf. |
 | Thin grey lines | Real lineage, source relationships, or low-priority lab-surface flow | Source -> gesture -> take -> memory/branch relationships; subtle non-interactive workbench background only. |
 | Nodes / dots | Source/take/decision branch points | Data-backed lineage rows, decision memory, prompt history, branch points, anchors. |
 | Transport wheel | Playback or macro execution control | AudioDeck play button only for now. |
 | Rainbow waveform lane | Perceptual listening axis | AudioDeck WaveSurfer surface, persisted markers, draggable loop region, and compact audition playback. |
-| Grid clusters | Mode/operator families or dense parameter sets | RecipeFields, Operator Studio, prompt search presets. |
+| Grid clusters | Mode/gesture families or dense parameter sets | RecipeFields, Tune controls, prompt search presets. |
 | Hand labels | Human annotation and experiment labels | Eyebrows, rail heads, chips, small metadata labels. |
 
 ## Visual Semantics
@@ -51,8 +51,8 @@ play something real.
 
 ## Layout Rules
 
-- The first viewport should teach the actual instrument: current sound,
-  gestures, takes, and memory.
+- The first viewport should teach the actual instrument: Current Sound,
+  Gestures, Pending Takes, Branch / Remember / Tune, and Memory.
 - The current sound and playback surface remain the main focal objects.
 - Runtime/readiness state should stay available but visually subordinate.
 - Dense modules are acceptable when controls remain readable and stable.
@@ -105,7 +105,7 @@ Near-horizon additions should remain conditional:
 - Text remains readable on desktop and mobile.
 - Flow styling does not imply unavailable routing.
 - Play and audition controls become more visually central.
-- Prompt, latent, and recipe controls feel like gestures rather than generic
-  forms.
+- Prompt, latent, and recipe controls feel like gesture-specific Tune controls
+  rather than generic forms.
 - Strong visual routes can be audited against actual source/gesture/take/branch
   data.

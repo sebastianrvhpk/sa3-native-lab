@@ -64,7 +64,7 @@ progressive disclosure.
   job state, listening decisions, archive volume, and the next real focus
   action. Archive artifacts can be recovered into the active session through a
   tested annotation/session reassignment path.
-- The listening bench now has a tested recent-take playlist cursor and local
+- The listening surface now has a tested recent-take playlist cursor and local
   waveform markers in addition to playback, loop, and decision controls.
   The player now supports marker deletion, relabeling after deletion, loop-edge
   nudging, marker notes, sequence-aware audition navigation, persisted playback
@@ -129,10 +129,13 @@ progressive disclosure.
 
 ### Current Maturity
 
-The app is in a strong runtime-prototype phase but a weak product-interface
-phase. It can run meaningful workflows and preserve useful provenance, but the
-visible app still feels too much like an engineering dashboard. The next work is
-an interface rescue, not more visible feature parity.
+The app is in a strong runtime-prototype phase and now has a credible
+product-interface loop. It can run meaningful workflows, preserve useful
+provenance, and expose the first-use path as Current Sound -> Gesture -> Pending
+Take -> Listen -> Branch / Remember / Tune. The next work is not visible Colab
+parity; it is sharpening listening review, Memory browsing, branch actions, and
+gesture orchestration without letting backend precision dominate the first
+screen again.
 
 The main engineering challenge is not choosing the stack. The stack direction is
 sound. The main challenge is translating backend precision into a creative

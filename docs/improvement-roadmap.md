@@ -3,10 +3,10 @@
 This roadmap is a code-grounded triage queue for turning the current Colab
 migration into a stronger local AI sound instrument.
 
-The immediate product direction is now governed by
-`docs/product-rescue-brief.md`: stop exposing parity as the primary UI, remove
-CLAP from product language, remove or reframe A/B comparison, and organize the
-app around current sound, gestures, takes, branches, tuning, and memory.
+The immediate product direction is governed by `docs/product-rescue-brief.md`.
+The rescue pass has landed: the primary loop is now Current Sound -> Gesture ->
+Pending Take -> Listen -> Branch / Remember / Tune. This roadmap now tracks
+what should happen after that loop, not the old dashboard cleanup.
 
 For the consolidated current-state, engineering-health, test-posture, and
 definition-of-done document, see `docs/implementation-readiness.md`.
@@ -14,29 +14,34 @@ definition-of-done document, see `docs/implementation-readiness.md`.
 For the broader stack direction and promotion triggers, see
 `docs/architecture-horizon.md`.
 
-## P0: Interface Rescue
+## P0: Product Loop Follow-Through
 
-1. Correct product language.
-   Replace primary UI/docs language that centers artifacts, jobs, operators,
-   result families, A/B, scorers, and specs. The visible app should lead with
-   sound, take, gesture, source, anchor, memory, branch, tune, and inspect.
+1. Keep the first-use smoke as the product-health gate.
+   `npm run smoke:first-use --prefix frontend` now protects Current Sound,
+   Gestures, Make, Tune, pending/failed take language, Next actions, Remember,
+   Branch, Memory reuse as Source/Anchor, recovery, Settings/Inspect demotion,
+   desktop/mobile screenshots, and mobile overflow.
 
-2. Remove CLAP from product language.
-   CLAP is not part of the current repo's useful creative path and should not
-   appear as a queued option or roadmap promise in the app-facing language.
+2. Harden next-action semantics.
+   The current `Next` model covers audio, latent, bundle, pending/failed take,
+   and branch states. The next pass should add branch-card component tests and
+   validate more bundle-to-gesture promotions as inspectors mature.
 
-3. Remove or reframe A/B.
-   The app should not ask which result wins. It should let the user pin anchors,
-   remember material, branch takes, and reuse sources.
+3. Expand Memory as a creative shelf.
+   Active Memory reuse exists for Source, Anchor, donor, prompt seed, existing
+   Advanced Gesture bundle paths, and recovery. Next, add role/reuse-intent
+   filters and a fuller Memory browser before any vector retrieval work.
 
-4. Rebuild first-screen hierarchy.
-   Current sound, takes, and gestures should dominate. Readiness, specs, raw
-   jobs, API settings, and mode parity should move behind settings or inspect
-   drawers.
+4. Improve the take strip into a listening queue.
+   The app already has recent/lineage/open sequencing, playback decisions,
+   markers, loop regions, Remember, Branch, and Continue paths. The next work is
+   keep/maybe/reject review flow, continue-from-selected, and branch listening,
+   not decorative timelines.
 
-5. Attach progress to pending takes.
-   Jobs remain the backend contract, but the user should see a take being made
-   beside the sound, with cancel/retry/logs available from that pending take.
+5. Extract orchestration only when the contract is clear.
+   `App.tsx` still owns gesture state, form state, submit actions, and mutation
+   side effects. Extract a `useGestureWorkbench` only after Memory, Branch,
+   Pending Take, and Tune semantics survive another pass.
 
 ## P1: Trust And Runability
 
@@ -66,7 +71,7 @@ For the broader stack direction and promotion triggers, see
    The UI can fork recipe params, backend, model, seed, and notes with visible
    deltas plus reset controls. Backend `ui_fields` now provide defaults,
    bounds, options, required flags, artifact-kind hints, and advanced flags for
-   Operator Studio and Recipe Studio. Select options, whole-number controls,
+   latent gesture Tune and Advanced Gestures/Tune. Select options, whole-number controls,
    and alpha lists have first-pass validation. Next, make more complex controls
    fully schema-driven without losing the custom instrument layout.
 
@@ -83,20 +88,20 @@ For the broader stack direction and promotion triggers, see
    archive/recovery. Next playback work should add explicit playlist/session
    sequencing.
 
-2. Deepen result-family views for sweeps.
-   Recipe families now appear with metrics, a detail panel, per-result playback,
+2. Deepen branch views for sweeps.
+   Recipe families now appear as branches with a detail panel, per-result playback,
    replay, fork actions, and a compact sweep metric
    table with sort controls, branch highlighting, and durable
    keeper/maybe/reject listening decisions on playable artifacts. Sibling
    alpha-sweep families are now compared in the family detail panel when they
    share a vector bundle or prompt. Session/archive filters now surface saved
-   decisions by decision, kind, model, operator, family, tag, text, and source
+   decisions by decision, kind, model, gesture, branch, tag, text, and source
    lineage. Prompt-search takes now expose first-pass target-vs-take descriptor
    deltas plus a decision-study summary over keeper/maybe/reject annotations;
    prompt memory now groups generated prompt-candidate decisions across runs.
    Prompt-search bundles also summarize generated takes across search runs by
    method, mode, model, duration, prompt variety, and listening decisions. Next
-   they need richer sweep-family and layer/alpha branch views. Recipe Studio now
+   they need richer sweep-family and layer/alpha branch views. Advanced Gestures/Tune now
    also has prompt-search presets for Mode 2 hard-token search, Mode 3 readable
    prompt search, and a small Medium flow-score check, with active cost
    guidance visible before the heavier probe is selected. It also has
@@ -104,26 +109,27 @@ For the broader stack direction and promotion triggers, see
    from previous generated takes, so Mode 2/3 prompt exploration is no longer
    only a raw parameter form.
 
-3. Presets for Operator Studio.
+3. Latent presets.
    Browser-local named presets now exist for blur, DSP, graft, renoise, and
    cyclic roll. They can be saved, updated, selected, and deleted per operator
    mode. Selected presets show parameter and donor-latent diffs with a revert
    action. Next, promote useful presets into backend recipe history before
    adding a heavier database-backed preset library.
 
-4. Artifact filtering and tagging.
+4. Artifact filtering, memory roles, and tagging.
    Labels, tags, notes, keeper/maybe/reject listening decisions, archive search,
    archive-and-new session cleanup, and typed local recovery filters are now
-   implemented. The filter pass covers decision, kind, model, operator, result
-   family, source lineage, text, and tag. Next recovery work should add date and
-   job status filters only if actual archive volume makes them useful.
+   implemented. The filter pass covers decision, kind, model, gesture, branch,
+   source lineage, text, and tag. Memory annotations now include role, reuse
+   intent, and decision metadata. Next recovery work should add role/reuse
+   filters before date or job-status filters.
 
 5. Better bundle readers.
    Bundle file inventory, JSON previews, memory-result reuse, and first-pass
    typed readers now exist. The backend now parses JSON/NPZ bundle summaries
    and promotes metric scalars plus plot/image files into reader rows. Bundle
    cards can now route profiles, vectors, directions, soft prompts, memory
-   folders, prompt-search candidates, and LoRA checkpoints into Recipe Studio,
+   folders, prompt-search candidates, and LoRA checkpoints into Advanced Gestures/Tune,
    and discovered image plots plus embedded audio files render through the
    bundle-file endpoint. Embedded bundle audio can now be promoted into normal
    audio artifacts. Prompt-search bundles now show probe metadata, compact
@@ -161,7 +167,7 @@ For the broader stack direction and promotion triggers, see
    prompt-search branch and can be played, marked keeper/maybe/rejected with
    notes, and described through lightweight target/take descriptor deltas. They can also be
    summarized through a decision-study panel, grouped into prompt memory across
-   runs, and recovered later through decision/model/operator/family filters. The
+   runs, and recovered later through decision/model/gesture/branch filters. The
    next research step is richer layer/alpha comparison and runtime-cost notes.
 
 5. Geometry and control probes.
@@ -238,7 +244,7 @@ For the broader stack direction and promotion triggers, see
    `App.tsx` is now a composition root: configs, workbench model helpers,
    specimen, session tray, compare, mode atlas, audition stack, prompt-search
    rack, operator presets, readiness/status panels, spec coverage, playback,
-   result families, recipe forks, and bundle inspection are split out. Next
+   branch/result-family views, recipe forks, and bundle inspection are split out. Next
    extraction targets are the generation/SAME/operator/recipe action bands, but
    only after their state and handler contracts can be named cleanly. Storybook
    and MSW scenarios are now justified for the extracted panels.
@@ -249,7 +255,11 @@ For each pass:
 
 - Run `uv run pytest`.
 - Run `npm run build --prefix frontend`.
+- Run `npm run test --prefix frontend -- --run`.
 - Run `npm run test --prefix apps/control-plane`.
+- Run `npm run smoke:first-use --prefix frontend` for product-loop changes.
+- Run `npm run smoke:playback-session --prefix frontend` for listening/session
+  changes.
 - Run `git diff --check`.
 - Smoke the local app at `http://127.0.0.1:5173/`, preferably with
   `uv run sa3-lab dev --with-control-plane` when changing app-shaped reads.

@@ -1,6 +1,7 @@
 # SA3 Native Lab
 
-This repository is a combined Colab/research workspace:
+This repository is a combined Colab/research workspace and local Mac-native AI
+sound instrument:
 
 - official Stable Audio 3 source package in `stable_audio_3/`
 - SAME/SA3 native latent-memory, steering, and prompt-inversion primitives in `latent_audio_primitives/`
@@ -8,11 +9,20 @@ This repository is a combined Colab/research workspace:
 - research scripts in `scripts/`
 - current experimental math notes in `docs/research/`
 
-The goal is exploratory research over native SA3/SAME spaces, not a finished product.
+The current app goal is to make SA3 Medium + SAME-L playable:
+
+```text
+Current Sound -> Gesture -> Pending Take -> Listen -> Branch / Remember / Tune
+```
+
+The repo is still a research prototype, but the frontend now leads with current
+sound, gestures, takes, branches, memory reuse, Tune, and Inspect rather than a
+visible Colab-parity dashboard.
 
 For the current app-level description and improvement queue, see:
 
 - `docs/app-overview.md`
+- `docs/product-rescue-brief.md`
 - `docs/codebase-review.md`
 - `docs/improvement-roadmap.md`
 - `docs/colab-parity-matrix.md`
@@ -148,6 +158,19 @@ cues through the API, checks archive/recovery, and captures desktop/mobile
 screenshots. Set `SA3_SMOKE_SCREENSHOT_DIR=/path/to/screens` to choose where
 screenshots land.
 
+Run the first-use product-health smoke when changing Current Sound, Gestures,
+Pending Takes, Branch, Remember, Tune, Memory reuse, or primary layout:
+
+```bash
+npm run smoke:first-use --prefix frontend
+```
+
+That script launches temporary API and Vite servers, opens a fixture session in
+Playwright, verifies Current Sound, Gestures, Make, Tune, pending/failed take
+language, Next actions, Remember, Branch, Memory reuse as Source/Anchor,
+recovery, Settings/Inspect demotion, desktop/mobile screenshots, and mobile
+overflow.
+
 The real Medium/MLX smoke is intentionally slow and gated so normal checks do
 not download or sample a gated model by accident:
 
@@ -226,7 +249,8 @@ curl http://127.0.0.1:8733/operators/specs
 `/operators/specs` is now more than an inventory endpoint: each operator also
 returns `ui_fields` with labels, defaults, bounds, select options, artifact-kind
 hints, and required/advanced flags. The React instrument merges those backend
-field contracts into Generate, SAME, Operator Studio, and Recipe Studio, so
+field contracts into Generate, SAME, latent gesture Tune, and Advanced Gestures,
+so
 duration, seed, model, decoder, SAME chunking, sweep, path, and backend params
 stay reachable as the Colab scripts move into native UI.
 
@@ -252,8 +276,8 @@ artifacts when they produce listenable WAVs and zipped bundle artifacts for
 vector/profile outputs and training folders. `experiment.prompt_search` is a
 native recipe today: it keeps a deterministic `lexical_probe` scorer for cheap
 wiring tests and exposes an optional `sa3_flow_probe` scorer that ranks prompts
-with Medium flow losses against a target audio latent. CLAP scoring is still
-queued behind the same explicit scorer contract.
+with Medium flow losses against a target audio latent. CLAP-like scoring appears
+only in research notes/runbooks; it is not part of the current product loop.
 
 Bundle artifacts can be inspected with `/artifacts/{id}/inspect`; embedded audio
 inside a bundle can be streamed through `/artifacts/{id}/bundle-file` or promoted
@@ -272,7 +296,7 @@ curl -X POST http://127.0.0.1:8733/latents/decode \
   -d '{"source_artifact_id":"art_...","model":"same-l","backend":"torch_mps"}'
 ```
 
-### Listening Bench Frontend
+### Instrument Frontend
 
 The first local app slice lives in `frontend/` and talks to the API daemon:
 
@@ -282,20 +306,19 @@ npm install
 npm run dev
 ```
 
-Open the printed Vite URL, normally `http://127.0.0.1:5173`. The first bench
-supports audio import, MLX text generation, SAME encode/decode, latent operator
-jobs, Recipe Studio script experiments, Colab Mode Atlas parity/status, job
-polling plus durable live job replay, job phase labels, cancellation/retry,
-recipe replay/fork editing, recipe diff/reset controls, archive-and-new session
-cleanup, result-family grouping with detail playback, sortable alpha-sweep
-variant promotion and metric tables, durable keeper/maybe/reject listening
-decisions, session/archive recovery filters for decisions, kind, model,
-operator, family, tag, text, and lineage, memory-query result reuse,
-bundle-to-recipe actions, prompt-search decision summaries, Operator Studio
-local presets with visible diffs, prompt-memory grouping, bundle workflow
-signals, backend-parsed typed bundle inspectors, inline bundle plot previews,
-readiness checks, artifact selection, kind-specific artifact vitals, real
-waveform peaks, region looping, download, and A/B audio playback.
+Open the printed Vite URL, normally `http://127.0.0.1:5173`. The app supports
+audio import, MLX text generation, SAME encode/decode, latent gestures, Advanced
+Gestures, schema-derived Tune controls, pending/failed take cards, job phase
+labels, cancellation/retry, recipe replay/branch editing, archive-and-new
+session cleanup, branch grouping with detail playback, sortable alpha-sweep
+variants, durable keeper/maybe/reject listening decisions, session/archive
+filters for decisions, kind, model, gesture, branch, tag, text, and lineage,
+active Memory reuse as Source/Anchor/donor/prompt seed, bundle-to-gesture
+actions, prompt-search decision summaries, local latent presets with visible
+diffs, prompt-memory grouping, bundle workflow signals, backend-parsed typed
+bundle inspectors, inline bundle plot previews, readiness checks, kind-specific
+artifact vitals, real waveform peaks, loop regions, marker notes, download, and
+anchor/source listening slots.
 
 ### Notebook Parity Check
 

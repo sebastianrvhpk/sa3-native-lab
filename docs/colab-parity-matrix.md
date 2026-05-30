@@ -1,15 +1,19 @@
 # Colab Parity Matrix
 
-This matrix is the implementation gate for migrating
-`colab/sa3_same_native_experimental_modes.ipynb` into the local app. It is more
-granular than `docs/colab-capability-map.md`: each row tracks the notebook
-section or mode, the current app surface, missing controls, missing tests, and
-the next action.
+This matrix is the implementation gate for notebook/script capability, not the
+primary product queue. The app product loop now takes priority:
+
+```text
+Current Sound -> Gesture -> Pending Take -> Listen -> Branch / Remember / Tune
+```
+
+Rows below track how `colab/sa3_same_native_experimental_modes.ipynb` maps into
+that instrument without making visible Colab parity the main UI.
 
 Evidence labels:
 
 - `native`: first-class local API/UI behavior exists.
-- `recipe`: reachable through Recipe Studio or `/experiments/run`, but still
+- `recipe`: reachable through Advanced Gestures/Tune or `/experiments/run`, but still
   partly shaped like a script adapter.
 - `partial`: usable pieces exist, but important notebook semantics are missing.
 - `scaffold`: the repo names the path, but the app does not yet own the
@@ -18,11 +22,12 @@ Evidence labels:
 
 ## Priority Rules
 
-P0 work must protect runability and truth: parameters, provenance, progress,
-artifact records, replay/fork, and tests.
+P0 work must protect the product loop and runtime truth: Current Sound,
+Gesture, Pending Take, Listen, Branch, Remember, Tune, parameters, provenance,
+progress, artifact records, replay/branch, and tests.
 
-P1 work makes iteration faster: session organization, playback, comparison,
-bundle-specific inspectors, and decision memory.
+P1 work makes iteration faster: session organization, playback queues, memory
+reuse, branch review, bundle-specific inspectors, and decision memory.
 
 P2 work expands research cognition: memory browsing, latent regions, lineage
 graphs, probes, and prompt/residual comparisons.
@@ -38,21 +43,21 @@ meaning is real.
 | Colab L4 setup | `README.md`, `uv run sa3-lab dev`, `sa3-lab doctor`, MLX install notes | native | Exact HF license/cache-path diagnostics can be richer. | Readiness tests cover current checks, but not license acceptance nuance. | Keep improving `/readiness` before new heavy model paths. |
 | Imports and paths | `.sa3_lab/` artifact root, app storage, sessions | native | Path-based script adapters still expose raw filesystem paths in some places. | Contract tests exist for storage; no path-compatibility matrix yet. | Add path compatibility checks per recipe family. |
 | HF login and model loading | `HF_TOKEN`/HF cache, Medium/SAME-L defaults, readiness panel | native | Safe stderr and command-context preservation still needs hardening. | Token-leak regression tests are missing. | Add safe log-tail sanitizer tests before richer failure logs. |
-| Medium smoke test | `/generate/text`, MLX wrapper, listening bench, `uv run sa3-lab smoke-fixture --json`, `uv run sa3-lab smoke-mlx-medium --json` | native | The real Medium smoke remains intentionally slow and requires `--run` or `SA3_RUN_MLX_SMOKE=1` plus HF auth or local weights. Fixture smoke intentionally avoids that cost. | Fixture smoke and MLX smoke gating/recipe construction are covered by `tests/test_dev_runner.py`; the real model run is a gated manual/CI-slow path. | Keep the fixture smoke cheap; run `SA3_RUN_MLX_SMOKE=1 uv run sa3-lab smoke-mlx-medium --run --duration 1 --steps 2 --json` before model-runtime releases. |
+| Medium smoke test | `/generate/text`, MLX wrapper, Make gesture, Current Sound, `uv run sa3-lab smoke-fixture --json`, `uv run sa3-lab smoke-mlx-medium --json` | native | The real Medium smoke remains intentionally slow and requires `--run` or `SA3_RUN_MLX_SMOKE=1` plus HF auth or local weights. Fixture smoke intentionally avoids that cost. | Fixture smoke and MLX smoke gating/recipe construction are covered by `tests/test_dev_runner.py`; the real model run is a gated manual/CI-slow path. | Keep the fixture smoke cheap; run `SA3_RUN_MLX_SMOKE=1 uv run sa3-lab smoke-mlx-medium --run --duration 1 --steps 2 --json` before model-runtime releases. |
 | Shared helpers | API contracts, artifact store, descriptors, bundle inspection | native | Helpers are spread across runtime/adapters; `RuntimeDispatcher` remains broad. | Existing tests cover many helpers, but not all bundle-specific summaries. | Split adapters when the next mode becomes too hard to test in-place. |
-| Custom Colab audio player | Listening bench, waveform peaks, WaveSurfer zoom, draggable loop regions, persisted playback annotations, decisions, sequence-aware audition stack, waveform markers with notes, marker deletion, loop-edge nudging, artifact landing | partial | The player is now stateful and testable, but deeper region editing, richer session sequencing, and multi-artifact playlist export are still future work. | Unit/component coverage plus `npm run smoke:playback-session --prefix frontend` cover marker notes, loop persistence, annotation persistence, SessionTray artifact archive/recovery, sequence modes, and responsive playback layout. | Promote richer region editing and export only after the current listening loop has more real session use. |
+| Custom Colab audio player | Current Sound, waveform peaks, WaveSurfer zoom, draggable loop regions, persisted playback annotations, decisions, sequence-aware audition stack, waveform markers with notes, marker deletion, loop-edge nudging, artifact landing, Next actions | partial | The player is now stateful and testable, but deeper region editing, richer session sequencing, branch listening, and multi-artifact playlist export are still future work. | Unit/component coverage plus `npm run smoke:playback-session --prefix frontend` and `npm run smoke:first-use --prefix frontend` cover marker notes, loop persistence, annotation persistence, SessionTray artifact archive/recovery, sequence modes, first-use product loop, Memory reuse, and responsive layout. | Promote richer review/queue behavior only after the current listening loop has more real session use. |
 | Dataset and long-file policy | `dataset.pre_encode`, SAME encode/decode, memory query, encoded dataset inspector | partial | Long-file chunking rules are now visible in bundle inspectors when sidecar metadata is present, but richer dataset QA and bad-caption diagnostics are still needed. | Dataset bundle summary and frontend inspector tests cover manifest/sidecar rows; broader chunking/payload tests are still partial. | Add dataset QA warnings for missing prompts, padding, and unusually long/short chunks. |
 
 ## Mode Matrix
 
 | Mode | Notebook intent | Current API/UI surface | Status | Required / advanced parameters | Artifacts and provenance | Missing controls | Missing tests | Next action |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0 | Renoise variation / local neighborhood sampling | `generate.audio_to_audio`, Listening Bench | native | `source_artifact_id`, `prompt`, `duration_seconds`, `init_noise_level`, `steps`, `seed`, `cfg_scale`, `apg_scale`, `model`, `decoder`; rendered by spec-derived generation form | Audio artifact, recipe, source lineage, seed/model params, job phase, artifact landing | Better variation-family comparison and runtime notes | Payload builder and lineage tests exist; family comparison tests mostly cover sweeps, not this mode | Add audio-to-audio family comparison after session model cleanup |
-| 0c | Latent-selective renoise | `latent.renoise`, Operator Studio | native | `source latent`, `mode`, `fraction`, `sigma`, `seed`, `backend` | Latent artifact, recipe, selected-mask metadata | Channel/time mask UI instead of scalar-only controls | Latent-region UI tests missing | P2 latent-region control pass |
-| 0c-search | Annotation retrieval | Artifact annotation, archive filters | native | label, notes, tags, decision metadata, text/tag/model/operator/family filters | Updated artifact metadata and searchable archive | Rating-specific UI is not first-class | Filter tests exist, rating/search tests missing | Add only if ratings become active in workflow |
-| 0e | Cross-audio latent channel graft | `latent.graft`, donor latent picker | native | `source latent`, `donor latent`, `mode`, `fraction`, `amount`, `seed`, `backend` | Latent artifact, source/donor lineage, recipe | Donor preview and channel/time region selection | Donor-region tests missing | P2 latent-region and donor audition pass |
-| 0d | Latent blur playground | `latent.blur`, Operator Studio | native | `mode`, `strength`, backend, selected latent | Latent artifact, recipe | Visual preview of temporal/channel effect | Operator tests exist; perceptual/preview tests missing | Add typed inspector rows for latent transforms |
-| 0h | Neural latent DSP | `latent.dsp`, Operator Studio | native | DSP mode, strength, optional donor, backend | Latent artifact, recipe, operator metadata | Mode-specific controls for FFT/PCA/channel variants | Payload tests cover helpers, not every DSP variant | Expand operator payload tests before richer UI |
+| 0 | Renoise variation / local neighborhood sampling | Continue/Vary gesture, `generate.audio_to_audio` | native | `source_artifact_id`, `prompt`, `duration_seconds`, `init_noise_level`, `steps`, `seed`, `cfg_scale`, `apg_scale`, `model`, `decoder`; rendered by spec-derived Tune form | Audio artifact, recipe, source lineage, seed/model params, job phase, artifact landing | Better variation-family comparison and runtime notes | Payload builder and lineage tests exist; branch comparison tests mostly cover sweeps, not this mode | Add audio-to-audio branch comparison after session model cleanup |
+| 0c | Latent-selective renoise | Morph gesture, `latent.renoise` | native | `source latent`, `mode`, `fraction`, `sigma`, `seed`, `backend` | Latent artifact, recipe, selected-mask metadata | Channel/time mask UI instead of scalar-only controls | Latent-region UI tests missing | P2 latent-region control pass |
+| 0c-search | Annotation retrieval | Artifact annotation, Memory roles/reuse intent, archive filters | native | label, notes, tags, decision metadata, memory role, reuse intent, text/tag/model/gesture/branch filters | Updated artifact metadata and searchable archive/memory shelf | Rating-specific UI is not first-class | Filter tests, memory model tests, SessionTray reuse tests, first-use smoke exist; rating/search tests missing | Add role/reuse-intent filters before ratings |
+| 0e | Cross-audio latent channel graft | Borrow Texture gesture, `latent.graft`, donor latent picker, remembered latent donor reuse | native | `source latent`, `donor latent`, `mode`, `fraction`, `amount`, `seed`, `backend` | Latent artifact, source/donor lineage, recipe | Donor preview and channel/time region selection | Memory donor availability tests exist; donor-region tests missing | P2 latent-region and donor audition pass |
+| 0d | Latent blur playground | Morph gesture, `latent.blur` | native | `mode`, `strength`, backend, selected latent | Latent artifact, recipe | Visual preview of temporal/channel effect | Operator tests exist; perceptual/preview tests missing | Add typed inspector rows for latent transforms |
+| 0h | Neural latent DSP | Morph gesture, `latent.dsp` | native | DSP mode, strength, optional donor, backend | Latent artifact, recipe, operator metadata | Mode-specific controls for FFT/PCA/channel variants | Payload tests cover helpers, not every DSP variant | Expand operator payload tests before richer UI |
 | 0f | Cyclic time-roll loop lab | `latent.cyclic_roll`, MLX inpaint proxy | partial | `shift_frames`, `strength`, `symmetric`, source audio/latent, inpaint range | Latent/audio artifact, recipe | Iterative repair loop and loop-quality comparison | Loop-quality tests missing | Add loop family inspector after playback upgrade |
 | 0g | Cyclic roll inside denoising trajectory | Cyclic latent roll proxy only | scaffold | roll fraction, per-step mix, sampler hooks | Planned sampler trace/audio artifact | True sampler-step intervention | No sampler-level tests | Defer until resident/sampler adapter exists |
 | flow-sign | Flow sign diagnostic | Prompt-search probe and docs mention velocity convention | scaffold | target audio, prompts, convention, timesteps/logSNR | Loss comparison JSON | Native diagnostic recipe and result panel | Diagnostic runtime tests missing | Add after prompt-search branch path matures |
@@ -69,28 +74,26 @@ meaning is real.
 | 10 | Flow-state optimization | None beyond scaffolded helper in notebook | scaffold | target latents/audio, prompt, timestep, LR, steps | Loss curve and optimized flow state | Entire native recipe, safety boundaries | Missing | Defer until prompt-search/flow diagnostics are stable |
 | 11 | Inpainting / continuation composition | `generate.inpaint`, `generate.audio_to_audio` | native | source audio, prompt, duration, seed, range, init noise, model/decoder; rendered by spec-derived generation form | Audio artifact, recipe, source lineage, job phase, artifact landing | Composition timeline and continuation chain view | Generation payload and inpaint contract tests exist; timeline tests missing | Add after playback/timeline upgrade |
 | 12 | LatCH-style control heads | Control-head recipe queued | scaffold | latent memory, descriptor labels, control name, training params | `control_head.pt`, metrics | Label collection, training UI, probe inspector | Missing | P2/P3 after labelled probes exist |
-| 13 | LoRA scaffold | `training.lora` in Recipe Studio | recipe | encoded/raw data, model, steps, rank, adapter, precision, LR, logger, checkpointing | Checkpoint bundle, recipe, logs | Pause/resume, priority, resource scheduling, demo playback | Long-job lifecycle tests partial | Add long-job controls after runtime event hardening |
-| 14 | Latent memory instrument | latent import/encode, dataset pre-encode, `memory.query` | partial | source latent, top K, metric, exclude self, encoded datasets | Memory-result bundle, ranked hits, reuse actions | Dataset browser, preview audio, style/reference promotion | Memory reuse tests first-pass only | P2 memory browser pass |
+| 13 | LoRA scaffold | `training.lora` in Advanced Gestures/Tune | recipe | encoded/raw data, model, steps, rank, adapter, precision, LR, logger, checkpointing | Checkpoint bundle, recipe, logs | Pause/resume, priority, resource scheduling, demo playback | Long-job lifecycle tests partial | Add long-job controls after runtime event hardening |
+| 14 | Latent memory instrument | Memory shelf, active reuse actions, latent import/encode, dataset pre-encode, `memory.query` | partial | source latent, top K, metric, exclude self, encoded datasets, memory role/reuse intent | Memory-result bundle, ranked hits, remembered artifacts, reuse actions, recovery | Dataset browser, preview audio, style/reference promotion, role/reuse filters | Memory model tests, SessionTray reuse tests, first-use smoke exist; memory browser tests missing | P2 memory browser/filter pass |
 | 15 | SAME geometry and intervention audit | `experiment.geometry_audit` over local latents | partial | selected/session latents, components, limit | Geometry report bundle, variance/summary metrics | Periodicity/intervention/control probe panels | Geometry tests cover report path, not intervention UI | Add labelled geometry/control probes later |
 | combined | Audio-derived prompt + residual knob + SAME style push | Chainable manually through recipes | partial | soft prompt, residual vectors, style profile, prompt, alpha/seed/model | Multiple recipes and output artifacts | Macro recipe chain UI and lineage graph | Chain tests missing | Add after session/lineage model is first-class |
 
 ## Immediate Implementation Queue
 
-1. Keep this matrix synchronized with `/colab/modes`.
-2. Add a contract test proving the runtime mode atlas still covers the notebook
-   mode headings and only references known app operators.
-3. Continue playback-composer behavior with marker notes, richer playlist
-   sequencing, and browser-level tests. WaveSurfer zoom, draggable loop regions,
-   annotation persistence, SessionTray artifact archive/recovery,
-   and marker/loop persistence now have committed browser coverage. Mode 2/3
-   presets, probe-cost notes, generated-take run-comparison rows, vocabulary
-   sets, axis sets, and prompt history now exist; custom save/share for
-   vocabulary and axes can wait until backend preset history exists.
-4. Expand session/workspace/archive modeling from workspace pulse and artifact
-   recovery into archive review, replay/fork from archive, and long-session
-   cleanup flows before Postgres so the persistence schema stores the right
-   product objects.
-5. Keep enriching mode-specific bundle inspectors. First domain cards exist for
+1. Keep this matrix synchronized with `/colab/modes`, but do not let parity
+   inventory dominate the first screen.
+2. Keep `npm run smoke:first-use --prefix frontend` and
+   `npm run smoke:playback-session --prefix frontend` as the browser gates for
+   product-loop and listening/session behavior.
+3. Add branch-card action tests and expand `Next` action coverage where bundle
+   inspectors expose real use paths.
+4. Build the Memory browser/filter pass over the existing annotation metadata:
+   role, reuse intent, tags, notes, kind, source, decision, and branch.
+5. Continue playback queue behavior with keep/maybe/reject, remember, branch,
+   continue-from-selected, and branch trajectory listening before timeline or
+   region-export work.
+6. Keep enriching mode-specific bundle inspectors. First domain cards exist for
    sweeps, memory hits, vector NPZs, soft-prompt tensors, and training
    checkpoints; profile and geometry workflows need the next domain pass.
 
@@ -106,9 +109,11 @@ A mode is complete when all of the following are true:
 - It produces typed artifacts or a clearly marked no-output diagnostic state.
 - Outputs can be inspected, replayed, forked, archived, and reused where
   applicable.
-- If the mode produces artifacts asynchronously, the workbench can land on the
-  produced artifact when the successful job reports artifact IDs.
-- The UI exposes the operation as an instrument workflow, not just a file list.
+- If the mode produces artifacts asynchronously, the workbench can represent it
+  as a pending/failed/landed take and land on the produced artifact when the
+  successful job reports artifact IDs.
+- The UI exposes the operation as an instrument workflow, not just a file list
+  or script-parity panel.
 - At least one backend or contract test and one frontend/helper/UI-state test
   protects the path.
 

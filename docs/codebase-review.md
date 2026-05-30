@@ -2,7 +2,8 @@
 
 This is a lightweight review pass over the current local-app migration. It is
 not a security audit; it focuses on architecture, runability, model defaults,
-and the next risks for turning the Colab experiments into a proper app.
+and the next risks for turning the Colab experiments into a playable local
+sound instrument.
 
 ## What Is Working
 
@@ -16,42 +17,51 @@ and the next risks for turning the Colab experiments into a proper app.
   and errors are persisted.
 - Artifacts carry useful metadata: kind, file info, audio metadata, latent
   shape/rate, source artifact IDs, recipe ID, tags, and freeform metadata.
-- The frontend is no longer just a generic dashboard, but it still needs the
-  interface rescue described in `docs/product-rescue-brief.md`. It has a
-  listening bench, Operator Studio, Recipe Studio, Mode Atlas, job rail,
-  artifact rail, waveform peaks, region-loop playback, result-family
-  inspection, memory-hit reuse, archive-and-new sessions, and alpha-sweep
-  controls plus recipe fork diff/reset controls.
+- The frontend has completed the product-loop rescue described in
+  `docs/product-rescue-brief.md`: Current Sound, Gesture, Pending Take, Listen,
+  Branch / Remember / Tune. It has a gesture strip, scoped Tune drawer, Next
+  actions, pending/failed take cards, active Memory reuse, branch-language UI,
+  waveform peaks, loop-region playback, marker notes, archive/recovery, and
+  branch editing plus recipe diff/reset controls.
 - A first TypeScript tRPC control plane exists in `apps/control-plane`; it owns
   app-shaped workbench reads plus job lifecycle, recipe, artifact, family, and
   archive procedures plus durable-journal-aware job-event subscriptions while
   Python remains the model/runtime worker.
-- Audio playback, artifact display, job progress, result families, recipe fork
-  editing, and bundle inspection are now split out of `App.tsx`.
+- Audio playback, artifact display, job progress, branch/result-family views,
+  recipe fork editing, bundle inspection, memory actions, next actions, pending
+  landing, and Tune grouping are now split out of `App.tsx`.
 - Medium/SAME-L is now the default path across app contracts, runtime fallbacks,
   frontend defaults, README commands, docs, and tests.
 - Backend operator specs now include `ui_fields`, and the frontend merges those
-  fields into Operator Studio and Recipe Studio so bounds, defaults, options,
+  fields into latent gesture Tune and Advanced Gestures/Tune so bounds, defaults, options,
   required fields, artifact-kind hints, and backend choices are visible.
 - Job progress cards now classify running phases and common failures instead
   of leaving the user with only a raw status.
 - Bundle inspection promotes JSON/NPZ summaries, metric scalars, and plot/image
-  discovery into typed reader rows. Reusable bundles can now populate Recipe
-  Studio fields directly. Inline image plots now render from bundle artifacts,
+  discovery into typed reader rows. Reusable bundles can now populate existing
+  Advanced Gesture fields directly. Inline image plots now render from bundle artifacts,
   and alpha sweep families have sortable metrics and branch highlighting.
   Embedded bundle audio can be promoted into a
   first-class audio artifact, and prompt-search bundles are parsed into native
   probe rows, candidate-family previews, generated-take decision summaries,
   prompt memory, workflow-signal chips, and prompt reuse actions.
-- Operator Studio now has browser-local presets for repeatable latent operator
+- Latent gestures now have browser-local presets for repeatable latent operator
   explorations, plus selected-preset diffs for changed params and donor latents.
   This is useful immediately even before presets become durable backend records.
+- The first-use browser smoke is committed as the product-health gate for
+  Current Sound, Gestures, Make, Tune, Pending Takes, Next actions, Remember,
+  Branch, Memory reuse/recovery, Settings/Inspect demotion, screenshots, and
+  mobile overflow.
 
 ## Important Risks
 
 - Frontend field schemas are still partly duplicated in TypeScript. The new
   backend `ui_fields` merge reduces drift, but the static catalogs still carry
   layout, copy, and some hand-shaped controls.
+- `App.tsx` still owns orchestration across active gesture, form state, submit
+  action, selected/pending take, and mutation side effects. Extract a named
+  gesture-workbench hook only after Memory, Branch, Pending Take, and Tune
+  semantics settle.
 - Live job event transport now has a tRPC/SSE bridge with heartbeat and
   resume-aware IDs plus Python job-journal replay. The live source is still
   polling, so a future stream source would reduce latency and load.
@@ -91,9 +101,10 @@ and the next risks for turning the Colab experiments into a proper app.
    `runtime_mlx.py`, `runtime_same.py`, `runtime_latent.py`, and
    `runtime_scripts.py`.
 
-4. Add payload-building tests for the frontend.
-   Test default forms, donor modes, advanced params, number-list parsing, and
-   Recipe Studio payloads.
+4. Keep expanding product-model and payload tests.
+   Current coverage includes memory action availability, next-action mapping,
+   pending take landing, Tune field grouping, and focused panel tests. Next add
+   branch-card action tests and more bundle-to-gesture reuse coverage.
 
 5. Add artifact inspectors.
    Extend current audio/latent/bundle vitals and inline plot previews into
@@ -108,12 +119,11 @@ and the next risks for turning the Colab experiments into a proper app.
    Document what runs on M1/MPS/MLX, what is realistic on CPU, and what remains
    CUDA/Colab-oriented.
 
-## Verification Used In This Pass
+## Recent Verification Baseline
 
-- Searched model/default usage across app, runtime, frontend, tests, README,
-  and MLX scripts.
-- Added a default-model test for `medium`/`same-l`.
-- Ran the Python test suite.
-- Ran the frontend production build.
-- Ran the control-plane contract tests.
-- Checked whitespace with `git diff --check`.
+- `npm run test --prefix frontend -- --run`
+- `npm run build --prefix frontend`
+- `npm run smoke:playback-session --prefix frontend`
+- `npm run smoke:first-use --prefix frontend`
+- `uv run pytest`
+- `git diff --check`

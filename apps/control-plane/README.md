@@ -28,9 +28,13 @@ set. `GET /health` is available for the dev runner.
 ## Current Procedures
 
 `workbench.load` aggregates health, sessions, artifacts, jobs, the mode atlas,
-and operator specs into one UI-ready workbench state. It intentionally contains
-app logic such as active-session resolution, archive/session grouping, running
-job filtering, result-family grouping, and readiness summaries.
+operator specs, and result-family records into one UI-ready workbench state.
+The frontend currently presents those records as branches and owns product-layer
+models for Memory reuse, Next actions, Pending Take landing, Branch summaries,
+and Tune field grouping. `workbench.load` intentionally contains app logic such
+as active-session resolution, archive/session grouping, running job filtering,
+result-family grouping, and readiness summaries without replacing the Python
+runtime.
 
 The control plane also exposes:
 

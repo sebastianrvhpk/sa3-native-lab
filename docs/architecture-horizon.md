@@ -126,7 +126,11 @@ and branch state contracts are clean enough to name without hiding complexity.
 - Do not make both DuckDB and Polars primary. Use DuckDB for local queries first
   and Polars for Python dataframe pipelines when the need is concrete.
 
-## Next Promotion Candidates
+## Deferred Promotion Candidates
+
+This is not the active product queue. The current implementation queue lives in
+`docs/implementation-readiness.md`; these tools should be promoted only when the
+triggers above become concrete.
 
 1. React Aria Components for accessible controls.
 2. MSW for mocked API/tRPC component states after the current fixture helpers

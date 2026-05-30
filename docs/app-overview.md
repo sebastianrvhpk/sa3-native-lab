@@ -95,7 +95,7 @@ crowded session. Playback markers and loop regions persist as artifact
 annotations under `metadata.playback_state`, so listening cues survive reloads,
 replay/fork work, and session/archive movement. Archived artifacts can now be
 recovered into the active session through the archive drawer; active artifacts
-can also be archived directly from the specimen, session tray, and result-family
+can also be archived directly from the specimen, session tray, and branch
 surfaces. Both flows use the annotation contract to move `session_id` and record
 source/target session metadata.
 
@@ -192,7 +192,7 @@ prompt candidates, memory hits, sweep variants, tensors, checkpoints, and
 geometry stats. Reusable bundle types expose native Advanced Gesture actions such
 as use as profile, sweep vectors, use direction, use prompt in sweep, use soft
 prompt, use memory, and use checkpoint. Prompt-search bundles expose candidate
-prompts as a small listening bench: a candidate can be used as the main
+prompts as a small take strip: a candidate can be used as the main
 generation prompt, sent to an alpha sweep, or rendered as MLX audio with lineage
 back to the bundle. Generated candidate takes appear inline beside the prompt,
 can be played immediately and marked keeper/maybe/rejected with optional
@@ -273,11 +273,11 @@ Confirmed in the current codebase:
   tags, durable keeper/maybe/reject listening decisions, artifact kind, model,
   gesture, branch, and source lineage.
 - tRPC workbench, readiness, job lifecycle, recipe replay/fork, artifact
-  inspection, result-family procedures, and job-event subscriptions are
+  inspection, branch/result-family procedures, and job-event subscriptions are
   implemented behind the control-plane launch flag.
 - The frontend has durable job-event replay through the control plane, a
   readiness panel, a recipe fork
-  editor with diffs and resets, result-family detail playback, memory-result
+  editor with diffs and resets, branch detail playback, memory-result
   reuse actions, alpha-sweep variant promotion with a compact metric table,
   metric sorting, branch highlighting, bundle-to-recipe reuse actions, job
   phase labels, artifact landing after successful jobs, job recovery hints,
@@ -319,7 +319,7 @@ Still partial:
   summaries, first-pass metrics/plot discovery, embedded image/audio rendering,
   recipe-input actions, workflow hints, and first-pass domain item cards, but
   still need richer domain-specific controls for each bundle type.
-- Memory-query bundles expose preview rows and donor/A-B reuse actions, but
+- Memory-query bundles expose preview rows and donor reuse actions, but
   still need richer dataset browsing, preview audio for non-local children, and
   style-reference promotion.
 - Playback is now beyond the basic browser player, with playlist navigation,

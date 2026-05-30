@@ -26,11 +26,12 @@ The app is not a Colab parity dashboard, benchmark lab, operator catalog, job
 queue, artifact database, or A/B evaluator. Those concepts may remain in the
 implementation, but they should not be the first product language.
 
-## Product Diagnosis
+## Original Product Diagnosis
 
-The current app has a reasonably healthy code split and useful local runtime
-contracts, but the visible interface is still organized around engineering
-objects:
+This was the diagnosis before the rescue and priority-queue product-loop
+passes. The app already had a reasonably healthy code split and useful local
+runtime contracts, but the visible interface was still organized around
+engineering objects:
 
 - artifacts
 - jobs
@@ -43,9 +44,10 @@ objects:
 - scorer choices
 - backend readiness
 
-That makes the app feel like a control room for experiments instead of an
-instrument for creative exploration. The backend can keep its precision. The
-front of the app needs a different grammar.
+That made the app feel like a control room for experiments instead of an
+instrument for creative exploration. The backend could keep its precision, but
+the front of the app needed a different grammar. The later sections in this
+brief describe the current product-loop state after that rescue work landed.
 
 ## New Object Model
 
@@ -164,9 +166,9 @@ Advanced controls stay available through progressive disclosure:
 Advanced does not mean hidden forever. It means the user chooses to tune after
 understanding the gesture.
 
-## Concepts To Remove Or Reframe
+## Original Concepts Removed Or Reframed
 
-| Current concept | Decision | Replacement |
+| Original concept | Decision | Replacement |
 | --- | --- | --- |
 | CLAP | Delete from product language | No replacement until a compatible, useful workflow exists |
 | A/B comparison | Delete as primary model | Anchors, pinned sources, memory, take strip |
@@ -180,9 +182,9 @@ understanding the gesture.
 | Best candidate | Remove evaluative framing | Interesting take / remembered take / branch highlight |
 | Archive | Reframe | Memory shelf |
 
-## Element-By-Element Audit
+## Original Element-By-Element Audit
 
-| Current visible element | Decision | Target behavior |
+| Original visible element | Decision | Target behavior |
 | --- | --- | --- |
 | Brand/header | Keep, simplify | Brand plus compact local status; API field moves to settings |
 | Backend pills | Move behind readiness | Status dot/popover unless setup is broken |
@@ -328,7 +330,7 @@ The backend can keep precise nouns, but the UI should translate them:
 
 ## Migration Plan
 
-### Current status after first-screen rescue
+### Historical status after first-screen rescue
 
 As of the first interface rescue implementation pass, slices 1 and 2 are
 partially implemented in the app:
@@ -343,17 +345,16 @@ partially implemented in the app:
 - CLAP and A/B are not product-facing concepts; remaining mentions in this
   document describe the audit history and migration rationale.
 
-Still open:
+Resolved or superseded by later passes:
 
-- A real gesture strip/tuning drawer should replace the remaining form-heavy
-  action wall.
-- Running jobs should become pending takes inside the take/branch flow instead
-  of relying on a compact global status strip.
-- Memory and anchors need deeper reuse actions, not just better names.
-- The visual motif should keep getting closer to source -> gesture -> take ->
-  memory relationships instead of decorative dashboard framing.
+- A real gesture strip/tuning drawer now exists.
+- Running jobs now appear as pending/failed takes in the take/branch flow.
+- Memory now has active source, anchor, donor, prompt seed, bundle reuse, and
+  recovery actions where existing backend paths support them.
+- The visual motif now maps more directly to Current Sound -> Gesture -> Take
+  -> Branch/Memory relationships.
 
-### Current status after gesture model pass
+### Historical status after gesture model pass
 
 The app now has frontend product-domain models for `Gesture` and `PendingTake`.
 The primary action area is no longer four simultaneous panels for generation,
@@ -368,19 +369,15 @@ Selecting a gesture reveals a scoped Tune surface backed by the existing
 schema-driven form and payload builders. Raw contract/spec and mode atlas
 details remain reachable through Inspect rather than being first-order product
 controls. Job records are translated into pending/failed take cards in the
-Takes / Branches flow, while the compact global Take Status remains only a
-safety/status strip.
+Takes / Branches flow, while raw activity is demoted behind Inspect activity.
 
-Still open:
+Resolved or superseded by the priority-queue product loop:
 
-- Gesture selection is now real, but deeper gesture chaining is not: a finished
-  take should suggest the next useful gestures from its kind, source, and
-  lineage.
-- Memory is still mostly archive/recovery plus anchors. It needs reuse actions
-  such as use as source, donor, prompt seed, or branch context where the
-  backend already supports those paths.
-- Tune is scoped to one gesture, but some gestures still expose dense
-  parameter sets inherited from backend/script forms.
+- Finished takes now suggest useful next gestures from their artifact kind and
+  context.
+- Memory has active reuse actions for source, donor, prompt seed, bundle paths,
+  and recovery where the backend already supports those paths.
+- Tune now has primary/advanced/inspect grouping for the main active gestures.
 - Pending takes currently translate jobs in the UI; the tRPC/workbench control
   plane should eventually return pending-take-shaped state directly.
 
@@ -417,6 +414,11 @@ The product-health browser gate is now
 `npm run smoke:first-use --prefix frontend`. It verifies the first-use path,
 Memory reuse, recovery, Branch, Remember, Settings/Inspect demotion, desktop and
 mobile screenshots, and mobile overflow.
+
+### Historical Rescue Slices
+
+These slices describe the path already taken. The current queue lives in
+`docs/implementation-readiness.md`.
 
 ### Slice 1: Language correction
 

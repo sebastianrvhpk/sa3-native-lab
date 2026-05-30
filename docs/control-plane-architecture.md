@@ -28,7 +28,7 @@ Python runtime data and shapes it into the state the instrument actually needs:
 - sessions and active session
 - session artifacts and archive artifacts
 - session jobs, archive jobs, running jobs, latest job
-- result families and latest family metrics
+- result-family records that the frontend presents as branches
 - mode atlas and operator specs
 - selected artifact fallback
 - artifact/job/mode counts
@@ -51,21 +51,26 @@ diagnostics, and log tails.
 When the env var is absent, the frontend falls back to the existing direct
 Python read queries, Python mutations, and Python job WebSockets.
 
-On the UI side, result families are now treated as app objects. The product
-rescue should present them as branches: inspect related takes, play audio,
-show related jobs, surface alpha-sweep variants from sortable metric rows, and
-branch the recipe with visible diffs. Memory-query bundle hits can also feed
-app actions when they resolve to local artifacts. Bundle inspection now includes
+On the UI side, result families are now legacy contract records that the product
+surface presents as branches: inspect related takes, play audio, show related
+jobs behind Inspect, surface alpha-sweep variants from sortable metric rows, and
+branch the recipe with visible diffs. Memory is now an active reuse shelf:
+remembered audio/latent/bundle artifacts can become Source, Anchor, donor,
+prompt seed, existing Advanced Gesture input, or recovered material when the
+backend already supports the path. Bundle inspection now includes
 backend-parsed summaries for
 JSON/NPZ outputs, metric scalars, plot/image discovery, and inline image plot
-rendering in addition to file inventory. Reusable bundles can populate Recipe
-Studio fields for vectors, directions, profiles, memory folders, soft prompts,
-and LoRA checkpoints. Operator specs also carry backend-derived `ui_fields`,
+rendering in addition to file inventory. Reusable bundles can populate
+Advanced Gesture fields for vectors, directions, profiles, memory folders, soft
+prompts, and LoRA checkpoints. Operator specs also carry backend-derived `ui_fields`,
 which React merges into the hand-shaped instrument forms. Generate and SAME
 encode/decode now use the same schema-driven form path, so their payloads are
 built from field contracts rather than separate hard-coded controls.
 Successful job events can also land the React workbench on the newest produced
 artifact when the Python worker reports artifact IDs.
+The frontend currently owns product-shaped Memory, Next Action, Pending Take
+Landing, Branch Summary, and Tune Field Group models. Promote those shapes into
+tRPC only when server-side shaping removes real frontend complexity.
 
 The local runner can launch the full path:
 
@@ -119,10 +124,10 @@ Future responsibilities:
    the durable journal replay contract.
 2. Promote archive annotation/search mutations to the normal UI path.
 3. Move more bounded fork and recipe forms onto backend-derived `ui_fields`.
-   Generate, SAME, Operator Studio, and Recipe Studio already use this path;
+   Generate, SAME, latent gesture Tune, and Advanced Gestures/Tune already use this path;
    the next remaining form surface is fork/replay editing.
-4. Promote family detail and memory-result actions into tRPC procedures where
-   they need server-side shaping beyond `workbench.load`.
-5. Add richer family-specific inspectors for sweeps, memory query bundles, and
+4. Promote branch detail, memory reuse, and next-action state into tRPC
+   procedures only where they need server-side shaping beyond `workbench.load`.
+5. Add richer branch-specific inspectors for sweeps, memory query bundles, and
    style profile bundles now that embedded image plot previews exist.
 6. Evaluate Postgres only after these procedures stabilize.
