@@ -71,6 +71,8 @@ describe("bundle inspector summaries", () => {
     expect(sections).toContainEqual({
       title: "Vectors",
       rows: [
+        ["shape", undefined],
+        ["source pair", undefined],
         ["best layer", 4],
         ["accuracy", "0.812"],
         ["examples", undefined],
@@ -98,6 +100,8 @@ describe("bundle inspector summaries", () => {
         results: [{ artifact_id: "art_neighbor", score: 0.91, kind: "latent" }],
       },
       vectors: {
+        positive_path: "sets/bright",
+        negative_path: "sets/dark",
         npz_files: [
           {
             path: "direction.npz",
@@ -106,7 +110,7 @@ describe("bundle inspector summaries", () => {
           },
         ],
       },
-      soft_prompt: { tensor_files: ["optim/soft_prompt.pt"] },
+      soft_prompt: { tensor_files: ["optim/soft_prompt.pt"], final_loss: 0.1234, optimization_steps: 80, generated_audio_path: "optim/test.wav" },
       training: { checkpoint_files: ["runs/lora_adapter.safetensors", "runs/checkpoint-20.pt"] },
     });
 
@@ -116,12 +120,19 @@ describe("bundle inspector summaries", () => {
     expect(sections.find((section) => section.title === "Memory")?.items).toEqual([
       { label: "art_neighbor", meta: "score 0.91 · latent" },
     ]);
+    expect(sections.find((section) => section.title === "Vectors")?.rows).toContainEqual(["shape", "64x128"]);
+    expect(sections.find((section) => section.title === "Vectors")?.rows).toContainEqual(["source pair", "bright / dark"]);
     expect(sections.find((section) => section.title === "Vectors")?.items).toEqual([
       { label: "direction.npz", meta: "LatentStyleDirection · direction 64x128" },
     ]);
     expect(sections.find((section) => section.title === "Soft Prompt")?.items).toEqual([
       { label: "soft_prompt.pt", meta: "conditioning tensor" },
     ]);
+    expect(sections.find((section) => section.title === "Soft Prompt")?.rows).toEqual(expect.arrayContaining([
+      ["loss", "0.123"],
+      ["steps", 80],
+      ["test audio", "test.wav"],
+    ]));
     expect(sections.find((section) => section.title === "Training")?.items).toEqual([
       { label: "lora_adapter.safetensors", meta: "LoRA adapter" },
       { label: "checkpoint-20.pt", meta: "checkpoint" },
@@ -163,6 +174,8 @@ describe("bundle inspector summaries", () => {
         ],
       },
       profile: {
+        source_path: "memory/target",
+        reference_path: "memory/reference",
         profiles: [
           {
             path: "profile.npz",
@@ -184,6 +197,9 @@ describe("bundle inspector summaries", () => {
       rows: [
         ["items", 2],
         ["latents", 2],
+        ["prompt coverage", "1/2"],
+        ["missing captions", 1],
+        ["chunk warnings", undefined],
         ["metadata", 2],
         ["prompts", 1],
         ["model", "same-l"],
@@ -202,6 +218,8 @@ describe("bundle inspector summaries", () => {
         ["profiles", 1],
         ["items", 5],
         ["dims", "64"],
+        ["source", "target"],
+        ["reference", "reference"],
       ],
       files: ["profile.npz"],
       items: [{ label: "target", meta: "dim 64 · 5 items · mean 64, std 64" }],
@@ -265,6 +283,7 @@ describe("bundle inspector summaries", () => {
     expect(bundleDomainSections({ geometry: { latent_count: 4, n_components: 3, kept_variance_fraction: 0.934 } })).toContainEqual({
       title: "Geometry",
       rows: [
+        ["maturity", "experimental"],
         ["path", undefined],
         ["latents", 4],
         ["candidates", undefined],
@@ -327,6 +346,8 @@ describe("bundle inspector summaries", () => {
       rows: [
         ["prompt", "warm granular loop"],
         ["score", "0.82"],
+        ["probe cost", "2 flow samples"],
+        ["risk", "Medium probe"],
         ["mode", "beam"],
         ["scorer", "sa3_flow_probe"],
         ["model-backed", "yes"],

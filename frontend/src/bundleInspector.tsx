@@ -386,6 +386,9 @@ export function bundleDomainSections(summary: Record<string, unknown> | undefine
       rows: [
         ["items", dataset.item_count],
         ["latents", dataset.latent_count],
+        ["prompt coverage", datasetPromptCoverage(dataset)],
+        ["missing captions", datasetMissingCaptions(dataset)],
+        ["chunk warnings", datasetChunkWarnings(dataset)],
         ["metadata", dataset.metadata_count],
         ["prompts", dataset.prompt_count],
         ["model", dataset.model],
@@ -405,6 +408,8 @@ export function bundleDomainSections(summary: Record<string, unknown> | undefine
     const vectorSection: BundleDomainSection = {
       title: "Vectors",
       rows: [
+        ["shape", primaryVectorShape(vectors)],
+        ["source pair", vectorSourcePair(vectors)],
         ["best layer", vectors.best_layer],
         ["accuracy", formatMaybeNumber(vectors.probe_accuracy)],
         ["examples", vectors.example_count],
@@ -430,6 +435,7 @@ export function bundleDomainSections(summary: Record<string, unknown> | undefine
     sections.push({
       title: "Geometry",
       rows: [
+        ["maturity", "experimental"],
         ["path", geometry.path],
         ["latents", geometry.latent_count],
         ["candidates", geometry.candidate_count],
@@ -454,6 +460,8 @@ export function bundleDomainSections(summary: Record<string, unknown> | undefine
       rows: [
         ["prompt", promptSearch.prompt],
         ["score", formatMaybeNumber(promptSearch.score)],
+        ["probe cost", promptSearchProbeCost(promptSearch)],
+        ["risk", promptSearchRisk(promptSearch)],
         ["mode", promptSearch.search_mode],
         ["scorer", promptSearch.scorer],
         ["model-backed", formatBoolean(promptSearch.model_backed)],
@@ -475,6 +483,8 @@ export function bundleDomainSections(summary: Record<string, unknown> | undefine
           ["profiles", profiles.length],
           ["items", sumNumeric(profiles, "item_count")],
           ["dims", uniqueValues(profiles.map((item) => item.dim)).join(", ") || undefined],
+          ["source", profileSource(profile)],
+          ["reference", profileReference(profile)],
         ],
         files: profiles.map((item) => String(item.path ?? "")).filter(Boolean),
         items: profiles.slice(0, 6).map((item) => ({
@@ -490,6 +500,8 @@ export function bundleDomainSections(summary: Record<string, unknown> | undefine
           ["path", item.path],
           ["dim", item.dim],
           ["items", item.item_count],
+          ["source", profileSource(item)],
+          ["reference", profileReference(item)],
           ["arrays", formatArrayShapes(objectValue(item.arrays))],
         ],
       });
@@ -511,6 +523,9 @@ export function bundleDomainSections(summary: Record<string, unknown> | undefine
     sections.push({
       title: "Soft Prompt",
       rows: [
+        ["loss", softPromptLoss(softPrompt)],
+        ["steps", softPromptSteps(softPrompt)],
+        ["test audio", basename(softPromptTestPath(softPrompt))],
         ["tensors", tensorFiles.length || undefined],
         ["primary", basename(tensorFiles[0])],
       ],
@@ -1071,6 +1086,27 @@ function datasetItemMeta(item: Record<string, unknown>) {
   return [prompt, source, chunk, duration, rate].filter(Boolean).join(" · ") || undefined;
 }
 
+function datasetPromptCoverage(dataset: Record<string, unknown>) {
+  const prompts = finiteNumber(dataset.prompt_count);
+  const items = finiteNumber(dataset.item_count);
+  if (prompts === null) return undefined;
+  return items !== null && items > 0 ? `${prompts}/${items}` : prompts;
+}
+
+function datasetMissingCaptions(dataset: Record<string, unknown>) {
+  const explicit = finiteNumber(dataset.missing_caption_count ?? dataset.missing_captions);
+  if (explicit !== null) return explicit;
+  const prompts = finiteNumber(dataset.prompt_count);
+  const items = finiteNumber(dataset.item_count);
+  if (prompts === null || items === null) return undefined;
+  return Math.max(0, items - prompts);
+}
+
+function datasetChunkWarnings(dataset: Record<string, unknown>) {
+  const warnings = Array.isArray(dataset.chunk_warnings) ? dataset.chunk_warnings.length : finiteNumber(dataset.chunk_warning_count ?? dataset.warning_count);
+  return warnings ?? undefined;
+}
+
 function vectorFileMeta(file: Record<string, unknown>) {
   const scalars = objectValue(file.scalars);
   const kind = scalars?.kind;
@@ -1079,6 +1115,23 @@ function vectorFileMeta(file: Record<string, unknown>) {
   const layer = scalars?.layer !== undefined ? `layer ${scalars.layer}` : null;
   const arrays = formatArrayShapes(objectValue(file.arrays));
   return [kind, name, dim, layer, arrays].filter(Boolean).join(" · ") || undefined;
+}
+
+function primaryVectorShape(vectors: Record<string, unknown>) {
+  if (Array.isArray(vectors.shape)) return vectors.shape.join("x");
+  const firstFile = arrayOfObjects(vectors.npz_files)[0];
+  const arrays = objectValue(firstFile?.arrays);
+  if (!arrays) return undefined;
+  const firstShape = Object.values(arrays).find((value) => Array.isArray(value));
+  return Array.isArray(firstShape) ? firstShape.join("x") : undefined;
+}
+
+function vectorSourcePair(vectors: Record<string, unknown>) {
+  const explicit = stringValue(vectors.source_pair ?? vectors.pair ?? vectors.axis_pair);
+  if (explicit) return explicit;
+  const positive = basename(stringValue(vectors.positive_path ?? vectors.positive_source ?? vectors.target_path));
+  const negative = basename(stringValue(vectors.negative_path ?? vectors.negative_source ?? vectors.reference_path));
+  return [positive, negative].filter(Boolean).join(" / ") || undefined;
 }
 
 function geometryArtifactMeta(artifact: Record<string, unknown>) {
@@ -1094,6 +1147,41 @@ function profileItemMeta(item: Record<string, unknown>) {
   const count = item.item_count !== undefined ? `${item.item_count} items` : null;
   const arrays = formatArrayShapes(objectValue(item.arrays));
   return [dim, count, arrays].filter(Boolean).join(" · ") || undefined;
+}
+
+function profileSource(profile: Record<string, unknown>) {
+  return basename(stringValue(profile.source ?? profile.source_path ?? profile.target_memory_path ?? profile.input_path));
+}
+
+function profileReference(profile: Record<string, unknown>) {
+  return basename(stringValue(profile.reference ?? profile.reference_path ?? profile.reference_memory_path));
+}
+
+function promptSearchProbeCost(promptSearch: Record<string, unknown>) {
+  if (promptSearch.model_backed === false) return "lexical";
+  if (promptSearch.model_backed === true) {
+    const samples = finiteNumber(promptSearch.score_samples) ?? 1;
+    return `${samples} flow sample${samples === 1 ? "" : "s"}`;
+  }
+  return undefined;
+}
+
+function promptSearchRisk(promptSearch: Record<string, unknown>) {
+  if (promptSearch.model_backed === false) return "cheap probe";
+  if (promptSearch.model_backed === true) return "Medium probe";
+  return undefined;
+}
+
+function softPromptLoss(softPrompt: Record<string, unknown>) {
+  return formatMaybeNumber(softPrompt.final_loss ?? softPrompt.best_loss ?? softPrompt.loss);
+}
+
+function softPromptSteps(softPrompt: Record<string, unknown>) {
+  return softPrompt.optimization_steps ?? softPrompt.steps ?? softPrompt.train_steps;
+}
+
+function softPromptTestPath(softPrompt: Record<string, unknown>) {
+  return stringValue(softPrompt.generated_audio_path ?? softPrompt.test_audio_path ?? softPrompt.demo_audio_path);
 }
 
 function formatArrayShapes(arrays: Record<string, unknown> | null) {
@@ -1118,6 +1206,14 @@ function sumNumeric(items: Record<string, unknown>[], key: string) {
 
 function uniqueValues(values: unknown[]) {
   return Array.from(new Set(values.filter((value) => value !== undefined && value !== null && value !== "").map(String)));
+}
+
+function finiteNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function stringValue(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
 function bundlePlotFiles(summary: Record<string, unknown>, files: BundleFileEntry[]): string[] {
