@@ -49,12 +49,12 @@ export function listeningDecisionSummary(artifacts: readonly ArtifactRecord[]): 
     },
     { keeper: 0, maybe: 0, rejected: 0, open: 0 },
   );
-  const entries: ListeningDecisionSummaryEntry[] = [
+  const entries = ([
     { key: "keeper", label: "keeper", count: counts.keeper },
     { key: "maybe", label: "maybe", count: counts.maybe },
     { key: "rejected", label: "reject", count: counts.rejected },
     { key: "open", label: "open", count: counts.open },
-  ].filter((entry) => entry.count > 0);
+  ] satisfies ListeningDecisionSummaryEntry[]).filter((entry) => entry.count > 0);
   return {
     total: playable.length,
     decided: playable.length - counts.open,
