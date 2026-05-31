@@ -1430,6 +1430,11 @@ label {
   background: rgb(234 74 162 / 0.16);
 }
 
+.decision-summary i.open {
+  color: var(--muted);
+  background: rgb(255 255 255 / 0.42);
+}
+
 .bundle-audio-children {
   display: grid;
   gap: 7px;

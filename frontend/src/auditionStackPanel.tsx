@@ -11,7 +11,7 @@ import {
 } from "./auditionStack";
 import type { ArtifactAnnotationPayload } from "./api";
 import { AudioDeck } from "./audioDeck";
-import { ListeningDecisionBadge, ListeningDecisionControls } from "./listeningDecision";
+import { ListeningDecisionBadge, ListeningDecisionControls, ListeningDecisionSummaryChips } from "./listeningDecision";
 import type { ArtifactRecord } from "./types";
 
 export function AuditionStackPanel({
@@ -44,6 +44,8 @@ export function AuditionStackPanel({
   const cursor = auditionCursor(artifacts, selectedId, 8, sequenceMode);
   const position = auditionPositionLabel(artifacts, selectedId, 8, sequenceMode);
   if (!rows.length) return null;
+  const artifactMap = new Map(artifacts.map((artifact) => [artifact.artifact_id, artifact]));
+  const queueArtifacts = rows.map((row) => artifactMap.get(row.artifactId)).filter((artifact): artifact is ArtifactRecord => Boolean(artifact));
   const moveSelection = (key: string) => {
     const target = auditionKeyboardTarget(artifacts, selectedId, key, 8, sequenceMode);
     if (!target) return false;
@@ -64,6 +66,7 @@ export function AuditionStackPanel({
         <div>
           <span className="eyebrow">Takes</span>
           <strong>{position}</strong>
+          <ListeningDecisionSummaryChips artifacts={queueArtifacts} ariaLabel="Queue listening decision summary" />
         </div>
         <label className="audition-sequence">
           <span>Sequence</span>
@@ -91,7 +94,7 @@ export function AuditionStackPanel({
         </div>
       </div>
       {rows.map((row) => {
-        const artifact = artifacts.find((item) => item.artifact_id === row.artifactId);
+        const artifact = artifactMap.get(row.artifactId);
         if (!artifact) return null;
         return (
           <article key={row.artifactId} className={selectedId === row.artifactId ? "selected" : ""}>

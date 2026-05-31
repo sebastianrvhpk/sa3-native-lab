@@ -9,7 +9,7 @@ import { branchListeningCursor } from "./branchListeningModel";
 import { branchMeta, branchSummaryForFamily } from "./branchModel";
 import type { ResultFamily } from "./controlPlane";
 import { JobProgress, type JobActionHandlers } from "./jobProgress";
-import { listeningDecision, ListeningDecisionBadge, ListeningDecisionControls } from "./listeningDecision";
+import { ListeningDecisionBadge, ListeningDecisionControls, ListeningDecisionSummaryChips } from "./listeningDecision";
 import type { ArtifactRecord, JobRecord, Recipe } from "./types";
 
 export function ResultFamilyPanel({
@@ -63,7 +63,7 @@ export function ResultFamilyPanel({
                 <i>empty</i>
               )}
             </div>
-            <DecisionSummary artifacts={familyArtifacts} />
+            <ListeningDecisionSummaryChips artifacts={familyArtifacts} />
             <button type="button" className="family-replay" onClick={() => onInspectFamily(family.familyId)} title="Inspect branch takes and progress">
               <Search size={14} />
               Inspect
@@ -150,6 +150,7 @@ export function FamilyDetailPanel({
         <span>{summary.latestTakeLabel}</span>
         <span>{summary.updatedLabel}</span>
       </div>
+      <ListeningDecisionSummaryChips artifacts={familyArtifacts} ariaLabel="Branch listening decision summary" />
       {sourceArtifacts.length ? (
         <div className="family-source-strip" aria-label="Branch source material">
           {sourceArtifacts.slice(0, 3).map((artifact) => (
@@ -203,6 +204,7 @@ export function FamilyDetailPanel({
                   <strong>{artifactName(artifact)}</strong>
                   <span>{artifactMeta(artifact)}</span>
                   <ListeningDecisionBadge artifact={artifact} />
+                  {artifact.artifact_id === selectedId ? <i className="selected-take-label">selected take</i> : null}
                 </div>
               </button>
               {artifact.kind === "audio" ? (
@@ -283,32 +285,6 @@ export function FamilyDetailPanel({
         ) : null}
       </details>
     </section>
-  );
-}
-
-function DecisionSummary({ artifacts }: { artifacts: ArtifactRecord[] }) {
-  const counts = artifacts.reduce(
-    (items, artifact) => {
-      const decision = listeningDecision(artifact);
-      if (decision) items[decision] += 1;
-      return items;
-    },
-    { keeper: 0, maybe: 0, rejected: 0 },
-  );
-  const entries = [
-    ["keeper", counts.keeper],
-    ["maybe", counts.maybe],
-    ["rejected", counts.rejected],
-  ].filter(([, count]) => Number(count) > 0);
-  if (!entries.length) return null;
-  return (
-    <div className="decision-summary" aria-label="Listening decision summary">
-      {entries.map(([label, count]) => (
-        <i key={label} className={String(label)}>
-          {String(count)} {label}
-        </i>
-      ))}
-    </div>
   );
 }
 

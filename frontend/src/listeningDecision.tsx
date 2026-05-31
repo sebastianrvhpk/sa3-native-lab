@@ -6,6 +6,24 @@ import type { ArtifactRecord } from "./types";
 
 export type ListeningDecision = "keeper" | "maybe" | "rejected";
 
+export type ListeningDecisionSummaryKey = ListeningDecision | "open";
+
+export interface ListeningDecisionSummaryEntry {
+  key: ListeningDecisionSummaryKey;
+  label: string;
+  count: number;
+}
+
+export interface ListeningDecisionSummary {
+  total: number;
+  decided: number;
+  undecided: number;
+  keeper: number;
+  maybe: number;
+  rejected: number;
+  entries: ListeningDecisionSummaryEntry[];
+}
+
 const DECISION_TAGS = new Set(["keeper", "maybe", "rejected"]);
 
 export function listeningDecision(artifact: ArtifactRecord): ListeningDecision | null {
@@ -18,6 +36,34 @@ export function listeningDecisionLabel(decision: ListeningDecision | null): stri
   if (decision === "maybe") return "maybe";
   if (decision === "rejected") return "rejected";
   return "undecided";
+}
+
+export function listeningDecisionSummary(artifacts: readonly ArtifactRecord[]): ListeningDecisionSummary {
+  const playable = artifacts.filter((artifact) => artifact.kind === "audio");
+  const counts = playable.reduce(
+    (items, artifact) => {
+      const decision = listeningDecision(artifact);
+      if (decision) items[decision] += 1;
+      else items.open += 1;
+      return items;
+    },
+    { keeper: 0, maybe: 0, rejected: 0, open: 0 },
+  );
+  const entries: ListeningDecisionSummaryEntry[] = [
+    { key: "keeper", label: "keeper", count: counts.keeper },
+    { key: "maybe", label: "maybe", count: counts.maybe },
+    { key: "rejected", label: "reject", count: counts.rejected },
+    { key: "open", label: "open", count: counts.open },
+  ].filter((entry) => entry.count > 0);
+  return {
+    total: playable.length,
+    decided: playable.length - counts.open,
+    undecided: counts.open,
+    keeper: counts.keeper,
+    maybe: counts.maybe,
+    rejected: counts.rejected,
+    entries,
+  };
 }
 
 export function listeningDecisionPayload({
@@ -52,6 +98,26 @@ export function ListeningDecisionBadge({ artifact }: { artifact: ArtifactRecord 
   const decision = listeningDecision(artifact);
   if (!decision) return null;
   return <span className={`listening-decision-badge ${decision}`}>{listeningDecisionLabel(decision)}</span>;
+}
+
+export function ListeningDecisionSummaryChips({
+  artifacts,
+  ariaLabel = "Listening decision summary",
+}: {
+  artifacts: readonly ArtifactRecord[];
+  ariaLabel?: string;
+}) {
+  const summary = listeningDecisionSummary(artifacts);
+  if (!summary.total) return null;
+  return (
+    <div className="decision-summary" aria-label={ariaLabel}>
+      {summary.entries.map((entry) => (
+        <i key={entry.key} className={entry.key}>
+          {entry.count} {entry.label}
+        </i>
+      ))}
+    </div>
+  );
 }
 
 export function ListeningDecisionControls({

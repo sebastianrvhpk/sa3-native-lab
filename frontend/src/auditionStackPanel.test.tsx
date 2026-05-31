@@ -76,4 +76,31 @@ describe("AuditionStackPanel", () => {
     expect(within(row as HTMLElement).getByRole("button", { name: /Branch/ })).toBeDisabled();
     expect(within(row as HTMLElement).getByRole("button", { name: /Remember/ })).toBeDisabled();
   });
+
+  it("summarizes listening decisions for the visible queue", () => {
+    render(
+      <AuditionStackPanel
+        artifacts={[
+          testArtifact({ artifact_id: "art_keep", label: "Keep", metadata: { listening_decision: "keeper" } }),
+          testArtifact({ artifact_id: "art_maybe", label: "Maybe", metadata: { listening_decision: "maybe" } }),
+          testArtifact({ artifact_id: "art_open", label: "Open" }),
+        ]}
+        selectedId="art_open"
+        apiBase="http://api.test"
+        activeSessionId="sess_1"
+        archivingArtifactId={null}
+        onSelect={vi.fn()}
+        onCompare={vi.fn()}
+        onAnnotate={vi.fn()}
+        onRemember={vi.fn()}
+        onContinue={vi.fn()}
+        onBranch={vi.fn()}
+      />,
+    );
+
+    const summary = screen.getByLabelText("Queue listening decision summary");
+    expect(summary).toHaveTextContent("1 keeper");
+    expect(summary).toHaveTextContent("1 maybe");
+    expect(summary).toHaveTextContent("1 open");
+  });
 });

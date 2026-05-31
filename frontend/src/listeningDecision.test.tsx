@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { listeningDecision, listeningDecisionPayload } from "./listeningDecision";
+import { listeningDecision, listeningDecisionPayload, listeningDecisionSummary } from "./listeningDecision";
 import type { ArtifactRecord } from "./types";
 
 describe("listening decisions", () => {
@@ -47,6 +47,29 @@ describe("listening decisions", () => {
         listening_decision_source: "family_detail",
       },
     });
+  });
+
+  it("summarizes playable queue decisions including open takes", () => {
+    const summary = listeningDecisionSummary([
+      audioArtifact({ artifact_id: "art_keep", metadata: { listening_decision: "keeper" } }),
+      audioArtifact({ artifact_id: "art_maybe", metadata: { listening_decision: "maybe" } }),
+      audioArtifact({ artifact_id: "art_open" }),
+      audioArtifact({ artifact_id: "art_latent", kind: "latent", audio: null }),
+    ]);
+
+    expect(summary).toMatchObject({
+      total: 3,
+      decided: 2,
+      undecided: 1,
+      keeper: 1,
+      maybe: 1,
+      rejected: 0,
+    });
+    expect(summary.entries).toEqual([
+      { key: "keeper", label: "keeper", count: 1 },
+      { key: "maybe", label: "maybe", count: 1 },
+      { key: "open", label: "open", count: 1 },
+    ]);
   });
 });
 

@@ -90,7 +90,7 @@ describe("FamilyDetailPanel", () => {
           families={[family, sibling]}
           artifacts={artifacts}
           jobs={[]}
-          selectedId={null}
+          selectedId="art_neg"
           apiBase="http://api.test"
           activeSessionId="sess_1"
           archivingArtifactId={null}
@@ -110,6 +110,7 @@ describe("FamilyDetailPanel", () => {
     expect(screen.getByLabelText("Alpha sweep variants")).toBeInTheDocument();
     expect(screen.getByLabelText("Alpha sweep metric table")).toBeInTheDocument();
     expect(screen.getByLabelText("Branch listening trajectory")).toHaveTextContent("1/2 · alpha_neg4p00");
+    expect(screen.getByLabelText("Branch listening decision summary")).toHaveTextContent("2 open");
     expect(screen.getByText("alpha -4")).toBeInTheDocument();
     expect(screen.getByText("alpha +4")).toBeInTheDocument();
     expect(screen.getByText("0.32")).toBeInTheDocument();
@@ -124,6 +125,7 @@ describe("FamilyDetailPanel", () => {
       .map((element) => element.closest(".family-artifact"))
       .find((element): element is HTMLElement => Boolean(element));
     expect(negativeArtifact).not.toBeNull();
+    expect(within(negativeArtifact as HTMLElement).getByText("selected take")).toBeInTheDocument();
     await user.click(within(negativeArtifact as HTMLElement).getByRole("button", { name: /keep/i }));
     await user.click(within(negativeArtifact as HTMLElement).getByRole("button", { name: /Continue/i }));
     await user.click(within(negativeArtifact as HTMLElement).getByRole("button", { name: /Branch/i }));
