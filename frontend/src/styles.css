@@ -3395,7 +3395,8 @@ audio {
 
 .aria-slider-thumb[data-focus-visible],
 .field-checkbox[data-focus-visible],
-.path-actions button[data-focus-visible] {
+.path-actions button[data-focus-visible],
+.source-picker button[data-focus-visible] {
   outline: 2px solid var(--green);
   outline-offset: 3px;
 }
@@ -3481,6 +3482,90 @@ audio {
   display: grid;
   grid-template-columns: minmax(0, 1fr) max-content;
   gap: 6px;
+}
+
+.source-field {
+  grid-column: span 2;
+}
+
+.source-picker {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.source-picker-head {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.source-picker-head span,
+.source-picker-current,
+.source-picker-current code {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.source-picker-head span {
+  color: var(--ink);
+  font-size: 0.7rem;
+  font-weight: 760;
+}
+
+.source-picker-head small {
+  display: inline-flex;
+  gap: 4px;
+  min-width: 0;
+}
+
+.source-picker-head i {
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  padding: 1px 5px;
+  color: #2f6c64;
+  background: rgb(255 255 255 / 0.46);
+  font-size: 0.56rem;
+  font-style: normal;
+  white-space: nowrap;
+}
+
+.source-picker-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  gap: 6px;
+}
+
+.source-picker-actions button {
+  min-height: 34px;
+  padding: 0 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border-radius: 6px;
+  box-shadow: none;
+  background: rgb(255 255 255 / 0.62);
+  color: var(--ink);
+  font-size: 0.68rem;
+}
+
+.source-picker-actions button[data-disabled] {
+  opacity: 0.45;
+}
+
+.source-picker-current {
+  color: var(--muted);
+  font-size: 0.62rem;
+}
+
+.source-picker-current code {
+  color: var(--ink);
+  font-size: 0.6rem;
 }
 
 .donor-cell {
@@ -5537,7 +5622,8 @@ audio {
 
   .range-pair,
   .fork-core-grid,
-  .path-actions {
+  .path-actions,
+  .source-picker-actions {
     grid-template-columns: 1fr;
   }
 }
@@ -5563,6 +5649,7 @@ audio {
   .recipe-mode-grid,
   .operator-preset-rack,
   .path-actions,
+  .source-picker-actions,
   .mode-card,
   .annotation-panel,
   .annotation-memory-grid,

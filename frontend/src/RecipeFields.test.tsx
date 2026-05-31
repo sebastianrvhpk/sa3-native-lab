@@ -21,7 +21,9 @@ describe("RecipeFields", () => {
   it("can fill artifact-path fields from the selected artifact", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
-    const selected = artifact("bundle");
+    const selected = artifact("bundle", {
+      metadata: { operator: "experiment.style_profile.build", script_output_path: "/tmp/bundle" },
+    });
 
     render(
       <RecipeFields
@@ -37,9 +39,38 @@ describe("RecipeFields", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: /selected/i }));
+    await user.click(screen.getByRole("button", { name: /current/i }));
 
     expect(onChange).toHaveBeenCalledWith("profile_path", "/tmp/bundle/profile_path.npz");
+  });
+
+  it("selects a Tune source into an artifact path field", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const target = artifact("audio", { label: "Bell take", path: "/tmp/bell.wav" });
+    const bundle = artifact("bundle", {
+      label: "Vector memory",
+      path: "/tmp/vector.zip",
+      metadata: { operator: "experiment.sa3_vectors.extract", script_output_path: "/runs/vector" },
+    });
+
+    render(
+      <RecipeFields
+        config={{
+          fields: [{ key: "target_audio_path", label: "Target audio", type: "artifact-path", artifactKinds: ["audio"] }],
+        }}
+        form={{ target_audio_path: "" }}
+        artifacts={[target, bundle]}
+        selectedArtifact={null}
+        onChange={onChange}
+        getArtifactPath={(artifact) => artifact.path}
+        getArtifactLabel={(artifact) => artifact.label ?? artifact.artifact_id}
+      />,
+    );
+
+    await user.selectOptions(screen.getByLabelText("Target audio source"), "/tmp/bell.wav");
+
+    expect(onChange).toHaveBeenCalledWith("target_audio_path", "/tmp/bell.wav");
   });
 });
 
@@ -66,7 +97,7 @@ function RecipeFieldsHarness({ onChange }: { onChange: (key: string, value: stri
   );
 }
 
-function artifact(kind: ArtifactRecord["kind"]): ArtifactRecord {
+function artifact(kind: ArtifactRecord["kind"], overrides: Partial<ArtifactRecord> = {}): ArtifactRecord {
   return {
     artifact_id: `art_${kind}`,
     kind,
@@ -83,5 +114,6 @@ function artifact(kind: ArtifactRecord["kind"]): ArtifactRecord {
     metadata: {},
     session_id: "sess_1",
     created_at: "2026-05-27T10:00:00.000Z",
+    ...overrides,
   };
 }

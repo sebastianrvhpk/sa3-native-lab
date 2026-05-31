@@ -79,6 +79,7 @@ import {
 import { artifactArchivePayload, artifactRecoveryPayload } from "./sessionRecovery";
 import { SessionTray } from "./sessionPanel";
 import { buildProductSources } from "./sourceModel";
+import { SourcePicker } from "./SourceField";
 import { SourceShelf } from "./sourceShelf";
 import { SpecCoverage, SpecCoveragePair } from "./specCoverage";
 import { Specimen } from "./specimenPanel";
@@ -698,10 +699,30 @@ export function App() {
               </select>
             </label>
           </div>
+          {generationNeedsSource ? (
+            <SourcePicker
+              className="control-cell source-audio-cell"
+              label="Source sound"
+              description="Choose the audio source that this gesture will continue or inpaint."
+              value={generationSource?.artifact_id ?? ""}
+              sources={sourceRows}
+              selectedArtifact={selectedArtifact}
+              artifactKinds={["audio"]}
+              fieldKey="source_artifact_id"
+              valueMode="artifact-id"
+              getArtifactPath={artifactPathForField}
+              onChange={(artifactId) => {
+                selectArtifact(artifactId);
+                setCompare("b", artifactId);
+              }}
+              emptyLabel="Choose sound"
+            />
+          ) : null}
           <RecipeFields
             config={withTuneFieldGroups(activeGenerationConfig, { gestureId: activeGesture.id, generationMode })}
             form={generationForm}
             artifacts={allArtifacts}
+            sources={sourceRows}
             selectedArtifact={selectedArtifact}
             onChange={setGenerationField}
             getArtifactLabel={artifactName}
@@ -718,6 +739,7 @@ export function App() {
           config={withTuneFieldGroups(activeSameConfig, { gestureId: activeGesture.id })}
           form={sameForm}
           artifacts={allArtifacts}
+          sources={sourceRows}
           selectedArtifact={selectedArtifact}
           onChange={setSameField}
           getArtifactLabel={artifactName}
@@ -756,29 +778,33 @@ export function App() {
             onDeletePreset={removeOperatorPreset}
           />
           {operatorUsesDonor(activeOperatorConfig, operatorForm) ? (
-            <label className="control-cell donor-cell">
-              <span>Texture donor</span>
-              <select value={donorArtifactId} onChange={(event) => setDonorArtifactId(event.target.value)}>
-                <option value="">Select latent</option>
-                {latentArtifacts
-                  .filter((artifact) => artifact.artifact_id !== selectedArtifact?.artifact_id)
-                  .map((artifact) => (
-                    <option key={artifact.artifact_id} value={artifact.artifact_id}>
-                      {artifactName(artifact)}
-                    </option>
-                  ))}
-              </select>
+            <div className="control-cell donor-cell">
+              <SourcePicker
+                label="Texture donor"
+                description="Choose a recovered or encoded latent as the donor texture."
+                value={donorArtifactId}
+                sources={sourceRows.filter((source) => source.artifactId !== selectedArtifact?.artifact_id)}
+                selectedArtifact={null}
+                artifactKinds={["latent"]}
+                fieldKey="donor"
+                valueMode="artifact-id"
+                getArtifactPath={artifactPathForField}
+                onChange={setDonorArtifactId}
+                emptyLabel="Choose latent donor"
+                showSelectedButton={false}
+              />
               <small>
                 {latentArtifacts.filter((artifact) => artifact.artifact_id !== selectedArtifact?.artifact_id).length
                   ? "Use a recovered or encoded latent as the donor texture."
                   : "Encode or recover another latent before borrowing texture."}
               </small>
-            </label>
+            </div>
           ) : null}
           <RecipeFields
             config={withTuneFieldGroups(activeOperatorConfig, { gestureId: activeGesture.id, operatorMode: operator })}
             form={operatorForm}
             artifacts={allArtifacts}
+            sources={sourceRows}
             selectedArtifact={selectedArtifact}
             onChange={setOperatorField}
             getArtifactPath={artifactPathForField}
@@ -822,6 +848,7 @@ export function App() {
             config={withTuneFieldGroups(activeExperiment, { gestureId: activeGesture.id, experimentMode })}
             form={experimentForm}
             artifacts={allArtifacts}
+            sources={sourceRows}
             selectedArtifact={selectedArtifact}
             onChange={setExperimentField}
             getArtifactPath={artifactPathForField}

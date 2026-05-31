@@ -1,7 +1,6 @@
 import { useForm } from "@tanstack/react-form";
-import { Route, SlidersHorizontal } from "lucide-react";
+import { SlidersHorizontal } from "lucide-react";
 import {
-  Button as AriaButton,
   Checkbox as AriaCheckbox,
   Input as AriaInput,
   Label as AriaLabel,
@@ -12,18 +11,21 @@ import {
   TextField as AriaTextField,
 } from "react-aria-components";
 
+import { SourceField } from "./SourceField";
 import {
   validateRecipeField,
   type FieldConfig,
   type RecipeField,
   type RecipeValue,
 } from "./recipeFormModel";
+import { buildProductSources, type ProductSource } from "./sourceModel";
 import type { ArtifactRecord } from "./types";
 
 interface RecipeFieldsProps {
   config: FieldConfig;
   form: Record<string, RecipeValue>;
   artifacts: ArtifactRecord[];
+  sources?: ProductSource[];
   selectedArtifact: ArtifactRecord | null;
   onChange: (key: string, value: RecipeValue) => void;
   getArtifactPath: (artifact: ArtifactRecord, fieldKey: string) => string;
@@ -34,12 +36,14 @@ export function RecipeFields({
   config,
   form,
   artifacts,
+  sources,
   selectedArtifact,
   onChange,
   getArtifactPath,
   getArtifactLabel,
 }: RecipeFieldsProps) {
   const formController = useForm({ defaultValues: form });
+  const sourceOptions = sources ?? buildProductSources(artifacts);
   const coreFields = config.fields.filter((field) => !field.advanced);
   const advancedFields = config.fields.filter((field) => field.advanced);
   const renderControl = (field: RecipeField) => (
@@ -58,6 +62,7 @@ export function RecipeFields({
             value={form[field.key]}
             error={error}
             artifacts={artifacts}
+            sources={sourceOptions}
             selectedArtifact={selectedArtifact}
             getArtifactPath={getArtifactPath}
             getArtifactLabel={getArtifactLabel}
@@ -92,6 +97,7 @@ interface RecipeFieldControlProps {
   value: RecipeValue | undefined;
   error?: string;
   artifacts: ArtifactRecord[];
+  sources: ProductSource[];
   selectedArtifact: ArtifactRecord | null;
   onChange: (value: RecipeValue) => void;
   getArtifactPath: (artifact: ArtifactRecord, fieldKey: string) => string;
@@ -103,6 +109,7 @@ function RecipeFieldControl({
   value,
   error,
   artifacts,
+  sources,
   selectedArtifact,
   onChange,
   getArtifactPath,
@@ -185,33 +192,20 @@ function RecipeFieldControl({
   }
 
   if (field.type === "artifact-path") {
-    const candidates = artifacts.filter((artifact) => !field.artifactKinds?.length || field.artifactKinds.includes(artifact.kind));
-    const selectedCandidate =
-      selectedArtifact && (!field.artifactKinds?.length || field.artifactKinds.includes(selectedArtifact.kind)) ? selectedArtifact : null;
     return (
-      <AriaTextField className="control-cell path-field" value={String(value ?? "")} onChange={onChange}>
-        <AriaLabel>{field.label}</AriaLabel>
-        <AriaInput placeholder={field.placeholder} title={field.description} />
-        <div className="path-actions">
-          <select value="" onChange={(event) => event.target.value && onChange(event.target.value)}>
-            <option value="">Artifacts</option>
-            {candidates.map((artifact) => (
-              <option key={artifact.artifact_id} value={getArtifactPath(artifact, field.key)}>
-                {getArtifactLabel(artifact)}
-              </option>
-            ))}
-          </select>
-          <AriaButton
-            type="button"
-            isDisabled={!selectedCandidate}
-            onPress={() => selectedCandidate && onChange(getArtifactPath(selectedCandidate, field.key))}
-          >
-            <Route size={15} />
-            Selected
-          </AriaButton>
-        </div>
-        <FieldError error={error} />
-      </AriaTextField>
+      <SourceField
+        label={field.label}
+        description={field.description}
+        placeholder={field.placeholder}
+        value={String(value ?? "")}
+        sources={sources}
+        selectedArtifact={selectedArtifact}
+        artifactKinds={field.artifactKinds}
+        fieldKey={field.key}
+        getArtifactPath={getArtifactPath}
+        onChange={onChange}
+        error={<FieldError error={error} />}
+      />
     );
   }
 

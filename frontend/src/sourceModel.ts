@@ -8,7 +8,7 @@ import {
   type MemoryRole,
 } from "./memoryModel";
 import { artifactMeta, artifactName, sortNewest } from "./artifactUtils";
-import type { ArtifactRecord } from "./types";
+import type { ArtifactKind, ArtifactRecord } from "./types";
 
 export type ProductSourceKind = "sound" | "latent" | "bundle" | "material";
 export type ProductSourceRole = "current" | "anchor" | "source" | "donor" | "remembered" | "imported" | "take" | "bundle" | "bundle_derived";
@@ -27,6 +27,25 @@ export interface ProductSource {
   actions: MemoryReuseAction[];
   isCurrent: boolean;
   isRemembered: boolean;
+}
+
+export type SourceFieldValueMode = "artifact-id" | "path";
+
+export interface ProductSourceFieldOption {
+  source: ProductSource;
+  artifact: ArtifactRecord;
+  value: string;
+  label: string;
+  detail: string;
+  roleLabels: string[];
+}
+
+export interface ProductSourceFieldOptionsInput {
+  sources: readonly ProductSource[];
+  fieldKey: string;
+  artifactKinds?: readonly ArtifactKind[];
+  valueMode?: SourceFieldValueMode;
+  getArtifactPath: (artifact: ArtifactRecord, fieldKey: string) => string;
 }
 
 export interface ProductSourceContext {
@@ -83,6 +102,55 @@ export function productSourceRoleLabel(
   if (role === "bundle_derived") return "bundle audio";
   return "take";
 }
+
+export function productSourceFieldOptions({
+  sources,
+  fieldKey,
+  artifactKinds = [],
+  valueMode = "path",
+  getArtifactPath,
+}: ProductSourceFieldOptionsInput): ProductSourceFieldOption[] {
+  return sources
+    .filter((source) => productSourceMatchesField(source, fieldKey, artifactKinds))
+    .map((source) => ({
+      source,
+      artifact: source.artifact,
+      value: valueMode === "artifact-id" ? source.artifactId : getArtifactPath(source.artifact, fieldKey),
+      label: source.label,
+      detail: sourceFieldOptionDetail(source),
+      roleLabels: source.roleLabels,
+    }))
+    .filter((option) => option.value.length > 0);
+}
+
+export function productSourceMatchesField(
+  source: ProductSource,
+  fieldKey: string,
+  artifactKinds: readonly ArtifactKind[] = [],
+): boolean {
+  if (artifactKinds.length && !artifactKinds.includes(source.artifact.kind)) return false;
+  if (source.artifact.kind !== "bundle") return true;
+  if (!strictBundleFieldKeys.has(fieldKey)) return true;
+  return source.actions.some(
+    (action) => action.available && action.intent === "advanced_gesture" && action.fieldKey === fieldKey,
+  );
+}
+
+function sourceFieldOptionDetail(source: ProductSource): string {
+  const roles = source.roleLabels.slice(0, 2).join(" / ");
+  return roles ? `${source.detail} · ${roles}` : source.detail;
+}
+
+const strictBundleFieldKeys = new Set([
+  "profile_path",
+  "direction_path",
+  "vectors_path",
+  "soft_prompt_path",
+  "target_memory_path",
+  "reference_memory_path",
+  "encoded_dir",
+  "lora_checkpoint",
+]);
 
 function productSourceRoles(artifact: ArtifactRecord, context: ProductSourceContext): ProductSourceRole[] {
   const roles: ProductSourceRole[] = [];
