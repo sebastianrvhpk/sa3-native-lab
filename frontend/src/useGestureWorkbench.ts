@@ -22,6 +22,15 @@ import {
   type LatentOperatorMode,
 } from "./workbenchConfigs";
 
+/*
+ * Boundary: this hook owns semantic workbench state only: active gesture, Tune
+ * forms, donor/source reuse, next-action routing, prompt seeding, and bundle
+ * reuse. React Query mutations, job-event landing, archive/recover, pending-take
+ * selection, and other side effects stay in App.tsx. A future descriptor helper
+ * may shape labels/readiness/disabled reasons, but it should not move mutations
+ * into this hook.
+ */
+
 export interface UseGestureWorkbenchInput {
   allArtifacts: readonly ArtifactRecord[];
   selectedArtifact: ArtifactRecord | null;

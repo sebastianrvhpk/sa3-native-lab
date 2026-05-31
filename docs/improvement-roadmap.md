@@ -38,10 +38,14 @@ For the broader stack direction and promotion triggers, see
    keep/maybe/reject review flow, continue-from-selected, and branch listening,
    not decorative timelines.
 
-5. Extract orchestration only when the contract is clear.
-   `App.tsx` still owns gesture state, form state, submit actions, and mutation
-   side effects. Extract a `useGestureWorkbench` only after Memory, Branch,
-   Pending Take, and Tune semantics survive another pass.
+5. Keep gesture orchestration boundaries named.
+   `useGestureWorkbench` is now intentionally bounded to semantic workbench
+   state: active gesture, Tune form state, donor/source reuse, next-action
+   routing, prompt seeding, and bundle reuse. `App.tsx` still owns React Query
+   mutations, job-event landing, archive/recover, pending-take selection, and
+   other side effects. If this grows again, the next extraction should be a
+   small gesture action descriptor for labels, readiness, and disabled reasons,
+   not a mutation-moving hook.
 
 ## P1: Trust And Runability
 

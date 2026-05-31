@@ -58,10 +58,12 @@ sound instrument.
 - Frontend field schemas are still partly duplicated in TypeScript. The new
   backend `ui_fields` merge reduces drift, but the static catalogs still carry
   layout, copy, and some hand-shaped controls.
-- `App.tsx` still owns orchestration across active gesture, form state, submit
-  action, selected/pending take, and mutation side effects. Extract a named
-  gesture-workbench hook only after Memory, Branch, Pending Take, and Tune
-  semantics settle.
+- `useGestureWorkbench` now owns only semantic workbench state: active gesture,
+  Tune forms, donor/source reuse, next-action routing, prompt seeding, and
+  bundle reuse. `App.tsx` remains the side-effect boundary for React Query
+  mutations, job-event landing, archive/recover, pending-take selection, and
+  submit actions. A later gesture action descriptor may help with labels,
+  readiness, and disabled reasons without moving mutations into the hook.
 - Live job event transport now has a tRPC/SSE bridge with heartbeat and
   resume-aware IDs plus Python job-journal replay. The live source is still
   polling, so a future stream source would reduce latency and load.
