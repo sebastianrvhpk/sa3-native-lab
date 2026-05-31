@@ -112,6 +112,12 @@ be reused as Source or Anchor, latent material can become a Borrow Texture
 donor, remembered prompt/label/notes can seed Make, reusable bundles can feed
 existing Advanced Gesture paths, and archived materials can be recovered into
 the active session.
+Tune now reuses that same product source model for backend-supported path and
+artifact-id fields. Profile, direction/vector, soft-prompt, encoded dataset,
+checkpoint, target-audio, source-audio, and donor-latent choices appear as
+compact Source pickers while still showing the exact backend path or artifact ID
+that will be submitted. Bundle options stay strict to known reusable paths
+instead of becoming a generic "use bundle" control.
 Selected landed takes also show a `Next` affordance: audio suggests Continue,
 Vary, Encode, and Remember; latent suggests Decode, Morph, Borrow Texture, and
 Remember; bundles keep technical details behind Inspect while exposing real
@@ -216,12 +222,20 @@ Jobs and artifacts with the same recipe are grouped as branch records in the
 right rail, backed by the legacy result-family contract; raw run metrics remain
 inspect details when the job reports them. Prompt-candidate generations are grouped
 under their search bundle instead of scattering as unrelated text-to-audio rows.
+The take queue and branch detail now summarize keeper/maybe/reject/open counts,
+and the selected take is labeled consistently across the queue and branch
+detail.
 Memory query bundle previews expose ranked hits that can be selected, played
 when audio, or reused as latent donors when the hit is a latent artifact.
 Encoded dataset bundles expose manifest/sidecar
 counts, chunk timing, prompt coverage, latent files, and reuse into LoRA
 training. Alpha sweep families can also compare sibling sweep runs that share a
 vector bundle or prompt.
+Bundle domain inspectors now expose more parsed, mode-specific evidence where
+the summary supports it: profile source/reference, vector shapes and source
+pairs, prompt-search probe cost/risk, soft-prompt loss/steps/test audio,
+dataset prompt coverage and caption/chunk warnings, and geometry variance with
+clear experimental framing.
 
 ## Runtime Assumptions
 

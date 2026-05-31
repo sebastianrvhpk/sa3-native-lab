@@ -30,6 +30,10 @@ sound instrument.
 - Audio playback, artifact display, job progress, branch/result-family views,
   recipe fork editing, bundle inspection, memory actions, next actions, pending
   landing, and Tune grouping are now split out of `App.tsx`.
+- Tune artifact/path selection now reuses the Source model for supported
+  source-audio, donor-latent, target-audio, profile, direction/vector,
+  soft-prompt, encoded-dataset, and checkpoint paths while preserving the exact
+  submitted path or artifact ID.
 - Medium/SAME-L is now the default path across app contracts, runtime fallbacks,
   frontend defaults, README commands, docs, and tests.
 - Backend operator specs now include `ui_fields`, and the frontend merges those
@@ -48,6 +52,8 @@ sound instrument.
 - Latent gestures now have browser-local presets for repeatable latent operator
   explorations, plus selected-preset diffs for changed params and donor latents.
   This is useful immediately even before presets become durable backend records.
+- The listening queue and branch detail expose keeper/maybe/reject/open
+  summaries, and selected takes are labeled consistently across both surfaces.
 - The first-use browser smoke is committed as the product-health gate for
   Current Sound, Gestures, Make, Tune, Pending Takes, Next actions, Remember,
   Branch, Memory reuse/recovery, Settings/Inspect demotion, screenshots, and

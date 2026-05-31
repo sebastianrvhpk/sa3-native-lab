@@ -34,9 +34,12 @@ For the broader stack direction and promotion triggers, see
 
 4. Improve the take strip into a listening queue.
    The app already has recent/lineage/open sequencing, playback decisions,
-   markers, loop regions, Remember, Branch, and Continue paths. The next work is
-   keep/maybe/reject review flow, continue-from-selected, and branch listening,
-   not decorative timelines.
+   markers, loop regions, Remember, Branch, and Continue paths. A small clarity
+   pass now shows keeper/maybe/reject/open summaries for the current queue and
+   branch detail, and selected takes use the same visual label in the take strip
+   and branch view. Playlist export, autoplay, multi-branch listening sessions,
+   and heavy review modes remain deferred because they add new listening modes
+   rather than clarifying the current loop.
 
 5. Keep gesture orchestration boundaries named.
    `useGestureWorkbench` is now intentionally bounded to semantic workbench
@@ -141,9 +144,22 @@ For the broader stack direction and promotion triggers, see
    and saved listening decisions with notes. Bundle panels now show workflow
    signals for recipe actions, playable
    audio, lineage, plots, metrics, candidates, memory hits, variants, tensors,
-   checkpoints, and geometry stats. Next, vector/profile/soft-prompt/sweep/
-   geometry/prompt-search bundles should expose deeper domain-specific controls
-   without making the user inspect zip contents.
+   checkpoints, and geometry stats. Profile, vector, prompt-search, soft-prompt,
+   dataset, and geometry domain cards now expose additional parsed evidence:
+   source/reference, vector shape and source pair, prompt-search probe cost/risk,
+   soft-prompt loss/steps/test audio, prompt coverage and caption/chunk warnings,
+   and explicit geometry experimental framing. Next, sweep/layer comparison can
+   deepen only where parsed bundle summaries and backend reuse paths support it.
+
+## Explicitly Deferred
+
+Do not add these until a later pass has a narrower contract: saved Memory filter
+presets, "usable as donor/source/anchor" Memory filters, vector search,
+pgvector, similarity browser, memory atlas UI, waveform region workflows,
+playlist export, autoplay queue, multi-branch listening sessions, heavy review
+modes, sampler-step intervention, flow-state optimization, control heads, macro
+chain UI, LoRA pause/resume/priority, resident worker, moving more app state
+into tRPC, or moving gesture form state server-side.
 
 ## P3: Research Cognition
 
