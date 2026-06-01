@@ -1037,6 +1037,8 @@ export function App() {
     );
   };
 
+  const engineStatus = readinessStatusSummary(readinessChecks, healthData);
+
   return (
     <SoundInstrumentSurface
       selected={Boolean(selectedArtifact)}
@@ -1053,9 +1055,13 @@ export function App() {
       loopPrompt={loopPrompt}
       settings={
         <details className="settings-panel">
-          <summary>
+          <summary className={`engine-settings-summary ${engineStatus.tone}`} aria-label={`Engine settings: ${engineStatus.label}`}>
             <Settings size={17} />
-            Settings
+            <span className="engine-settings-copy">
+              <strong>Settings</strong>
+              <small>{engineStatus.label}</small>
+            </span>
+            <span className="engine-status-light" aria-hidden="true" />
           </summary>
           <div className="settings-body">
             <div className="api-field">
@@ -1278,4 +1284,20 @@ function readinessChecksFromHealth(health: HealthResponse | undefined): Readines
       message: backend.message ?? backend.device ?? backend.backend,
     })),
   ];
+}
+
+function readinessStatusSummary(checks: ReadinessCheck[], health: HealthResponse | undefined) {
+  if (!health) {
+    return { tone: "loading", label: "Connecting" };
+  }
+  const errorCount = checks.filter((check) => check.status === "error").length;
+  const warnCount = checks.filter((check) => check.status === "warn").length;
+  if (errorCount) {
+    return { tone: "error", label: `${errorCount} check${errorCount === 1 ? "" : "s"}` };
+  }
+  if (warnCount) {
+    return { tone: "warn", label: `${warnCount} warning${warnCount === 1 ? "" : "s"}` };
+  }
+  const readyBackends = health.backends.filter((backend) => backend.available).length;
+  return { tone: "ok", label: `${readyBackends}/${health.backends.length} engines` };
 }

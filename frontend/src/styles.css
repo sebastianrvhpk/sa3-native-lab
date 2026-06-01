@@ -6062,6 +6062,62 @@ textarea {
   text-transform: uppercase;
 }
 
+.settings-panel > summary.engine-settings-summary {
+  min-height: 44px;
+  min-width: 148px;
+  justify-content: flex-start;
+  gap: 9px;
+  border-width: 2px;
+  border-radius: 6px;
+  padding: 5px 9px;
+  background:
+    linear-gradient(90deg, rgb(255 255 255 / 0.74), rgb(235 240 238 / 0.86)),
+    var(--console-paper);
+  box-shadow: 3px 3px 0 var(--console-line);
+}
+
+.engine-settings-copy {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+  line-height: 1;
+}
+
+.engine-settings-copy strong {
+  font-family: var(--display-font);
+  font-size: 0.78rem;
+  letter-spacing: 0;
+}
+
+.engine-settings-copy small {
+  color: var(--muted);
+  font-size: 0.65rem;
+  font-weight: 760;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.engine-status-light {
+  width: 10px;
+  height: 10px;
+  margin-left: auto;
+  border: 2px solid var(--console-line);
+  border-radius: 999px;
+  background: var(--accent-green);
+}
+
+.engine-settings-summary.warn .engine-status-light {
+  background: var(--accent-yellow);
+}
+
+.engine-settings-summary.error .engine-status-light {
+  background: var(--accent-red);
+}
+
+.engine-settings-summary.loading .engine-status-light {
+  background: var(--muted);
+}
+
 .bench-grid {
   grid-template-columns: minmax(190px, 248px) minmax(560px, 1fr) minmax(300px, 380px);
   gap: 0;
@@ -7169,6 +7225,14 @@ label {
 
   .instrument-shell .top-strip {
     gap: 8px;
+  }
+
+  .instrument-shell .settings-panel {
+    justify-self: stretch;
+  }
+
+  .instrument-shell .settings-panel > summary.engine-settings-summary {
+    width: 100%;
   }
 
   .instrument-shell .instrument-question {
