@@ -108,6 +108,14 @@ export function nextActionsForArtifact(
         disabledReason: donorCount > 0 ? null : "Encode or recover another latent donor first.",
       }),
       action({
+        id: "find_similar",
+        label: "Find Similar",
+        description: "Search local latent memory for nearby material.",
+        kind: "gesture",
+        gestureId: "steer",
+        experimentMode: "memory.query",
+      }),
+      action({
         id: "remember",
         label: "Remember",
         description: "Save this latent with a reusable role.",

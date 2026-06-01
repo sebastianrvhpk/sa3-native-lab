@@ -78,4 +78,36 @@ describe("useGestureWorkbench", () => {
     expect(result.current.activeGestureId).toBe("make");
     expect(result.current.generationForm.prompt).toBe("soft remembered loop");
   });
+
+  it("routes remembered latent similarity search through the real memory query recipe", () => {
+    const selectArtifact = vi.fn();
+    const remembered = testArtifact({ kind: "latent", artifact_id: "art_memory_latent" });
+    const { result } = renderHook(() =>
+      useGestureWorkbench({
+        allArtifacts: [remembered],
+        selectedArtifact: null,
+        selectArtifact,
+        setCompare: vi.fn(),
+        artifactPathForField: (artifact) => artifact.path,
+      }),
+    );
+
+    act(() => {
+      result.current.applyMemoryAction(remembered, {
+        id: "find_similar",
+        label: "Find Similar",
+        description: "Search memory",
+        intent: "advanced_gesture",
+        available: true,
+        disabledReason: null,
+        gestureId: "steer",
+        mode: "memory.query",
+      });
+    });
+
+    expect(selectArtifact).toHaveBeenCalledWith("art_memory_latent");
+    expect(result.current.activeGestureId).toBe("steer");
+    expect(result.current.experimentMode).toBe("memory.query");
+    expect(result.current.experimentForm.top_k).toBe(5);
+  });
 });

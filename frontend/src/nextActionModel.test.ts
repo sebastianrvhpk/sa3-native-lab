@@ -16,8 +16,12 @@ describe("nextActionModel", () => {
     const latentActions = nextActionsForArtifact(testArtifact({ kind: "latent", artifact_id: "art_latent" }), {
       donorLatents: [testArtifact({ kind: "latent", artifact_id: "art_donor" })],
     });
-    expect(latentActions.map((action) => action.id)).toEqual(["decode", "morph", "borrow_texture", "remember"]);
+    expect(latentActions.map((action) => action.id)).toEqual(["decode", "morph", "borrow_texture", "find_similar", "remember"]);
     expect(latentActions.find((action) => action.id === "borrow_texture")).toMatchObject({ available: true });
+    expect(latentActions.find((action) => action.id === "find_similar")).toMatchObject({
+      experimentMode: "memory.query",
+      gestureId: "steer",
+    });
 
     const bundleActions = nextActionsForArtifact(testArtifact({ kind: "bundle", metadata: { operator: "experiment.audio_style_vectors" } }));
     expect(bundleActions).toEqual(expect.arrayContaining([

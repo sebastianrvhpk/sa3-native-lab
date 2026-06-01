@@ -180,6 +180,13 @@ export function useGestureWorkbench({
       setActiveGestureId("steer");
       return true;
     }
+    if (action.intent === "advanced_gesture" && action.mode && isExperimentMode(action.mode)) {
+      selectArtifact(artifact.artifact_id);
+      setExperimentMode(action.mode);
+      setExperimentForm(defaultExperimentForm(action.mode));
+      setActiveGestureId("steer");
+      return true;
+    }
     return false;
   };
 

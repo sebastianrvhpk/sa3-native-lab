@@ -24,6 +24,11 @@ describe("memoryModel", () => {
       available: true,
       gestureId: "borrow_texture",
     });
+    expect(actions.find((action) => action.id === "find_similar")).toMatchObject({
+      available: true,
+      gestureId: "steer",
+      mode: "memory.query",
+    });
     expect(actions.find((action) => action.id === "anchor")?.disabledReason).toMatch(/Only audio/);
   });
 

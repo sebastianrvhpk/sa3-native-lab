@@ -160,6 +160,16 @@ export function memoryActionsForArtifact(
       gestureId: "borrow_texture",
     },
     {
+      id: "find_similar",
+      label: "Find Similar",
+      description: "Search local latent memory for material near this remembered latent.",
+      intent: "advanced_gesture",
+      available: artifact.kind === "latent",
+      disabledReason: artifact.kind === "latent" ? null : "Memory query needs a latent source.",
+      gestureId: "steer",
+      mode: "memory.query",
+    },
+    {
       id: "prompt_seed",
       label: "Seed Prompt",
       description: "Copy remembered prompt, label, or notes into Make.",
