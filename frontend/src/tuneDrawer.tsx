@@ -21,9 +21,12 @@ export function TuneDrawer({ gesture, children, inspect, action, actionDescripto
           <h2>{gesture.label}</h2>
           <p>{gesture.shortIntent}</p>
         </div>
-        <span className={`gesture-state ${gesture.available ? "ready" : "blocked"}`}>
-          {gesture.available ? "ready" : "needs source"}
-        </span>
+        <div className="tune-head-controls">
+          <span className={`gesture-state ${gesture.available ? "ready" : "blocked"}`}>
+            {gesture.available ? "ready" : "needs source"}
+          </span>
+          {action ? <div className="gesture-action tune-primary-action">{action}</div> : null}
+        </div>
       </div>
       {!gesture.available ? (
         <div className="quiet-panel compact gesture-blocked">
@@ -45,7 +48,6 @@ export function TuneDrawer({ gesture, children, inspect, action, actionDescripto
           {inspect}
         </details>
       ) : null}
-      {action ? <div className="gesture-action">{action}</div> : null}
     </section>
   );
 }

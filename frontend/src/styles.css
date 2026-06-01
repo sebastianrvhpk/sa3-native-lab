@@ -7499,6 +7499,86 @@ label {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.move-console {
+  align-content: start;
+  gap: 8px;
+}
+
+.move-console .zone-label {
+  min-height: 20px;
+  margin-bottom: 0;
+  padding-left: 2px;
+}
+
+.move-console .gesture-strip {
+  padding: 8px;
+  border-width: 2px;
+  border-radius: 6px;
+  box-shadow: none;
+}
+
+.move-console .gesture-buttons button {
+  min-height: 44px;
+}
+
+.move-console .gesture-buttons button.active {
+  flex-basis: 118px;
+}
+
+.move-console .tune-drawer {
+  gap: 8px;
+  padding: 10px 10px 10px 18px;
+  box-shadow: none;
+}
+
+.move-console .tune-head {
+  grid-template-columns: minmax(0, 1fr) minmax(132px, 0.58fr);
+  gap: 10px;
+  align-items: stretch;
+}
+
+.move-console .tune-head h2 {
+  margin: 1px 0 1px;
+}
+
+.move-console .tune-head p {
+  font-size: 0.78rem;
+  line-height: 1.25;
+}
+
+.tune-head-controls {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  justify-items: stretch;
+}
+
+.tune-head-controls .gesture-state {
+  justify-content: center;
+}
+
+.tune-primary-action {
+  min-width: 0;
+}
+
+.tune-primary-action .primary-action {
+  width: 100%;
+  min-height: 42px;
+}
+
+.tune-primary-action .inline-job-status {
+  margin-top: 4px;
+}
+
+.move-console .gesture-action-summary {
+  padding: 8px;
+}
+
+.move-console .tune-details > summary {
+  min-height: 28px;
+}
+
 .take-lane-panel {
   border-top: 2px solid var(--console-line);
   padding-top: 10px;
@@ -7636,6 +7716,14 @@ label {
 
   .stage-header .surface-head h1 {
     font-size: 1.7rem;
+  }
+
+  .move-console .tune-head {
+    grid-template-columns: 1fr;
+  }
+
+  .tune-head-controls {
+    justify-items: stretch;
   }
 }
 

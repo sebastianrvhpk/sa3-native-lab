@@ -74,10 +74,10 @@ export function SoundInstrumentSurface({
 
           <div className="stage-main">
             <div className="sound-stage-player">{currentSound}</div>
-            <aside className="gesture-workbench gesture-console" aria-label="Prompt and gesture">
+            <aside className="gesture-workbench gesture-console move-console" aria-label="Move console">
               <div className="zone-label">
                 <SlidersHorizontal size={16} />
-                <span>Gesture / Tune</span>
+                <span>Move Console</span>
               </div>
               {gestureRack}
               {tuneBank}

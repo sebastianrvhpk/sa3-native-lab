@@ -42,7 +42,7 @@ describe("SoundInstrumentSurface", () => {
     );
 
     expect(screen.getByLabelText("SA3 Native Lab sound instrument")).toBeInTheDocument();
-    expect(screen.getByLabelText("Prompt and gesture").textContent).toContain("tune bank");
+    expect(screen.getByLabelText("Move console").textContent).toContain("tune bank");
     expect(screen.getByLabelText("Take lane").textContent).toContain("take queue");
     expect(screen.getByLabelText("Secondary instrument trays").textContent).toContain("5 sources");
     expect(screen.getByLabelText("Secondary instrument trays").textContent).toContain("2 paths");
