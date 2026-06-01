@@ -6803,6 +6803,26 @@ label {
   grid-template-rows: auto 1fr;
 }
 
+.instrument-shell .top-strip {
+  position: relative;
+  z-index: 60;
+  overflow: visible;
+}
+
+.instrument-shell .settings-panel {
+  z-index: 80;
+}
+
+.instrument-shell .settings-panel[open] {
+  z-index: 120;
+}
+
+.instrument-shell .settings-body {
+  z-index: 120;
+  max-height: min(680px, calc(100vh - 84px));
+  overflow: auto;
+}
+
 .instrument-shell .instrument-question {
   display: grid;
   gap: 1px;
@@ -6826,6 +6846,8 @@ label {
 }
 
 .instrument-board {
+  position: relative;
+  z-index: 1;
   min-height: calc(100vh - 58px);
   display: grid;
   grid-template-columns: minmax(0, 1.55fr) minmax(340px, 0.72fr);
