@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -6,7 +7,19 @@ import { AuditionStackPanel } from "./auditionStackPanel";
 import { testArtifact } from "./test/fixtures";
 
 vi.mock("./audioDeck", () => ({
-  AudioDeck: ({ artifact }: { artifact: { artifact_id: string } }) => <div data-testid={`deck-${artifact.artifact_id}`} />,
+  AudioDeck: ({
+    artifact,
+    autoPlay,
+    onEnded,
+  }: {
+    artifact: { artifact_id: string };
+    autoPlay?: boolean;
+    onEnded?: () => void;
+  }) => (
+    <button type="button" data-testid={`deck-${artifact.artifact_id}`} data-autoplay={autoPlay ? "true" : "false"} onClick={() => onEnded?.()}>
+      end {artifact.artifact_id}
+    </button>
+  ),
 }));
 
 describe("AuditionStackPanel", () => {
@@ -102,5 +115,46 @@ describe("AuditionStackPanel", () => {
     expect(summary).toHaveTextContent("1 keeper");
     expect(summary).toHaveTextContent("1 maybe");
     expect(summary).toHaveTextContent("1 open");
+  });
+
+  it("plays forward through the current visible queue without creating a playlist mode", async () => {
+    const user = userEvent.setup();
+    const artifacts = [
+      testArtifact({ artifact_id: "art_new", label: "Newest", created_at: "2026-01-03T00:00:00Z" }),
+      testArtifact({ artifact_id: "art_mid", label: "Middle", created_at: "2026-01-02T00:00:00Z" }),
+      testArtifact({ artifact_id: "art_old", label: "Oldest", created_at: "2026-01-01T00:00:00Z" }),
+    ];
+
+    function Harness() {
+      const [selectedId, setSelectedId] = useState("art_new");
+      return (
+        <AuditionStackPanel
+          artifacts={artifacts}
+          selectedId={selectedId}
+          apiBase="http://api.test"
+          activeSessionId="sess_1"
+          archivingArtifactId={null}
+          onSelect={setSelectedId}
+          onCompare={vi.fn()}
+          onAnnotate={vi.fn()}
+          onRemember={vi.fn()}
+          onContinue={vi.fn()}
+          onBranch={vi.fn()}
+        />
+      );
+    }
+
+    render(<Harness />);
+
+    const auto = screen.getByRole("button", { name: "Auto" });
+    await user.click(auto);
+    expect(auto).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByTestId("deck-art_new")).toHaveAttribute("data-autoplay", "true");
+
+    await user.click(screen.getByTestId("deck-art_new"));
+
+    expect(screen.getByText("Middle").closest("article")).toHaveClass("selected");
+    expect(screen.getByTestId("deck-art_mid")).toHaveAttribute("data-autoplay", "true");
+    expect(screen.getByTestId("deck-art_new")).toHaveAttribute("data-autoplay", "false");
   });
 });

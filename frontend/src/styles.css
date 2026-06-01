@@ -5695,6 +5695,12 @@ audio {
   box-shadow: none;
 }
 
+.audition-transport button.active {
+  border-color: rgb(37 98 139 / 0.42);
+  background: rgb(224 243 246 / 0.86);
+  color: #17415a;
+}
+
 .audition-stack article {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 74px;

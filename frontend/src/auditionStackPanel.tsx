@@ -40,6 +40,8 @@ export function AuditionStackPanel({
   onBranch: (artifact: ArtifactRecord) => void;
 }) {
   const [sequenceMode, setSequenceMode] = useState<AuditionSequenceMode>("recent");
+  const [queueAutoplay, setQueueAutoplay] = useState(false);
+  const [autoPlayArtifactId, setAutoPlayArtifactId] = useState<string | null>(null);
   const rows = auditionStackRows(artifacts, 8, sequenceMode, selectedId);
   const cursor = auditionCursor(artifacts, selectedId, 8, sequenceMode);
   const position = auditionPositionLabel(artifacts, selectedId, 8, sequenceMode);
@@ -49,8 +51,32 @@ export function AuditionStackPanel({
   const moveSelection = (key: string) => {
     const target = auditionKeyboardTarget(artifacts, selectedId, key, 8, sequenceMode);
     if (!target) return false;
-    onSelect(target.artifact_id);
+    selectTake(target.artifact_id);
     return true;
+  };
+  const selectTake = (artifactId: string) => {
+    setQueueAutoplay(false);
+    setAutoPlayArtifactId(null);
+    onSelect(artifactId);
+  };
+  const changeSequenceMode = (mode: AuditionSequenceMode) => {
+    setQueueAutoplay(false);
+    setAutoPlayArtifactId(null);
+    setSequenceMode(mode);
+  };
+  const toggleQueueAutoplay = () => {
+    const next = !queueAutoplay;
+    setQueueAutoplay(next);
+    setAutoPlayArtifactId(next ? cursor.selected?.artifact_id ?? null : null);
+  };
+  const advanceAutoplay = (artifactId: string) => {
+    if (!queueAutoplay || selectedId !== artifactId || !cursor.next) {
+      if (!cursor.next) setQueueAutoplay(false);
+      setAutoPlayArtifactId(null);
+      return;
+    }
+    setAutoPlayArtifactId(cursor.next.artifact_id);
+    onSelect(cursor.next.artifact_id);
   };
   return (
     <div
@@ -70,7 +96,7 @@ export function AuditionStackPanel({
         </div>
         <label className="audition-sequence">
           <span>Sequence</span>
-          <select value={sequenceMode} onChange={(event) => setSequenceMode(event.target.value as AuditionSequenceMode)}>
+          <select value={sequenceMode} onChange={(event) => changeSequenceMode(event.target.value as AuditionSequenceMode)}>
             {auditionSequenceOptions.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
@@ -79,11 +105,21 @@ export function AuditionStackPanel({
           </select>
         </label>
         <div className="audition-transport">
-          <button type="button" disabled={!cursor.previous} onClick={() => cursor.previous && onSelect(cursor.previous.artifact_id)} title="Previous take">
+          <button type="button" disabled={!cursor.previous} onClick={() => cursor.previous && selectTake(cursor.previous.artifact_id)} title="Previous take">
             <SkipBack size={14} />
           </button>
-          <button type="button" disabled={!cursor.next} onClick={() => cursor.next && onSelect(cursor.next.artifact_id)} title="Next take">
+          <button type="button" disabled={!cursor.next} onClick={() => cursor.next && selectTake(cursor.next.artifact_id)} title="Next take">
             <SkipForward size={14} />
+          </button>
+          <button
+            type="button"
+            disabled={!cursor.selected}
+            aria-pressed={queueAutoplay}
+            className={queueAutoplay ? "active" : ""}
+            onClick={toggleQueueAutoplay}
+            title="Play through this take queue"
+          >
+            Auto
           </button>
           <button type="button" disabled={!cursor.selected} onClick={() => cursor.selected && onCompare("a", cursor.selected.artifact_id)} title="Pin selected take as anchor">
             Anchor
@@ -98,13 +134,19 @@ export function AuditionStackPanel({
         if (!artifact) return null;
         return (
           <article key={row.artifactId} className={selectedId === row.artifactId ? "selected" : ""}>
-            <button type="button" onClick={() => onSelect(row.artifactId)} title={row.prompt ?? row.label}>
+            <button type="button" onClick={() => selectTake(row.artifactId)} title={row.prompt ?? row.label}>
               <span>{row.label}</span>
               <small>{row.sequence} · {row.origin} · {row.meta}</small>
               <ListeningDecisionBadge artifact={artifact} />
               {selectedId === row.artifactId ? <i className="selected-take-label">selected take</i> : null}
             </button>
-            <AudioDeck artifact={artifact} apiBase={apiBase} compact />
+            <AudioDeck
+              artifact={artifact}
+              apiBase={apiBase}
+              compact
+              autoPlay={queueAutoplay && autoPlayArtifactId === row.artifactId}
+              onEnded={() => advanceAutoplay(row.artifactId)}
+            />
             <ListeningDecisionControls
               artifact={artifact}
               source="take_strip"

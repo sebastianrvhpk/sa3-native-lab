@@ -21,12 +21,16 @@ export function AudioDeck({
   apiBase,
   compact = false,
   onAnnotate,
+  autoPlay = false,
+  onEnded,
   persisting = false,
 }: {
   artifact: ArtifactRecord;
   apiBase: string;
   compact?: boolean;
   onAnnotate?: (artifactId: string, payload: ArtifactAnnotationPayload) => void;
+  autoPlay?: boolean;
+  onEnded?: () => void;
   persisting?: boolean;
 }) {
   const api = useMemo(() => createApi(apiBase), [apiBase]);
@@ -38,6 +42,7 @@ export function AudioDeck({
     staleTime: Infinity,
   });
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const autoPlayKeyRef = useRef("");
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -87,6 +92,18 @@ export function AudioDeck({
   useEffect(() => {
     if (audioRef.current) audioRef.current.playbackRate = playbackRate;
   }, [playbackRate]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    const autoPlayKey = `${artifact.artifact_id}:${autoPlay}`;
+    if (!autoPlay) {
+      autoPlayKeyRef.current = "";
+      return;
+    }
+    if (!audio || autoPlayKeyRef.current === autoPlayKey) return;
+    autoPlayKeyRef.current = autoPlayKey;
+    audio.play().catch(() => setPlaying(false));
+  }, [artifact.artifact_id, autoPlay]);
 
   const seekTo = (fraction: number) => {
     const audio = audioRef.current;
@@ -174,7 +191,10 @@ export function AudioDeck({
         }}
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
-        onEnded={() => setPlaying(false)}
+        onEnded={() => {
+          setPlaying(false);
+          onEnded?.();
+        }}
       />
       <div className="deck-head">
         <button type="button" className="transport-wheel" onClick={togglePlay} title={playing ? "Pause" : "Play"}>
