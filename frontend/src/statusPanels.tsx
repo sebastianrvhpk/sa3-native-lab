@@ -87,12 +87,17 @@ export function ReadinessPanel({ checks }: { checks: ReadinessCheck[] }) {
           <div key={check.name} className={`readiness-row ${check.status}`}>
             <span>{readinessLabel(check.name)}</span>
             <strong>{check.status}</strong>
-            <small title={check.detail ?? check.message}>{check.message}</small>
+            <small title={check.detail ?? check.message}>{readinessMessage(check)}</small>
           </div>
         ))}
       </div>
     </details>
   );
+}
+
+function readinessMessage(check: ReadinessCheck) {
+  if (!check.detail || check.detail === check.message) return check.message;
+  return `${check.message} · ${check.detail}`;
 }
 
 function priorityReadinessChecks(checks: ReadinessCheck[]) {

@@ -1,6 +1,8 @@
+import { render, screen } from "@testing-library/react";
+import { createElement } from "react";
 import { describe, expect, it } from "vitest";
 
-import { jobPhase, jobRecoveryHints } from "./jobProgress";
+import { JobProgress, jobPhase, jobRecoveryHints } from "./jobProgress";
 import { landingArtifactId } from "./jobUtils";
 import type { JobRecord } from "./types";
 
@@ -49,6 +51,14 @@ describe("job recovery hints", () => {
     expect(landingArtifactId(job({ status: "succeeded", artifact_ids: ["art_a", "art_b"] }))).toBe("art_b");
     expect(landingArtifactId(job({ status: "failed", artifact_ids: ["art_a"] }))).toBeNull();
     expect(landingArtifactId(job({ status: "succeeded", artifact_ids: [] }))).toBeNull();
+  });
+
+  it("keeps command context and log tail behind the job drawer", () => {
+    render(createElement(JobProgress, { job: job({ status: "failed", metrics: { command: "python script.py --token REDACTED" }, logs: ["line one", "line two"] }) }));
+
+    expect(screen.getByText("Log tail")).toBeInTheDocument();
+    expect(screen.getByText("python script.py --token REDACTED")).toBeInTheDocument();
+    expect(screen.getAllByText(/line two/).length).toBeGreaterThan(0);
   });
 });
 

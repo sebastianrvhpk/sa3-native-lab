@@ -29,6 +29,7 @@ export function JobProgress({
 } & JobActionHandlers) {
   const logLines = job.logs.slice(-12);
   const hints = jobRecoveryHints(job);
+  const commandContext = commandMetric(job.metrics.command);
   const canCancel = isJobActive(job) && Boolean(onCancelJob);
   const canRetry = (job.status === "failed" || job.status === "cancelled") && Boolean(onRetryJob);
   const statusMessage = job.message ?? latestUsefulLog(job) ?? job.status;
@@ -64,14 +65,15 @@ export function JobProgress({
           ) : null}
         </div>
       ) : null}
-      {!compact && (job.error || logLines.length) ? (
+      {!compact && (job.error || logLines.length || commandContext) ? (
         <details className="job-log-drawer">
           <summary>
             <CircleAlert size={14} />
-            {job.error ? "Error details" : `${logLines.length} log lines`}
+            {job.error ? "Error details" : "Log tail"}
           </summary>
           {job.error ? <strong>{job.error}</strong> : null}
           {hints.length ? <RecoveryHints hints={hints} /> : null}
+          {commandContext ? <code>{commandContext}</code> : null}
           {logLines.length ? <pre>{logLines.join("\n")}</pre> : null}
         </details>
       ) : null}
@@ -190,4 +192,9 @@ function dedupeHints(hints: JobRecoveryHint[]) {
     seen.add(hint.title);
     return true;
   });
+}
+
+function commandMetric(value: unknown) {
+  if (typeof value !== "string") return "";
+  return value.trim().slice(0, 500);
 }

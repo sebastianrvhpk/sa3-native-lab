@@ -184,7 +184,13 @@ export function FamilyDetailPanel({
         </div>
       ) : null}
       {sweepEntries.length ? (
-        <SweepFamilyBand entries={sweepEntries} onSelect={onSelect} onCompare={onCompare} onForkRecipe={() => onForkRecipe(family.recipe)} />
+        <SweepFamilyBand
+          entries={sweepEntries}
+          selectedId={selectedId}
+          onSelect={onSelect}
+          onCompare={onCompare}
+          onForkRecipe={() => onForkRecipe(family.recipe)}
+        />
       ) : null}
       {siblingSweeps.length ? (
         <SweepSiblingComparison
@@ -333,11 +339,13 @@ function SweepSiblingComparison({
 
 function SweepFamilyBand({
   entries,
+  selectedId,
   onSelect,
   onCompare,
   onForkRecipe,
 }: {
   entries: SweepEntry[];
+  selectedId: string | null;
   onSelect: (artifactId: string | null) => void;
   onCompare: (slot: "a" | "b", artifactId: string | null) => void;
   onForkRecipe: () => void;
@@ -353,6 +361,7 @@ function SweepFamilyBand({
         <span>Alpha Sweep</span>
         <strong>{entries.length} variants</strong>
       </div>
+      <ListeningDecisionSummaryChips artifacts={entries.map((entry) => entry.artifact)} ariaLabel="Sweep listening decision summary" />
       <div className="sweep-sort-controls" aria-label="Sort sweep variants">
         <button type="button" className={sortKey === "alpha" ? "active" : ""} onClick={() => setSortKey("alpha")}>
           alpha
@@ -368,11 +377,16 @@ function SweepFamilyBand({
       </div>
       <div className="sweep-family-grid">
         {sortedEntries.map((entry) => (
-          <article key={entry.artifact.artifact_id} className={entry.artifact.artifact_id === bestArtifactId ? "promoted" : ""}>
+          <article
+            key={entry.artifact.artifact_id}
+            className={`${entry.artifact.artifact_id === bestArtifactId ? "promoted" : ""} ${entry.artifact.artifact_id === selectedId ? "selected" : ""}`}
+          >
             <button type="button" className="sweep-main" onClick={() => onSelect(entry.artifact.artifact_id)} title={artifactName(entry.artifact)}>
               <span>{entry.label}</span>
-              <small>{artifactMeta(entry.artifact)}</small>
+              <small>{sweepDeltaLabel(entry)} · {artifactMeta(entry.artifact)}</small>
+              <ListeningDecisionBadge artifact={entry.artifact} />
               {entry.artifact.artifact_id === bestArtifactId ? <i>highlight</i> : null}
+              {entry.artifact.artifact_id === selectedId ? <i className="selected-take-label">selected take</i> : null}
             </button>
             <div className="sweep-actions">
               <button type="button" onClick={() => onCompare("a", entry.artifact.artifact_id)} title="Pin this sweep variant as anchor">
@@ -568,6 +582,12 @@ function artifactAlpha(artifact: ArtifactRecord): number | null {
 
 function sweepLabel(artifact: ArtifactRecord, index: number) {
   return artifact.label || artifact.file?.filename?.replace(/\.[^.]+$/, "") || `variant ${index + 1}`;
+}
+
+function sweepDeltaLabel(entry: SweepEntry) {
+  if (entry.alpha === null) return "open alpha";
+  if (entry.alpha === 0) return "neutral";
+  return `${formatAlpha(entry.alpha)} from neutral`;
 }
 
 function formatAlpha(value: number) {

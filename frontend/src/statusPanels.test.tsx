@@ -28,7 +28,7 @@ describe("status panels", () => {
     expect(screen.getAllByText("warn").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("Artifacts")).toBeInTheDocument();
     expect(screen.getByText("HF auth")).toBeInTheDocument();
-    expect(screen.getByText("HF token missing")).toBeInTheDocument();
+    expect(screen.getByText("HF token missing · hf-auth detail")).toBeInTheDocument();
   });
 
   it("shows active run state and forwards job actions", async () => {

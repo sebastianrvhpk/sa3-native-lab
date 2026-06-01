@@ -45,10 +45,26 @@ export function PendingTakesPanel({ takes, onCancelJob, onRetryJob }: PendingTak
                 <dd>{take.inspect.jobId}</dd>
                 <dt>Gesture</dt>
                 <dd>{take.inspect.operator}</dd>
+                <dt>Backend</dt>
+                <dd>{take.job.recipe.backend}</dd>
+                <dt>Model</dt>
+                <dd>{take.job.recipe.model ?? "not set"}</dd>
                 <dt>Sources</dt>
                 <dd>{take.sourceIds.length ? take.sourceIds.join(", ") : "none"}</dd>
                 <dt>Landing</dt>
                 <dd>{take.landingArtifactId ?? "not landed"}</dd>
+                <dt>Outputs</dt>
+                <dd>{take.producedArtifactIds.length ? take.producedArtifactIds.join(", ") : "none yet"}</dd>
+                <dt>Params</dt>
+                <dd>{formatInspectParams(take.job.recipe.params)}</dd>
+                {take.job.logs.length ? (
+                  <>
+                    <dt>Log tail</dt>
+                    <dd>
+                      <pre>{take.job.logs.slice(-4).join("\n")}</pre>
+                    </dd>
+                  </>
+                ) : null}
               </dl>
             </details>
             <div className="pending-next-actions" aria-label={`${take.phrase} next actions`}>
@@ -79,4 +95,18 @@ export function PendingTakesPanel({ takes, onCancelJob, onRetryJob }: PendingTak
       </div>
     </section>
   );
+}
+
+function formatInspectParams(params: Record<string, unknown>) {
+  const entries = Object.entries(params)
+    .filter(([key]) => key !== "metadata")
+    .slice(0, 6)
+    .map(([key, value]) => `${key}: ${formatInspectValue(value)}`);
+  return entries.length ? entries.join(" · ") : "none";
+}
+
+function formatInspectValue(value: unknown) {
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return String(value);
+  if (Array.isArray(value)) return `[${value.slice(0, 4).join(", ")}${value.length > 4 ? ", ..." : ""}]`;
+  return value === null || value === undefined ? "none" : "set";
 }

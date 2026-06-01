@@ -192,9 +192,9 @@ function PromptSearchRunComparison({ rows }: { rows: PromptSearchRunComparisonRo
   const totalRuns = visibleRows.length;
   const totalTakes = visibleRows.reduce((total, row) => total + row.totalTakes, 0);
   return (
-    <section className="prompt-run-comparison" aria-label="Prompt search run comparison">
+    <section className="prompt-run-comparison" aria-label="Prompt take family comparison">
       <div>
-        <strong>Run comparison</strong>
+        <strong>Prompt take families</strong>
         <span>{totalRuns} run{totalRuns === 1 ? "" : "s"} · {totalTakes} take{totalTakes === 1 ? "" : "s"}</span>
       </div>
       {visibleRows.map((row) => (
@@ -258,7 +258,7 @@ function PromptDecisionCorrelation({
   });
   if (!takes.length) return null;
   if (!target) {
-    return <div className="prompt-decision-study unavailable">target decision study unavailable</div>;
+    return <div className="prompt-decision-study unavailable">target listening comparison unavailable</div>;
   }
   const comparisons = new Map<string, AudioDescriptorComparison>();
   comparisonQueries.forEach((query, index) => {
@@ -268,9 +268,9 @@ function PromptDecisionCorrelation({
   const summary = promptDecisionSummary(rows);
   const loading = comparisonQueries.some((query) => query.isLoading);
   return (
-    <section className="prompt-decision-study" aria-label="Prompt search decision correlation">
+    <section className="prompt-decision-study" aria-label="Prompt candidate listening comparison">
       <div className="prompt-decision-head">
-        <strong>Decision study</strong>
+        <strong>Candidate listening</strong>
         <span>{loading ? "measuring..." : `${rows.filter((row) => row.decision).length}/${rows.length} listened`}</span>
       </div>
       <div className="prompt-decision-summary">
