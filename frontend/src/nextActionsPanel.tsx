@@ -21,6 +21,7 @@ export function NextActionsPanel({
           <button
             key={action.id}
             type="button"
+            data-action-kind={action.kind}
             disabled={!action.available}
             title={action.disabledReason ?? action.description}
             onClick={() => onAction(action)}

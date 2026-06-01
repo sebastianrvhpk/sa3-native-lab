@@ -133,7 +133,7 @@ export function AuditionStackPanel({
         const artifact = artifactMap.get(row.artifactId);
         if (!artifact) return null;
         return (
-          <article key={row.artifactId} className={selectedId === row.artifactId ? "selected" : ""}>
+          <article key={row.artifactId} className={selectedId === row.artifactId ? "selected" : ""} data-kind={artifact.kind}>
             <button type="button" onClick={() => selectTake(row.artifactId)} title={row.prompt ?? row.label}>
               <span>{row.label}</span>
               <small>{row.sequence} · {row.origin} · {row.meta}</small>

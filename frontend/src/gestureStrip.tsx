@@ -21,6 +21,7 @@ export function GestureStrip({ gestures, activeId, onSelect }: GestureStripProps
             key={gesture.id}
             type="button"
             className={activeId === gesture.id ? "active" : ""}
+            data-gesture={gesture.id}
             onClick={() => onSelect(gesture.id)}
             aria-pressed={activeId === gesture.id}
             title={gesture.disabledReason ?? gesture.shortIntent}

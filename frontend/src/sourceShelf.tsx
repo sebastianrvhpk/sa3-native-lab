@@ -35,6 +35,7 @@ export function SourceShelf({
           <article
             key={artifact.artifact_id}
             className={`artifact-row-shell ${selectedId === artifact.artifact_id ? "selected" : ""}`}
+            data-kind={artifact.kind}
           >
             <button
               type="button"

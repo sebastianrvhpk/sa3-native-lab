@@ -1077,8 +1077,6 @@ export function App() {
             {selectedArtifact ? <ArtifactBadge artifact={selectedArtifact} /> : null}
           </div>
 
-          <GestureStrip gestures={gestureOptions} activeId={activeGesture.id} onSelect={selectGesture} />
-
           <Specimen
             artifact={selectedArtifact}
             artifacts={allArtifacts}
@@ -1101,7 +1099,10 @@ export function App() {
             onGeneratePrompt={runPromptCandidate}
             getArtifactPath={artifactPathForField}
           />
-          <NextActionsPanel actions={currentNextActions} onAction={applyNextAction} />
+          <div className="control-bank" aria-label="Gesture controls">
+            <GestureStrip gestures={gestureOptions} activeId={activeGesture.id} onSelect={selectGesture} />
+            <NextActionsPanel actions={currentNextActions} onAction={applyNextAction} />
+          </div>
           <details className="dev-drawer activity-drawer">
             <summary>Inspect activity</summary>
             <RunMonitor
