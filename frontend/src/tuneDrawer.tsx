@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { CircleAlert, SlidersHorizontal } from "lucide-react";
 
+import type { GestureActionDescriptor } from "./gestureActionDescriptor";
 import type { GestureOption } from "./gestureModel";
 
 interface TuneDrawerProps {
@@ -8,9 +9,10 @@ interface TuneDrawerProps {
   children: ReactNode;
   inspect?: ReactNode;
   action?: ReactNode;
+  actionDescriptor?: GestureActionDescriptor;
 }
 
-export function TuneDrawer({ gesture, children, inspect, action }: TuneDrawerProps) {
+export function TuneDrawer({ gesture, children, inspect, action, actionDescriptor }: TuneDrawerProps) {
   return (
     <section className={`tune-drawer ${gesture.available ? "available" : "blocked"}`} aria-label={`${gesture.label} tune`}>
       <div className="tune-head">
@@ -29,6 +31,7 @@ export function TuneDrawer({ gesture, children, inspect, action }: TuneDrawerPro
           {gesture.disabledReason}
         </div>
       ) : null}
+      {actionDescriptor ? <GestureActionSummary descriptor={actionDescriptor} /> : null}
       <details className="tune-details" open>
         <summary>
           <SlidersHorizontal size={15} />
@@ -44,5 +47,22 @@ export function TuneDrawer({ gesture, children, inspect, action }: TuneDrawerPro
       ) : null}
       {action ? <div className="gesture-action">{action}</div> : null}
     </section>
+  );
+}
+
+function GestureActionSummary({ descriptor }: { descriptor: GestureActionDescriptor }) {
+  return (
+    <div className={`gesture-action-summary ${descriptor.ready ? "ready" : "blocked"}`}>
+      <p>{descriptor.disabledReason ?? descriptor.intentCopy}</p>
+      {descriptor.sourceRequirements.length ? (
+        <div className="gesture-requirements" aria-label="Gesture source requirements">
+          {descriptor.sourceRequirements.map((requirement) => (
+            <span key={`${requirement.label}:${requirement.detail}`} className={requirement.status} title={requirement.detail}>
+              {requirement.label}
+            </span>
+          ))}
+        </div>
+      ) : null}
+    </div>
   );
 }

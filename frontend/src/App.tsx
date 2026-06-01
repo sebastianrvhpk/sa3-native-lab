@@ -28,6 +28,7 @@ import { AuditionStackPanel } from "./auditionStackPanel";
 import { ComparePanel } from "./comparePanel";
 import { createControlPlaneClient, DEFAULT_CONTROL_PLANE_URL, type ResultFamily, type WorkbenchState } from "./controlPlane";
 import { ForkRecipePanel } from "./forkRecipePanel";
+import { describeGestureAction } from "./gestureActionDescriptor";
 import { buildGestureOptions, gestureById, type GestureId } from "./gestureModel";
 import { GestureStrip } from "./gestureStrip";
 import { isJobActive, landingArtifactId } from "./jobUtils";
@@ -284,6 +285,7 @@ export function App() {
   const generationNeedsSource = generationMode !== "generate.text_to_audio";
   const generationSource = selectedArtifact?.kind === "audio" ? selectedArtifact : null;
   const canGenerate = generationReady({ form: generationForm, needsSource: generationNeedsSource, sourceArtifact: generationSource });
+  const operatorNeedsDonor = operatorUsesDonor(activeOperatorConfig, operatorForm);
   const canRunOperator = operatorReady(activeOperatorConfig, operatorForm, selectedArtifact, donorArtifactId);
   const generateJob = activeJobForOperator(runningJobs, generationMode);
   const encodeJob = activeJobForOperator(runningJobs, "latent.encode");
@@ -580,6 +582,31 @@ export function App() {
   const canRunExperiment = experimentReady(activeExperiment, experimentForm, selectedArtifact);
   const gestureOptions = useMemo(() => buildGestureOptions(selectedArtifact), [selectedArtifact]);
   const activeGesture = gestureOptions.find((gesture) => gesture.id === activeGestureId) ?? gestureOptions[0] ?? buildGestureOptions(null)[0]!;
+  const gestureAction = describeGestureAction({
+    gesture: activeGesture,
+    selectedArtifact,
+    generationMode,
+    generationForm,
+    generationNeedsSource,
+    generationSource,
+    generationReady: canGenerate,
+    generationBusy: generate.isPending || Boolean(generateJob),
+    encodeReady: Boolean(activeGesture.available && selectedArtifact?.kind === "audio"),
+    encodeBusy: encode.isPending || Boolean(encodeJob),
+    decodeReady: Boolean(activeGesture.available && selectedArtifact?.kind === "latent"),
+    decodeBusy: decode.isPending || Boolean(decodeJob),
+    operatorMode: operator,
+    operatorLabel: activeOperatorConfig.label,
+    operatorReady: canRunOperator,
+    operatorBusy: runOperator.isPending || Boolean(operatorJob),
+    operatorNeedsDonor,
+    donorArtifactId,
+    donorArtifactLabel: latentArtifacts.find((artifact) => artifact.artifact_id === donorArtifactId)?.label ?? null,
+    experimentLabel: activeExperiment.label,
+    experimentReady: canRunExperiment,
+    experimentBusy: runExperiment.isPending || Boolean(experimentJob),
+    rememberBusy: archiveArtifact.isPending,
+  });
   const currentNextActions = useMemo(
     () => nextActionsForArtifact(selectedArtifact, { donorLatents: latentArtifacts }),
     [latentArtifacts, selectedArtifact],
@@ -777,7 +804,7 @@ export function App() {
             onResetPreset={() => selectedOperatorPreset && applyOperatorPreset(selectedOperatorPreset.id)}
             onDeletePreset={removeOperatorPreset}
           />
-          {operatorUsesDonor(activeOperatorConfig, operatorForm) ? (
+          {operatorNeedsDonor ? (
             <div className="control-cell donor-cell">
               <SourcePicker
                 label="Texture donor"
@@ -809,6 +836,7 @@ export function App() {
             onChange={setOperatorField}
             getArtifactPath={artifactPathForField}
             getArtifactLabel={artifactName}
+            operatorMode={operator}
           />
         </>
       );
@@ -894,9 +922,9 @@ export function App() {
     if (activeGesture.tuneSource === "generation") {
       return (
         <>
-          <button className="primary-action" onClick={() => generate.mutate()} disabled={!activeGesture.available || !canGenerate || generate.isPending || Boolean(generateJob)}>
+          <button className="primary-action" onClick={() => generate.mutate()} disabled={!gestureAction.ready} title={gestureAction.disabledReason ?? gestureAction.intentCopy}>
             {generate.isPending || generateJob ? <LoaderCircle className="spin" size={18} /> : <Play size={18} />}
-            {generateJob ? activeGesture.progressPhrase : generate.isPending ? "Queueing take" : generationButtonLabel(activeGesture.id, generationMode)}
+            {gestureAction.label}
           </button>
           <InlineJobStatus
             job={generateJob}
@@ -910,9 +938,9 @@ export function App() {
     if (activeGesture.id === "encode") {
       return (
         <>
-          <button disabled={!activeGesture.available || !selectedArtifact || selectedArtifact.kind !== "audio" || encode.isPending || Boolean(encodeJob)} onClick={() => selectedArtifact && encode.mutate(selectedArtifact)}>
+          <button disabled={!gestureAction.ready} title={gestureAction.disabledReason ?? gestureAction.intentCopy} onClick={() => selectedArtifact && encode.mutate(selectedArtifact)}>
             {encode.isPending || encodeJob ? <LoaderCircle className="spin" size={17} /> : <Box size={17} />}
-            {encodeJob ? "Encoding latent" : "Encode current sound"}
+            {gestureAction.label}
           </button>
           <InlineJobStatus
             job={encodeJob}
@@ -926,9 +954,9 @@ export function App() {
     if (activeGesture.id === "decode") {
       return (
         <>
-          <button disabled={!activeGesture.available || !selectedArtifact || selectedArtifact.kind !== "latent" || decode.isPending || Boolean(decodeJob)} onClick={() => selectedArtifact && decode.mutate(selectedArtifact)}>
+          <button disabled={!gestureAction.ready} title={gestureAction.disabledReason ?? gestureAction.intentCopy} onClick={() => selectedArtifact && decode.mutate(selectedArtifact)}>
             {decode.isPending || decodeJob ? <LoaderCircle className="spin" size={17} /> : <Waves size={17} />}
-            {decodeJob ? "Decoding sound" : "Decode latent"}
+            {gestureAction.label}
           </button>
           <InlineJobStatus
             job={decodeJob}
@@ -942,9 +970,9 @@ export function App() {
     if (activeGesture.tuneSource === "operator") {
       return (
         <>
-          <button className="primary-action" disabled={!activeGesture.available || !canRunOperator || runOperator.isPending || Boolean(operatorJob)} onClick={() => selectedArtifact && runOperator.mutate(selectedArtifact)}>
+          <button className="primary-action" disabled={!gestureAction.ready} title={gestureAction.disabledReason ?? gestureAction.intentCopy} onClick={() => selectedArtifact && runOperator.mutate(selectedArtifact)}>
             {runOperator.isPending || operatorJob ? <LoaderCircle className="spin" size={18} /> : <GitFork size={17} />}
-            {operatorJob ? activeGesture.progressPhrase : "Apply gesture"}
+            {gestureAction.label}
           </button>
           <InlineJobStatus
             job={operatorJob}
@@ -958,9 +986,9 @@ export function App() {
     if (activeGesture.tuneSource === "experiment") {
       return (
         <>
-          <button className="primary-action" disabled={!activeGesture.available || !canRunExperiment || runExperiment.isPending || Boolean(experimentJob)} onClick={() => runExperiment.mutate()}>
+          <button className="primary-action" disabled={!gestureAction.ready} title={gestureAction.disabledReason ?? gestureAction.intentCopy} onClick={() => runExperiment.mutate()}>
             {runExperiment.isPending || experimentJob ? <LoaderCircle className="spin" size={18} /> : <Play size={18} />}
-            {experimentJob ? activeGesture.progressPhrase : "Run gesture"}
+            {gestureAction.label}
           </button>
           <InlineJobStatus
             job={experimentJob}
@@ -974,11 +1002,12 @@ export function App() {
     return (
       <button
         className="primary-action"
-        disabled={!selectedArtifact || archiveArtifact.isPending}
+        disabled={!gestureAction.ready}
+        title={gestureAction.disabledReason ?? gestureAction.intentCopy}
         onClick={() => selectedArtifact && archiveArtifact.mutate({ artifact: selectedArtifact, source: "remember_gesture" })}
       >
         {archiveArtifact.isPending ? <LoaderCircle className="spin" size={18} /> : <Box size={17} />}
-        {archiveArtifact.isPending ? "Remembering" : "Remember current sound"}
+        {gestureAction.label}
       </button>
     );
   };
@@ -1085,7 +1114,7 @@ export function App() {
           </details>
 
           <div className="gesture-workbench">
-            <TuneDrawer gesture={activeGesture} inspect={renderGestureInspect()} action={renderGestureAction()}>
+            <TuneDrawer gesture={activeGesture} inspect={renderGestureInspect()} action={renderGestureAction()} actionDescriptor={gestureAction}>
               {renderGestureTune()}
             </TuneDrawer>
           </div>
@@ -1231,10 +1260,4 @@ function readinessChecksFromHealth(health: HealthResponse | undefined): Readines
       message: backend.message ?? backend.device ?? backend.backend,
     })),
   ];
-}
-
-function generationButtonLabel(gestureId: GestureId, mode: GenerationMode) {
-  if (gestureId === "vary") return "Vary sound";
-  if (gestureId === "continue") return mode === "generate.inpaint" ? "Inpaint sound" : "Continue sound";
-  return mode === "generate.text_to_audio" ? "Make sound" : "Make from source";
 }

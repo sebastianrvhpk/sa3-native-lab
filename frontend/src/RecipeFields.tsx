@@ -18,8 +18,10 @@ import {
   type RecipeField,
   type RecipeValue,
 } from "./recipeFormModel";
+import { latentRegionDescriptor } from "./latentRegionModel";
 import { buildProductSources, type ProductSource } from "./sourceModel";
 import type { ArtifactRecord } from "./types";
+import type { LatentOperatorMode } from "./workbenchConfigs";
 
 interface RecipeFieldsProps {
   config: FieldConfig;
@@ -30,6 +32,7 @@ interface RecipeFieldsProps {
   onChange: (key: string, value: RecipeValue) => void;
   getArtifactPath: (artifact: ArtifactRecord, fieldKey: string) => string;
   getArtifactLabel: (artifact: ArtifactRecord) => string;
+  operatorMode?: LatentOperatorMode;
 }
 
 export function RecipeFields({
@@ -41,6 +44,7 @@ export function RecipeFields({
   onChange,
   getArtifactPath,
   getArtifactLabel,
+  operatorMode,
 }: RecipeFieldsProps) {
   const formController = useForm({ defaultValues: form });
   const sourceOptions = sources ?? buildProductSources(artifacts);
@@ -78,6 +82,7 @@ export function RecipeFields({
 
   return (
     <div className="recipe-fields">
+      {operatorMode ? <LatentRegionSummary descriptor={latentRegionDescriptor({ operatorMode, form, selectedArtifact })} /> : null}
       {coreFields.map(renderControl)}
       {advancedFields.length ? (
         <details className="recipe-advanced">
@@ -88,6 +93,24 @@ export function RecipeFields({
           <div className="recipe-fields advanced">{advancedFields.map(renderControl)}</div>
         </details>
       ) : null}
+    </div>
+  );
+}
+
+function LatentRegionSummary({ descriptor }: { descriptor: ReturnType<typeof latentRegionDescriptor> }) {
+  if (!descriptor) return null;
+  return (
+    <div className="latent-region-summary">
+      <div>
+        <strong>{descriptor.title}</strong>
+        <span>{descriptor.detail}</span>
+      </div>
+      <div>
+        {descriptor.chips.map((chip) => (
+          <i key={chip}>{chip}</i>
+        ))}
+      </div>
+      {descriptor.warning ? <small>{descriptor.warning}</small> : null}
     </div>
   );
 }

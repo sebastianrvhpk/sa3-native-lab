@@ -72,6 +72,23 @@ describe("RecipeFields", () => {
 
     expect(onChange).toHaveBeenCalledWith("target_audio_path", "/tmp/bell.wav");
   });
+
+  it("renders latent-region context without changing submitted field values", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const latent = artifact("latent", {
+      label: "Latent take",
+      latent: { shape: [256, 64], latent_rate: 10.77, duration_seconds: 6, channel_first: true },
+    });
+
+    render(<LatentRecipeFieldsHarness latent={latent} onChange={onChange} />);
+
+    expect(screen.getByText("Channel mask for borrowed texture")).toBeInTheDocument();
+    expect(screen.getByText(/not bounded time-region/)).toBeInTheDocument();
+    await user.type(screen.getByLabelText("Exact channels"), "4, 12");
+
+    expect(onChange).toHaveBeenCalledWith("channels", expect.stringContaining("12"));
+  });
 });
 
 function RecipeFieldsHarness({ onChange }: { onChange: (key: string, value: string | number | boolean) => void }) {
@@ -93,6 +110,36 @@ function RecipeFieldsHarness({ onChange }: { onChange: (key: string, value: stri
       }}
       getArtifactPath={(artifact) => artifact.path}
       getArtifactLabel={(artifact) => artifact.label ?? artifact.artifact_id}
+    />
+  );
+}
+
+function LatentRecipeFieldsHarness({
+  latent,
+  onChange,
+}: {
+  latent: ArtifactRecord;
+  onChange: (key: string, value: string | number | boolean) => void;
+}) {
+  const [form, setForm] = useState({ mode: "channel_block", channels: "" });
+  return (
+    <RecipeFields
+      config={{
+        fields: [
+          { key: "mode", label: "Mask mode", type: "select", options: [{ value: "channel_block", label: "channel block" }] },
+          { key: "channels", label: "Exact channels", type: "text" },
+        ],
+      }}
+      form={form}
+      artifacts={[latent]}
+      selectedArtifact={latent}
+      onChange={(key, value) => {
+        setForm((current) => ({ ...current, [key]: value }));
+        onChange(key, value);
+      }}
+      getArtifactPath={(artifact) => artifact.path}
+      getArtifactLabel={(artifact) => artifact.label ?? artifact.artifact_id}
+      operatorMode="latent.graft"
     />
   );
 }

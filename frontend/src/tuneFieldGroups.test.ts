@@ -35,4 +35,20 @@ describe("tuneFieldGroups", () => {
     expect(grouped.fields.find((field) => field.key === "temporal_sigma")?.advanced).toBe(true);
     expect(grouped.fields.find((field) => field.key === "backend")?.advanced).toBe(true);
   });
+
+  it("renames primary Tune fields into sound-operation language without changing keys", () => {
+    const grouped = withTuneFieldGroups(generationCatalog[1], { gestureId: "continue", generationMode: "generate.audio_to_audio" });
+
+    expect(grouped.fields.find((field) => field.key === "duration_seconds")?.label).toBe("Length");
+    expect(grouped.fields.find((field) => field.key === "init_noise_level")?.label).toBe("Variation amount");
+    expect(grouped.fields.find((field) => field.key === "init_noise_level")?.description).toMatch(/current sound/i);
+  });
+
+  it("keeps backend-supported channel masks visible for graft and renoise", () => {
+    const graft = operatorCatalog.find((item) => item.value === "latent.graft")!;
+    const renoise = operatorCatalog.find((item) => item.value === "latent.renoise")!;
+
+    expect(withTuneFieldGroups(graft, { gestureId: "borrow_texture", operatorMode: "latent.graft" }).fields.find((field) => field.key === "channels")?.advanced).toBe(false);
+    expect(withTuneFieldGroups(renoise, { gestureId: "morph", operatorMode: "latent.renoise" }).fields.find((field) => field.key === "block_size")?.advanced).toBe(false);
+  });
 });
