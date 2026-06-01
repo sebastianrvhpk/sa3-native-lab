@@ -9,7 +9,7 @@ import { branchListeningCursor } from "./branchListeningModel";
 import { branchMeta, branchSummaryForFamily } from "./branchModel";
 import type { ResultFamily } from "./controlPlane";
 import { JobProgress, type JobActionHandlers } from "./jobProgress";
-import { ListeningDecisionBadge, ListeningDecisionControls, ListeningDecisionSummaryChips } from "./listeningDecision";
+import { ListeningDecisionBadge, ListeningDecisionControls, ListeningDecisionSummaryChips, listeningDecision, listeningDecisionLabel } from "./listeningDecision";
 import type { ArtifactRecord, JobRecord, Recipe } from "./types";
 
 export function ResultFamilyPanel({
@@ -355,6 +355,7 @@ function SweepFamilyBand({
   const [sortKey, setSortKey] = useState<SweepSortKey>("alpha");
   const sortedEntries = useMemo(() => sortSweepEntries(entries, sortKey, primaryMetric), [entries, sortKey, primaryMetric]);
   const bestArtifactId = primaryMetric ? bestSweepEntry(entries, primaryMetric)?.artifact.artifact_id ?? null : null;
+  const listeningPick = sweepListeningPick(entries, primaryMetric);
   return (
     <div className="sweep-family-band" aria-label="Alpha sweep variants">
       <div className="sweep-family-head">
@@ -362,6 +363,13 @@ function SweepFamilyBand({
         <strong>{entries.length} variants</strong>
       </div>
       <ListeningDecisionSummaryChips artifacts={entries.map((entry) => entry.artifact)} ariaLabel="Sweep listening decision summary" />
+      {listeningPick ? (
+        <button type="button" className="sweep-listening-pick" onClick={() => onSelect(listeningPick.artifactId)} aria-label="Sweep listening pick">
+          <span>{listeningPick.label}</span>
+          <strong>{listeningPick.value}</strong>
+          {listeningPick.meta ? <small>{listeningPick.meta}</small> : null}
+        </button>
+      ) : null}
       <div className="sweep-sort-controls" aria-label="Sort sweep variants">
         <button type="button" className={sortKey === "alpha" ? "active" : ""} onClick={() => setSortKey("alpha")}>
           alpha
@@ -506,6 +514,31 @@ function bestSweepEntry(entries: SweepEntry[], metricKey: string): SweepEntry | 
   return sorted[0] ?? null;
 }
 
+function sweepListeningPick(entries: SweepEntry[], metricKey: string | null): { artifactId: string; label: string; value: string; meta: string } | null {
+  const candidates = entries
+    .map((entry) => ({ entry, decision: listeningDecision(entry.artifact) }))
+    .filter((item): item is { entry: SweepEntry; decision: "keeper" | "maybe" } => item.decision === "keeper" || item.decision === "maybe")
+    .sort((left, right) =>
+      sweepDecisionRank(left.decision) - sweepDecisionRank(right.decision)
+      || Date.parse(right.entry.artifact.created_at) - Date.parse(left.entry.artifact.created_at),
+    );
+  const first = candidates[0];
+  if (!first) return null;
+  const metric = metricKey && first.entry.metrics[metricKey] !== undefined ? `${prettyParamName(metricKey)} ${formatMetricValue(first.entry.metrics[metricKey])}` : "";
+  const duration = first.entry.artifact.audio ? `${formatMetricValue(first.entry.artifact.audio.duration_seconds)}s` : "";
+  const note = sweepListeningNote(first.entry.artifact);
+  return {
+    artifactId: first.entry.artifact.artifact_id,
+    label: "Listening pick",
+    value: `${listeningDecisionLabel(first.decision)} at ${first.entry.label}`,
+    meta: [metric, duration, note].filter(Boolean).join(" · "),
+  };
+}
+
+function sweepDecisionRank(decision: "keeper" | "maybe") {
+  return decision === "keeper" ? 0 : 1;
+}
+
 function compareMetricValues(left: unknown, right: unknown, higherIsBetter: boolean) {
   const leftNumber = typeof left === "number" && Number.isFinite(left) ? left : null;
   const rightNumber = typeof right === "number" && Number.isFinite(right) ? right : null;
@@ -534,6 +567,13 @@ function artifactSweepMetrics(artifact: ArtifactRecord): Record<string, number |
     if (typeof value === "string" && value.length <= 32 && /^-?\d+(?:\.\d+)?$/.test(value)) metrics[key] = Number(value);
   }
   return metrics;
+}
+
+function sweepListeningNote(artifact: ArtifactRecord) {
+  if (typeof artifact.metadata.listening_decision_note === "string" && artifact.metadata.listening_decision_note.trim()) {
+    return artifact.metadata.listening_decision_note.trim();
+  }
+  return artifact.notes?.trim() ?? "";
 }
 
 function sweepMetricKeys(entries: SweepEntry[]): string[] {

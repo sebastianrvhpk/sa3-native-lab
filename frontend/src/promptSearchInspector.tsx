@@ -132,7 +132,7 @@ export function PromptSearchCandidatePanel({
       </div>
       <PromptDecisionCorrelation apiBase={apiBase} target={targetArtifact} takes={allGeneratedTakes} />
       <PromptDecisionMemory rows={decisionMemory} currentBundleId={artifact.artifact_id} />
-      <PromptSearchRunComparison rows={runComparisons} />
+      <PromptSearchRunComparison rows={runComparisons} onSelectArtifact={onSelectArtifact} />
       {candidates.map((candidate) => {
         const generated = promptCandidateGeneratedArtifacts(artifact.artifact_id, artifacts, candidate.prompt);
         return (
@@ -186,7 +186,13 @@ export function PromptSearchCandidatePanel({
   );
 }
 
-function PromptSearchRunComparison({ rows }: { rows: PromptSearchRunComparisonRow[] }) {
+function PromptSearchRunComparison({
+  rows,
+  onSelectArtifact,
+}: {
+  rows: PromptSearchRunComparisonRow[];
+  onSelectArtifact: (artifactId: string | null) => void;
+}) {
   const visibleRows = rows.filter((row) => row.totalTakes > 0 || row.current).slice(0, 6);
   if (!visibleRows.length) return null;
   const totalRuns = visibleRows.length;
@@ -204,7 +210,12 @@ function PromptSearchRunComparison({ rows }: { rows: PromptSearchRunComparisonRo
             <span>{row.keeper}K · {row.maybe}M · {row.rejected}R</span>
           </div>
           <small>{promptRunMeta(row)}</small>
-          <p>{row.prompts.slice(0, 2).join(" / ") || "no generated prompts yet"}</p>
+          <p>{row.latestNote || row.prompts.slice(0, 2).join(" / ") || "no generated prompts yet"}</p>
+          {row.latestArtifactId ? (
+            <button type="button" onClick={() => onSelectArtifact(row.latestArtifactId ?? null)}>
+              Latest take
+            </button>
+          ) : null}
         </article>
       ))}
     </section>

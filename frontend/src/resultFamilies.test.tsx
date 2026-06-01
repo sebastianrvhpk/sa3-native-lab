@@ -79,7 +79,11 @@ describe("FamilyDetailPanel", () => {
       updatedAt: "2026-05-27T16:02:00.000Z",
     });
     const artifacts = [
-      audioArtifact("art_pos", "alpha_pos4p00.wav", "2026-05-27T15:02:00.000Z", { score: 0.91 }),
+      audioArtifact("art_pos", "alpha_pos4p00.wav", "2026-05-27T15:02:00.000Z", {
+        score: 0.91,
+        listening_decision: "keeper",
+        listening_decision_note: "clean lift",
+      }),
       audioArtifact("art_neg", "alpha_neg4p00.wav", "2026-05-27T15:01:00.000Z", { score: 0.32 }),
     ];
 
@@ -110,7 +114,11 @@ describe("FamilyDetailPanel", () => {
     expect(screen.getByLabelText("Alpha sweep variants")).toBeInTheDocument();
     expect(screen.getByLabelText("Alpha sweep metric table")).toBeInTheDocument();
     expect(screen.getByLabelText("Branch listening trajectory")).toHaveTextContent("1/2 · alpha_neg4p00");
-    expect(screen.getByLabelText("Branch listening decision summary")).toHaveTextContent("2 open");
+    expect(screen.getByLabelText("Branch listening decision summary")).toHaveTextContent("1 keeper");
+    expect(screen.getByLabelText("Branch listening decision summary")).toHaveTextContent("1 open");
+    expect(screen.getByLabelText("Sweep listening pick")).toHaveTextContent("keeper at alpha +4");
+    expect(screen.getByLabelText("Sweep listening pick")).toHaveTextContent("score 0.91");
+    expect(screen.getByLabelText("Sweep listening pick")).toHaveTextContent("clean lift");
     expect(screen.getByText("alpha -4")).toBeInTheDocument();
     expect(screen.getByText("alpha +4")).toBeInTheDocument();
     expect(screen.getByText("0.32")).toBeInTheDocument();

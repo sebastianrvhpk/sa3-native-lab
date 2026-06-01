@@ -1169,6 +1169,18 @@ label {
   font-size: 0.62rem;
 }
 
+.prompt-run-comparison article button {
+  justify-self: start;
+  width: auto;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 6px;
+  background: rgb(255 255 255 / 0.58);
+  box-shadow: none;
+  color: var(--ink);
+  font-size: 0.62rem;
+}
+
 .prompt-candidate-panel article {
   display: grid;
   grid-template-columns: minmax(0, 1fr) max-content;
@@ -4565,6 +4577,44 @@ audio {
 .sweep-family-head strong {
   color: var(--ink);
   font-size: 0.74rem;
+}
+
+.sweep-listening-pick {
+  border: 1px solid rgb(45 51 52 / 0.14);
+  border-radius: 7px;
+  padding: 7px 9px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 3px 8px;
+  text-align: left;
+  background:
+    linear-gradient(135deg, rgb(201 238 72 / 0.19), rgb(85 198 199 / 0.12)),
+    rgb(255 255 255 / 0.56);
+  box-shadow: none;
+}
+
+.sweep-listening-pick span,
+.sweep-listening-pick strong,
+.sweep-listening-pick small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sweep-listening-pick span {
+  color: var(--muted);
+  font-size: 0.67rem;
+}
+
+.sweep-listening-pick strong {
+  color: var(--ink);
+  font-size: 0.73rem;
+}
+
+.sweep-listening-pick small {
+  grid-column: 2;
+  color: var(--muted);
+  font-size: 0.66rem;
 }
 
 .sweep-sort-controls {

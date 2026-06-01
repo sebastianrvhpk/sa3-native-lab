@@ -147,10 +147,12 @@ export function bundleReuseActions(inspection: Pick<ArtifactInspection, "artifac
   const kind = typeof inspection.bundle_summary.kind === "string" ? inspection.bundle_summary.kind : "";
   const operator = typeof inspection.artifact.metadata.operator === "string" ? inspection.artifact.metadata.operator : "";
   const prompt = objectValue(inspection.bundle_summary.prompt_search)?.prompt;
+  const memoryPath = profileMemoryPath(objectValue(inspection.bundle_summary.profile));
   return bundleReuseActionsForContext({
     kind,
     operator,
     prompt: typeof prompt === "string" ? prompt : undefined,
+    memoryPath,
   });
 }
 
@@ -382,6 +384,7 @@ export function bundleDomainSections(summary: Record<string, unknown> | undefine
       rows: [
         ["items", dataset.item_count],
         ["latents", dataset.latent_count],
+        ["readiness", datasetSourceReadiness(dataset)],
         ["prompt coverage", datasetPromptCoverage(dataset)],
         ["missing captions", datasetMissingCaptions(dataset)],
         ["chunk warnings", datasetChunkWarnings(dataset)],
@@ -1058,6 +1061,20 @@ function datasetPromptCoverage(dataset: Record<string, unknown>) {
   return items !== null && items > 0 ? `${prompts}/${items}` : prompts;
 }
 
+function datasetSourceReadiness(dataset: Record<string, unknown>) {
+  const items = finiteNumber(dataset.item_count);
+  const latents = finiteNumber(dataset.latent_count);
+  const missingCaptions = datasetMissingCaptions(dataset);
+  const chunkWarnings = datasetChunkWarnings(dataset);
+  if (items !== null && items <= 0) return "no source items";
+  if (latents !== null && latents <= 0) return "no encoded latents";
+  if (typeof missingCaptions === "number" && missingCaptions > 0) return `${missingCaptions} missing caption${missingCaptions === 1 ? "" : "s"}`;
+  if (typeof chunkWarnings === "number" && chunkWarnings > 0) return `${chunkWarnings} chunk warning${chunkWarnings === 1 ? "" : "s"}`;
+  if (items !== null && latents !== null) return `${latents}/${items} encoded`;
+  if (latents !== null) return `${latents} encoded`;
+  return undefined;
+}
+
 function datasetMissingCaptions(dataset: Record<string, unknown>) {
   const explicit = finiteNumber(dataset.missing_caption_count ?? dataset.missing_captions);
   if (explicit !== null) return explicit;
@@ -1120,6 +1137,18 @@ function profileSource(profile: Record<string, unknown>) {
 
 function profileReference(profile: Record<string, unknown>) {
   return basename(stringValue(profile.reference ?? profile.reference_path ?? profile.reference_memory_path));
+}
+
+function profileMemoryPath(profile: Record<string, unknown> | null) {
+  if (!profile) return undefined;
+  const direct = stringValue(profile.target_memory_path ?? profile.memory_path);
+  if (direct) return direct;
+  const profileItems = arrayOfObjects(profile.profiles);
+  for (const item of profileItems) {
+    const itemPath = stringValue(item.target_memory_path ?? item.memory_path);
+    if (itemPath) return itemPath;
+  }
+  return undefined;
 }
 
 function promptSearchProbeCost(promptSearch: Record<string, unknown>) {

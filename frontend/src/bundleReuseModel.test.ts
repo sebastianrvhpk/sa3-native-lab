@@ -18,6 +18,7 @@ describe("bundleReuseModel", () => {
     expect(bundleReuseActionsForContext({ kind: "prompt-search", prompt: "warm granular loop" })).toEqual([
       { label: "Use prompt in sweep", fieldKey: "prompt", mode: "experiment.alpha_sweep", value: "warm granular loop" },
     ]);
+    expect(bundleReuseActionsForContext({ kind: "prompt-search" })).toEqual([]);
   });
 
   it("dedupes kind and operator matches for the same real path", () => {
@@ -27,7 +28,10 @@ describe("bundleReuseModel", () => {
   it("keeps profile and memory promotions on supported recipe fields", () => {
     expect(bundleReuseActionsForContext({ kind: "profile" })).toEqual([
       { label: "Use as profile", fieldKey: "profile_path", mode: "experiment.style_profile.generate" },
-      { label: "Use memory", fieldKey: "target_memory_path", mode: "experiment.style_profile.build" },
+    ]);
+    expect(bundleReuseActionsForContext({ kind: "profile", memoryPath: "memory/target.json" })).toEqual([
+      { label: "Use as profile", fieldKey: "profile_path", mode: "experiment.style_profile.generate" },
+      { label: "Use profile memory", fieldKey: "target_memory_path", mode: "experiment.style_profile.build", value: "memory/target.json" },
     ]);
     expect(bundleReuseActionsForContext({ kind: "memory" })).toEqual([
       { label: "Use as target memory", fieldKey: "target_memory_path", mode: "experiment.style_profile.build" },

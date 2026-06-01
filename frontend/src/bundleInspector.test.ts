@@ -193,6 +193,7 @@ describe("bundle inspector summaries", () => {
       rows: [
         ["items", 2],
         ["latents", 2],
+        ["readiness", "1 missing caption"],
         ["prompt coverage", "1/2"],
         ["missing captions", 1],
         ["chunk warnings", undefined],
@@ -226,6 +227,21 @@ describe("bundle inspector summaries", () => {
         bundle_summary: { kind: "dataset" },
       }),
     ).toEqual([]);
+    expect(
+      bundleReuseActions({
+        artifact: { metadata: { operator: "experiment.style_profile.build" } } as never,
+        bundle_summary: { kind: "profile", profile: { profiles: [{ path: "profile.npz" }] } },
+      }),
+    ).toEqual([{ label: "Use as profile", fieldKey: "profile_path", mode: "experiment.style_profile.generate" }]);
+    expect(
+      bundleReuseActions({
+        artifact: { metadata: { operator: "experiment.style_profile.build" } } as never,
+        bundle_summary: { kind: "profile", profile: { target_memory_path: "memory/target.json" } },
+      }),
+    ).toEqual([
+      { label: "Use as profile", fieldKey: "profile_path", mode: "experiment.style_profile.generate" },
+      { label: "Use profile memory", fieldKey: "target_memory_path", mode: "experiment.style_profile.build", value: "memory/target.json" },
+    ]);
   });
 
   it("summarizes bundle workflow signals from real bundle metadata", () => {
@@ -595,6 +611,7 @@ describe("bundle inspector summaries", () => {
             prompt_search_model: "medium",
             prompt_search_duration_seconds: 8,
             listening_decision: "keeper",
+            listening_decision_note: "holds the motion",
           },
           tags: [],
           path: "/tmp/take-a.wav",
@@ -641,6 +658,8 @@ describe("bundle inspector summaries", () => {
       durationSeconds: 8,
       promptCount: 1,
       prompts: ["warm granular loop"],
+      latestArtifactId: "art_take_a",
+      latestNote: "holds the motion",
     }));
     expect(rows[1]).toEqual(expect.objectContaining({
       bundleId: "art_bundle_b",

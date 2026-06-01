@@ -9,16 +9,20 @@ export interface BundleReuseContext {
   kind?: string | null;
   operator?: string | null;
   prompt?: string | null;
+  memoryPath?: string | null;
 }
 
 export function bundleReuseActionsForContext(context: BundleReuseContext): BundleReuseAction[] {
   const kind = normalize(context.kind);
   const operator = normalize(context.operator);
   const prompt = context.prompt?.trim() || undefined;
+  const memoryPath = context.memoryPath?.trim() || undefined;
   const actions: BundleReuseAction[] = [];
   if (kind === "profile" || operator.includes("style_profile") || operator.includes("positive_style_profile")) {
     actions.push({ label: "Use as profile", fieldKey: "profile_path", mode: "experiment.style_profile.generate" });
-    actions.push({ label: "Use memory", fieldKey: "target_memory_path", mode: "experiment.style_profile.build" });
+    if (memoryPath) {
+      actions.push({ label: "Use profile memory", fieldKey: "target_memory_path", mode: "experiment.style_profile.build", value: memoryPath });
+    }
   }
   if (kind === "vectors" || operator.includes("vectors") || operator.includes("direction")) {
     actions.push({ label: "Sweep vectors", fieldKey: "vectors_path", mode: "experiment.alpha_sweep" });
@@ -27,7 +31,7 @@ export function bundleReuseActionsForContext(context: BundleReuseContext): Bundl
   if (kind === "soft-prompt" || operator.includes("soft_prompt")) {
     actions.push({ label: "Use soft prompt", fieldKey: "soft_prompt_path", mode: "experiment.soft_prompt.generate" });
   }
-  if (kind === "prompt-search" || operator.includes("prompt_search")) {
+  if ((kind === "prompt-search" || operator.includes("prompt_search")) && prompt) {
     actions.push({
       label: "Use prompt in sweep",
       fieldKey: "prompt",
