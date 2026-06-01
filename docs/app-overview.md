@@ -121,6 +121,10 @@ checkpoint, target-audio, source-audio, and donor-latent choices appear as
 compact Source pickers while still showing the exact backend path or artifact ID
 that will be submitted. Bundle options stay strict to known reusable paths
 instead of becoming a generic "use bundle" control.
+The current gesture action is described by a pure product descriptor: button
+labels, readiness, disabled reasons, source requirements, and concise "what
+this will do" copy come from semantic state, while React Query mutations, job
+landing, archive/recovery, and pending-take selection stay in `App.tsx`.
 Selected landed takes also show a `Next` affordance: audio suggests Continue,
 Vary, Encode, and Remember; latent suggests Decode, Morph, Borrow Texture, and
 Remember; bundles keep technical details behind Inspect while exposing real
@@ -156,6 +160,10 @@ parameter sets can be saved, reloaded, updated, or deleted per operator mode so
 repeatable latent explorations do not require rebuilding a form by hand. When a
 preset is selected, the UI now shows parameter and donor-latent drift from the
 saved setting and can revert the current controls back to that preset.
+Tune now gives backend-supported latent-region context without inventing a
+waveform editor: Graft and Renoise describe channel masks, Blur describes its
+global latent-time smear, and DSP/Reroute calls out latent-time FFT/gain
+behavior. Exact submitted fields remain visible in the form.
 
 ### Advanced Gestures
 
@@ -216,6 +224,9 @@ the descriptor shifts for keepers so prompt-search listening notes become
 research feedback rather than isolated labels. Prompt-search panels also show
 first-pass prompt memory across generated takes, grouping keeper/maybe/reject
 decisions by prompt text across runs.
+The primary prompt-search language is now candidate listening: cost/risk/probe
+details stay visible in Inspect-style evidence, while branch/family surfaces
+focus on generated candidate takes and which prompts survived listening.
 Bundle domain cards now promote parsed sweep outputs, memory hits, vector NPZ
 contents, and soft-prompt tensors into native rows and
 item lists. They are still inspectors rather than full editors, but they make
@@ -228,6 +239,11 @@ under their search bundle instead of scattering as unrelated text-to-audio rows.
 The take queue and branch detail now summarize keeper/maybe/reject/open counts,
 and the selected take is labeled consistently across the queue and branch
 detail.
+Session Memory now has a visible remembered-material browser over existing
+annotation metadata: role, reuse intent, kind, listening decision, branch,
+source lineage, tags, notes, and immediate reuse actions. It is optimized around
+"what remembered sound/source can I use right now" and does not add vector
+search or a new persistence layer.
 Memory query bundle previews expose ranked hits that can be selected, played
 when audio, or reused as latent donors when the hit is a latent artifact.
 Encoded dataset bundles expose manifest/sidecar counts, chunk timing, prompt
@@ -258,9 +274,9 @@ clear experimental framing.
   captures desktop/mobile screenshots.
 - `npm run smoke:first-use --prefix frontend` is the committed product-health
   smoke for the first-use instrument loop: Current Sound, Gestures, Make, Tune,
-  pending/failed take language, Next actions, Remember, Branch, Memory reuse as
-  Source/Anchor, recovery, Settings/Inspect demotion, screenshots, and mobile
-  overflow.
+  gesture readiness copy, pending/failed take language, Next actions, Remember,
+  Branch, Memory reuse as Source/Anchor, recovery, Settings/Inspect demotion,
+  screenshots, and mobile overflow.
 - `uv run sa3-lab smoke-mlx-medium --json` verifies the slow Medium/MLX path is
   gated by default; `SA3_RUN_MLX_SMOKE=1 uv run sa3-lab smoke-mlx-medium --run
   --duration 1 --steps 2 --json` submits the authenticated real model smoke.
@@ -290,7 +306,7 @@ Confirmed in the current codebase:
   only implemented paths (`lexical_probe` and `sa3_flow_probe`).
 - Artifact annotation and archive search are implemented for labels, notes,
   tags, durable keeper/maybe/reject listening decisions, artifact kind, model,
-  gesture, branch, and source lineage.
+  gesture, branch, source lineage, memory role, and reuse intent.
 - tRPC workbench, readiness, job lifecycle, recipe replay/fork, artifact
   inspection, branch/result-family procedures, and job-event subscriptions are
   implemented behind the control-plane launch flag.
@@ -314,16 +330,18 @@ Confirmed in the current codebase:
   marker notes, committed browser coverage for SessionTray
   artifact archive/recovery, and the first native geometry-audit recipe.
 - Product-domain frontend models now cover memory reuse, next actions,
-  pending-take landing, branch summaries, and Tune field grouping. Branch UI is
-  product-language first, while raw job IDs, recipe IDs, backend details, logs,
-  and material counts are behind Inspect/Settings/details.
-- The latest consolidation pass adds a unified product Source shelf,
-  role/reuse-intent/notes/source-lineage memory filters, selected-take queue
-  actions for keep/maybe/reject, remember, continue, and branch, branch
-  trajectory listening controls, shared bundle-to-gesture reuse semantics, and
-  a named `useGestureWorkbench` hook for gesture/Tune/action state. Submit
-  mutations, pending landing side effects, and archive/recover persistence stay
-  in `App.tsx` for now because they coordinate backend mutations and job-event
+  pending-take landing, branch summaries, Tune field grouping, source-aware
+  Tune fields, gesture action descriptors, memory browsing, and latent-region
+  descriptions. Branch UI is product-language first, while raw job IDs, recipe
+  IDs, backend details, logs, command context, and material counts are behind
+  Inspect/Settings/details.
+- The latest consolidation passes add a unified product Source shelf, a visible
+  remembered-material browser, selected-take queue actions for
+  keep/maybe/reject, remember, continue, and branch, branch trajectory listening
+  controls, shared bundle-to-gesture reuse semantics, and a named
+  `useGestureWorkbench` hook for gesture/Tune/action state. Submit mutations,
+  pending landing side effects, and archive/recover persistence stay in
+  `App.tsx` because they coordinate backend mutations and job-event
   subscriptions.
 - Artifact manifest writes are atomic, reducing transient JSON-read races during
   annotation, remember, and recovery workflows.

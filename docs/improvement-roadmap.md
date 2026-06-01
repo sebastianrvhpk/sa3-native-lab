@@ -24,13 +24,19 @@ For the broader stack direction and promotion triggers, see
 
 2. Harden next-action semantics.
    The current `Next` model covers audio, latent, bundle, pending/failed take,
-   and branch states. The next pass should add branch-card component tests and
-   validate more bundle-to-gesture promotions as inspectors mature.
+   and branch states. The gesture action descriptor now covers primary button
+   labels, readiness, disabled reasons, source requirements, and "what this
+   will do" copy without moving mutations out of `App.tsx`. The next pass should
+   add branch-card component tests and validate more bundle-to-gesture
+   promotions as inspectors mature.
 
 3. Expand Memory as a creative shelf.
    Active Memory reuse exists for Source, Anchor, donor, prompt seed, existing
-   Advanced Gesture bundle paths, and recovery. Next, add role/reuse-intent
-   filters and a fuller Memory browser before any vector retrieval work.
+   Advanced Gesture bundle paths, and recovery. The remembered-material browser
+   now sorts usable material first and exposes role, reuse intent, tags, notes,
+   kind, listening decision, branch, and source lineage from existing metadata.
+   Next, deepen dataset/audio preview and style-reference promotion before any
+   vector retrieval work.
 
 4. Improve the take strip into a listening queue.
    The app already has recent/lineage/open sequencing, playback decisions,
@@ -46,9 +52,15 @@ For the broader stack direction and promotion triggers, see
    state: active gesture, Tune form state, donor/source reuse, next-action
    routing, prompt seeding, and bundle reuse. `App.tsx` still owns React Query
    mutations, job-event landing, archive/recover, pending-take selection, and
-   other side effects. If this grows again, the next extraction should be a
-   small gesture action descriptor for labels, readiness, and disabled reasons,
-   not a mutation-moving hook.
+   other side effects. The descriptor layer is now the approved extraction for
+   labels, readiness, disabled reasons, source requirements, and intent copy;
+   it must remain pure and mutation-free.
+
+6. Keep Tune slimmer than the backend.
+   Tune now uses source-aware fields, product-language labels, exact submitted
+   values, and latent-region summaries for channel-mask/global latent
+   transforms. Continue improving field copy only where it maps to real
+   backend-supported parameters.
 
 ## P1: Trust And Runability
 
@@ -58,15 +70,17 @@ For the broader stack direction and promotion triggers, see
    resume-aware sequencing, heartbeat events, log-tail diagnostics, and
    durable Python job-journal replay. Job cards now also derive readable phases
    from current event text. The next trust step is richer command and
-   stderr-tail context plus eventually replacing live polling with a stream
-   source.
+   stderr-tail context is now kept behind job drawers and Pending Take Inspect.
+   The next trust step is sanitizer coverage for sensitive command details plus
+   eventually replacing live polling with a stream source.
 
 2. Improve error surfacing.
    Job failures now classify common failures into recovery hints for Hugging
    Face auth, missing MLX setup, path/output problems, subprocess exits, and
    memory pressure. Medium torch prompt probes also preflight Hugging Face cache
-   space before the heavy checkpoint download. Next, preserve richer stderr
-   tails and command context without exposing sensitive tokens.
+   space before the heavy checkpoint download. Command context and log tails are
+   now available behind details surfaces; keep adding trust detail there rather
+   than to the primary listening bench.
 
 3. Deepen environment readiness checks.
    `/readiness` now reports artifact root, HF auth, Medium MLX weights, SAME-L
@@ -107,8 +121,9 @@ For the broader stack direction and promotion triggers, see
    deltas plus a decision-study summary over keeper/maybe/reject annotations;
    prompt memory now groups generated prompt-candidate decisions across runs.
    Prompt-search bundles also summarize generated takes across search runs by
-   method, mode, model, duration, prompt variety, and listening decisions. Next
-   they need richer sweep-family and layer/alpha branch views. Advanced Gestures/Tune now
+   method, mode, model, duration, prompt variety, and listening decisions. The
+   UI now frames this as candidate listening instead of a scorer dashboard.
+   Next they need richer sweep-family and layer/alpha branch views. Advanced Gestures/Tune now
    also has prompt-search presets for Mode 2 hard-token search, Mode 3 readable
    prompt search, and a small Medium flow-score check, with active cost
    guidance visible before the heavier probe is selected. It also has
@@ -120,16 +135,19 @@ For the broader stack direction and promotion triggers, see
    Browser-local named presets now exist for blur, DSP, graft, renoise, and
    cyclic roll. They can be saved, updated, selected, and deleted per operator
    mode. Selected presets show parameter and donor-latent diffs with a revert
-   action. Next, promote useful presets into backend recipe history before
-   adding a heavier database-backed preset library.
+   action. Tune now also explains supported latent-region semantics: Graft and
+   Renoise expose channel masks; Blur is a global latent-time smear; DSP/Reroute
+   operates in latent time, not waveform EQ. Next, promote useful presets into
+   backend recipe history only after those semantics stay stable in use.
 
 4. Artifact filtering, memory roles, and tagging.
    Labels, tags, notes, keeper/maybe/reject listening decisions, archive search,
    archive-and-new session cleanup, and typed local recovery filters are now
    implemented. The filter pass covers decision, kind, model, gesture, branch,
-   source lineage, text, and tag. Memory annotations now include role, reuse
-   intent, and decision metadata. Next recovery work should add role/reuse
-   filters before date or job-status filters.
+   source lineage, text, tag, memory role, and reuse intent. Memory annotations
+   now include role, reuse intent, and decision metadata. Date/job-status
+   filters remain lower priority than making remembered material easier to use
+   immediately.
 
 5. Better bundle readers.
    Bundle file inventory, JSON previews, memory-result reuse, and first-pass
@@ -154,25 +172,27 @@ For the broader stack direction and promotion triggers, see
 ## Explicitly Deferred
 
 Do not add these until a later pass has a narrower contract: saved Memory filter
-presets, "usable as donor/source/anchor" Memory filters, vector search,
-pgvector, similarity browser, memory atlas UI, waveform region workflows,
-playlist export, autoplay queue, multi-branch listening sessions, heavy review
-modes, sampler-step intervention, flow-state optimization, control heads, macro
-chain UI, resident worker, moving more app state into tRPC, or moving gesture
-form state server-side. Fine-tuning belongs in `dada-bots/underfit` on Colab
-A100, not in this local product loop.
+presets, vector search, pgvector, similarity browser, memory atlas UI, waveform
+region workflows, playlist export, autoplay queue, multi-branch listening
+sessions, heavy review modes, sampler-step intervention, flow-state
+optimization, control heads, macro chain UI, resident worker, moving more app
+state into tRPC, or moving gesture form state server-side. Fine-tuning belongs
+in `dada-bots/underfit` on Colab A100, not in this local product loop.
 
 ## P3: Research Cognition
 
 1. Memory browser and query surface.
    Local latent-artifact nearest-neighbor query now exists as `memory.query`.
    Bundle previews now allow selecting hits, playback for audio hits, and
-   donor reuse for latent hits. The next step is a richer browser for encoded
-   SAME datasets, preview audio, tags, and style-reference promotion.
+   donor reuse for latent hits. The app-level Memory browser now covers stored
+   role, reuse, notes, tags, decisions, kind, branch, and lineage metadata. The
+   next research step is a richer browser for encoded SAME datasets, preview
+   audio for child material, and style-reference promotion.
 
 2. Latent channel and time-region views.
-   Graft/renoise masks would be more intuitive as channel/time selections,
-   heatmaps, or lane views instead of only scalar forms.
+   Graft/renoise now expose real channel-mask semantics in Tune. True bounded
+   time-region masks, heatmaps, and lane views remain deferred until the backend
+   accepts those masks instead of only scalar/global latent controls.
 
 3. Recipe graph and lineage map.
    Routing lines should eventually become an inspectable graph of source audio,
@@ -189,7 +209,9 @@ A100, not in this local product loop.
    notes, and described through lightweight target/take descriptor deltas. They can also be
    summarized through a decision-study panel, grouped into prompt memory across
    runs, and recovered later through decision/model/gesture/branch filters. The
-   next research step is richer layer/alpha comparison and runtime-cost notes.
+   next research step is richer layer/alpha comparison and Medium/MPS runtime
+   cost notes after the current branch/sweep listening comparison has enough
+   real use.
 
 5. Geometry and control probes.
    `experiment.geometry_audit` now produces a local latent geometry report

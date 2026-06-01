@@ -68,8 +68,9 @@ sound instrument.
   Tune forms, donor/source reuse, next-action routing, prompt seeding, and
   bundle reuse. `App.tsx` remains the side-effect boundary for React Query
   mutations, job-event landing, archive/recover, pending-take selection, and
-  submit actions. A later gesture action descriptor may help with labels,
-  readiness, and disabled reasons without moving mutations into the hook.
+  submit actions. The separate gesture action descriptor now owns labels,
+  readiness, disabled reasons, source requirements, and action intent copy
+  without moving mutations into the hook.
 - Live job event transport now has a tRPC/SSE bridge with heartbeat and
   resume-aware IDs plus Python job-journal replay. The live source is still
   polling, so a future stream source would reduce latency and load.
@@ -88,8 +89,9 @@ sound instrument.
   branch, decision-correlation, and prompt-memory slices exist.
 - Long-running jobs have cancel/retry, but not pause/resume, priority,
   resource-aware scheduling, or resident worker reuse.
-- Error messages are now transformed into first-pass recovery hints, but command
-  context and safe stderr-tail preservation need more work.
+- Error messages are now transformed into first-pass recovery hints, and command
+  context/log tails are kept behind details surfaces. Sanitizer coverage and
+  richer stderr context still need more work.
 - The frontend build is clean, and payload/form helper tests now exist, but
   component-level tests should expand as fields become more schema-driven.
 
@@ -102,7 +104,7 @@ sound instrument.
 2. Harden job events in tRPC.
    Job lifecycle, recipe, archive, family procedures, and a heartbeat/resume
    event bridge exist. Durable replay now exists; the next gap is replacing
-   live polling with a stream source and preserving richer safe stderr context.
+   live polling with a stream source and hardening safe stderr/command context.
 
 3. Split runtime adapters.
    Move MLX, SAME, latent operators, and script recipes into modules such as

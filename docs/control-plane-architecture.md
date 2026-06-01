@@ -68,9 +68,10 @@ encode/decode now use the same schema-driven form path, so their payloads are
 built from field contracts rather than separate hard-coded controls.
 Successful job events can also land the React workbench on the newest produced
 artifact when the Python worker reports artifact IDs.
-The frontend currently owns product-shaped Memory, Next Action, Pending Take
-Landing, Branch Summary, and Tune Field Group models. Promote those shapes into
-tRPC only when server-side shaping removes real frontend complexity.
+The frontend currently owns product-shaped Memory, Memory Browser, Next Action,
+Gesture Action Descriptor, Pending Take Landing, Branch Summary, Latent Region,
+and Tune Field Group models. Promote those shapes into tRPC only when
+server-side shaping removes real frontend complexity.
 
 The local runner can launch the full path:
 

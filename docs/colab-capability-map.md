@@ -65,7 +65,8 @@ changed params and donor latents; backend-backed preset history remains future
 promotion work.
 
 The Memory shelf now supports label, notes, tags, listening decisions, role,
-reuse intent, active reuse actions, and recovery into the current session.
+reuse intent, branch/source lineage filters, a visible remembered-material
+browser, active reuse actions, and recovery into the current session.
 Latent memory query is promoted from concept to recipe: selecting a latent
 artifact can produce a `memory_query.json` bundle ranked by cosine or Euclidean
 summary distance against other local latent artifacts. Those local memory hits
@@ -90,8 +91,8 @@ by prompt text across runs.
    surfaces evolve.
 2. Add prompt-search sweep/layer comparisons and document useful Medium/MPS
    score-sample/timestep settings.
-3. Build the richer Memory browser over current metadata before vector search:
-   role, reuse intent, tags, notes, kind, decision, branch, source.
+3. Deepen Memory around encoded datasets, preview audio, and style/reference
+   promotion before vector search.
 4. Control-head recipes for Mode 12 and the labelled-probe part of Mode 15.
 5. Promote local latent presets into backend history only after preset semantics
    are stable.

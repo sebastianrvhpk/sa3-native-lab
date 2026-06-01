@@ -263,10 +263,10 @@ branched, and inspected without making the user operate the machinery first.
   archive actions, but long-session cleanup still needs deeper end-to-end
   workflows.
 - The frontend root is much healthier, and the main action bands now have
-  named product models. `App.tsx` still owns too much action orchestration
-  because mutation handlers, active gesture state, and form state are not yet
-  extracted into a clean `useGestureWorkbench`-style contract. Do that only
-  once memory/branch reuse semantics are clearer.
+  named product models. `useGestureWorkbench` owns semantic gesture/Tune/source
+  state, while `gestureActionDescriptor` owns pure labels/readiness/disabled
+  reasons. `App.tsx` still deliberately owns mutation handlers, job-event
+  landing, pending-take selection, archive/recovery, and other side effects.
 
 ### Not Bad Code, But Incomplete Architecture
 
@@ -334,6 +334,11 @@ instead of invisible friction.
 11. Memory browsing has explicit stored-metadata filters for role, reuse intent,
     tags, notes, kind, listening decision, and source lineage, including
     bundle-derived audio. No vector search or new persistence layer was added.
+12. The listening bench now has a visible remembered-material browser that
+    ranks usable material first, a pure gesture action descriptor for primary
+    action copy/readiness, source-aware Tune fields, latent-region summaries for
+    supported operators, and runtime trust details behind Inspect/details
+    surfaces.
 
 ### Deferred With Reason
 
