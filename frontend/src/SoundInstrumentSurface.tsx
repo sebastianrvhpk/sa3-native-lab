@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Activity, Archive, GitBranch, Library, SlidersHorizontal, Upload } from "lucide-react";
+import { Activity, Archive, Box, GitBranch, Library, SlidersHorizontal, Upload } from "lucide-react";
 
 import type { InstrumentFlowNode } from "./instrumentFrameModel";
 
@@ -66,76 +66,104 @@ export function SoundInstrumentSurface({
       </header>
 
       <section className="instrument-board" aria-label="SA3 Native Lab sound instrument">
-        <section className={`operator-surface sound-bench ${selected ? "has-selection" : "idle"}`}>
-          <div className="surface-head">{currentHeader}</div>
-          <InstrumentFlowStrip nodes={flowNodes} />
-          <div className="sound-bench-core">
-            <div className="sound-bench-lane">{currentSound}</div>
-            <aside className="source-rail material-bay" aria-label="Material bay">
-              <div className="rail-head">
-                <div>
-                  <span className="eyebrow">Material Bay</span>
-                  <strong>{sourceCount} usable sources</strong>
-                </div>
-                {importControl}
+        <section className={`operator-surface sound-stage ${selected ? "has-selection" : "idle"}`}>
+          <div className="stage-header">
+            <div className="surface-head">{currentHeader}</div>
+            <InstrumentFlowStrip nodes={flowNodes} />
+          </div>
+
+          <div className="stage-main">
+            <div className="sound-stage-player">{currentSound}</div>
+            <aside className="gesture-workbench gesture-console" aria-label="Prompt and gesture">
+              <div className="zone-label">
+                <SlidersHorizontal size={16} />
+                <span>Gesture / Tune</span>
               </div>
-              {materialBay}
+              {gestureRack}
+              {tuneBank}
             </aside>
           </div>
-          <div className="control-bank instrument-control-bank" aria-label="Gesture controls">
-            {gestureRack}
-            {nextActions}
-          </div>
-        </section>
 
-        <section className="gesture-workbench tune-bank-zone" aria-label="Tune bank">
-          <div className="zone-label">
-            <SlidersHorizontal size={16} />
-            <span>Tune Bank</span>
-          </div>
-          {tuneBank}
-        </section>
-
-        <section className="result-rail take-field-zone" aria-label="Take field">
-          <div className="rail-head">
-            <div>
-              <span className="eyebrow">Take Field</span>
-              <strong>{branchCount} branches</strong>
+          <div className="take-lane-panel" aria-label="Take lane">
+            <div className="rail-head">
+              <div>
+                <span className="eyebrow">Take Lane</span>
+                <strong>listen next</strong>
+              </div>
+              <Activity size={19} />
             </div>
-            <Activity size={19} />
-          </div>
-          <div className="take-field-grid">
-            <div className="take-lane-stack">
+            <div className="take-lane-grid">
               {takeQueue}
               {pendingTakes}
               {forkPanel}
             </div>
-            <div className="branch-stack-zone">
-              <div className="zone-label">
+          </div>
+        </section>
+
+        <section className="instrument-trays" aria-label="Secondary instrument trays">
+          <details className="instrument-tray action-tray">
+            <summary>
+              <span>
+                <Activity size={16} />
+                Do next
+              </span>
+              <strong>optional moves</strong>
+            </summary>
+            <div className="tray-body">{nextActions}</div>
+          </details>
+
+          <details className="instrument-tray material-tray">
+            <summary>
+              <span>
+                <Box size={16} />
+                Material
+              </span>
+              <strong>{sourceCount} sources</strong>
+            </summary>
+            <div className="tray-body">
+              <div className="tray-actions">{importControl}</div>
+              {materialBay}
+            </div>
+          </details>
+
+          <details className="instrument-tray branch-tray">
+            <summary>
+              <span>
                 <GitBranch size={16} />
-                <span>Branches</span>
-              </div>
+                Branches
+              </span>
+              <strong>{branchCount} paths</strong>
+            </summary>
+            <div className="tray-body branch-tray-body">
               {branchList}
               {branchDetail}
             </div>
-          </div>
-        </section>
+          </details>
 
-        <section className="memory-zone" aria-label="Memory and evidence">
-          <div className="zone-label">
-            <Library size={16} />
-            <span>Memory</span>
-          </div>
-          {sessionMemory}
-        </section>
+          <details className="instrument-tray memory-tray">
+            <summary>
+              <span>
+                <Library size={16} />
+                Memory
+              </span>
+              <strong>remembered material</strong>
+            </summary>
+            <div className="tray-body">{sessionMemory}</div>
+          </details>
 
-        <section className="evidence-zone" aria-label="Evidence dock">
-          <div className="zone-label">
-            <Archive size={16} />
-            <span>Inspect / Evidence</span>
-          </div>
-          {evidenceDock}
-          {utilityDock}
+          <details className="instrument-tray inspect-tray">
+            <summary>
+              <span>
+                <Archive size={16} />
+                Inspect
+              </span>
+              <strong>runtime and provenance</strong>
+            </summary>
+            <div className="tray-body">
+              {evidenceDock}
+              {utilityDock}
+            </div>
+          </details>
         </section>
       </section>
     </main>

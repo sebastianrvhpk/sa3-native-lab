@@ -5,7 +5,7 @@ import { SoundInstrumentSurface, ImportAudioButton } from "./SoundInstrumentSurf
 import { instrumentFlowNodes } from "./instrumentFrameModel";
 
 describe("SoundInstrumentSurface", () => {
-  it("composes the product loop as bench, take field, tune bank, material bay, and memory", () => {
+  it("keeps the first surface focused on sound, gesture, tune, and the take lane", () => {
     render(
       <SoundInstrumentSurface
         selected
@@ -42,11 +42,11 @@ describe("SoundInstrumentSurface", () => {
     );
 
     expect(screen.getByLabelText("SA3 Native Lab sound instrument")).toBeInTheDocument();
-    expect(screen.getByLabelText("Material bay").textContent).toContain("5 usable sources");
-    expect(screen.getByLabelText("Take field").textContent).toContain("2 branches");
-    expect(screen.getByLabelText("Tune bank").textContent).toContain("tune bank");
-    expect(screen.getByLabelText("Memory and evidence").textContent).toContain("session memory");
-    expect(screen.getByLabelText("Evidence dock").textContent).toContain("Inspect activity");
+    expect(screen.getByLabelText("Prompt and gesture").textContent).toContain("tune bank");
+    expect(screen.getByLabelText("Take lane").textContent).toContain("take queue");
+    expect(screen.getByLabelText("Secondary instrument trays").textContent).toContain("5 sources");
+    expect(screen.getByLabelText("Secondary instrument trays").textContent).toContain("2 paths");
+    expect(screen.queryByLabelText("Material bay")).not.toBeInTheDocument();
 
     const loop = screen.getByLabelText("Instrument loop");
     expect(within(loop).getByText("Current Sound")).toBeInTheDocument();
