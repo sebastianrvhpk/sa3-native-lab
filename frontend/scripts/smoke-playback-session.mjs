@@ -142,7 +142,7 @@ try {
     return `${item.session_id ?? "null"}:${item.metadata?.archived_from_session_id ?? "none"}`;
   }, { timeout: 6000 }).toBe(`null:${fixture.session_id}`);
 
-  await page.locator("summary", { hasText: "Memory" }).last().click();
+  await expect(page.getByLabel("Remembered material")).toBeVisible();
   const archivedRow = page.locator(".session-artifact", { hasText: "Warm Smoke Take" }).first();
   await expect(archivedRow).toBeVisible();
   await archivedRow.getByRole("button", { name: "Recover" }).click();

@@ -77,7 +77,8 @@ describe("SessionTray", () => {
       label: "Remembered Loop",
       session_id: null,
       prompt: "soft remembered loop",
-      metadata: { memory_role: "loop" },
+      notes: "warm source for the next branch",
+      metadata: { memory_role: "loop", reuse_intent: "source", listening_decision: "keeper" },
     });
 
     renderSessionTray({
@@ -89,7 +90,10 @@ describe("SessionTray", () => {
     const row = screen.getByText("Remembered Loop").closest("article");
     expect(row).not.toBeNull();
     expect(within(row as HTMLElement).getByText("role: loop")).toBeInTheDocument();
-    await user.click(within(row as HTMLElement).getByRole("button", { name: "Use as Source" }));
+    expect(within(row as HTMLElement).getByText("reuse: source")).toBeInTheDocument();
+    expect(within(row as HTMLElement).getAllByText("keeper").length).toBeGreaterThan(0);
+    expect(within(row as HTMLElement).getByText(/warm source/)).toBeInTheDocument();
+    await user.click(within(row as HTMLElement).getByRole("button", { name: "Use now: Use as Source" }));
     await user.click(within(row as HTMLElement).getByRole("button", { name: "Anchor" }));
 
     expect(onUseMemoryAction).toHaveBeenCalledWith(archived, expect.objectContaining({ intent: "source" }));

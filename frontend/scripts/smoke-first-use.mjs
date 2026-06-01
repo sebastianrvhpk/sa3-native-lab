@@ -117,7 +117,7 @@ try {
   await expect(page.locator(".fork-panel")).toContainText("Branch Gesture");
   await expect(page.locator(".fork-panel")).toContainText("Branch with changes");
 
-  await page.locator(".session-tray summary", { hasText: "Memory" }).click();
+  await expect(page.getByLabel("Remembered material")).toBeVisible();
   const memoryRow = page.locator(".session-tray .session-artifact", { hasText: "Archived Smoke Take" }).first();
   await expect(memoryRow).toBeVisible();
   await memoryRow.getByRole("button", { name: "Use as Source" }).click();

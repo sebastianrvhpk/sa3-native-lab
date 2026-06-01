@@ -22,7 +22,8 @@ import type { ResultFamily } from "./controlPlane";
 import { JobProgress, type JobActionHandlers } from "./jobProgress";
 import { shortOperatorName } from "./jobUtils";
 import { ListeningDecisionBadge } from "./listeningDecision";
-import { memoryActionsForArtifact, memoryRoleFromArtifact, memoryRoleLabel, type MemoryReuseAction } from "./memoryModel";
+import { buildMemoryBrowserItems, memoryBrowserSummary, type MemoryBrowserItem } from "./memoryBrowserModel";
+import { memoryRoleFromArtifact, memoryRoleLabel, type MemoryReuseAction } from "./memoryModel";
 import { archivableSessionArtifacts, recoverableArchiveArtifacts } from "./sessionRecovery";
 import { summarizeSessionWorkspace, workspaceFocus, workspacePulseRows, type WorkspaceFocus, type WorkspacePulseRow } from "./sessionWorkspace";
 import type { ArtifactRecord, JobRecord, OperatorName, SessionRecord } from "./types";
@@ -83,16 +84,27 @@ export function SessionTray({
   const filteredArchiveArtifacts = useMemo(() => filterArtifacts(archivedArtifacts, artifactFilters, filterContext), [archivedArtifacts, artifactFilters, filterContext]);
   const sessionArtifactRows = sortNewest(filteredSessionArtifacts).slice(0, 8);
   const sessionJobs = sortNewestJobs(jobs).slice(0, 4);
-  const archiveArtifactRows = sortNewest(filteredArchiveArtifacts).slice(0, 10);
+  const memoryArtifactRows = useMemo(() => sortNewest(filteredArchiveArtifacts), [filteredArchiveArtifacts]);
   const archiveJobRows = filterActive ? [] : sortNewestJobs(archivedJobs).slice(0, 10);
+  const memoryItems = useMemo(
+    () =>
+      buildMemoryBrowserItems(memoryArtifactRows, {
+        activeSessionId,
+        artifacts: filterCorpus,
+        jobs: [...jobs, ...archivedJobs],
+        families,
+      }),
+    [activeSessionId, memoryArtifactRows, archivedJobs, families, filterCorpus, jobs],
+  );
+  const memorySummary = useMemo(() => memoryBrowserSummary(memoryItems), [memoryItems]);
   const activeJobs = runningJobs.slice(0, 3);
   const archivableIds = useMemo(
     () => new Set(archivableSessionArtifacts(sessionArtifactRows, activeSessionId).map((artifact) => artifact.artifact_id)),
     [sessionArtifactRows, activeSessionId],
   );
   const recoverableIds = useMemo(
-    () => new Set(recoverableArchiveArtifacts(archiveArtifactRows, activeSessionId).map((artifact) => artifact.artifact_id)),
-    [archiveArtifactRows, activeSessionId],
+    () => new Set(recoverableArchiveArtifacts(memoryArtifactRows, activeSessionId).map((artifact) => artifact.artifact_id)),
+    [memoryArtifactRows, activeSessionId],
   );
   const workspaceSummary = useMemo(
     () => summarizeSessionWorkspace({ artifacts, archivedArtifacts, jobs, archivedJobs, families, runningJobs, selectedId }),
@@ -190,39 +202,65 @@ export function SessionTray({
         </details>
       ) : null}
 
-      <details className="archive-drawer">
-        <summary>
-          <Database size={15} />
-          Memory
-          <span>{filterActive ? `${filteredArchiveArtifacts.length}/${archivedArtifacts.length}` : archivedArtifacts.length + archivedJobs.length}</span>
-        </summary>
-        <div className="archive-list">
-          {archiveArtifactRows.map((artifact) => (
-            <SessionArtifactRow
-              key={artifact.artifact_id}
-              artifact={artifact}
-              selected={artifact.artifact_id === selectedId}
-              apiBase={apiBase}
-              onSelect={onSelect}
-              memoryActions={memoryActionsForArtifact(artifact, { activeSessionId }).filter((item) => item.intent !== "recover")}
-              onMemoryAction={onUseMemoryAction ? (action) => onUseMemoryAction(artifact, action) : undefined}
-              action={
-                recoverableIds.has(artifact.artifact_id)
-                  ? {
-                      label: recoveringArtifactId === artifact.artifact_id ? "Recovering" : "Recover",
-                      disabled: Boolean(recoveringArtifactId),
-                      onAction: () => onRecoverArtifact(artifact),
-                    }
-                  : undefined
-              }
-            />
-          ))}
-          {archiveJobRows.map((job) => (
-            <JobProgress key={job.job_id} job={job} compact onCancelJob={onCancelJob} onRetryJob={onRetryJob} />
-          ))}
-          {!archiveArtifactRows.length && !archiveJobRows.length ? <div className="quiet-panel compact">{filterActive ? "No matching takes" : "Memory empty"}</div> : null}
+      <section className="memory-browser" aria-label="Remembered material">
+        <div className="memory-browser-head">
+          <div>
+            <span className="session-label">
+              <Database size={15} />
+              Remembered Material
+            </span>
+            <strong>{filterActive ? `${memoryItems.length}/${archivedArtifacts.length}` : `${memorySummary.usable} usable now`}</strong>
+          </div>
+          <div className="memory-browser-summary" aria-label="Memory browser summary">
+            <span>{memorySummary.total} total</span>
+            <span>{memorySummary.keepers} keepers</span>
+            <span>{memorySummary.donors} donors</span>
+            <span>{memorySummary.references} references</span>
+          </div>
         </div>
-      </details>
+        <div className="archive-list memory-list">
+          {memoryItems.map((item) => {
+            const artifact = item.artifact;
+            return (
+              <SessionArtifactRow
+                key={artifact.artifact_id}
+                artifact={artifact}
+                selected={artifact.artifact_id === selectedId}
+                apiBase={apiBase}
+                onSelect={onSelect}
+                memoryItem={item}
+                memoryActions={item.actions.filter((action) => action.intent !== "recover" && action !== item.primaryAction)}
+                onMemoryAction={onUseMemoryAction ? (action) => onUseMemoryAction(artifact, action) : undefined}
+                action={
+                  recoverableIds.has(artifact.artifact_id)
+                    ? {
+                        label: recoveringArtifactId === artifact.artifact_id ? "Recovering" : "Recover",
+                        disabled: Boolean(recoveringArtifactId),
+                        onAction: () => onRecoverArtifact(artifact),
+                      }
+                    : undefined
+                }
+              />
+            );
+          })}
+          {!memoryItems.length ? <div className="quiet-panel compact">{filterActive ? "No matching remembered material" : "Memory empty"}</div> : null}
+        </div>
+      </section>
+
+      {archiveJobRows.length ? (
+        <details className="archive-drawer">
+          <summary>
+            <Gauge size={15} />
+            Archived gesture history
+            <span>{archiveJobRows.length}</span>
+          </summary>
+          <div className="archive-list">
+            {archiveJobRows.map((job) => (
+              <JobProgress key={job.job_id} job={job} compact onCancelJob={onCancelJob} onRetryJob={onRetryJob} />
+            ))}
+          </div>
+        </details>
+      ) : null}
     </div>
   );
 }
@@ -430,6 +468,7 @@ function SessionArtifactRow({
   apiBase,
   onSelect,
   action,
+  memoryItem,
   memoryActions,
   onMemoryAction,
 }: {
@@ -442,6 +481,7 @@ function SessionArtifactRow({
     disabled?: boolean;
     onAction: () => void;
   };
+  memoryItem?: MemoryBrowserItem;
   memoryActions?: readonly MemoryReuseAction[];
   onMemoryAction?: (action: MemoryReuseAction) => void;
 }) {
@@ -461,10 +501,22 @@ function SessionArtifactRow({
               ))}
             </span>
           ) : null}
-          {memoryRole ? <span className="memory-role">role: {memoryRoleLabel(memoryRole)}</span> : null}
+          {memoryRole && !memoryItem ? <span className="memory-role">role: {memoryRoleLabel(memoryRole)}</span> : null}
+          {memoryItem ? <MemoryBrowserChips item={memoryItem} /> : null}
+          {memoryItem?.notesPreview ? <small className="memory-note-preview">{memoryItem.notesPreview}</small> : null}
         </div>
         {artifact.kind === "audio" ? <TinyWave artifact={artifact} apiBase={apiBase} /> : null}
       </button>
+      {memoryItem?.primaryAction && onMemoryAction ? (
+        <button
+          type="button"
+          className="memory-primary-action"
+          title={memoryItem.primaryAction.description}
+          onClick={() => onMemoryAction(memoryItem.primaryAction!)}
+        >
+          Use now: {memoryItem.primaryAction.label}
+        </button>
+      ) : null}
       {memoryActions?.length ? (
         <div className="memory-reuse-actions" aria-label={`${artifact.label ?? artifact.artifact_id} memory reuse actions`}>
           {memoryActions.map((item) => (
@@ -486,6 +538,20 @@ function SessionArtifactRow({
         </button>
       ) : null}
     </article>
+  );
+}
+
+function MemoryBrowserChips({ item }: { item: MemoryBrowserItem }) {
+  return (
+    <span className="memory-browser-chips">
+      <i>{item.kindLabel}</i>
+      {item.roleLabel !== "untyped" ? <i>role: {item.roleLabel}</i> : null}
+      {item.reuseIntentLabel ? <i>reuse: {item.reuseIntentLabel}</i> : null}
+      {item.decisionLabel !== "undecided" ? <i>{item.decisionLabel}</i> : null}
+      {item.branchLabel ? <i>branch: {item.branchLabel}</i> : null}
+      <i>{item.lineageLabel}</i>
+      {item.sourceLabel ? <i>source: {item.sourceLabel}</i> : null}
+    </span>
   );
 }
 
