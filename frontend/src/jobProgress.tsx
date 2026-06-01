@@ -1,6 +1,7 @@
 import { CircleAlert, Gauge, LoaderCircle, Repeat, X } from "lucide-react";
 
 import { formatJobElapsed, isJobActive, progressPercent, shortOperatorName } from "./jobUtils";
+import { latestSafeRuntimeLine, safeRuntimeLogLines, sanitizeRuntimeText } from "./runtimeTrustModel";
 import type { JobRecord } from "./types";
 
 export interface JobActionHandlers {
@@ -27,12 +28,12 @@ export function JobProgress({
   job: JobRecord;
   compact?: boolean;
 } & JobActionHandlers) {
-  const logLines = job.logs.slice(-12);
+  const logLines = safeRuntimeLogLines(job.logs, 12);
   const hints = jobRecoveryHints(job);
-  const commandContext = commandMetric(job.metrics.command);
+  const commandContext = sanitizeRuntimeText(job.metrics.command, 500);
   const canCancel = isJobActive(job) && Boolean(onCancelJob);
   const canRetry = (job.status === "failed" || job.status === "cancelled") && Boolean(onRetryJob);
-  const statusMessage = job.message ?? latestUsefulLog(job) ?? job.status;
+  const statusMessage = sanitizeRuntimeText(job.message, 180) || latestSafeRuntimeLine(job.logs) || job.status;
   const phase = jobPhase(job);
   return (
     <div className={`job-progress ${job.status} ${compact ? "compact" : ""}`}>
@@ -71,7 +72,7 @@ export function JobProgress({
             <CircleAlert size={14} />
             {job.error ? "Error details" : "Log tail"}
           </summary>
-          {job.error ? <strong>{job.error}</strong> : null}
+          {job.error ? <strong>{sanitizeRuntimeText(job.error, 500)}</strong> : null}
           {hints.length ? <RecoveryHints hints={hints} /> : null}
           {commandContext ? <code>{commandContext}</code> : null}
           {logLines.length ? <pre>{logLines.join("\n")}</pre> : null}
@@ -89,7 +90,7 @@ export function jobPhase(job: JobRecord): JobPhase {
   const contractedPhase = job.phase ? phaseFromContract(job.phase) : null;
   if (contractedPhase) return contractedPhase;
 
-  const text = [job.message, latestUsefulLog(job), ...job.logs.slice(-4)].filter(Boolean).join("\n").toLowerCase();
+  const text = [job.message, latestSafeRuntimeLine(job.logs), ...safeRuntimeLogLines(job.logs, 4)].filter(Boolean).join("\n").toLowerCase();
   if (/(sample|sampling|generate|generating|denoise|step|score|scoring|candidate)/.test(text)) {
     return { label: "generating", tone: "model" };
   }
@@ -180,11 +181,6 @@ function RecoveryHints({ hints }: { hints: readonly JobRecoveryHint[] }) {
   );
 }
 
-function latestUsefulLog(job: JobRecord) {
-  const latest = [...job.logs].reverse().find((line) => line.trim() && !line.includes("[heartbeat]"));
-  return latest?.trim().slice(0, 180);
-}
-
 function dedupeHints(hints: JobRecoveryHint[]) {
   const seen = new Set<string>();
   return hints.filter((hint) => {
@@ -192,9 +188,4 @@ function dedupeHints(hints: JobRecoveryHint[]) {
     seen.add(hint.title);
     return true;
   });
-}
-
-function commandMetric(value: unknown) {
-  if (typeof value !== "string") return "";
-  return value.trim().slice(0, 500);
 }

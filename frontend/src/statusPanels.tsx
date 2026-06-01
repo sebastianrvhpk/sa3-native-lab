@@ -1,13 +1,14 @@
 import { Check, CircleAlert, Gauge } from "lucide-react";
 
 import { JobProgress, type JobActionHandlers } from "./jobProgress";
+import { sanitizeRuntimeText } from "./runtimeTrustModel";
 import type { JobRecord, ModelStatus, ReadinessCheck } from "./types";
 
 export function BackendPills({ backends }: { backends: ModelStatus[] }) {
   return (
     <div className="backend-pills">
       {backends.map((backend) => (
-        <span key={backend.backend} className={backend.available ? "ready" : "offline"} title={backend.message ?? backend.backend}>
+        <span key={backend.backend} className={backend.available ? "ready" : "offline"} title={sanitizeRuntimeText(backend.message, 180) || backend.backend}>
           {backend.available ? <Check size={14} /> : <CircleAlert size={14} />}
           {backend.backend}
         </span>
@@ -87,7 +88,7 @@ export function ReadinessPanel({ checks }: { checks: ReadinessCheck[] }) {
           <div key={check.name} className={`readiness-row ${check.status}`}>
             <span>{readinessLabel(check.name)}</span>
             <strong>{check.status}</strong>
-            <small title={check.detail ?? check.message}>{readinessMessage(check)}</small>
+            <small title={sanitizeRuntimeText(check.detail ?? check.message, 240)}>{readinessMessage(check)}</small>
           </div>
         ))}
       </div>
@@ -96,8 +97,10 @@ export function ReadinessPanel({ checks }: { checks: ReadinessCheck[] }) {
 }
 
 function readinessMessage(check: ReadinessCheck) {
-  if (!check.detail || check.detail === check.message) return check.message;
-  return `${check.message} · ${check.detail}`;
+  const message = sanitizeRuntimeText(check.message, 160);
+  const detail = sanitizeRuntimeText(check.detail, 160);
+  if (!detail || detail === message) return message;
+  return `${message} · ${detail}`;
 }
 
 function priorityReadinessChecks(checks: ReadinessCheck[]) {

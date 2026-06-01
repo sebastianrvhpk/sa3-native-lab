@@ -13,7 +13,7 @@ describe("status panels", () => {
         <ReadinessPanel
           checks={[
             testReadiness("artifact-root", "ok", "artifact root ready"),
-            testReadiness("hf-auth", "warn", "HF token missing"),
+            { ...testReadiness("hf-auth", "warn", "HF_TOKEN=hf_abcdefghijklmnopqrstuvwxyz"), detail: "retry with --token hf_abcdefghijklmnopqrstuvwxyz" },
             testReadiness("backend:mlx", "ok", "MLX ready"),
           ]}
         />
@@ -28,7 +28,8 @@ describe("status panels", () => {
     expect(screen.getAllByText("warn").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("Artifacts")).toBeInTheDocument();
     expect(screen.getByText("HF auth")).toBeInTheDocument();
-    expect(screen.getByText("HF token missing · hf-auth detail")).toBeInTheDocument();
+    expect(screen.getByText("HF_TOKEN=[redacted] · retry with --token [redacted]")).toBeInTheDocument();
+    expect(screen.queryByText(/hf_abcdefghijklmnopqrstuvwxyz/)).not.toBeInTheDocument();
   });
 
   it("shows active run state and forwards job actions", async () => {

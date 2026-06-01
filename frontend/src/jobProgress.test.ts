@@ -54,11 +54,12 @@ describe("job recovery hints", () => {
   });
 
   it("keeps command context and log tail behind the job drawer", () => {
-    render(createElement(JobProgress, { job: job({ status: "failed", metrics: { command: "python script.py --token REDACTED" }, logs: ["line one", "line two"] }) }));
+    render(createElement(JobProgress, { job: job({ status: "failed", metrics: { command: "python script.py --token hf_abcdefghijklmnopqrstuvwxyz" }, logs: ["line one", "line two hf_abcdefghijklmnopqrstuvwxyz"] }) }));
 
     expect(screen.getByText("Log tail")).toBeInTheDocument();
-    expect(screen.getByText("python script.py --token REDACTED")).toBeInTheDocument();
+    expect(screen.getByText("python script.py --token [redacted]")).toBeInTheDocument();
     expect(screen.getAllByText(/line two/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/hf_abcdefghijklmnopqrstuvwxyz/)).not.toBeInTheDocument();
   });
 });
 
