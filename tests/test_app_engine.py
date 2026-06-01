@@ -439,20 +439,6 @@ def test_operator_specs_cover_typed_request_params(tmp_path):
     assert {"name", "chunked", "normalize_frame", "device"} <= set(audio_vector_fields)
     assert audio_vector_fields["normalize_frame"].advanced is True
 
-    lora_fields = {field.key: field for field in specs[OperatorName.TRAIN_LORA].ui_fields}
-    assert {"model", "base_precision", "svd_bases_path", "lora_checkpoint", "checkpoint_every", "log_every", "demo_every", "num_workers"} <= set(lora_fields)
-    assert [option.value for option in lora_fields["adapter_type"].options] == [
-        "lora",
-        "dora",
-        "dora-rows",
-        "dora-cols",
-        "bora",
-        "lora-xs",
-        "dora-rows-xs",
-        "dora-cols-xs",
-        "bora-xs",
-    ]
-
 
 def test_operator_specs_emit_ui_fields_for_all_runtime_params(tmp_path):
     store = ArtifactStore(tmp_path / "lab")
@@ -813,7 +799,7 @@ def test_colab_mode_atlas_covers_numbered_modes(tmp_path):
     assert response.status_code == 200
     modes = response.json()
     mode_ids = {mode["mode_id"] for mode in modes}
-    for expected in ["0", "0c", "0e", "0d", "0h", "0f", "0g", "1", "1b", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"]:
+    for expected in ["0", "0c", "0e", "0d", "0h", "0f", "0g", "1", "1b", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "14", "15"]:
         assert expected in mode_ids
     assert any(mode["status"] == "native recipe" and "experiment.alpha_sweep" in mode["operators"] for mode in modes)
 

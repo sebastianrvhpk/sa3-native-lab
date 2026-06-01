@@ -9,7 +9,8 @@ Dataset layout:
     clip2.txt
     ...
 
-Saves .npy files for latents and .json files for metadata, compatible with train_lora.py --encoded_dir.
+Saves .npy files for latents and .json files for metadata for local SAME
+memory/profile experiments or external training handoff.
 
 Usage:
   uv run python scripts/pre_encode_dataset.py --model same-s --data_dir ./my_data --output_path ./latents_out

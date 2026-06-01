@@ -34,11 +34,6 @@ notebook = [
   "ipykernel>=6.30.0",
   "jupyterlab>=4.5.0",
 ]
-lora = [
-  "pytorch_lightning==2.5.5",
-  "dill>=0.4.1",
-  "matplotlib>=3.10.8",
-]
 dev = [
   "pytest>=9.0.3",
 ]

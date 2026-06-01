@@ -163,7 +163,6 @@ The exact target convention is an implementation detail. The research claim is n
 10. Noise / trajectory optimization scaffold
 11. Inpainting / continuation as composition
 12. LatCH-style control heads
-13. LoRA adaptation scaffold
 14. Latent memory instrument
 
 Interpretation rule:
@@ -261,7 +260,6 @@ LMDM adaptation is conceptual unless SA3 attention/sampler code is modified and 
 | 10. Trajectory optimization | noise / \(z_t\) / sampler state | DITTO, training-free guidance |
 | 11. Inpainting / continuation | masked SAME latent \(z_{missing}\) | SA3 inpainting, guidance-gradient music editing |
 | 12. LatCH-style control head | sidecar \(h_\psi(z)\) | LatCH, training-free guidance |
-| 13. LoRA | low-rank weight delta \(\Delta W\) | lightweight adaptation/fine-tuning |
 | 14. Latent memory | stored \(z, s(z), metadata\) | retrieval, dataset geometry, composition systems |
 """
     ),
@@ -4531,54 +4529,6 @@ if RUN_MODE_12_CONTROL_HEAD:
     ),
     md(
         r"""
-## Mode 13. LoRA Adaptation Scaffold
-
-LoRA changes weights through low-rank adapters:
-
-$$
-W' = W + \Delta W
-$$
-
-$$
-\Delta W = BA
-$$
-
-with:
-
-$$
-A \in \mathbb{R}^{r \times d_{in}}, \qquad B \in \mathbb{R}^{d_{out} \times r}
-$$
-
-Use LoRA when you want a dataset/style/domain to become more native to generation.
-
-Do not use it as the first answer for every control. Prompt inversion, SAME edits, and residual steering are better diagnostic probes.
-"""
-    ),
-    code(
-        r"""
-# @title Mode 13. LoRA scaffold
-
-RUN_MODE_13_LORA_SCAFFOLD = env_flag("RUN_MODE_13_LORA_SCAFFOLD", False)
-
-LORA_DATASET_DIR = DATASET_DIR
-LORA_OUTPUT_DIR = OUTPUT_DIR / "mode_13_lora"
-
-if RUN_MODE_13_LORA_SCAFFOLD:
-    lora_model = os.environ.get("SA3_LORA_MODEL", "medium-base")
-    command = [
-        sys.executable,
-        str(Path(PROJECT_DIR) / "scripts" / "train_lora.py"),
-        "--model", lora_model,
-        "--data_dir", str(LORA_DATASET_DIR),
-        "--save_dir", str(LORA_OUTPUT_DIR),
-        "--device", DEVICE,
-        "--logger", "csv",
-    ]
-    print(" ".join(command))
-"""
-    ),
-    md(
-        r"""
 ## Mode 14. Latent Memory Instrument
 
 Memory item:
@@ -4894,7 +4844,6 @@ manifest = {
         "10_flow_state_opt": RUN_MODE_10_FLOW_STATE_OPT,
         "11_continuation": RUN_MODE_11_CONTINUATION,
         "12_control_head": RUN_MODE_12_CONTROL_HEAD,
-        "13_lora_scaffold": RUN_MODE_13_LORA_SCAFFOLD,
         "14_memory": RUN_MODE_14_LATENT_MEMORY,
         "15_geometry_audit": RUN_MODE_15_GEOMETRY_AUDIT,
         "combined_chain": RUN_COMBINED_CHAIN,

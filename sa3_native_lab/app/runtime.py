@@ -68,7 +68,6 @@ SCRIPT_EXPERIMENT_OPERATORS = {
     OperatorName.EXPERIMENT_SOFT_PROMPT_OPTIMIZE,
     OperatorName.EXPERIMENT_SOFT_PROMPT_GENERATE,
     OperatorName.DATASET_PRE_ENCODE,
-    OperatorName.TRAIN_LORA,
 }
 
 PROGRESS_PERCENT_RE = re.compile(r"(?<![\d.])(\d{1,3})(?:\.\d+)?%")
@@ -190,18 +189,6 @@ FIELD_HINTS: dict[str, dict[str, Any]] = {
     "no_std": {"type": "checkbox", "default": False, "advanced": True},
     "save_original": {"type": "checkbox", "default": False, "advanced": True},
     "normalize_frame": {"type": "checkbox", "default": False, "advanced": True},
-    "rank": {"type": "number", "default": 16, "min": 1, "step": 1},
-    "lora_alpha": {"type": "number", "step": 1, "advanced": True},
-    "adapter_type": {"type": "select", "default": "dora-rows", "options": ["lora", "dora", "dora-rows", "dora-cols", "bora", "lora-xs", "dora-rows-xs", "dora-cols-xs", "bora-xs"], "advanced": True},
-    "base_precision": {"type": "select", "default": "bf16", "options": ["bf16", "bfloat16", "fp16", "float16"], "advanced": True},
-    "dropout": {"type": "number", "default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05, "advanced": True},
-    "logger": {"type": "select", "default": "csv", "options": ["wandb", "comet", "csv", "none"], "advanced": True},
-    "checkpoint_every": {"type": "number", "default": 500, "min": 1, "step": 1, "advanced": True},
-    "log_every": {"type": "number", "default": 100, "min": 1, "step": 1, "advanced": True},
-    "demo_every": {"type": "number", "default": 500, "min": 1, "step": 1, "advanced": True},
-    "num_workers": {"type": "number", "default": 8, "min": 0, "step": 1, "advanced": True},
-    "include": {"type": "text", "advanced": True},
-    "exclude": {"type": "text", "advanced": True},
     "device": {"type": "text", "advanced": True},
     "name": {"type": "text"},
     "positive_path": {"type": "path", "required": True},
@@ -215,9 +202,6 @@ FIELD_HINTS: dict[str, dict[str, Any]] = {
     "soft_prompt_path": {"type": "artifact-path", "required": True, "artifact_kinds": [ArtifactKind.BUNDLE], "description": "Bundle artifact containing optimized soft-prompt tensors."},
     "target_memory_path": {"type": "artifact-path", "required": True, "artifact_kinds": [ArtifactKind.BUNDLE], "description": "Bundle artifact used as the target memory/profile source."},
     "reference_memory_path": {"type": "artifact-path", "artifact_kinds": [ArtifactKind.BUNDLE], "description": "Optional reference bundle for contrastive profile building."},
-    "encoded_dir": {"type": "artifact-path", "artifact_kinds": [ArtifactKind.BUNDLE]},
-    "svd_bases_path": {"type": "artifact-path", "artifact_kinds": [ArtifactKind.BUNDLE], "advanced": True},
-    "lora_checkpoint": {"type": "artifact-path", "artifact_kinds": [ArtifactKind.BUNDLE], "advanced": True},
 }
 
 
@@ -798,40 +782,6 @@ class RuntimeDispatcher:
                 params={"top_k": "int", "metric": "cosine|euclidean", "exclude_self": "bool"},
                 produces=[ArtifactKind.BUNDLE],
                 status="implemented for local latent artifacts",
-            ),
-            OperatorSpec(
-                name=OperatorName.TRAIN_LORA,
-                maturity="danger",
-                backends=[BackendName.TORCH_MPS, BackendName.TORCH_CPU],
-                inputs=[],
-                params={
-                    "encoded_dir": "folder",
-                    "data_dir": "folder|null",
-                    "model": "medium-base",
-                    "steps": "int",
-                    "rank": "int",
-                    "lora_alpha": "int",
-                    "adapter_type": "lora|dora|dora-rows|dora-cols|bora|lora-xs|dora-rows-xs|dora-cols-xs|bora-xs",
-                    "dropout": "float",
-                    "svd_bases_path": "file|null",
-                    "base_precision": "bf16|bfloat16|fp16|float16",
-                    "lora_checkpoint": "file|null",
-                    "lr": "float",
-                    "batch_size": "int",
-                    "duration_seconds": "float",
-                    "seed": "int|null",
-                    "device": "str|null",
-                    "logger": "wandb|comet|csv|none",
-                    "include": "patterns",
-                    "exclude": "patterns",
-                    "name": "str",
-                    "checkpoint_every": "int",
-                    "log_every": "int",
-                    "demo_every": "int",
-                    "num_workers": "int",
-                },
-                produces=[ArtifactKind.BUNDLE],
-                status="script adapter; long-running training",
             ),
         ]
 
@@ -1766,44 +1716,6 @@ class RuntimeDispatcher:
             _append_bool(command, "--pad", params.get("pad"))
             return command, output
 
-        if recipe.operator == OperatorName.TRAIN_LORA:
-            output = output_root / "lora_checkpoints"
-            command = script("train_lora.py")
-            command.extend(["--save_dir", str(output), "--model", model])
-            if params.get("encoded_dir"):
-                command.extend(["--encoded_dir", str(params["encoded_dir"])])
-            elif params.get("data_dir"):
-                command.extend(["--data_dir", str(params["data_dir"])])
-            else:
-                raise ValueError("LoRA training requires params.encoded_dir or params.data_dir")
-            for flag, key in [
-                ("--rank", "rank"),
-                ("--lora_alpha", "lora_alpha"),
-                ("--adapter_type", "adapter_type"),
-                ("--dropout", "dropout"),
-                ("--svd_bases_path", "svd_bases_path"),
-                ("--base_precision", "base_precision"),
-                ("--lora_checkpoint", "lora_checkpoint"),
-                ("--lr", "lr"),
-                ("--steps", "steps"),
-                ("--batch_size", "batch_size"),
-                ("--duration", "duration_seconds"),
-                ("--device", "device"),
-                ("--logger", "logger"),
-                ("--name", "name"),
-                ("--checkpoint_every", "checkpoint_every"),
-                ("--log_every", "log_every"),
-                ("--demo_every", "demo_every"),
-                ("--num_workers", "num_workers"),
-            ]:
-                _append_option(command, flag, params.get(key))
-            _append_multi_option(command, "--include", params.get("include"))
-            _append_multi_option(command, "--exclude", params.get("exclude"))
-            _append_int(command, "--seed", seed)
-            if not params.get("device"):
-                _append_option(command, "--device", _device_for_backend(recipe.backend))
-            return command, output
-
         raise ValueError(f"unsupported script experiment operator: {recipe.operator}")
 
     def _run_subprocess(self, command: list[str], *, cwd: Path, context: JobContext) -> int:
@@ -2195,8 +2107,6 @@ def _default_script_model(operator: OperatorName | str) -> str:
         OperatorName.DATASET_PRE_ENCODE,
     }:
         return "same-l"
-    if operator == OperatorName.TRAIN_LORA:
-        return "medium-base"
     return "medium"
 
 

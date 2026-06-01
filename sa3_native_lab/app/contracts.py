@@ -63,7 +63,6 @@ class OperatorName(str, Enum):
     EXPERIMENT_SOFT_PROMPT_OPTIMIZE = "experiment.soft_prompt.optimize"
     EXPERIMENT_SOFT_PROMPT_GENERATE = "experiment.soft_prompt.generate"
     DATASET_PRE_ENCODE = "dataset.pre_encode"
-    TRAIN_LORA = "training.lora"
     MEMORY_QUERY = "memory.query"
     ARTIFACT_PROMOTE_BUNDLE_AUDIO = "artifact.promote_bundle_audio"
     ANNOTATE = "artifact.annotate"

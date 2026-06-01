@@ -269,18 +269,6 @@ COLAB_MODES: tuple[NotebookMode, ...] = (
         outputs=["control_head.pt", "training metrics"],
     ),
     NotebookMode(
-        mode_id="13",
-        title="LoRA adaptation scaffold",
-        priority="P2",
-        maturity="danger",
-        status="native recipe",
-        native_surface="Recipe Studio: train LoRA",
-        operators=[OperatorName.TRAIN_LORA],
-        scripts=["scripts/train_lora.py"],
-        inputs=["encoded dataset or data folder", "rank", "steps", "logger"],
-        outputs=["checkpoint bundle", "recipe", "training logs"],
-    ),
-    NotebookMode(
         mode_id="14",
         title="Latent memory instrument",
         priority="P2",

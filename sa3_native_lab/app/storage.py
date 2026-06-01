@@ -766,10 +766,6 @@ def _bundle_summary(record: ArtifactRecord, files: list[BundleFileEntry]) -> dic
         summary["soft_prompt"] = {
             "tensor_files": [entry.path for entry in files if entry.path.lower().endswith(".pt") or "soft_prompt" in entry.path.lower()][:8],
         }
-    if any("checkpoint" in name or "adapter" in name or "lora" in name for name in file_names):
-        summary["training"] = {
-            "checkpoint_files": [entry.path for entry in files if any(token in entry.path.lower() for token in ("checkpoint", "adapter", "lora"))][:8],
-        }
     return {key: value for key, value in summary.items() if value not in (None, [], {})}
 
 
@@ -860,8 +856,6 @@ def _classify_bundle_kind(
         return "dataset"
     if any("soft_prompt" in name for name in file_names):
         return "soft-prompt"
-    if any("lora" in name or "checkpoint" in name for name in file_names):
-        return "training"
     return "generic"
 
 

@@ -21,8 +21,6 @@ def main(args):
     torch.manual_seed(42)
     model_half = args.model_half
     model = StableAudioModel.from_pretrained(args.model, device=args.device, model_half=model_half)
-    if args.lora_ckpt_path:
-        model.load_lora(args.lora_ckpt_path)
     from stable_audio_3.interface.diffusion_cond import create_diffusion_cond_ui
 
     interface = create_diffusion_cond_ui(
@@ -82,13 +80,6 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--title", type=str, help="Display Title top of Gradio", required=False
-    )
-    parser.add_argument(
-        "--lora-ckpt-path",
-        type=str,
-        nargs="*",
-        help="Path(s) for LoRA(s) to apply. Can specify multiple.",
-        required=False,
     )
     parser.add_argument(
         "--default-prompt",
