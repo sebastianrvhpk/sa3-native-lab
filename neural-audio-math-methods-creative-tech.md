@@ -978,59 +978,7 @@ gradients must pass through the sampler
 
 So it is powerful but not casual. It is like slow studio rendering, not a live knob.
 
-## 21. LoRA: Small Weight Deltas as Style Memory
-
-A normal linear layer:
-
-```text
-y = W x
-```
-
-LoRA:
-
-```text
-y = (W + DeltaW) x
-DeltaW = (alpha / r) B A
-```
-
-where:
-
-```text
-A in R^(r x d_in)
-B in R^(d_out x r)
-r is small
-```
-
-Creative translation:
-
-```text
-do not rewrite the whole model;
-insert a small learned stylistic bias into its circuits
-```
-
-LoRA is good for:
-
-- style,
-- domain,
-- instrument palette,
-- production aesthetic,
-- dataset identity.
-
-LoRA is weaker for:
-
-- clean scalar controls,
-- disentangled mood knobs,
-- precise time-varying curves.
-
-Why:
-
-```text
-weight changes alter the model's tendencies globally
-```
-
-They can become very expressive, but they are not automatically interpretable.
-
-## 22. Activation Steering: Hidden State as a Performance Surface
+## 21. Activation Steering: Hidden State as a Performance Surface
 
 Collect activations at layer `l`:
 
@@ -1061,13 +1009,6 @@ This is different from prompt engineering:
 ```text
 prompting changes input language
 activation steering changes computation
-```
-
-It is different from LoRA:
-
-```text
-LoRA changes weights
-activation steering changes temporary hidden states
 ```
 
 It is different from LatCH:
@@ -1239,7 +1180,7 @@ seed: change noise
 sampler: change trajectory
 latent: change z or z_hat
 decoder: change D or postprocess
-weights: add LoRA to theta
+weights: change theta through external fine-tuning
 activations: patch hidden state h_l
 ranker: change R
 dataset: change the world the model learns
@@ -1266,7 +1207,6 @@ not only the model weights
 | CFG vector | `cond - uncond` | prompt strength | over-guidance |
 | Flow field | `dz/dt = v_theta` | trajectory steering | field not directly visible |
 | Inpainting mask | `p(z_missing | z_known,m)` | composition by holes | boundary artifacts |
-| LoRA delta | `W + BA` | style/domain memory | entangled changes |
 | Activation vector | `h + alpha v` | internal fader | causal ambiguity |
 | LatCH head | `h_psi(z)->y` | measurement/ranking/guidance | descriptor gaming |
 | Branch ranker | `argmax score(z_i)` | producer selection | compute cost |
@@ -1347,8 +1287,8 @@ Latent diffusion:
 Flow matching:
     learn vector fields from noise to data
 
-Adapters:
-    LoRA as portable weight deltas
+External fine-tuning:
+    style/domain adaptation outside this local instrument
 
 Mechinterp:
     probes and activation steering over hidden states
@@ -1371,7 +1311,6 @@ DDSP -> a differentiable synth player
 VQ/codecs -> a writer of sound tokens
 diffusion -> a sculptor of noisy fields
 flow matching -> a navigator of latent motion
-LoRA -> a carrier of learned style deltas
 activation steering -> a playable internal circuit
 LatCH -> a dashboard and steering proxy
 LMDM -> a possible real-time partner

@@ -7,7 +7,7 @@ repo-specific Colab mode math and implementation notes live in:
 docs/research/native-experimental-modes-math.md
 ```
 
-Scope: open-ended research notes on Stable Audio 3, SAME, LatCH, activation steering, LoRA, inference-time guidance, and LMDM-style live diffusion. This document is not an implementation plan for a final product. It is a measurement and experiment map for discovering what current audio latent models afford.
+Scope: open-ended research notes on Stable Audio 3, SAME, LatCH, activation steering, inference-time guidance, and LMDM-style live diffusion. This document is not an implementation plan for a final product. It is a measurement and experiment map for discovering what current audio latent models afford.
 
 Evidence labels used below:
 
@@ -240,7 +240,6 @@ Confirmed from code/docs:
 - Audio-to-audio uses `init_audio` and `init_noise_level`.
 - Inpainting and continuation are exposed by passing reference audio and mask start/end times.
 - `return_latents=True` can return SAME latents rather than decoded audio.
-- LoRA can be applied to diffusion backbone and conditioner modules, with runtime strength and interval controls.
 
 ### Conditioning Paths
 
@@ -251,7 +250,6 @@ Confirmed from paper/code/docs:
 - Timestep/noise: injected through adaptive normalization/global conditioning.
 - Inpainting/continuation: known reference audio is encoded to SAME latents, multiplied by a binary mask, concatenated or projected with the mask, and added as local conditioning in transformer blocks.
 - Negative prompt/CFG: available in base-model inference and code paths, but post-trained models default to lower CFG usage.
-- LoRA: weight adaptation paths can modify both the DiT and trainable conditioner components.
 
 Unknown:
 
@@ -410,17 +408,17 @@ A control is research-ready only when all three are measured separately. A descr
 | Loudness / intensity | RMS, LUFS, peak, dynamic range, envelope slope | weak/strong, too quiet, too compressed | quiet/loud, intimate/powerful, soft/aggressive | latent norm, channel energy, low-rank envelope components | prompt, branch-rank, LatCH, DITTO, direct guidance |
 | Brightness | spectral centroid, rolloff, high/low energy ratio | bright/dark, muffled/crisp | bright shimmering, dark warm, muted | latent PCA/correlations with spectral descriptors | prompt, branch-rank, LatCH, activation steering |
 | Density / activity | onset rate, spectral flux, event count, polyphony proxy | sparse/dense, busy/minimal | sparse arrangement, dense wall, active percussion | temporal latent variance, flux in latent trajectory | prompt, branch-rank, LatCH, activation steering |
-| Noisiness / grain | spectral flatness, harmonic/noise ratio, roughness | clean/grainy/noisy | clean tone, noisy texture, tape grain | latent high-frequency temporal variation, decoder residual sensitivity | prompt, LatCH, LoRA for texture domains |
+| Noisiness / grain | spectral flatness, harmonic/noise ratio, roughness | clean/grainy/noisy | clean tone, noisy texture, tape grain | latent high-frequency temporal variation, decoder residual sensitivity | prompt, LatCH, branch-rank |
 | Stereo width | mid/side energy, inter-channel correlation, ILD | narrow/wide/immersive | mono centered, wide stereo, spacious | SAME may encode ILD because semantic regression included ILD-like terms | prompt, LatCH, direct guidance |
 | Energy slope | RMS envelope over time, build/drop curves | builds/fades, static/dynamic | gradual build, sudden drop, fade out | latent envelope trend, first temporal principal components | prompt, branch-rank, LatCH, DITTO |
 | Beat strength | beat tracker confidence, onset periodicity | weak/strong groove | strong four-on-floor, no beat, pulsing | periodic latent components around beat grid | prompt, LatCH, branch-rank |
 | Pitch/register | CREPE, BasicPitch, chroma, F0 histograms | low/high, bass/mid/topline | low bass drone, high melody, midrange pad | latent-channel correlation with pitch/chroma | prompt, LatCH difficult for rapid pitch, DITTO |
 | Harmony/key | chroma, key estimator, tonal centroid | key match, harmonic stability | in C minor, modal, dissonant | latent clusters by chroma/key | prompt, branch-rank, prompt-aware LatCH |
-| Section role | novelty curve, structural segmentation | intro, build, drop, outro, transition | intro, build-up, drop, breakdown | long-range latent trajectory shape | prompt, human labels, LatCH, LoRA if domain-specific |
+| Section role | novelty curve, structural segmentation | intro, build, drop, outro, transition | intro, build-up, drop, breakdown | long-range latent trajectory shape | prompt, human labels, LatCH |
 | Tension | dissonance, roughness, spectral flux, density, harmonic instability | tense/relaxed, suspenseful/resolved | tense build, relaxed resolution | multi-descriptor latent direction, activation probes | prompt, activation steering, human-labeled LatCH |
 | Valence / mood | CLAP anchor scores, music emotion classifiers | happy/sad, euphoric/melancholic | happy/sad paired prompts by genre | SA3 residual vectors, SAME latent probes | prompt, activation steering, branch-rank, LatCH |
 | Prompt adherence | CLAP/text-audio similarity, captioning consistency | prompt match score | explicit controlled prompt sets | prompt-aware latent/text model score | branch-rank, CFG, prompt-aware LatCH, DITTO |
-| Style match | embedding similarity to references, classifier score | style match preference | style tags, era/genre/instrument descriptors | latent embedding clusters | prompt, LoRA, branch-rank |
+| Style match | embedding similarity to references, classifier score | style match preference | style tags, era/genre/instrument descriptors | latent embedding clusters | prompt, branch-rank |
 | Transition quality | boundary RMS/spectral discontinuity, beat continuity, embedding continuity | smooth/jarring transition | bridge, seamless transition | latent boundary derivative, context mismatch | inpainting, branch-rank, DITTO |
 | Loop usability | boundary similarity, click detection, beat/bar alignment | usable loop yes/no | seamless loop, looping phrase | first/last latent similarity, periodicity | branch-rank, DITTO, inpainting |
 
@@ -471,7 +469,6 @@ Recommended stages:
 | Activation steering | No weight training | Yes, DiT internals | residual control knobs | can reveal internal representation geometry | hook/compile fragility; causal validity unknown |
 | DITTO | No model training | Differentiable sampler | arbitrary differentiable objectives | flexible and training-free for base model | slow, memory-heavy, can over-optimize |
 | Direct sampler guidance | Usually a guide/predictor | Sampler modification | gradient steering | stronger than ranking | off-manifold risk, descriptor gaming |
-| LoRA | Adapter training | Weight adaptation | style/domain transfer | compact, stackable, strong style adaptation | entangles controls; not ideal for one-off scalar knobs |
 | Architecture/routing changes | Fine-tuning/full training | Full model | new native conditioning | clean if trained well | highest cost and blast radius |
 | LMDM-style streaming | Fine-tuning/post-training | Attention/routing/cache changes | live block-wise generation | low-latency interactive generation | not available from SA3 as-is |
 
@@ -495,12 +492,6 @@ Activation steering modifies internal activations:
 
 ```text
 h_l <- h_l + alpha * v_l
-```
-
-LoRA modifies model weights through a low-rank adapter:
-
-```text
-W_eff = W + Delta_W_lora
 ```
 
 DITTO modifies the initial noise or latent seed:
@@ -906,37 +897,13 @@ Automatic descriptors are useful, but none is a direct substitute for human list
 
 The harness should record descriptor values and human notes side by side.
 
-## LoRA Research Position
+## Fine-Tuning Delegation
 
-LoRA should not be the default answer for every control. It is most appropriate when the target is style/domain adaptation:
-
-- artist-like production domain,
-- instrument family,
-- recording aesthetic,
-- genre/subgenre,
-- SFX class,
-- dataset-specific sound palette,
-- consistent arrangement idiom.
-
-Confirmed from official docs/code:
-
-- LoRA training freezes base weights and optimizes adapter parameters.
-- LoRA can be applied to linear and Conv1d layers.
-- Official docs describe stackable LoRAs, runtime strength control, conditioner/backbone strength, sigma/noise interval control, and layer filtering.
-
-Research uses:
-
-- Train a small LoRA for a style domain, then map which descriptors changed.
-- Test whether LoRA shifts SAME latent distributions predictably.
-- Compare LoRA style adaptation against prompt-only and branch-and-rank.
-- Combine LoRA with LatCH measurement to quantify collateral changes.
-
-Risks:
-
-- A LoRA may entangle style with tempo, loudness, instrumentation, and arrangement.
-- LoRA is not ideal for an interpretable scalar knob unless trained with explicit control structure.
-- Small datasets can overfit or memorize.
-- Combining multiple LoRAs can produce nonlinear interactions.
+SA3 Native Lab should not make local model adaptation the default answer for
+every control. Style/domain adaptation belongs in an external training workflow,
+currently [dada-bots/underfit](https://github.com/dada-bots/underfit) on Colab
+A100. This lab should ingest the resulting audio or analysis artifacts only as
+material for listening, comparison, memory, and inspection.
 
 ## Direct Sampler Guidance Requirements
 
@@ -1018,20 +985,19 @@ Open question: whether SA3's variable-length and inpainting training provides en
 
 ## Training vs Inference-Time Intervention Matrix
 
-| Intervention | No training | Sidecar training | LoRA training | Full fine-tune / architecture | Notes |
-|---|---:|---:|---:|---:|---|
-| Prompt augmentation | Yes | No | No | No | public baseline |
-| Negative prompt / CFG | Yes | No | No | No | stronger for base checkpoints |
-| Audio-to-audio / continuation | Yes | No | No | No | existing SA3 mode |
-| Branch-and-rank by descriptors | Yes | No | No | No | compute-heavy but robust |
-| Branch-and-rank by LatCH | No | Yes | No | No | good first use of LatCH |
-| LatCH direct guidance | No | Yes | No | No | sampler modification needed |
-| Activation steering | Yes | No | No | No | internal hooks/patching needed |
-| DITTO | Yes | No | No | No | differentiable sampler/descriptor needed |
-| LoRA style adaptation | No | No | Yes | No | style/domain transfer |
-| Native new conditioning tensor | No | Maybe | Maybe | Yes | requires training route |
-| LMDM streaming | No | No | No | Yes | attention/routing/cache redesign |
-| New subjective controls | Maybe | Usually | Maybe | Maybe | depends on labels and target |
+| Intervention | No training | Sidecar training | Full fine-tune / architecture | Notes |
+|---|---:|---:|---:|---|
+| Prompt augmentation | Yes | No | No | public baseline |
+| Negative prompt / CFG | Yes | No | No | stronger for base checkpoints |
+| Audio-to-audio / continuation | Yes | No | No | existing SA3 mode |
+| Branch-and-rank by descriptors | Yes | No | No | compute-heavy but robust |
+| Branch-and-rank by LatCH | No | Yes | No | good first use of LatCH |
+| LatCH direct guidance | No | Yes | No | sampler modification needed |
+| Activation steering | Yes | No | No | internal hooks/patching needed |
+| DITTO | Yes | No | No | differentiable sampler/descriptor needed |
+| Native new conditioning tensor | No | Maybe | Yes | requires training route |
+| LMDM streaming | No | No | Yes | attention/routing/cache redesign |
+| New subjective controls | Maybe | Usually | Maybe | depends on labels and target |
 
 ## Research Hypotheses and Tests
 
@@ -1129,7 +1095,6 @@ Success criterion:
 - Do inpainting masks give reliable boundary-conditioned composition, or do they create artifacts near mask edges?
 - Can prompt-aware LatCH measure prompt adherence better than CLAP?
 - How many human labels are needed for subjective controls like tension and section role?
-- Can LoRA adapt style without degrading controllability of base descriptors?
 - Can rolling continuation preserve rhythm and key without true block-causal training?
 
 ## Risk Register
@@ -1143,7 +1108,6 @@ Success criterion:
 | Descriptors fail on some genres | noisy training/evaluation | report descriptor confidence and genre failures |
 | LatCH learns descriptor artifacts | poor perceptual control | include listening tests and held-out descriptors |
 | Guidance pushes off manifold | artifacts, prompt drift | start with ranking, use weak/selective guidance |
-| LoRA entangles controls | style improves but other properties drift | quantify descriptor shifts before/after LoRA |
 | Rolling continuation accumulates drift | unusable long sessions | measure drift curves and branch-rank candidates |
 | Human labels are inconsistent | noisy subjective heads | pairwise labels, multiple raters, calibration examples |
 
@@ -1182,16 +1146,12 @@ Success criterion:
 11. `10_rolling_continuation.ipynb`
     - Test continuation as a block-wise composition approximation and measure drift.
 
-12. `11_lora_style_audit.ipynb`
-    - Train or load one LoRA, then quantify how it shifts descriptors and latent distributions.
-
 ## Near-Term Research Priorities
 
 1. Establish the SAME latent audit first. The latent object is the shared substrate for SA3 generation, LatCH, branch ranking, perturbation tests, and LMDM adaptation.
 2. Build prompt-only and branch-and-rank baselines before internal steering. This prevents confusing model variance with new control.
 3. Replicate audioscope carefully, including compile/hook validation and held-out prompt tests.
 4. Train LatCH-SAME only after descriptor reliability is known. Start with objective low-frequency controls.
-5. Treat LoRA as a style/domain adaptation experiment, not a universal control mechanism.
-6. Treat LMDM as a conceptual future path. First measure rolling continuation drift with existing SA3.
+5. Treat LMDM as a conceptual future path. First measure rolling continuation drift with existing SA3.
 
 The central research stance is: discover which properties are observable, predictable, and intervenable in SAME/SA3 before deciding which mechanisms deserve engineering investment.

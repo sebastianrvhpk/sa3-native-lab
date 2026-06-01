@@ -136,7 +136,7 @@ For the broader stack direction and promotion triggers, see
    typed readers now exist. The backend now parses JSON/NPZ bundle summaries
    and promotes metric scalars plus plot/image files into reader rows. Bundle
    cards can now route profiles, vectors, directions, soft prompts, memory
-   folders, prompt-search candidates, and LoRA checkpoints into Advanced Gestures/Tune,
+   folders, and prompt-search candidates into Advanced Gestures/Tune,
    and discovered image plots plus embedded audio files render through the
    bundle-file endpoint. Embedded bundle audio can now be promoted into normal
    audio artifacts. Prompt-search bundles now show probe metadata, compact
@@ -144,7 +144,7 @@ For the broader stack direction and promotion triggers, see
    and saved listening decisions with notes. Bundle panels now show workflow
    signals for recipe actions, playable
    audio, lineage, plots, metrics, candidates, memory hits, variants, tensors,
-   checkpoints, and geometry stats. Profile, vector, prompt-search, soft-prompt,
+   and geometry stats. Profile, vector, prompt-search, soft-prompt,
    dataset, and geometry domain cards now expose additional parsed evidence:
    source/reference, vector shape and source pair, prompt-search probe cost/risk,
    soft-prompt loss/steps/test audio, prompt coverage and caption/chunk warnings,
@@ -158,8 +158,9 @@ presets, "usable as donor/source/anchor" Memory filters, vector search,
 pgvector, similarity browser, memory atlas UI, waveform region workflows,
 playlist export, autoplay queue, multi-branch listening sessions, heavy review
 modes, sampler-step intervention, flow-state optimization, control heads, macro
-chain UI, LoRA pause/resume/priority, resident worker, moving more app state
-into tRPC, or moving gesture form state server-side.
+chain UI, resident worker, moving more app state into tRPC, or moving gesture
+form state server-side. Fine-tuning belongs in `dada-bots/underfit` on Colab
+A100, not in this local product loop.
 
 ## P3: Research Cognition
 
@@ -257,8 +258,8 @@ into tRPC, or moving gesture form state server-side.
    first-class audio artifacts. The specimen panel shows kind-specific vitals for
    audio, latent, and bundle artifacts. Next each bundle kind should grow a
    dedicated inspector component with richer actions beyond the new workflow
-   signals: vector bundle, profile, prompt search, soft prompt, training output,
-   sweep, memory collection, and geometry audit.
+   signals: vector bundle, profile, prompt search, soft prompt, sweep, memory
+   collection, and geometry audit.
 
 7. Continue extraction only where the contract is named.
    `App.tsx` is now a composition root: configs, workbench model helpers,

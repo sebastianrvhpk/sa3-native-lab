@@ -62,7 +62,8 @@ the desired interface grammar:
   intent, tags, notes, kind, decision, and source lineage.
 - `bundleReuseModel.ts`: shared bundle-to-gesture reuse paths for profiles,
   directions, sweeps, prompt-search prompts, memory bundles, datasets, soft
-  prompts, and training checkpoints where existing recipe fields support them.
+  prompts, and other backend-supported bundle inputs where existing recipe
+  fields support them.
 - `useGestureWorkbench.ts`: named frontend orchestration hook for active
   gesture, Tune form state, donor/source reuse, next-action routing, prompt
   seeding, and bundle reuse. App-level submit mutations and persistence side

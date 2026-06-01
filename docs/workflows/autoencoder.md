@@ -72,7 +72,8 @@ audio_out = ae.decode(latent_tensor)
 
 ## Pre-encoding a dataset
 
-For LoRA training, if you have a large dataset, it is much faster to pre-encode your dataset once and train from the saved latents. Use the provided script:
+Use this script when you want a local SAME latent dataset for memory queries,
+style/profile experiments, geometry audits, or external training handoff:
 
 ```bash
 uv run python scripts/pre_encode_dataset.py \
@@ -102,7 +103,9 @@ latents_out/
   000000000001.json
 ```
 
-Pass the output directory to `train_lora.py` via `--encoded_dir`. See [LoRA training](lora.md) for the full training workflow.
+SA3 Native Lab no longer owns local fine-tuning workflows. Use
+[dada-bots/underfit](https://github.com/dada-bots/underfit) on a Colab A100 for
+style/domain adaptation.
 
 ### Options
 

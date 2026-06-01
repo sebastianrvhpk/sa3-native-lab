@@ -72,11 +72,15 @@ python ...`, `uv run stable-audio ...`, or activate `.venv/` if you want a
 traditional prompt.
 
 For the full local app/research surface, including the API, frontend-backed
-scripts, notebook tools, and LoRA scaffold, sync all local extras:
+scripts, and notebook tools, sync all local extras:
 
 ```bash
-uv sync --extra app --extra ui --extra lora --extra notebook --extra dev
+uv sync --extra app --extra ui --extra notebook --extra dev
 ```
+
+Fine-tuning workflows are intentionally out of scope for SA3 Native Lab.
+Use [dada-bots/underfit](https://github.com/dada-bots/underfit) on a Colab A100
+for that work instead.
 
 ### Model Policy
 
@@ -271,9 +275,9 @@ output artifact instead of relying on notebook cell state.
 Colab-style experiment scripts are also available as background recipe jobs
 through `/experiments/run`. These bridge the notebook migration for style
 profiles, audio directions, residual vectors, alpha sweeps, prompt search, soft
-prompts, dataset pre-encoding, and LoRA training. Script runs save audio
+prompts, and dataset pre-encoding. Script runs save audio
 artifacts when they produce listenable WAVs and zipped bundle artifacts for
-vector/profile outputs and training folders. `experiment.prompt_search` is a
+vector/profile outputs and research folders. `experiment.prompt_search` is a
 native recipe today: it keeps a deterministic `lexical_probe` scorer for cheap
 wiring tests and exposes an optional `sa3_flow_probe` scorer that ranks prompts
 with Medium flow losses against a target audio latent. CLAP-like scoring appears
@@ -393,8 +397,9 @@ The current repo-specific math and implementation map is:
 That document covers the current Colab modes, including renoise, selective latent
 renoise, blur/sharpen/filtering, cross-audio grafting, cyclic sampler mixing,
 neural latent DSP, soft prompt inversion, Mode 2 beam prompt inversion, SAME
-statistical controls, residual steering, LatCH-style sidecars, LoRA boundaries,
-and Mode 15 geometry audits.
+statistical controls, residual steering, LatCH-style sidecars, and Mode 15
+geometry audits. Fine-tuning work is delegated to
+[dada-bots/underfit](https://github.com/dada-bots/underfit).
 
 The seven-operator research layer is:
 

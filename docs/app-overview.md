@@ -21,10 +21,13 @@ The target model family is SA3 Medium. Defaults use:
 
 - `medium` for SA3 generation and SA3 script experiments.
 - `same-l` for SAME encode/decode and audio-memory/style-vector work.
-- `medium-base` for LoRA training because LoRA starts from a base checkpoint.
 
 Small checkpoints can still be selected for deliberate smoke tests, but they
 are no longer the default exploration path.
+Fine-tuning workflows are deliberately delegated to
+[dada-bots/underfit](https://github.com/dada-bots/underfit) on a Colab A100.
+SA3 Native Lab stays focused on local generation, SAME latents, gestures,
+listening, memory, steering, and inspection.
 
 ## Main Surfaces
 
@@ -158,8 +161,8 @@ saved setting and can revert the current controls back to that preset.
 
 Advanced Gestures wrap the notebook/script experiments as background recipes. It
 covers style vectors, style profiles, residual vectors, alpha sweeps, prompt
-search, soft prompts, dataset pre-encoding, local latent-memory query, local
-SAME geometry audit, and LoRA training.
+search, soft prompts, dataset pre-encoding, local latent-memory query, and local
+SAME geometry audit.
 
 Operator and recipe controls are partly hand-shaped for playability and partly
 derived from backend `ui_fields` emitted by `/operators/specs`. The frontend
@@ -177,7 +180,7 @@ Artifacts are stored under `.sa3_lab/` by default. The app currently supports:
 - `audio`: WAV files with waveform peaks and playback.
 - `latent`: `.npy` time-major latent arrays with shape/rate metadata.
 - `bundle`: zipped script outputs such as vector folders, profiles, soft
-  prompts, pre-encoded datasets, and training outputs.
+  prompts, pre-encoded datasets, prompt-search reports, and geometry summaries.
 
 Every run records a `Recipe` and `JobRecord` so results can be traced back to
 operator, backend, inputs, params, model, seed, logs, phase, and source
@@ -214,7 +217,7 @@ research feedback rather than isolated labels. Prompt-search panels also show
 first-pass prompt memory across generated takes, grouping keeper/maybe/reject
 decisions by prompt text across runs.
 Bundle domain cards now promote parsed sweep outputs, memory hits, vector NPZ
-contents, soft-prompt tensors, and training checkpoints into native rows and
+contents, and soft-prompt tensors into native rows and
 item lists. They are still inspectors rather than full editors, but they make
 script-backed modes legible without pretending unavailable routing or graph
 behavior exists.
@@ -227,10 +230,10 @@ and the selected take is labeled consistently across the queue and branch
 detail.
 Memory query bundle previews expose ranked hits that can be selected, played
 when audio, or reused as latent donors when the hit is a latent artifact.
-Encoded dataset bundles expose manifest/sidecar
-counts, chunk timing, prompt coverage, latent files, and reuse into LoRA
-training. Alpha sweep families can also compare sibling sweep runs that share a
-vector bundle or prompt.
+Encoded dataset bundles expose manifest/sidecar counts, chunk timing, prompt
+coverage, and latent files for memory/profile/geometry work or external
+fine-tuning handoff. Alpha sweep families can also compare sibling sweep runs
+that share a vector bundle or prompt.
 Bundle domain inspectors now expose more parsed, mode-specific evidence where
 the summary supports it: profile source/reference, vector shapes and source
 pairs, prompt-search probe cost/risk, soft-prompt loss/steps/test audio,
@@ -261,9 +264,8 @@ clear experimental framing.
 - `uv run sa3-lab smoke-mlx-medium --json` verifies the slow Medium/MLX path is
   gated by default; `SA3_RUN_MLX_SMOKE=1 uv run sa3-lab smoke-mlx-medium --run
   --duration 1 --steps 2 --json` submits the authenticated real model smoke.
-- Long jobs such as LoRA training are submitted as background jobs and can be
-  cancelled from the app, although true resumable multi-step workflows are still
-  future work.
+- Fine-tuning jobs are not owned by SA3 Native Lab; use `dada-bots/underfit` on
+  Colab A100 for that path.
 
 ## Current Status
 
@@ -304,7 +306,7 @@ Confirmed in the current codebase:
   probe controls, candidate-family bundle reading, durable listening decision
   controls, prompt-search decision summaries, prompt memory, Latent Gestures
   local presets with visible diffs, bundle workflow signals, richer domain
-  cards for memory/sweep/vector/soft-prompt/training bundles, sibling sweep
+  cards for memory/sweep/vector/soft-prompt bundles, sibling sweep
   comparison, data-backed specimen lineage threads, a session workspace pulse,
   archive artifact recovery, keyboardable playback playlist navigation, local
   waveform markers, persisted playback cues, WaveSurfer zoom and draggable loop
@@ -339,8 +341,8 @@ Still partial:
   needs richer layer/alpha comparison reports and clearer runtime-cost notes.
 - Operator presets are currently browser-local. Backend or Postgres-backed
   preset persistence and shareable preset history remain future work.
-- Type-specific readers for profiles, vectors, soft prompts, training outputs,
-  sweeps, memory collections, and geometry audits now receive backend-parsed
+- Type-specific readers for profiles, vectors, soft prompts, sweeps, memory
+  collections, and geometry audits now receive backend-parsed
   summaries, first-pass metrics/plot discovery, embedded image/audio rendering,
   recipe-input actions, workflow hints, and first-pass domain item cards, but
   still need richer domain-specific controls for each bundle type.

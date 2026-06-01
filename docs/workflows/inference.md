@@ -183,41 +183,9 @@ audio = model.generate(prompt="...", duration=30)
 
 > **Note:** Chunked decoding only affects the final autoencoder decode step, not the diffusion process. On GPUs with enough VRAM to decode the full sequence at once, `chunked_decode=False` may be slightly faster.
 
-# LoRA
-## Inference with LoRA
+## Fine-Tuning
 
-Load one or more LoRA checkpoints onto the model before generating:
-
-```python
-from stable_audio_3 import StableAudioModel
-
-model = StableAudioModel.from_pretrained("medium")
-model.load_lora(["path/to/lora.safetensors"])
-
-audio = model.generate(
-    prompt="Lo-fi boom bap meets orchestral strings 84 BPM",
-    duration=30,
-)
-```
-
-Multiple LoRAs can be stacked by passing additional paths:
-
-```python
-model.load_lora(["style_a.safetensors", "style_b.safetensors"])
-```
-
-### Adjusting LoRA strength
-
-Control how strongly the LoRA influences the output at runtime:
-
-```python
-model.set_lora_strength(0.5)              # Half-strength on all LoRAs
-model.set_lora_strength(1.5)              # Amplify the effect
-model.set_lora_strength(0.0)              # Disable without unloading
-
-# With multiple LoRAs, target by index:
-model.set_lora_strength(1.0, lora_index=0)
-model.set_lora_strength(0.3, lora_index=1)
-```
-
-For full details on LoRA training see [LoRA Training](lora.md).
+SA3 Native Lab does not own local fine-tuning workflows. Use
+[dada-bots/underfit](https://github.com/dada-bots/underfit) on a Colab A100 for
+that work, then keep this repo focused on local listening, gestures, memory,
+SAME latents, prompt search, steering, and playback.

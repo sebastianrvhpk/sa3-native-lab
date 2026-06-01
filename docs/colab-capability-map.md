@@ -37,7 +37,6 @@ smoke tests, but they are not the app default.
 | Soft prompt optimize/generate | `scripts/optimize_sa3_soft_prompt.py`, `scripts/generate_sa3_with_soft_prompt.py` | `/experiments/run`, Advanced Gestures/Tune | script-job adapter with native controls |
 | Dataset pre-encode | `scripts/pre_encode_dataset.py` | `/experiments/run`, Advanced Gestures/Tune | script-job adapter with native controls |
 | SAME geometry audit | `latent_audio_primitives.geometry.geometry_report` | `/experiments/run`, Advanced Gestures/Tune | implemented for local latent artifacts |
-| LoRA training | `scripts/train_lora.py` | `/experiments/run`, Advanced Gestures/Tune | script-job adapter with native controls; long-running |
 | Colab mode inventory | `colab/sa3_same_native_experimental_modes.ipynb` | `/colab/modes`, Mode Atlas | typed parity/status map |
 
 ## Artifact Graph
@@ -96,5 +95,6 @@ by prompt text across runs.
 4. Control-head recipes for Mode 12 and the labelled-probe part of Mode 15.
 5. Promote local latent presets into backend history only after preset semantics
    are stable.
-6. Long-job controls for LoRA training: pause/resume, priority, and
-   resource-aware scheduling are not yet implemented.
+6. Keep fine-tuning out of SA3 Native Lab; use
+   [dada-bots/underfit](https://github.com/dada-bots/underfit) on Colab A100 for
+   style/domain adaptation work.

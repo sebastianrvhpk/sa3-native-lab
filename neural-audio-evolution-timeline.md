@@ -717,7 +717,6 @@ This imports transformer scaling laws and infrastructure into audio diffusion:
 - adaptive normalization,
 - memory tokens,
 - FlashAttention,
-- LoRA,
 - activation patching,
 - hidden-state probing.
 
@@ -765,7 +764,6 @@ Representative methods:
 - classifier/universal/training-free guidance,
 - DITTO,
 - LatCH,
-- LoRA,
 - activation steering,
 - prompt-to-prompt-like interventions,
 - branch-and-rank.
@@ -860,30 +858,6 @@ For SA3/SAME, this suggests:
 h_psi(SAME latent, optional t, optional prompt) -> control values
 ```
 
-### LoRA
-
-LoRA adapts weights by low-rank updates:
-
-```text
-W_eff = W + (alpha / r) B A
-```
-
-where:
-
-```text
-A in R^(r x d_in)
-B in R^(d_out x r)
-r << min(d_in, d_out)
-```
-
-LoRA is not just a training trick. It changes the artistic ontology:
-
-```text
-a style/domain can be a small portable delta over a giant prior
-```
-
-But it is not automatically a clean control knob. A LoRA can entangle timbre, genre, loudness, tempo, and form.
-
 ### Activation Steering
 
 Contrastive direction:
@@ -903,7 +877,6 @@ This sits between mechanistic interpretability and instrument design. It treats 
 Important distinction:
 
 - LatCH reads or guides latent audio states.
-- LoRA changes weights.
 - CFG changes prediction mixing.
 - DITTO changes the initial noise.
 - Activation steering changes internal hidden states during the forward pass.
@@ -1002,7 +975,7 @@ If the last deep hands-on period was around 2023, the main changes are:
    ```
 
 6. Internal representations became experimentally accessible.
-   LoRA, activation steering, probes, hooks, and sidecar heads make it practical to treat models as objects of study, not only black boxes.
+   Activation steering, probes, hooks, and sidecar heads make it practical to treat models as objects of study, not only black boxes.
 
 7. Live generation is no longer just low-latency inference.
    True live diffusion requires block-wise architecture, caching, and rollout training.
@@ -1098,7 +1071,6 @@ The practical research surface moved from custom scripts to:
 - Colab notebooks,
 - experiment trackers,
 - CLAP/audio embedding evaluators,
-- LoRA training stacks,
 - local model wrappers with `return_latents`.
 
 This matters because experimentation requires state capture:
@@ -1210,7 +1182,6 @@ Tools:
 - seed morphing,
 - latent sliders,
 - activation steering,
-- LoRA strength,
 - branch-and-rank,
 - live continuation.
 
@@ -1229,8 +1200,7 @@ Tools:
 - activation replacement,
 - attention inspection,
 - residual stream steering,
-- layer ablations,
-- LoRA insertion.
+- layer ablations.
 
 ## A Research Vocabulary for Controls
 
@@ -1334,14 +1304,6 @@ pred_guided = pred_uncond + s * (pred_cond - pred_uncond)
 
 Good for prompt adherence. Can reduce diversity or overcook outputs.
 
-### LoRA
-
-```text
-W_eff = W + (alpha / r) B A
-```
-
-Good for lightweight domain adaptation.
-
 ### Activation Steering
 
 ```text
@@ -1408,7 +1370,6 @@ Suggested sequence:
    - pairwise preference heads.
 
 7. Only then consider adaptation.
-   - LoRA for style,
    - sampler guidance for objective controls,
    - block-wise continuation experiments,
    - architecture changes if measurement justifies them.

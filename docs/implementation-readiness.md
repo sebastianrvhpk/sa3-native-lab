@@ -84,7 +84,7 @@ progressive disclosure.
   decisions, decision summaries, and first-pass prompt memory.
 - Bundle inspectors now surface parsed sweep outputs, memory hits, vector NPZs,
   encoded dataset manifests, profile aggregates, direction NPZ metadata,
-  geometry artifacts, soft-prompt tensors, and training checkpoints as domain
+  geometry artifacts, and soft-prompt tensors as domain
   cards instead of only file inventory.
 - Latent Gestures have browser-local presets with visible diff and revert
   behavior.

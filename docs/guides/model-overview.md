@@ -113,7 +113,7 @@ Three families of checkpoints are provided, each with Small and Medium variants:
 | Key | Family | Purpose |
 |---|---|---|
 | `small-music`, `small-sfx`, `medium` | Post-trained | Primary inference checkpoints. Use these for generation. |
-| `small-music-base`, `small-sfx-base`, `medium-base` | Base | Base checkpoints. Used as the starting point for LoRA training. |
+| `small-music-base`, `small-sfx-base`, `medium-base` | Base | Pre-trained base checkpoints. Keep them outside the default local instrument path unless an external workflow explicitly needs them. |
 | `same-s`, `same-l` | SAME | Standalone autoencoder checkpoints. Use these if you only need encoding/decoding without the Diffusion Transformer. |
 
 Post-trained checkpoints have no suffix because they are the default choice for inference — the `-base` suffix distinguishes the pre-trained base checkpoints. SAME checkpoints will reuse a locally cached post-trained or base checkpoint automatically if one is already present, avoiding a redundant download.
@@ -123,11 +123,11 @@ Post-trained checkpoints have no suffix because they are the default choice for 
 At inference time, the Diffusion Transformer iteratively denoises noise into SAME latents conditioned on your text prompt and duration. The SAME decoder then reconstructs the latents into a full-resolution 44.1 kHz stereo waveform.
 
 
-## LoRA
+## Fine-Tuning
 
-Stable Audio supports LoRA fine-tuning as an easy way to adapt models toward specific styles. See the [LoRA guide](../workflows/lora.md).
-
-Note: LoRAs are trained on the base checkpoint. Once trained, they can be applied to the post-trained model and will work as expected.
+SA3 Native Lab does not own local fine-tuning workflows. Use
+[dada-bots/underfit](https://github.com/dada-bots/underfit) on a Colab A100 for
+that work.
 
 ## Training Data
 All models were trained on a combination of licensed ([AudioSparx](https://www.audiosparx.com/)) and CC0 ([Freesound](https://freesound.org/) data)

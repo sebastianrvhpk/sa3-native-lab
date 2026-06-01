@@ -47,7 +47,7 @@ Current Sound
 | P1 | Runtime readiness checks | `/readiness` + `system.readiness` + readiness panel | Promote | API tests, control-plane tests, frontend tests |
 | P1 | Fork-with-edited-params UI | recipe-derived fork editor with diff/reset controls | Promote | frontend tests/build |
 | P1 | Bundle inspection and branch records | `/artifacts/{id}/inspect` + `families.load` + branch rail/detail panel | Promote | API tests, control-plane tests, frontend tests |
-| P1 | Typed bundle readers | backend `bundle_summary` parser + `BundleField` readers for memory/profile/vector/sweep/soft-prompt/training outputs, metrics, plot discovery, inline plot rendering, and recipe-input reuse | Promote | API tests, frontend tests/build |
+| P1 | Typed bundle readers | backend `bundle_summary` parser + `BundleField` readers for memory/profile/vector/sweep/soft-prompt outputs, metrics, plot discovery, inline plot rendering, and recipe-input reuse | Promote | API tests, frontend tests/build |
 | P1 | Alpha-sweep branch surface | `FamilyDetailPanel` alpha variant band with sortable metric table, branch highlighting, and sibling sweep comparison | Promote | frontend tests/build |
 | P1 | Prompt-candidate take bench | Prompt-search bundle reader + text generation lineage metadata + grouped prompt-candidate branches, inline playback, and durable keeper/maybe/reject listening decisions | Promote | frontend tests/build, control-plane family test |
 | P1 | Prompt take descriptor deltas | `/artifacts/{target}/descriptor-comparison/{take}` + prompt-search generated-take delta strip | Promote first slice | storage/API tests, frontend tests/build |
@@ -85,8 +85,8 @@ Current Sound
 4. Promote the take strip toward a listening queue with keep/maybe/reject,
    remember, branch, continue-from-selected, and branch trajectory listening.
 5. Add deeper domain-specific controls for style profiles, vectors, prompt
-   search, soft prompts, memory collections, sweeps, geometry audits, and
-   training outputs only where existing bundle inspectors expose real use paths.
+   search, soft prompts, memory collections, sweeps, and geometry audits only
+   where existing bundle inspectors expose real use paths.
 6. Continue shrinking frontend field drift until backend `ui_fields` can drive
    most controls without losing the instrument-specific layout.
 7. Promote archive/memory actions into tRPC/control-plane procedures when

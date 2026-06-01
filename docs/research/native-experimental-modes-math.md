@@ -342,7 +342,6 @@ larger BABBLE_LOGSNR_VALUES        -> better probe coverage, more compute
 | 10 | Flow-state optimization | intermediate `z_t` | no base training | optimize flow-state loss |
 | 11 | Inpainting/continuation | masked latent/audio | no | `p(z_missing | z_known, mask, c)` |
 | 12 | LatCH-style head | sidecar `h_psi(z)` | sidecar only | `h_psi(z)->controls` |
-| 13 | LoRA scaffold | small weight adapters | yes, LoRA | `theta + BA` |
 | 14 | Latent memory | indexed latent items | no | retrieval over summaries/metadata |
 | 15 | SAME geometry audit | latent set + control labels | no | PCA, periodicity, probes, transport |
 
@@ -676,15 +675,13 @@ predictability: can h_psi predict it from z?
 intervenability: can a sampler/edit change it reliably?
 ```
 
-## Mode 13: LoRA
+## Mode 13: Fine-Tuning Delegated
 
-LoRA is the first mode here that adapts weights:
-
-```text
-W' = W + alpha/r * B A
-```
-
-Use it for domain/style adaptation after lighter probes show that prompt inversion, latent edits, or residual steering are insufficient.
+Fine-tuning and style/domain adaptation are no longer part of SA3 Native Lab's
+local app/runtime surface. Use
+[dada-bots/underfit](https://github.com/dada-bots/underfit) on a Colab A100 for
+that work, then bring resulting audio or analysis artifacts back into this lab
+only as material to listen to, compare, remember, or inspect.
 
 ## Mode 15: SAME Geometry and Intervention Audit
 
