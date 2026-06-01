@@ -35,17 +35,22 @@ For the broader stack direction and promotion triggers, see
    Advanced Gesture bundle paths, and recovery. The remembered-material browser
    now sorts usable material first and exposes role, reuse intent, tags, notes,
    kind, listening decision, branch, and source lineage from existing metadata.
+   Remembered latent material now exposes an honest `Find Similar` path that
+   routes to the existing local `memory.query` recipe with the selected latent
+   as source. This is local artifact retrieval, not a vector database or atlas.
    Next, deepen dataset/audio preview and style-reference promotion before any
-   vector retrieval work.
+   indexed retrieval or spatial memory UI.
 
 4. Improve the take strip into a listening queue.
    The app already has recent/lineage/open sequencing, playback decisions,
    markers, loop regions, Remember, Branch, and Continue paths. A small clarity
    pass now shows keeper/maybe/reject/open summaries for the current queue and
    branch detail, and selected takes use the same visual label in the take strip
-   and branch view. Playlist export, autoplay, multi-branch listening sessions,
-   and heavy review modes remain deferred because they add new listening modes
-   rather than clarifying the current loop.
+   and branch view. The current visible queue now has an explicit Auto transport
+   that plays forward through the selected queue order using the existing audio
+   deck. Playlist export, multi-branch listening sessions, and heavy review
+   modes remain deferred because they add new listening modes rather than
+   clarifying the current loop.
 
 5. Keep gesture orchestration boundaries named.
    `useGestureWorkbench` is now intentionally bounded to semantic workbench
@@ -107,8 +112,10 @@ For the broader stack direction and promotion triggers, see
    annotations, supports marker notes, uses WaveSurfer for zoom plus draggable
    loop edits, and has committed browser coverage for cue
    persistence, annotation persistence, and SessionTray artifact
-   archive/recovery. Next playback work should add explicit playlist/session
-   sequencing.
+   archive/recovery. The take strip can now autoplay through the current visible
+   queue order without introducing playlist files or a separate review mode.
+   Next playback work should stay scoped to session sequencing and export only
+   after the visible listening bench needs it.
 
 2. Deepen branch views for sweeps.
    Recipe families now appear as branches with a detail panel, per-result playback,
@@ -179,13 +186,16 @@ For the broader stack direction and promotion triggers, see
 ## Explicitly Deferred
 
 Do not add these until a later pass has a narrower contract: saved Memory filter
-presets, vector search, pgvector, similarity browser, memory atlas UI, waveform
-region workflows, playlist export, autoplay queue, multi-branch listening
-sessions, heavy review modes, sampler-step intervention, flow-state
-optimization, control heads, macro chain UI, resident worker, moving more app
-state into tRPC, moving gesture form state server-side, or generic bundle apply
-buttons. Fine-tuning and style-domain adaptation belong in `dada-bots/underfit`
-on Colab A100, not in this local product loop.
+presets, pgvector or indexed vector search, similarity browser, memory atlas UI,
+graph/node editing, true bounded time-region latent masks, waveform region
+export workflows, playlist export, multi-branch listening sessions, heavy
+review modes, sampler-step intervention, flow-state optimization, control
+heads, macro chain UI, resident worker, moving more app state into tRPC, moving
+gesture form state server-side, fake editor/apply buttons, or generic bundle
+apply buttons. The app can route a selected latent into the existing
+`memory.query` recipe, but it should not present that as a vector-search system
+or memory atlas. Fine-tuning and style-domain adaptation belong in
+`dada-bots/underfit` on Colab A100, not in this local product loop.
 
 ## P3: Research Cognition
 
@@ -193,9 +203,11 @@ on Colab A100, not in this local product loop.
    Local latent-artifact nearest-neighbor query now exists as `memory.query`.
    Bundle previews now allow selecting hits, playback for audio hits, and
    donor reuse for latent hits. The app-level Memory browser now covers stored
-   role, reuse, notes, tags, decisions, kind, branch, and lineage metadata. The
-   next research step is a richer browser for encoded SAME datasets, preview
-   audio for child material, and style-reference promotion.
+   role, reuse, notes, tags, decisions, kind, branch, and lineage metadata, and
+   selected latent material can open `Find Similar` by seeding the real
+   `memory.query` recipe. The next research step is a richer browser for
+   encoded SAME datasets, preview audio for child material, and style-reference
+   promotion, not a decorative atlas.
 
 2. Latent channel and time-region views.
    Graft/renoise now expose real channel-mask semantics in Tune. True bounded
@@ -204,7 +216,10 @@ on Colab A100, not in this local product loop.
 
 3. Recipe graph and lineage map.
    Routing lines should eventually become an inspectable graph of source audio,
-   latent, donor, operator, bundle, and decoded result relationships.
+   latent, donor, operator, bundle, and decoded result relationships. Until
+   those nodes have real actions and reliable backend semantics, keep lineage as
+   the existing source -> gesture -> take evidence thread rather than adding a
+   graph UI.
 
 4. Prompt/residual comparison bench.
    Prompt search now exists as `experiment.prompt_search` with beam, greedy, and

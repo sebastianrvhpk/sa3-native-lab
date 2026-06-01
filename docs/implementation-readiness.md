@@ -64,11 +64,12 @@ progressive disclosure.
   job state, listening decisions, archive volume, and the next real focus
   action. Archive artifacts can be recovered into the active session through a
   tested annotation/session reassignment path.
-- The listening surface now has a tested recent-take playlist cursor and local
+- The listening surface now has a tested recent-take queue cursor and local
   waveform markers in addition to playback, loop, and decision controls.
   The player now supports marker deletion, relabeling after deletion, loop-edge
-  nudging, marker notes, sequence-aware audition navigation, persisted playback
-  annotations, WaveSurfer zoom, and draggable loop regions. The committed
+  nudging, marker notes, sequence-aware audition navigation, visible-queue
+  autoplay, persisted playback annotations, WaveSurfer zoom, and draggable loop
+  regions. The committed
   `npm run smoke:playback-session --prefix frontend` script verifies these
   interactions in a real browser with temporary API and Vite servers.
 - `sa3-lab smoke-fixture` now provides a cheap local runtime smoke by creating a
@@ -109,9 +110,9 @@ progressive disclosure.
   into the active session where existing backend paths support it.
 - Selected takes now expose a `Next` affordance beside Current Sound. Audio
   takes suggest Continue, Vary, Encode, and Remember; latent takes suggest
-  Decode, Morph, Borrow Texture, and Remember; bundles surface Inspect plus
-  available bundle-to-gesture reuse actions. These actions select the matching
-  Gesture/Tune state instead of sending users back to a dashboard.
+  Decode, Morph, Borrow Texture, Find Similar, and Remember; bundles surface
+  Inspect plus available bundle-to-gesture reuse actions. These actions select
+  the matching Gesture/Tune state instead of sending users back to a dashboard.
 - Branches are reframed as creative paths with source, gesture, latest take,
   take count, status, do-again, branch, remember, and Inspect details. Raw job
   IDs, recipe IDs, backend fields, logs, and material counts remain available
@@ -220,8 +221,9 @@ branched, and inspected without making the user operate the machinery first.
   domain-specific. The extracted specimen/session/status/prompt/preset/spec
   panels now have focused fixtures.
 - Playback-specific browser tests for generated-take promotion, richer playlist
-  sequencing, and future region-export workflows. Marker notes, loop regions,
-  persisted cues, and tray archive/recovery now have committed
+  sequencing/export, and future region-export workflows. Marker notes, loop
+  regions, persisted cues, visible queue autoplay, and tray archive/recovery now
+  have focused or committed
   browser coverage.
 - Performance or runtime-cost tests for Medium/MPS prompt-search probe paths.
 - Broader tests that protect against token or credential leakage in less common
@@ -287,7 +289,8 @@ instead of invisible friction.
 
 1. P0.1 Memory reuse: active Memory actions now cover use as Source, Anchor,
    latent donor for Borrow Texture, prompt seed, bundle-to-Advanced-Gesture
-   reuse, and recovery into the current session. No vector search or new
+   reuse, recovery into the current session, and Find Similar routing into the
+   real local `memory.query` recipe. No vector database, atlas, or new
    persistence layer was added.
 2. P0.2 Landed-take next actions: selected audio, latent, bundle, pending, and
    failed states now produce context-aware `Next` actions that select the right
@@ -337,7 +340,9 @@ instead of invisible friction.
     where existing recipes and audio artifacts support them.
 11. Memory browsing has explicit stored-metadata filters for role, reuse intent,
     tags, notes, kind, listening decision, and source lineage, including
-    bundle-derived audio. No vector search or new persistence layer was added.
+    bundle-derived audio. Latent memories can now seed the real `memory.query`
+    recipe through Find Similar. No vector database, atlas, or new persistence
+    layer was added.
 12. The listening bench now has a visible remembered-material browser that
     ranks usable material first, a pure gesture action descriptor for primary
     action copy/readiness, source-aware Tune fields, latent-region summaries for
@@ -347,6 +352,12 @@ instead of invisible friction.
     dataset/source readiness in bundle inspectors, strict profile-memory reuse,
     decision-aware sweep picks, and prompt-search latest-take routing without
     adding new backend capability.
+14. Deferred-area reassessment added two real, bounded pieces: selected latent
+    takes or memories can open the existing local similarity recipe, and the
+    take strip can autoplay through the visible queue order. Graph UI, memory
+    atlas, playlist export, heavy review modes, fake apply/editor affordances,
+    true bounded time-region latent masks, and local fine-tuning remain
+    deferred.
 
 ### Deferred With Reason
 
@@ -365,11 +376,18 @@ instead of invisible friction.
    product overlays only.
 4. P1.11 deeper workspace modeling is deferred beyond the memory/branch/pending
    pieces used by this loop.
-5. P2 listening/review items are documented as next queue. Richer playlist
-   review, waveform regions, mode-specific inspectors, and deeper branch-review
-   workflows need more design and should not be decorative add-ons.
+5. P2 listening/review items remain bounded after the visible-queue autoplay
+   pass. Playlist export, multi-branch review, waveform region export, and
+   deeper branch-review workflows need clearer workflow pressure and should not
+   become decorative modes.
 6. Postgres, pgvector, Temporal, React Flow, Tauri, Storybook, DuckDB,
    OpenTelemetry, and 3D remain out of scope for this pass.
+7. True time-region latent masks remain deferred because current backend
+   operators expose channel masks for graft/renoise and global latent-time
+   transforms for blur/DSP, not bounded time masks that can be edited honestly.
+8. Local fine-tuning remains delegated to `dada-bots/underfit` on Colab A100;
+   SA3 Native Lab should not reintroduce local LoRA/fine-tuning surfaces without
+   a new real runtime contract.
 
 ### Next Queue
 
@@ -379,9 +397,10 @@ instead of invisible friction.
 2. Turn the source shelf into a reusable picker inside Tune fields where it
    would replace generic artifact selects without hiding backend-supported
    paths.
-3. Continue listening review with playlist-level keep/maybe/reject summaries,
-   branch trajectory favorites, and branch-from-selected shortcuts only where
-   they reduce repeated clicks.
+3. Continue listening review with session-level sequencing, branch trajectory
+   favorites, and branch-from-selected shortcuts only where they reduce repeated
+   clicks. Keep playlist export and heavy review modes deferred until the
+   visible queue proves insufficient.
 4. Design mode-specific Inspect panels for profiles, directions, geometry,
    datasets, residual vectors, prompt search, and soft prompts using existing
    bundle summaries.

@@ -127,8 +127,9 @@ this will do" copy come from semantic state, while React Query mutations, job
 landing, archive/recovery, and pending-take selection stay in `App.tsx`.
 Selected landed takes also show a `Next` affordance: audio suggests Continue,
 Vary, Encode, and Remember; latent suggests Decode, Morph, Borrow Texture, and
-Remember; bundles keep technical details behind Inspect while exposing real
-reuse actions where a bundle path already exists.
+Find Similar through the real local `memory.query` recipe; bundles keep
+technical details behind Inspect while exposing real reuse actions where a
+bundle path already exists.
 
 Read-heavy workbench state can now be loaded through the TypeScript tRPC
 control plane. This is enabled by setting `VITE_SA3_CONTROL_PLANE_URL` or by
@@ -240,14 +241,17 @@ inspect details when the job reports them. Prompt-candidate generations are grou
 under their search bundle instead of scattering as unrelated text-to-audio rows.
 The take queue and branch detail now summarize keeper/maybe/reject/open counts,
 and the selected take is labeled consistently across the queue and branch
-detail. Alpha-sweep branch detail also highlights a listening pick from actual
-keeper/maybe decisions so a human decision can lead the comparison alongside
-metric highlights.
+detail. The take queue also has an Auto transport for playing forward through
+the current visible queue order without creating playlist files or a separate
+review mode. Alpha-sweep branch detail also highlights a listening pick from
+actual keeper/maybe decisions so a human decision can lead the comparison
+alongside metric highlights.
 Session Memory now has a visible remembered-material browser over existing
 annotation metadata: role, reuse intent, kind, listening decision, branch,
 source lineage, tags, notes, and immediate reuse actions. It is optimized around
-"what remembered sound/source can I use right now" and does not add vector
-search or a new persistence layer.
+"what remembered sound/source can I use right now"; latent memories can seed
+the existing local `memory.query` recipe through Find Similar, but the app still
+does not add a vector database, atlas, or new persistence layer.
 Memory query bundle previews expose ranked hits that can be selected, played
 when audio, or reused as latent donors when the hit is a latent artifact.
 Encoded dataset bundles expose manifest/sidecar counts, chunk timing, prompt
@@ -296,7 +300,8 @@ Confirmed in the current codebase:
 - Direct latent operators run as typed jobs over stored latent artifacts.
 - Script-backed Colab experiments are reachable from Advanced Gestures.
 - Local latent-memory query is reachable as a CPU recipe over stored latent
-  artifacts.
+  artifacts, including a product-level Find Similar action from selected latent
+  takes and remembered latent material.
 - Local SAME geometry audit is reachable as a CPU recipe over stored latent
   artifacts, producing a report bundle with variance and summary metrics.
 - Local prompt search is reachable as a recipe over a selected or explicit
@@ -328,10 +333,11 @@ Confirmed in the current codebase:
   local presets with visible diffs, bundle workflow signals, richer domain
   cards for memory/sweep/vector/soft-prompt bundles, sibling sweep
   comparison, data-backed specimen lineage threads, a session workspace pulse,
-  archive artifact recovery, keyboardable playback playlist navigation, local
-  waveform markers, persisted playback cues, WaveSurfer zoom and draggable loop
-  regions, per-marker deletion, loop-edge nudging, data-backed archive actions,
-  marker notes, committed browser coverage for SessionTray
+  archive artifact recovery, keyboardable playback queue navigation, queue
+  autoplay over the visible take order, local waveform markers, persisted
+  playback cues, WaveSurfer zoom and draggable loop regions, per-marker
+  deletion, loop-edge nudging, data-backed archive actions, marker notes,
+  committed browser coverage for SessionTray
   artifact archive/recovery, and the first native geometry-audit recipe.
 - Product-domain frontend models now cover memory reuse, next actions,
   pending-take landing, branch summaries, Tune field grouping, source-aware
@@ -371,11 +377,11 @@ Still partial:
 - Memory-query bundles expose preview rows and donor reuse actions, but
   still need richer dataset browsing, preview audio for non-local children, and
   style-reference promotion.
-- Playback is now beyond the basic browser player, with playlist navigation,
-  persisted markers, marker deletion, WaveSurfer zoom, draggable loop regions,
-  region persistence, marker notes, SessionTray
+- Playback is now beyond the basic browser player, with queue navigation,
+  visible-queue autoplay, persisted markers, marker deletion, WaveSurfer zoom,
+  draggable loop regions, region persistence, marker notes, SessionTray
   archive/recovery browser coverage, and loop-edge nudging. It still needs
-  richer playlist sequencing and future region-export workflows.
+  richer session sequencing and future region-export workflows.
 - Multi-output sweeps have family grouping, metrics, direct playback, recipe
   fork deltas, inspected metric summaries, branch highlighting, saved listening
   decisions, sort controls, a compact alpha/metric table, and sibling recipe
