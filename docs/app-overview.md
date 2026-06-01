@@ -211,8 +211,9 @@ available affordances: recipe actions, playable audio, lineage, plots, metrics,
 prompt candidates, memory hits, sweep variants, tensors, checkpoints, and
 geometry stats. Reusable bundle types expose native Advanced Gesture actions such
 as use as profile, sweep vectors, use direction, use prompt in sweep, use soft
-prompt, use memory, and use checkpoint. Prompt-search bundles expose candidate
-prompts as a small take strip: a candidate can be used as the main
+prompt, memory reuse only when a parsed memory path exists, and use checkpoint.
+Prompt-search bundles expose candidate prompts as a small take strip: a
+candidate can be used as the main
 generation prompt, sent to an alpha sweep, or rendered as MLX audio with lineage
 back to the bundle. Generated candidate takes appear inline beside the prompt,
 can be played immediately and marked keeper/maybe/rejected with optional
@@ -223,7 +224,8 @@ summarizes listened/generated takes by keeper/maybe/reject state and averages
 the descriptor shifts for keepers so prompt-search listening notes become
 research feedback rather than isolated labels. Prompt-search panels also show
 first-pass prompt memory across generated takes, grouping keeper/maybe/reject
-decisions by prompt text across runs.
+decisions by prompt text across runs, and prompt-search run cards can jump to
+their latest generated take while surfacing the latest listening note.
 The primary prompt-search language is now candidate listening: cost/risk/probe
 details stay visible in Inspect-style evidence, while branch/family surfaces
 focus on generated candidate takes and which prompts survived listening.
@@ -238,7 +240,9 @@ inspect details when the job reports them. Prompt-candidate generations are grou
 under their search bundle instead of scattering as unrelated text-to-audio rows.
 The take queue and branch detail now summarize keeper/maybe/reject/open counts,
 and the selected take is labeled consistently across the queue and branch
-detail.
+detail. Alpha-sweep branch detail also highlights a listening pick from actual
+keeper/maybe decisions so a human decision can lead the comparison alongside
+metric highlights.
 Session Memory now has a visible remembered-material browser over existing
 annotation metadata: role, reuse intent, kind, listening decision, branch,
 source lineage, tags, notes, and immediate reuse actions. It is optimized around
@@ -247,14 +251,14 @@ search or a new persistence layer.
 Memory query bundle previews expose ranked hits that can be selected, played
 when audio, or reused as latent donors when the hit is a latent artifact.
 Encoded dataset bundles expose manifest/sidecar counts, chunk timing, prompt
-coverage, and latent files for memory/profile/geometry work or external
-fine-tuning handoff. Alpha sweep families can also compare sibling sweep runs
-that share a vector bundle or prompt.
+coverage, readiness, and latent files for memory/profile/geometry work or
+external fine-tuning handoff. Alpha sweep families can also compare sibling
+sweep runs that share a vector bundle or prompt.
 Bundle domain inspectors now expose more parsed, mode-specific evidence where
 the summary supports it: profile source/reference, vector shapes and source
 pairs, prompt-search probe cost/risk, soft-prompt loss/steps/test audio,
-dataset prompt coverage and caption/chunk warnings, and geometry variance with
-clear experimental framing.
+dataset prompt coverage/readiness and caption/chunk warnings, and geometry
+variance with clear experimental framing.
 
 ## Runtime Assumptions
 

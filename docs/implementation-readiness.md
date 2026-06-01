@@ -81,11 +81,13 @@ progressive disclosure.
   manager/runtime/storage path as the app.
 - Prompt search is no longer only a script adapter: it has a native recipe path,
   prompt-probe metadata, generated takes, lineage, descriptor deltas, listening
-  decisions, decision summaries, and first-pass prompt memory.
+  decisions, decision summaries, first-pass prompt memory, and run cards that
+  jump back to the latest generated take.
 - Bundle inspectors now surface parsed sweep outputs, memory hits, vector NPZs,
   encoded dataset manifests, profile aggregates, direction NPZ metadata,
-  geometry artifacts, and soft-prompt tensors as domain
-  cards instead of only file inventory.
+  geometry artifacts, and soft-prompt tensors as domain cards instead of only
+  file inventory. Dataset readiness and strict profile-memory reuse now keep
+  bundle actions tied to real parsed paths.
 - Latent Gestures have browser-local presets with visible diff and revert
   behavior.
 - The frontend has completed a de-monolith pass. `App.tsx` is now the
@@ -222,8 +224,9 @@ branched, and inspected without making the user operate the machinery first.
   persisted cues, and tray archive/recovery now have committed
   browser coverage.
 - Performance or runtime-cost tests for Medium/MPS prompt-search probe paths.
-- Tests that protect against token or credential leakage in logs, command
-  context, and error tails.
+- Broader tests that protect against token or credential leakage in less common
+  runtime metadata paths. The primary log, command, pending-take, and readiness
+  surfaces now have focused sanitizer coverage.
 
 ## Engineering Health
 
@@ -254,7 +257,8 @@ branched, and inspected without making the user operate the machinery first.
   native domain interactions rather than generic bundle readers.
 - Prompt search is exciting but should remain labeled as a probe until
   Medium/MPS cost notes, layer/alpha comparisons, and listening validation are
-  stronger.
+  stronger. Current UI should keep treating prompt search as candidate
+  listening, not a scorer dashboard.
 - Browser-local presets are useful but not shareable or durable across machines.
 - Job events are much better than silent jobs, but the live source still leans
   on polling underneath the control-plane bridge.
@@ -339,6 +343,10 @@ instead of invisible friction.
     action copy/readiness, source-aware Tune fields, latent-region summaries for
     supported operators, and runtime trust details behind Inspect/details
     surfaces.
+13. Remaining roadmap follow-through tightened runtime trust sanitization,
+    dataset/source readiness in bundle inspectors, strict profile-memory reuse,
+    decision-aware sweep picks, and prompt-search latest-take routing without
+    adding new backend capability.
 
 ### Deferred With Reason
 

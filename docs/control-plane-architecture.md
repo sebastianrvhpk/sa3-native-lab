@@ -61,8 +61,9 @@ backend already supports the path. Bundle inspection now includes
 backend-parsed summaries for
 JSON/NPZ outputs, metric scalars, plot/image discovery, and inline image plot
 rendering in addition to file inventory. Reusable bundles can populate
-Advanced Gesture fields for vectors, directions, profiles, memory folders, and
-soft prompts. Operator specs also carry backend-derived `ui_fields`,
+Advanced Gesture fields for vectors, directions, profiles, soft prompts, and
+memory paths only when parsed bundle summaries expose a concrete memory path.
+Operator specs also carry backend-derived `ui_fields`,
 which React merges into the hand-shaped instrument forms. Generate and SAME
 encode/decode now use the same schema-driven form path, so their payloads are
 built from field contracts rather than separate hard-coded controls.

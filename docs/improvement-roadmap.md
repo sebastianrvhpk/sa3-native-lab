@@ -69,10 +69,11 @@ For the broader stack direction and promotion triggers, see
    when the control plane is enabled. The bridge now emits monotonic IDs,
    resume-aware sequencing, heartbeat events, log-tail diagnostics, and
    durable Python job-journal replay. Job cards now also derive readable phases
-   from current event text. The next trust step is richer command and
-   stderr-tail context is now kept behind job drawers and Pending Take Inspect.
-   The next trust step is sanitizer coverage for sensitive command details plus
-   eventually replacing live polling with a stream source.
+   from current event text. Command context, stderr/log tails, pending-take
+   details, and readiness messages are sanitized before they appear behind job
+   drawers, Pending Take Inspect, and Settings. The next trust step is broader
+   runtime-event reliability work, especially replacing live polling with a
+   stream source while preserving journal replay.
 
 2. Improve error surfacing.
    Job failures now classify common failures into recovery hints for Hugging
@@ -121,9 +122,12 @@ For the broader stack direction and promotion triggers, see
    deltas plus a decision-study summary over keeper/maybe/reject annotations;
    prompt memory now groups generated prompt-candidate decisions across runs.
    Prompt-search bundles also summarize generated takes across search runs by
-   method, mode, model, duration, prompt variety, and listening decisions. The
-   UI now frames this as candidate listening instead of a scorer dashboard.
-   Next they need richer sweep-family and layer/alpha branch views. Advanced Gestures/Tune now
+   method, mode, model, duration, prompt variety, listening decisions, latest
+   take, and latest note. The UI now frames this as candidate listening instead
+   of a scorer dashboard. Alpha-sweep detail now adds a decision-aware listening
+   pick, so branch comparison can balance keeper/maybe judgement with metric
+   highlights. Next they need richer layer/alpha comparison only where parsed
+   vector or sweep summaries support it. Advanced Gestures/Tune now
    also has prompt-search presets for Mode 2 hard-token search, Mode 3 readable
    prompt search, and a small Medium flow-score check, with active cost
    guidance visible before the heavier probe is selected. It also has
@@ -166,8 +170,11 @@ For the broader stack direction and promotion triggers, see
    dataset, and geometry domain cards now expose additional parsed evidence:
    source/reference, vector shape and source pair, prompt-search probe cost/risk,
    soft-prompt loss/steps/test audio, prompt coverage and caption/chunk warnings,
-   and explicit geometry experimental framing. Next, sweep/layer comparison can
-   deepen only where parsed bundle summaries and backend reuse paths support it.
+   dataset readiness, and explicit geometry experimental framing. Profile bundle
+   reuse now stays strict: a profile can be used as a profile, but profile-memory
+   reuse appears only when parsed summary data includes an actual memory path.
+   Next, sweep/layer comparison can deepen only where parsed bundle summaries
+   and backend reuse paths support it.
 
 ## Explicitly Deferred
 
@@ -176,8 +183,9 @@ presets, vector search, pgvector, similarity browser, memory atlas UI, waveform
 region workflows, playlist export, autoplay queue, multi-branch listening
 sessions, heavy review modes, sampler-step intervention, flow-state
 optimization, control heads, macro chain UI, resident worker, moving more app
-state into tRPC, or moving gesture form state server-side. Fine-tuning belongs
-in `dada-bots/underfit` on Colab A100, not in this local product loop.
+state into tRPC, moving gesture form state server-side, or generic bundle apply
+buttons. Fine-tuning and style-domain adaptation belong in `dada-bots/underfit`
+on Colab A100, not in this local product loop.
 
 ## P3: Research Cognition
 
