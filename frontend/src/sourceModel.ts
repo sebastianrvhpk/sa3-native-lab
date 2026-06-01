@@ -148,8 +148,6 @@ const strictBundleFieldKeys = new Set([
   "soft_prompt_path",
   "target_memory_path",
   "reference_memory_path",
-  "encoded_dir",
-  "lora_checkpoint",
 ]);
 
 function productSourceRoles(artifact: ArtifactRecord, context: ProductSourceContext): ProductSourceRole[] {

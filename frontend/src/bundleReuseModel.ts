@@ -39,12 +39,6 @@ export function bundleReuseActionsForContext(context: BundleReuseContext): Bundl
     actions.push({ label: "Use as target memory", fieldKey: "target_memory_path", mode: "experiment.style_profile.build" });
     actions.push({ label: "Use as reference", fieldKey: "reference_memory_path", mode: "experiment.style_profile.build" });
   }
-  if (kind === "dataset" || operator.includes("dataset.pre_encode")) {
-    actions.push({ label: "Use encoded dataset", fieldKey: "encoded_dir", mode: "training.lora" });
-  }
-  if (kind === "training" || operator.includes("lora")) {
-    actions.push({ label: "Use checkpoint", fieldKey: "lora_checkpoint", mode: "training.lora" });
-  }
   return dedupeReuseActions(actions);
 }
 

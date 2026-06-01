@@ -47,10 +47,6 @@ export function inspectOnlyFieldKeys(): readonly string[] {
     "no_half",
     "model_half",
     "logger",
-    "checkpoint_every",
-    "log_every",
-    "demo_every",
-    "num_workers",
     "return_code",
   ];
 }
@@ -72,7 +68,6 @@ function steerPrimaryKeys(experimentMode?: ExperimentMode): readonly string[] {
   if (experimentMode === "experiment.prompt_search") return ["target_audio_path", "seed_prompt", "search_mode", "scorer", "model"];
   if (experimentMode === "memory.query") return ["top_k", "metric", "exclude_self"];
   if (experimentMode === "dataset.pre_encode") return ["data_dir", "model", "batch_size"];
-  if (experimentMode === "training.lora") return ["encoded_dir", "data_dir", "model", "steps", "rank"];
   if (experimentMode === "experiment.soft_prompt.optimize") return ["target_audio_path", "seed_prompt", "optimization_steps", "model"];
   if (experimentMode === "experiment.soft_prompt.generate") return ["soft_prompt_path", "model", "steps", "cfg_scale", "seed"];
   if (experimentMode === "experiment.geometry_audit") return ["n_components"];

@@ -84,7 +84,6 @@ function activePhrase(operator: OperatorName) {
   if (operator === "latent.graft") return "Borrowing texture";
   if (operator === "latent.renoise") return "Varying latent";
   if (operator.startsWith("latent.")) return "Morphing latent";
-  if (operator === "training.lora") return "Training gesture";
   if (operator === "memory.query") return "Searching memory";
   if (operator === "experiment.prompt_search") return "Probing prompts";
   return "Steering sound";
@@ -98,7 +97,6 @@ function queuedPhrase(operator: OperatorName) {
   if (operator === "latent.graft") return "Borrow queued";
   if (operator === "latent.renoise") return "Variation queued";
   if (operator.startsWith("latent.")) return "Morph queued";
-  if (operator === "training.lora") return "Training queued";
   if (operator === "memory.query") return "Memory search queued";
   if (operator === "experiment.prompt_search") return "Prompt probe queued";
   return "Steer queued";
@@ -108,7 +106,7 @@ function completedPhrase(operator: OperatorName) {
   if (operator === "latent.encode") return "Latent encoded";
   if (operator === "latent.decode") return "Sound decoded";
   if (operator === "memory.query") return "Memory searched";
-  if (operator.startsWith("experiment.") || operator === "training.lora") return "Gesture finished";
+  if (operator.startsWith("experiment.")) return "Gesture finished";
   return "Take landed";
 }
 

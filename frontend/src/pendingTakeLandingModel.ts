@@ -86,7 +86,7 @@ function landedCompletionPhrase(operator: OperatorName, count: number): string {
   if (operator === "latent.encode") return "Latent landed";
   if (operator === "latent.decode") return "Sound landed";
   if (operator === "memory.query") return "Memory hits landed";
-  if (operator.startsWith("experiment.") || operator === "training.lora") return count > 1 ? "Branch outputs landed" : "Bundle landed";
+  if (operator.startsWith("experiment.")) return count > 1 ? "Branch outputs landed" : "Bundle landed";
   return count > 1 ? "Takes landed" : "Take landed";
 }
 
@@ -97,6 +97,6 @@ function suggestedGesturesForJob(job: JobRecord): GestureId[] {
   if (operator === "latent.encode") return ["decode", "morph", "borrow_texture", "remember"];
   if (operator === "latent.decode" || operator.startsWith("generate.")) return ["continue", "vary", "encode", "remember"];
   if (operator === "latent.graft" || operator.startsWith("latent.")) return ["decode", "morph", "remember"];
-  if (operator.startsWith("experiment.") || operator === "memory.query" || operator === "training.lora") return ["steer", "remember"];
+  if (operator.startsWith("experiment.") || operator === "memory.query") return ["steer", "remember"];
   return [gestureForOperator(operator), "remember"];
 }

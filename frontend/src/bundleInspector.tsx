@@ -298,7 +298,6 @@ export function bundleWorkflowHints(inspection: Pick<ArtifactInspection, "artifa
   const dataset = objectValue(summary.dataset);
   const profile = objectValue(summary.profile);
   const softPrompt = objectValue(summary.soft_prompt);
-  const training = objectValue(summary.training);
   if (kind === "prompt-search" || promptSearch) {
     add("candidates", promptSearch?.candidate_count ?? promptSearchCandidates(summary).length, "probe");
     add("scorer", promptSearch?.scorer, "probe");
@@ -329,9 +328,6 @@ export function bundleWorkflowHints(inspection: Pick<ArtifactInspection, "artifa
   }
   if (kind === "soft-prompt" || softPrompt) {
     add("tensors", arrayOfStrings(softPrompt?.tensor_files).length, "reuse");
-  }
-  if (kind === "training" || training) {
-    add("checkpoints", arrayOfStrings(training?.checkpoint_files).length, "reuse");
   }
   return dedupeWorkflowHints(hints).slice(0, 8);
 }
@@ -533,19 +529,6 @@ export function bundleDomainSections(summary: Record<string, unknown> | undefine
       items: tensorFiles.slice(0, 5).map((file) => ({ label: basename(file) ?? file, meta: "conditioning tensor" })),
     });
   }
-  const training = objectValue(summary.training);
-  if (training) {
-    const checkpointFiles = arrayOfStrings(training.checkpoint_files);
-    sections.push({
-      title: "Training",
-      rows: [
-        ["checkpoints", checkpointFiles.length || undefined],
-        ["primary", basename(checkpointFiles[0])],
-      ],
-      files: checkpointFiles,
-      items: checkpointFiles.slice(0, 5).map((file) => ({ label: basename(file) ?? file, meta: checkpointKind(file) })),
-    });
-  }
   return sections.filter((section) => section.rows.some(([, value]) => value !== undefined && value !== null && value !== "") || section.files?.length);
 }
 
@@ -622,10 +605,6 @@ export function summarizeBundle(summary: Record<string, unknown> | undefined, pr
   const softPrompt = summary.soft_prompt && typeof summary.soft_prompt === "object" ? (summary.soft_prompt as Record<string, unknown>) : null;
   if (softPrompt) {
     rows.unshift(["tensors", Array.isArray(softPrompt.tensor_files) ? softPrompt.tensor_files.length : undefined]);
-  }
-  const training = summary.training && typeof summary.training === "object" ? (summary.training as Record<string, unknown>) : null;
-  if (training) {
-    rows.unshift(["checkpoints", Array.isArray(training.checkpoint_files) ? training.checkpoint_files.length : undefined]);
   }
   return { kind, label, description, rows, plotFiles };
 }
@@ -742,20 +721,18 @@ function bundleKindLabel(kind: string) {
   if (kind === "geometry") return "Geometry audit";
   if (kind === "prompt-search") return "Prompt search";
   if (kind === "soft-prompt") return "Soft prompt";
-  if (kind === "training") return "Training output";
   return "Bundle archive";
 }
 
 function bundleKindDescription(kind: string) {
   if (kind === "memory") return "Ranked latent neighbors parsed from local bundle metadata";
-  if (kind === "dataset") return "Pre-encoded latent items for memory, profile, or training workflows";
+  if (kind === "dataset") return "Pre-encoded latent items for memory, profile, or external training handoff";
   if (kind === "sweep") return "Parameter branch outputs with alpha and artifact metadata";
   if (kind === "profile") return "Reusable latent/audio statistics for profile-guided generation";
   if (kind === "vectors") return "Residual or style direction vectors with parsed layers and shapes";
   if (kind === "geometry") return "Local latent geometry summary for saved SAME artifacts";
   if (kind === "prompt-search") return "Hard-token prompt candidates from the local prompt-search probe";
   if (kind === "soft-prompt") return "Optimized conditioning tensors for prompt continuation";
-  if (kind === "training") return "Adapter checkpoints, logs, and long-running training outputs";
   return "Script output files preserved as a replayable artifact";
 }
 
@@ -935,7 +912,7 @@ function classifyBundle(preview: Record<string, unknown>, files: BundleFileEntry
     return {
       kind: "dataset",
       label: "Encoded dataset",
-      description: "Pre-encoded latent items for memory, profile, or training workflows",
+      description: "Pre-encoded latent items for memory, profile, or external training handoff",
       rows: [
         ["operator", operator],
         ["latents", fileNames.filter((name) => name.endsWith(".npy")).length],
@@ -976,18 +953,6 @@ function classifyBundle(preview: Record<string, unknown>, files: BundleFileEntry
       description: "Optimized conditioning tensor for prompt continuation experiments",
       rows: [
         ["tensor", hasFile("soft_prompt.pt") ? "soft_prompt.pt" : "not found"],
-        ["files", files.length],
-      ],
-      plotFiles: files.map((file) => file.path).filter(isPlotPath),
-    };
-  }
-  if (operator.includes("lora") || hasFile("checkpoint") || hasFile("adapter")) {
-    return {
-      kind: "training",
-      label: "Training output",
-      description: "Long-running adapter artifacts, logs, and checkpoints",
-      rows: [
-        ["operator", operator],
         ["files", files.length],
       ],
       plotFiles: files.map((file) => file.path).filter(isPlotPath),
@@ -1263,12 +1228,4 @@ function basename(path: string | undefined) {
   if (!path) return undefined;
   const parts = path.split("/").filter(Boolean);
   return parts[parts.length - 1] ?? path;
-}
-
-function checkpointKind(path: string) {
-  const lower = path.toLowerCase();
-  if (lower.includes("lora")) return "LoRA adapter";
-  if (lower.includes("checkpoint")) return "checkpoint";
-  if (lower.includes("adapter")) return "adapter";
-  return "training artifact";
 }

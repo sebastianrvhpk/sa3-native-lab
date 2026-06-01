@@ -83,7 +83,7 @@ describe("bundle inspector summaries", () => {
     expect(sections.find((section) => section.title === "Soft Prompt")?.files).toEqual(["soft_prompt.pt"]);
   });
 
-  it("turns sweep, memory, vector, soft-prompt, and training summaries into domain items", () => {
+  it("turns sweep, memory, vector, and soft-prompt summaries into domain items", () => {
     const sections = bundleDomainSections({
       sweep: {
         count: 2,
@@ -111,7 +111,6 @@ describe("bundle inspector summaries", () => {
         ],
       },
       soft_prompt: { tensor_files: ["optim/soft_prompt.pt"], final_loss: 0.1234, optimization_steps: 80, generated_audio_path: "optim/test.wav" },
-      training: { checkpoint_files: ["runs/lora_adapter.safetensors", "runs/checkpoint-20.pt"] },
     });
 
     expect(sections.find((section) => section.title === "Sweep")?.items).toEqual([
@@ -133,10 +132,7 @@ describe("bundle inspector summaries", () => {
       ["steps", 80],
       ["test audio", "test.wav"],
     ]));
-    expect(sections.find((section) => section.title === "Training")?.items).toEqual([
-      { label: "lora_adapter.safetensors", meta: "LoRA adapter" },
-      { label: "checkpoint-20.pt", meta: "checkpoint" },
-    ]);
+    expect(sections.find((section) => section.title === "Training")).toBeUndefined();
   });
 
   it("turns dataset manifests and profile npz files into native inspector cards", () => {
@@ -229,7 +225,7 @@ describe("bundle inspector summaries", () => {
         artifact: { metadata: { operator: "dataset.pre_encode" } } as never,
         bundle_summary: { kind: "dataset" },
       }),
-    ).toEqual([{ label: "Use encoded dataset", fieldKey: "encoded_dir", mode: "training.lora" }]);
+    ).toEqual([]);
   });
 
   it("summarizes bundle workflow signals from real bundle metadata", () => {

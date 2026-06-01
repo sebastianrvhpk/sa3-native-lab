@@ -29,13 +29,12 @@ export type ExperimentMode =
   | "experiment.soft_prompt.optimize"
   | "experiment.soft_prompt.generate"
   | "dataset.pre_encode"
-  | "memory.query"
-  | "training.lora";
+  | "memory.query";
 
 export interface ExperimentConfig {
   value: ExperimentMode;
   label: string;
-  family: "Style" | "Residual" | "Prompt" | "Soft Prompt" | "Dataset" | "Geometry" | "Training";
+  family: "Style" | "Residual" | "Prompt" | "Soft Prompt" | "Dataset" | "Geometry";
   maturity: "lab" | "probe" | "danger";
   backend: ExperimentPayload["backend"];
   modelDefault?: string;
@@ -618,41 +617,6 @@ export const experimentCatalog: readonly ExperimentConfig[] = [
     fields: [
       { key: "n_components", label: "Components", type: "number", defaultValue: 8, min: 1, step: 1 },
       { key: "limit", label: "Limit", type: "number", defaultValue: 0, min: 0, step: 1, advanced: true },
-    ],
-  },
-  {
-    value: "training.lora",
-    label: "Train LoRA",
-    family: "Training",
-    maturity: "danger",
-    backend: "torch_mps",
-    modelDefault: "medium-base",
-    produces: ["bundle"],
-    fields: [
-      { key: "encoded_dir", label: "Encoded dataset", type: "artifact-path", artifactKinds: ["bundle"] },
-      { key: "data_dir", label: "Raw dataset", type: "path" },
-      { key: "model", label: "Base model", type: "select", defaultValue: "medium-base", options: [{ value: "medium-base", label: "medium-base" }] },
-      { key: "steps", label: "Steps", type: "number", defaultValue: 10000, min: 1, step: 100 },
-      { key: "rank", label: "Rank", type: "number", defaultValue: 16, min: 1, step: 1 },
-      { key: "adapter_type", label: "Adapter", type: "select", defaultValue: "dora-rows", advanced: true, options: ["lora", "dora", "dora-rows", "dora-cols", "bora", "lora-xs", "dora-rows-xs", "dora-cols-xs", "bora-xs"].map((value) => ({ value, label: value })) },
-      { key: "lora_alpha", label: "LoRA alpha", type: "number", step: 1, advanced: true },
-      { key: "dropout", label: "Dropout", type: "number", defaultValue: 0, min: 0, max: 1, step: 0.05, advanced: true },
-      { key: "include", label: "Include", type: "text", advanced: true },
-      { key: "exclude", label: "Exclude", type: "text", advanced: true },
-      { key: "svd_bases_path", label: "SVD bases", type: "artifact-path", artifactKinds: ["bundle"], advanced: true },
-      { key: "base_precision", label: "Base precision", type: "select", defaultValue: "bf16", advanced: true, options: ["bf16", "bfloat16", "fp16", "float16"].map((value) => ({ value, label: value })) },
-      { key: "lora_checkpoint", label: "Resume ckpt", type: "artifact-path", artifactKinds: ["bundle"], advanced: true },
-      { key: "lr", label: "LR", type: "number", defaultValue: 0.0001, step: 0.00001, advanced: true },
-      { key: "batch_size", label: "Batch size", type: "number", defaultValue: 1, min: 1, step: 1, advanced: true },
-      { key: "duration_seconds", label: "Seconds", type: "number", defaultValue: 380, min: 1, step: 1, advanced: true },
-      { key: "seed", label: "Seed", type: "number", defaultValue: 42, step: 1, advanced: true },
-      { key: "device", label: "Device", type: "text", advanced: true },
-      { key: "logger", label: "Logger", type: "select", defaultValue: "csv", advanced: true, options: ["wandb", "comet", "csv", "none"].map((value) => ({ value, label: value })) },
-      { key: "name", label: "Run name", type: "text", defaultValue: "lora-finetune", advanced: true },
-      { key: "checkpoint_every", label: "Ckpt every", type: "number", defaultValue: 500, min: 1, step: 1, advanced: true },
-      { key: "log_every", label: "Log every", type: "number", defaultValue: 100, min: 1, step: 1, advanced: true },
-      { key: "demo_every", label: "Demo every", type: "number", defaultValue: 500, min: 1, step: 1, advanced: true },
-      { key: "num_workers", label: "Workers", type: "number", defaultValue: 8, min: 0, step: 1, advanced: true },
     ],
   },
 ];

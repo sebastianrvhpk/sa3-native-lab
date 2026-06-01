@@ -11,9 +11,7 @@ describe("bundleReuseModel", () => {
     expect(bundleReuseActionsForContext({ kind: "soft-prompt" })).toEqual([
       { label: "Use soft prompt", fieldKey: "soft_prompt_path", mode: "experiment.soft_prompt.generate" },
     ]);
-    expect(bundleReuseActionsForContext({ kind: "dataset" })).toEqual([
-      { label: "Use encoded dataset", fieldKey: "encoded_dir", mode: "training.lora" },
-    ]);
+    expect(bundleReuseActionsForContext({ kind: "dataset" })).toEqual([]);
   });
 
   it("carries prompt-search prompts only into the supported sweep prompt field", () => {
@@ -26,7 +24,7 @@ describe("bundleReuseModel", () => {
     expect(bundleReuseActionsForContext({ kind: "vectors", operator: "experiment.style_direction.generate" })).toHaveLength(2);
   });
 
-  it("keeps profile, memory, and checkpoint promotions on supported recipe fields", () => {
+  it("keeps profile and memory promotions on supported recipe fields", () => {
     expect(bundleReuseActionsForContext({ kind: "profile" })).toEqual([
       { label: "Use as profile", fieldKey: "profile_path", mode: "experiment.style_profile.generate" },
       { label: "Use memory", fieldKey: "target_memory_path", mode: "experiment.style_profile.build" },
@@ -35,8 +33,6 @@ describe("bundleReuseModel", () => {
       { label: "Use as target memory", fieldKey: "target_memory_path", mode: "experiment.style_profile.build" },
       { label: "Use as reference", fieldKey: "reference_memory_path", mode: "experiment.style_profile.build" },
     ]);
-    expect(bundleReuseActionsForContext({ kind: "training" })).toEqual([
-      { label: "Use checkpoint", fieldKey: "lora_checkpoint", mode: "training.lora" },
-    ]);
+    expect(bundleReuseActionsForContext({ kind: "training" })).toEqual([]);
   });
 });
