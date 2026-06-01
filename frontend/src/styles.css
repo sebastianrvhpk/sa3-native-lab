@@ -6739,3 +6739,506 @@ label {
     gap: 7px;
   }
 }
+
+/* End-to-end instrument shell: Current Sound -> Gesture -> Pending Take -> Listen -> Branch / Remember / Tune. */
+.instrument-shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+.instrument-shell .instrument-question {
+  display: grid;
+  gap: 1px;
+  line-height: 1.05;
+  white-space: normal;
+}
+
+.instrument-shell .instrument-question span,
+.instrument-shell .instrument-question small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.instrument-shell .instrument-question small {
+  color: var(--muted);
+  font-family: var(--label-font);
+  font-size: 0.66rem;
+  font-weight: 620;
+  text-transform: uppercase;
+}
+
+.instrument-board {
+  min-height: calc(100vh - 58px);
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(340px, 0.72fr);
+  grid-template-areas:
+    "bench tune"
+    "takes tune"
+    "memory evidence";
+  gap: 14px;
+  align-items: start;
+  padding: 14px;
+  background:
+    linear-gradient(90deg, transparent 0 49.85%, rgb(21 25 28 / 0.12) 49.95% 50.05%, transparent 50.15%),
+    radial-gradient(circle, rgb(21 25 28 / 0.28) 1px, transparent 1.25px) 0 0 / 22px 22px,
+    linear-gradient(90deg, rgb(21 25 28 / 0.055) 1px, transparent 1px) 0 0 / 92px 92px,
+    linear-gradient(rgb(21 25 28 / 0.045) 1px, transparent 1px) 0 0 / 92px 92px,
+    var(--console-paper);
+}
+
+.sound-bench.operator-surface,
+.take-field-zone.result-rail,
+.tune-bank-zone,
+.memory-zone,
+.evidence-zone {
+  min-height: auto;
+  border: 2px solid var(--console-line);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle, rgb(21 25 28 / 0.16) 1px, transparent 1.25px) 0 0 / 18px 18px,
+    linear-gradient(180deg, rgb(255 255 255 / 0.66), rgb(219 220 216 / 0.5)),
+    var(--console-paper-hot);
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.62) inset,
+    0 16px 34px rgb(21 25 28 / 0.08);
+  overflow: hidden;
+}
+
+.sound-bench.operator-surface {
+  grid-area: bench;
+  padding: 12px;
+}
+
+.sound-bench .surface-head {
+  min-height: 40px;
+  margin-bottom: 8px;
+}
+
+.sound-bench .surface-head h1 {
+  font-size: clamp(1.45rem, 2.4vw, 2.35rem);
+}
+
+.instrument-flow-strip {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 7px;
+  margin-bottom: 10px;
+}
+
+.instrument-flow-node {
+  min-width: 0;
+  min-height: 54px;
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  border: 1px solid var(--console-line);
+  border-radius: 5px;
+  padding: 7px 8px;
+  position: relative;
+  background:
+    linear-gradient(90deg, var(--flow-color, var(--track-cyan)) 0 5px, transparent 5px),
+    rgb(255 255 255 / 0.62);
+}
+
+.instrument-flow-node.sound {
+  --flow-color: var(--track-cyan);
+}
+
+.instrument-flow-node.gesture {
+  --flow-color: var(--track-purple);
+}
+
+.instrument-flow-node.pending {
+  --flow-color: var(--track-orange);
+}
+
+.instrument-flow-node.take {
+  --flow-color: var(--track-pink);
+}
+
+.instrument-flow-node.branch {
+  --flow-color: var(--track-blue);
+}
+
+.instrument-flow-node.memory {
+  --flow-color: var(--track-green);
+}
+
+.instrument-flow-node span,
+.instrument-flow-node strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.instrument-flow-node span {
+  color: var(--muted);
+  font-size: 0.58rem;
+  text-transform: uppercase;
+}
+
+.instrument-flow-node strong {
+  color: var(--ink);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+}
+
+.instrument-flow-route {
+  position: absolute;
+  left: -11px;
+  top: 50%;
+  width: 14px;
+  height: 2px;
+  background: var(--console-line);
+  transform: translateY(-50%);
+}
+
+.instrument-flow-route::after {
+  content: "";
+  position: absolute;
+  right: -3px;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  border: 1px solid var(--console-line);
+  border-radius: 999px;
+  background: var(--console-paper-hot);
+  transform: translateY(-50%);
+}
+
+.sound-bench-core {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(210px, 280px);
+  gap: 10px;
+  align-items: stretch;
+}
+
+.sound-bench-lane {
+  min-width: 0;
+}
+
+.sound-bench .specimen {
+  min-height: 0;
+  grid-template-columns: minmax(0, 1.24fr) minmax(250px, 0.76fr);
+  gap: 10px;
+}
+
+.sound-bench .wave-bus {
+  min-height: 316px;
+  padding: 12px;
+}
+
+.sound-bench .specimen-info {
+  min-height: 0;
+  max-height: 392px;
+  overflow: auto;
+}
+
+.sound-bench .playable-wave,
+.sound-bench .wave-surfer-stage {
+  min-height: 188px;
+}
+
+.material-bay.source-rail {
+  min-height: 0;
+  max-height: 520px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  align-self: stretch;
+  padding: 9px;
+  border: 2px solid var(--console-line);
+  border-radius: 6px;
+  overflow: hidden;
+  background:
+    linear-gradient(90deg, rgb(21 25 28 / 0.14) 1px, transparent 1px) 0 0 / 38px 100%,
+    radial-gradient(circle, rgb(21 25 28 / 0.24) 1px, transparent 1.25px) 0 0 / 17px 17px,
+    rgb(255 255 255 / 0.58);
+}
+
+.material-bay .rail-head {
+  min-height: 32px;
+  margin-bottom: 8px;
+}
+
+.material-bay .artifact-stack {
+  min-height: 0;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.material-bay .artifact-row-shell {
+  background:
+    linear-gradient(90deg, var(--track-green) 0 4px, transparent 4px),
+    rgb(255 255 255 / 0.62);
+}
+
+.instrument-control-bank {
+  grid-template-columns: minmax(0, 1.35fr) minmax(220px, 0.72fr);
+  margin-top: 10px;
+}
+
+.sound-bench .gesture-strip,
+.sound-bench .next-actions-panel {
+  min-height: 100%;
+}
+
+.sound-bench .gesture-buttons {
+  grid-template-columns: repeat(5, minmax(76px, 1fr));
+}
+
+.tune-bank-zone {
+  grid-area: tune;
+  max-height: calc(100vh - 86px);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  padding: 10px;
+}
+
+.tune-bank-zone .tune-drawer {
+  min-height: 0;
+  max-height: none;
+  overflow: auto;
+}
+
+.zone-label {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 760;
+  text-transform: uppercase;
+}
+
+.take-field-zone.result-rail {
+  grid-area: takes;
+  padding: 10px;
+}
+
+.take-field-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(250px, 0.85fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.take-lane-stack,
+.branch-stack-zone {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.take-field-zone .audition-stack {
+  max-height: 520px;
+  overflow: auto;
+}
+
+.take-field-zone .audition-stack article {
+  grid-template-columns: minmax(0, 1fr) minmax(92px, 118px);
+}
+
+.take-field-zone .pending-takes-panel,
+.branch-stack-zone .family-stack,
+.branch-stack-zone .family-detail {
+  max-height: 420px;
+  overflow: auto;
+}
+
+.branch-stack-zone {
+  border: 1px solid var(--console-line);
+  border-radius: 6px;
+  padding: 9px;
+  background:
+    linear-gradient(90deg, var(--track-blue) 0 5px, transparent 5px),
+    rgb(255 255 255 / 0.5);
+}
+
+.branch-stack-zone .zone-label {
+  margin-bottom: 0;
+}
+
+.memory-zone {
+  grid-area: memory;
+  padding: 10px;
+}
+
+.memory-zone .session-tray {
+  max-height: 760px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.evidence-zone {
+  grid-area: evidence;
+  padding: 10px;
+}
+
+.evidence-zone .activity-drawer,
+.evidence-zone .dev-drawer {
+  margin-top: 0;
+}
+
+.evidence-zone .compare-panel {
+  display: none;
+}
+
+.memory-zone .workspace-pulse-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+@media (min-width: 1540px) {
+  .instrument-board {
+    grid-template-columns: minmax(0, 1.62fr) minmax(390px, 0.68fr);
+  }
+
+  .sound-bench-core {
+    grid-template-columns: minmax(0, 1fr) minmax(240px, 320px);
+  }
+}
+
+@media (max-width: 1240px) {
+  .instrument-board {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "bench"
+      "takes"
+      "tune"
+      "memory"
+      "evidence";
+  }
+
+  .tune-bank-zone {
+    position: static;
+    max-height: none;
+  }
+
+  .sound-bench .specimen,
+  .take-field-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .material-bay.source-rail {
+    max-height: 420px;
+  }
+}
+
+@media (max-width: 860px) {
+  .instrument-board {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .sound-bench-core,
+  .instrument-control-bank,
+  .sound-bench .specimen {
+    grid-template-columns: 1fr;
+  }
+
+  .instrument-flow-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .instrument-flow-node:nth-child(4) .instrument-flow-route {
+    display: none;
+  }
+
+  .sound-bench .gesture-buttons {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .sound-bench .specimen-info {
+    max-height: none;
+  }
+}
+
+@media (max-width: 620px) {
+  .instrument-board {
+    grid-template-areas:
+      "bench"
+      "tune"
+      "takes"
+      "memory"
+      "evidence";
+  }
+
+  .instrument-shell .top-strip {
+    gap: 8px;
+  }
+
+  .instrument-shell .instrument-question {
+    justify-self: stretch;
+    text-align: left;
+  }
+
+  .instrument-shell .instrument-question span,
+  .instrument-shell .instrument-question small {
+    white-space: normal;
+  }
+
+  .sound-bench.operator-surface,
+  .take-field-zone.result-rail,
+  .tune-bank-zone,
+  .memory-zone,
+  .evidence-zone,
+  .material-bay.source-rail {
+    border-width: 2px;
+    border-radius: 6px;
+    padding: 8px;
+  }
+
+  .instrument-flow-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .instrument-flow-node {
+    min-height: 48px;
+  }
+
+  .instrument-flow-node:nth-child(odd) .instrument-flow-route {
+    display: none;
+  }
+
+  .sound-bench .surface-head {
+    align-items: start;
+  }
+
+  .sound-bench .surface-head h1 {
+    font-size: 1.45rem;
+  }
+
+  .sound-bench .wave-bus {
+    min-height: auto;
+  }
+
+  .sound-bench .playable-wave,
+  .sound-bench .wave-surfer-stage {
+    min-height: 168px;
+  }
+
+  .material-bay.source-rail,
+  .take-field-zone .audition-stack,
+  .take-field-zone .pending-takes-panel,
+  .branch-stack-zone .family-stack,
+  .branch-stack-zone .family-detail,
+  .memory-zone .session-tray {
+    max-height: none;
+  }
+
+  .sound-bench .gesture-buttons {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .take-field-zone .audition-stack article {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .memory-zone .workspace-pulse-grid {
+    grid-template-columns: 1fr;
+  }
+}

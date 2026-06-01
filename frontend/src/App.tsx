@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  Activity,
   Box,
   Braces,
   FileAudio,
@@ -9,7 +8,6 @@ import {
   LoaderCircle,
   Play,
   Settings,
-  Upload,
   Waves,
 } from "lucide-react";
 
@@ -31,6 +29,7 @@ import { ForkRecipePanel } from "./forkRecipePanel";
 import { describeGestureAction } from "./gestureActionDescriptor";
 import { buildGestureOptions, gestureById, type GestureId } from "./gestureModel";
 import { GestureStrip } from "./gestureStrip";
+import { instrumentFlowNodes, instrumentLoopPrompt } from "./instrumentFrameModel";
 import { isJobActive, landingArtifactId } from "./jobUtils";
 import { type MemoryReuseAction } from "./memoryModel";
 import { ModeAtlas } from "./modeAtlas";
@@ -82,6 +81,7 @@ import { SessionTray } from "./sessionPanel";
 import { buildProductSources } from "./sourceModel";
 import { SourcePicker } from "./SourceField";
 import { SourceShelf } from "./sourceShelf";
+import { ImportAudioButton, SoundInstrumentSurface } from "./SoundInstrumentSurface";
 import { SpecCoverage, SpecCoveragePair } from "./specCoverage";
 import { Specimen } from "./specimenPanel";
 import { BackendPills, InlineJobStatus, ReadinessPanel, RunMonitor } from "./statusPanels";
@@ -611,6 +611,31 @@ export function App() {
     () => nextActionsForArtifact(selectedArtifact, { donorLatents: latentArtifacts }),
     [latentArtifacts, selectedArtifact],
   );
+  const sessionAudioTakeCount = sessionArtifacts.filter((artifact) => artifact.kind === "audio").length;
+  const instrumentFlow = useMemo(
+    () =>
+      instrumentFlowNodes({
+        currentLabel: selectedArtifact ? artifactName(selectedArtifact) : null,
+        activeGestureLabel: activeGesture.label,
+        pendingCount: pendingTakes.length,
+        takeCount: sessionAudioTakeCount,
+        branchCount: sessionResultFamilies.length,
+        memoryCount: archiveArtifacts.length,
+      }),
+    [
+      activeGesture.label,
+      archiveArtifacts.length,
+      pendingTakes.length,
+      selectedArtifact,
+      sessionAudioTakeCount,
+      sessionResultFamilies.length,
+    ],
+  );
+  const loopPrompt = instrumentLoopPrompt({
+    pendingCount: pendingTakes.length,
+    takeCount: sessionAudioTakeCount,
+    branchCount: sessionResultFamilies.length,
+  });
 
   const updateOperatorPresets = (next: OperatorPreset[]) => {
     persistOperatorPresets(next);
@@ -1013,8 +1038,9 @@ export function App() {
   };
 
   return (
-    <main className="app-shell">
-      <header className="top-strip">
+    <SoundInstrumentSurface
+      selected={Boolean(selectedArtifact)}
+      brand={
         <div className="brand-mark">
           <img src={modelImage} alt="" />
           <div>
@@ -1022,7 +1048,10 @@ export function App() {
             <span>{healthData?.artifact_root ?? ".sa3_lab"}</span>
           </div>
         </div>
-        <div className="instrument-question">What do you want to do with this sound next?</div>
+      }
+      question="What do you want to do with this sound next?"
+      loopPrompt={loopPrompt}
+      settings={
         <details className="settings-panel">
           <summary>
             <Settings size={17} />
@@ -1037,185 +1066,173 @@ export function App() {
             <ReadinessPanel checks={readinessChecks} />
           </div>
         </details>
-      </header>
-
-      <section className="bench-grid">
-        <aside className="source-rail">
-          <div className="rail-head">
-            <div>
-              <span className="eyebrow">Sources</span>
-              <strong>{sourceRows.length} source options</strong>
-            </div>
-            <label className="icon-button" title="Import audio">
-              <Upload size={18} />
-              <input
-                type="file"
-                accept="audio/*"
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  if (file) importAudio.mutate(file);
-                  event.currentTarget.value = "";
-                }}
-              />
-            </label>
+      }
+      currentHeader={
+        <>
+          <div>
+            <span className="eyebrow">Current Sound</span>
+            <h1>{selectedArtifact ? artifactName(selectedArtifact) : "No sound selected"}</h1>
           </div>
-          <SourceShelf
-            sources={sourceRows}
-            selectedId={selectedArtifact?.artifact_id ?? null}
-            apiBase={apiBase}
-            onSelect={selectArtifact}
-            onUseAction={(source, action) => applyMemoryAction(source.artifact, action)}
+          {selectedArtifact ? <ArtifactBadge artifact={selectedArtifact} /> : null}
+        </>
+      }
+      currentSound={
+        <Specimen
+          artifact={selectedArtifact}
+          artifacts={allArtifacts}
+          jobs={allJobs}
+          families={resultFamilies}
+          compare={compare}
+          apiBase={apiBase}
+          annotating={annotateArtifact.isPending}
+          activeSessionId={activeSessionId}
+          archivingArtifactId={archiveArtifact.isPending ? archiveArtifact.variables?.artifact.artifact_id ?? null : null}
+          onAnnotate={(artifactId, payload) => annotateArtifact.mutate({ artifactId, payload })}
+          onCompare={setCompare}
+          onReplayRecipe={(recipeId) => replayRecipeMutation.mutate(recipeId)}
+          onForkRecipe={setForkTarget}
+          onArchiveArtifact={(artifact) => archiveArtifact.mutate({ artifact, source: "specimen" })}
+          onSelectArtifact={selectArtifact}
+          onUseAsDonor={useArtifactAsDonor}
+          onUseInRecipe={useBundleInRecipe}
+          onUsePrompt={usePromptCandidate}
+          onGeneratePrompt={runPromptCandidate}
+          getArtifactPath={artifactPathForField}
+        />
+      }
+      flowNodes={instrumentFlow}
+      sourceCount={sourceRows.length}
+      branchCount={sessionResultFamilies.length}
+      importControl={<ImportAudioButton onFile={(file) => importAudio.mutate(file)} />}
+      materialBay={
+        <SourceShelf
+          sources={sourceRows}
+          selectedId={selectedArtifact?.artifact_id ?? null}
+          apiBase={apiBase}
+          onSelect={selectArtifact}
+          onUseAction={(source, action) => applyMemoryAction(source.artifact, action)}
+        />
+      }
+      gestureRack={<GestureStrip gestures={gestureOptions} activeId={activeGesture.id} onSelect={selectGesture} />}
+      nextActions={<NextActionsPanel actions={currentNextActions} onAction={applyNextAction} />}
+      tuneBank={
+        <TuneDrawer gesture={activeGesture} inspect={renderGestureInspect()} action={renderGestureAction()} actionDescriptor={gestureAction}>
+          {renderGestureTune()}
+        </TuneDrawer>
+      }
+      takeQueue={
+        <AuditionStackPanel
+          artifacts={sessionArtifacts}
+          selectedId={selectedArtifact?.artifact_id ?? null}
+          apiBase={apiBase}
+          activeSessionId={activeSessionId}
+          archivingArtifactId={archiveArtifact.isPending ? archiveArtifact.variables?.artifact.artifact_id ?? null : null}
+          onSelect={selectArtifact}
+          onCompare={setCompare}
+          onAnnotate={(artifactId, payload) => annotateArtifact.mutate({ artifactId, payload })}
+          onRemember={(artifact) => archiveArtifact.mutate({ artifact, source: "take_strip" })}
+          onContinue={continueFromArtifact}
+          onBranch={branchFromArtifact}
+        />
+      }
+      pendingTakes={
+        <PendingTakesPanel
+          takes={pendingTakes}
+          onCancelJob={(job) => cancelJobMutation.mutate(job.job_id)}
+          onRetryJob={(job) => retryJobMutation.mutate(job.job_id)}
+        />
+      }
+      forkPanel={
+        forkTarget ? (
+          <ForkRecipePanel
+            recipe={forkTarget}
+            submitting={forkRecipeMutation.isPending}
+            onClose={() => setForkTarget(null)}
+            onSubmit={(payload) =>
+              forkRecipeMutation.mutate({
+                recipeId: forkTarget.recipe_id,
+                payload: { ...payload, session_id: activeSessionId },
+              })
+            }
           />
-        </aside>
-
-        <section className={`operator-surface ${selectedArtifact ? "has-selection" : "idle"}`}>
-          <div className="surface-head">
-            <div>
-              <span className="eyebrow">Current Sound</span>
-              <h1>{selectedArtifact ? artifactName(selectedArtifact) : "No sound selected"}</h1>
-            </div>
-            {selectedArtifact ? <ArtifactBadge artifact={selectedArtifact} /> : null}
-          </div>
-
-          <Specimen
-            artifact={selectedArtifact}
-            artifacts={allArtifacts}
-            jobs={allJobs}
-            families={resultFamilies}
-            compare={compare}
-            apiBase={apiBase}
-            annotating={annotateArtifact.isPending}
-            activeSessionId={activeSessionId}
-            archivingArtifactId={archiveArtifact.isPending ? archiveArtifact.variables?.artifact.artifact_id ?? null : null}
-            onAnnotate={(artifactId, payload) => annotateArtifact.mutate({ artifactId, payload })}
-            onCompare={setCompare}
-            onReplayRecipe={(recipeId) => replayRecipeMutation.mutate(recipeId)}
-            onForkRecipe={setForkTarget}
-            onArchiveArtifact={(artifact) => archiveArtifact.mutate({ artifact, source: "specimen" })}
-            onSelectArtifact={selectArtifact}
-            onUseAsDonor={useArtifactAsDonor}
-            onUseInRecipe={useBundleInRecipe}
-            onUsePrompt={usePromptCandidate}
-            onGeneratePrompt={runPromptCandidate}
-            getArtifactPath={artifactPathForField}
-          />
-          <div className="control-bank" aria-label="Gesture controls">
-            <GestureStrip gestures={gestureOptions} activeId={activeGesture.id} onSelect={selectGesture} />
-            <NextActionsPanel actions={currentNextActions} onAction={applyNextAction} />
-          </div>
-          <details className="dev-drawer activity-drawer">
-            <summary>Inspect activity</summary>
-            <RunMonitor
-              runningJobs={runningJobs}
-              latestJob={latestJobs[0] ?? null}
-              eventing={liveEventing}
-              onCancelJob={(job) => cancelJobMutation.mutate(job.job_id)}
-              onRetryJob={(job) => retryJobMutation.mutate(job.job_id)}
-            />
-          </details>
-
-          <div className="gesture-workbench">
-            <TuneDrawer gesture={activeGesture} inspect={renderGestureInspect()} action={renderGestureAction()} actionDescriptor={gestureAction}>
-              {renderGestureTune()}
-            </TuneDrawer>
-          </div>
-        </section>
-
-        <aside className="result-rail">
-          <div className="rail-head">
-            <div>
-              <span className="eyebrow">Takes / Branches</span>
-              <strong>{sessionResultFamilies.length} branches</strong>
-            </div>
-            <Activity size={19} />
-          </div>
-          <AuditionStackPanel
-            artifacts={sessionArtifacts}
-            selectedId={selectedArtifact?.artifact_id ?? null}
-            apiBase={apiBase}
-            activeSessionId={activeSessionId}
-            archivingArtifactId={archiveArtifact.isPending ? archiveArtifact.variables?.artifact.artifact_id ?? null : null}
-            onSelect={selectArtifact}
-            onCompare={setCompare}
-            onAnnotate={(artifactId, payload) => annotateArtifact.mutate({ artifactId, payload })}
-            onRemember={(artifact) => archiveArtifact.mutate({ artifact, source: "take_strip" })}
-            onContinue={continueFromArtifact}
-            onBranch={branchFromArtifact}
-          />
-          <PendingTakesPanel
-            takes={pendingTakes}
-            onCancelJob={(job) => cancelJobMutation.mutate(job.job_id)}
-            onRetryJob={(job) => retryJobMutation.mutate(job.job_id)}
-          />
-          {forkTarget ? (
-            <ForkRecipePanel
-              recipe={forkTarget}
-              submitting={forkRecipeMutation.isPending}
-              onClose={() => setForkTarget(null)}
-              onSubmit={(payload) =>
-                forkRecipeMutation.mutate({
-                  recipeId: forkTarget.recipe_id,
-                  payload: { ...payload, session_id: activeSessionId },
-                })
-              }
-            />
-          ) : null}
-          <ResultFamilyPanel
-            families={sessionResultFamilies}
-            artifacts={allArtifacts}
-            selectedId={selectedArtifact?.artifact_id ?? null}
-            inspectedFamilyId={inspectedFamily?.familyId ?? null}
-            onSelect={selectArtifact}
-            onInspectFamily={setInspectedFamilyId}
-            onReplayRecipe={(recipeId) => replayRecipeMutation.mutate(recipeId)}
-            onForkRecipe={setForkTarget}
-          />
-          <FamilyDetailPanel
-            family={inspectedFamily}
-            families={sessionResultFamilies}
-            artifacts={allArtifacts}
-            jobs={allJobs}
-            selectedId={selectedArtifact?.artifact_id ?? null}
-            apiBase={apiBase}
-            activeSessionId={activeSessionId}
-            archivingArtifactId={archiveArtifact.isPending ? archiveArtifact.variables?.artifact.artifact_id ?? null : null}
-            onSelect={selectArtifact}
-            onInspectFamily={setInspectedFamilyId}
-            onCompare={setCompare}
-            onAnnotate={(artifactId, payload) => annotateArtifact.mutate({ artifactId, payload })}
-            onReplayRecipe={(recipeId) => replayRecipeMutation.mutate(recipeId)}
-            onForkRecipe={setForkTarget}
-            onContinueArtifact={continueFromArtifact}
-            onBranchArtifact={branchFromArtifact}
-            onArchiveArtifact={(artifact) => archiveArtifact.mutate({ artifact, source: "family_detail" })}
-            onCancelJob={(job) => cancelJobMutation.mutate(job.job_id)}
-            onRetryJob={(job) => retryJobMutation.mutate(job.job_id)}
-          />
-          <SessionTray
-            artifacts={sessionArtifacts}
-            archivedArtifacts={archiveArtifacts}
-            jobs={sessionJobs}
-            archivedJobs={archiveJobs}
-            families={resultFamilies}
+        ) : null
+      }
+      branchList={
+        <ResultFamilyPanel
+          families={sessionResultFamilies}
+          artifacts={allArtifacts}
+          selectedId={selectedArtifact?.artifact_id ?? null}
+          inspectedFamilyId={inspectedFamily?.familyId ?? null}
+          onSelect={selectArtifact}
+          onInspectFamily={setInspectedFamilyId}
+          onReplayRecipe={(recipeId) => replayRecipeMutation.mutate(recipeId)}
+          onForkRecipe={setForkTarget}
+        />
+      }
+      branchDetail={
+        <FamilyDetailPanel
+          family={inspectedFamily}
+          families={sessionResultFamilies}
+          artifacts={allArtifacts}
+          jobs={allJobs}
+          selectedId={selectedArtifact?.artifact_id ?? null}
+          apiBase={apiBase}
+          activeSessionId={activeSessionId}
+          archivingArtifactId={archiveArtifact.isPending ? archiveArtifact.variables?.artifact.artifact_id ?? null : null}
+          onSelect={selectArtifact}
+          onInspectFamily={setInspectedFamilyId}
+          onCompare={setCompare}
+          onAnnotate={(artifactId, payload) => annotateArtifact.mutate({ artifactId, payload })}
+          onReplayRecipe={(recipeId) => replayRecipeMutation.mutate(recipeId)}
+          onForkRecipe={setForkTarget}
+          onContinueArtifact={continueFromArtifact}
+          onBranchArtifact={branchFromArtifact}
+          onArchiveArtifact={(artifact) => archiveArtifact.mutate({ artifact, source: "family_detail" })}
+          onCancelJob={(job) => cancelJobMutation.mutate(job.job_id)}
+          onRetryJob={(job) => retryJobMutation.mutate(job.job_id)}
+        />
+      }
+      sessionMemory={
+        <SessionTray
+          artifacts={sessionArtifacts}
+          archivedArtifacts={archiveArtifacts}
+          jobs={sessionJobs}
+          archivedJobs={archiveJobs}
+          families={resultFamilies}
+          runningJobs={runningJobs}
+          selectedId={selectedArtifact?.artifact_id ?? null}
+          apiBase={apiBase}
+          activeSessionId={activeSessionId}
+          session={activeSession}
+          sessionStartedAt={activeSession?.created_at ?? sessionStartedAt}
+          creatingSession={createSession.isPending}
+          archivingSession={archiveSession.isPending}
+          recoveringArtifactId={recoverArtifact.isPending ? recoverArtifact.variables?.artifact_id ?? null : null}
+          archivingArtifactId={archiveArtifact.isPending ? archiveArtifact.variables?.artifact.artifact_id ?? null : null}
+          onSelect={selectArtifact}
+          onStartSession={() => createSession.mutate()}
+          onArchiveSession={() => activeSession && archiveSession.mutate(activeSession)}
+          onRecoverArtifact={(artifact) => recoverArtifact.mutate(artifact)}
+          onArchiveArtifact={(artifact) => archiveArtifact.mutate({ artifact, source: "session_tray" })}
+          onUseMemoryAction={applyMemoryAction}
+          onCancelJob={(job) => cancelJobMutation.mutate(job.job_id)}
+          onRetryJob={(job) => retryJobMutation.mutate(job.job_id)}
+        />
+      }
+      evidenceDock={
+        <details className="dev-drawer activity-drawer">
+          <summary>Inspect activity</summary>
+          <RunMonitor
             runningJobs={runningJobs}
-            selectedId={selectedArtifact?.artifact_id ?? null}
-            apiBase={apiBase}
-            activeSessionId={activeSessionId}
-            session={activeSession}
-            sessionStartedAt={activeSession?.created_at ?? sessionStartedAt}
-            creatingSession={createSession.isPending}
-            archivingSession={archiveSession.isPending}
-            recoveringArtifactId={recoverArtifact.isPending ? recoverArtifact.variables?.artifact_id ?? null : null}
-            archivingArtifactId={archiveArtifact.isPending ? archiveArtifact.variables?.artifact.artifact_id ?? null : null}
-            onSelect={selectArtifact}
-            onStartSession={() => createSession.mutate()}
-            onArchiveSession={() => activeSession && archiveSession.mutate(activeSession)}
-            onRecoverArtifact={(artifact) => recoverArtifact.mutate(artifact)}
-            onArchiveArtifact={(artifact) => archiveArtifact.mutate({ artifact, source: "session_tray" })}
-            onUseMemoryAction={applyMemoryAction}
+            latestJob={latestJobs[0] ?? null}
+            eventing={liveEventing}
             onCancelJob={(job) => cancelJobMutation.mutate(job.job_id)}
             onRetryJob={(job) => retryJobMutation.mutate(job.job_id)}
           />
+        </details>
+      }
+      utilityDock={
+        <>
           <ComparePanel a={compareA} b={compareB} apiBase={apiBase} />
           <details className="dev-drawer">
             <summary>Material counts</summary>
@@ -1225,9 +1242,9 @@ export function App() {
               <span><Box size={15} /> {bundleArtifacts.length}</span>
             </div>
           </details>
-        </aside>
-      </section>
-    </main>
+        </>
+      }
+    />
   );
 }
 
