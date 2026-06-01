@@ -97,6 +97,11 @@ progressive disclosure.
   helpers, specimen/listening UI, session/archive UI, comparison, mode atlas,
   prompt search rack, operator preset rack, readiness/status panels, audition
   stack, and spec coverage widgets live in typed modules with clearer ownership.
+- The current interface pass adds `SoundInstrumentSurface` as the product
+  composition frame. `App.tsx` still owns side effects, but it no longer owns
+  the visible left/center/right dashboard grammar. `instrumentFrameModel` keeps
+  the product-loop strip data-backed by selected sound, active gesture, pending
+  takes, takes, branches, and memory counts.
 - The first product-domain rescue pass after that split adds explicit
   `Gesture` and `PendingTake` frontend models. Generation, SAME, latent
   operators, experiments, and remember/archive actions are now selected through
@@ -271,8 +276,9 @@ branched, and inspected without making the user operate the machinery first.
 - The frontend root is much healthier, and the main action bands now have
   named product models. `useGestureWorkbench` owns semantic gesture/Tune/source
   state, while `gestureActionDescriptor` owns pure labels/readiness/disabled
-  reasons. `App.tsx` still deliberately owns mutation handlers, job-event
-  landing, pending-take selection, archive/recovery, and other side effects.
+  reasons. `SoundInstrumentSurface` owns the product composition. `App.tsx`
+  still deliberately owns mutation handlers, job-event landing, pending-take
+  selection, archive/recovery, and other side effects.
 
 ### Not Bad Code, But Incomplete Architecture
 
@@ -307,6 +313,11 @@ instead of invisible friction.
 6. P0.6 Tune scope reduction: Make, Continue/Vary, Encode/Decode, Morph, and
    Steer use product-layer primary/advanced/inspect field grouping while still
    preserving backend `ui_fields` as parameter truth.
+7. P0.7 Instrument-surface composition: the top-level app shell now composes
+   Sound Bench, Material Bay, Gesture Rack, Tune Bank, Take Field, Memory, and
+   Evidence zones instead of preserving the old dashboard rails. The new loop
+   strip is pure/frontend-only and does not imply unsupported patch editing,
+   memory atlas, or region-latent semantics.
 
 ### P1 Work Landed Where It Was Enabled By P0
 

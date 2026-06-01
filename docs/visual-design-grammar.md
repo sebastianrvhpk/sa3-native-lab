@@ -30,10 +30,12 @@ flow lines should not imply routing unless the data exists. Dense cells should
 not hide missing parameters. Wheels should not appear unless they control or
 play something real.
 
-The current structural reset interprets the app as a tape-latent console:
-Current Sound is a wide playback lane, Takes are lane strips, Gestures and Next
-actions are modules, Sources/Memory are material bays, Tune is a control bank,
-and Inspect remains an evidence drawer.
+The current structural reset now interprets the app as one composed sound
+instrument surface rather than a left/center/right workbench. Current Sound is a
+wide playback lane with the Material Bay physically attached to it. A real loop
+strip summarizes Current Sound -> Gesture -> Pending -> Takes -> Branches ->
+Memory from current app state. The Take Field sits under the sound bench, Tune
+is a side control bank, and Inspect/Evidence remains a subordinate dock.
 
 ## Motif To Function
 
@@ -47,6 +49,7 @@ and Inspect remains an evidence drawer.
 | Material clips | Reusable sources, remembered material, branch takes | Sources rail, Memory browser, take queue, branch detail. |
 | Thin grey lines | Real lineage, source relationships, or low-priority lab-surface flow | Source -> gesture -> take -> memory/branch relationships; subtle non-interactive workbench background only. |
 | Nodes / dots | Source/take/decision branch points | Data-backed lineage rows, decision memory, prompt history, branch points, anchors. |
+| Loop strip cells | Current product-loop state | Counts and labels derived from current sound, active gesture, pending takes, takes, branches, and memory. |
 | Rainbow waveform lane | Perceptual listening axis | AudioDeck WaveSurfer surface, persisted markers, draggable loop region, and compact audition playback. |
 | Grid clusters | Mode/gesture families or dense parameter sets | RecipeFields, Tune controls, prompt search presets. |
 | Hand labels | Human annotation and experiment labels | Eyebrows, rail heads, chips, small metadata labels. |
@@ -64,11 +67,15 @@ and Inspect remains an evidence drawer.
 
 ## Layout Rules
 
-- The first viewport should read as a console, not a dashboard: Current Sound
-  lane first, then gesture modules, next actions, Tune, and supporting bays.
+- The first viewport should read as an instrument, not a dashboard: Current
+  Sound and Material Bay form the main bench; Tune is a side bank; gesture
+  modules attach directly below; the Take Field begins beneath the bench.
 - The current sound and playback lane remain the main focal objects.
-- Takes should read as horizontal lane strips rather than stacked cards.
-- Sources and Memory should read as material bays rather than archive rows.
+- Takes should read as lane strips inside the Take Field rather than a right
+  rail of cards.
+- Sources and Memory should read as usable material bays rather than archive
+  rows. Source/Memory can appear as compact lists, but only inside material
+  zones.
 - Tune should read as a compact control bank while preserving exact submitted
   values.
 - Runtime/readiness state should stay available but visually subordinate.
@@ -88,6 +95,8 @@ and Inspect remains an evidence drawer.
   assignment.
 - Future drag/routing interactions must create or inspect real recipe/source
   relationships, not just move decorative nodes.
+- Mobile order is listening-first: Current Sound, material, gestures, Tune,
+  Take Field, Memory, then Evidence.
 
 ## Anti-Copy Rules
 
@@ -105,12 +114,16 @@ and Inspect remains an evidence drawer.
 
 ## Stack Assessment
 
-The current stack is enough for the structural visual reset:
+The current stack is enough for the structural instrument surface:
 
 - CSS variables and pseudo layers for paper, track grids, neon lane bars,
   module banks, and transport surfaces.
 - React component state for real selected sounds, prompt history, decisions,
   recipes, takes, branches, memory, and anchors.
+- `SoundInstrumentSurface` as the product composition frame, with `App.tsx`
+  kept as the query/mutation composition root.
+- `instrumentFrameModel` as a pure loop-strip model so patch-like cells are
+  tied to real counts rather than decorative routing.
 - Lucide icons for symbolic controls.
 - Existing WaveSurfer and AudioDeck playback state for the only large transport
   wheel currently allowed.
@@ -126,8 +139,9 @@ Near-horizon additions should remain conditional:
 
 ## Acceptance Criteria
 
-- The first screenshot reads as a sound console: wide Current Sound lane,
-  transport, take lanes, gesture modules, material bay, and Tune control bank.
+- The first screenshot reads as a sound instrument: Current Sound and Material
+  Bay are composed as one bench, Tune is a side bank, gesture modules are
+  attached to the sound, and Take Field is a connected lane surface.
 - Text remains readable on desktop and mobile.
 - Flow styling does not imply unavailable routing.
 - Play and audition controls become more visually central.

@@ -96,6 +96,13 @@ The sound should be visually and interactively larger than every control panel.
 Progress should appear on the sound/take that is being made, not primarily as a
 job card elsewhere.
 
+The current implemented composition is `SoundInstrumentSurface`: a sound bench
+with the Material Bay attached to the Current Sound lane, a real product-loop
+strip, a side Tune Bank, a Take Field below the bench, Memory below the active
+listening work, and an Evidence dock for activity/runtime details. This replaces
+the earlier visible left/center/right rails while preserving backend-supported
+gesture, take, memory, branch, Tune, and Inspect actions.
+
 ## First 60 Seconds
 
 The first minute should work like this:
@@ -225,12 +232,13 @@ App
     Local status
     Settings
 
-  Instrument
-    Current Sound Surface
+  SoundInstrumentSurface
+    Sound Bench
       Player / waveform / latent preview
-      Pending take overlay
+      Material Bay
+      Product-loop strip
       Remember controls
-      Inspect drawer
+      Sound Inspect drawer
 
     Gesture Strip
       Make
@@ -242,12 +250,12 @@ App
       Decode
       Morph
 
-    Gesture Tuning Drawer
+    Tune Bank
       Selected gesture controls
       Advanced params
       Backend/model settings
 
-    Takes
+    Take Field
       Recent takes
       Pending takes
       Branches
@@ -258,6 +266,11 @@ App
       Sources
       Remembered takes
       Archive recovery
+
+    Evidence Dock
+      Activity monitor
+      Raw lineage / recipe / logs
+      Material counts
 
   Developer / Readiness
     API base

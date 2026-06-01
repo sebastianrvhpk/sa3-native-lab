@@ -108,6 +108,15 @@ The current product loop is now explicit:
 Current Sound -> Gesture -> Pending Take -> Listen -> Branch / Remember / Tune
 ```
 
+The current React composition now uses a named sound-instrument frame rather
+than a three-rail dashboard. `SoundInstrumentSurface` lays out the Current
+Sound bench, attached Material Bay, real product-loop strip, Gesture Rack, side
+Tune Bank, Take Field, Memory zone, and Evidence dock. `instrumentFrameModel`
+derives the loop strip from current app state: selected sound, active gesture,
+pending takes, audio takes, branches, and remembered material. This keeps the
+reference-inspired patch cells grounded in data instead of implying an
+unsupported graph editor.
+
 Remembered material is active, not just archived. The Sources shelf now routes
 current material, remembered material, donor latents, imported audio, promoted
 bundle audio, and reusable bundles through one product action path. Audio can
@@ -341,15 +350,16 @@ Confirmed in the current codebase:
   artifact archive/recovery, and the first native geometry-audit recipe.
 - Product-domain frontend models now cover memory reuse, next actions,
   pending-take landing, branch summaries, Tune field grouping, source-aware
-  Tune fields, gesture action descriptors, memory browsing, and latent-region
-  descriptions. Branch UI is product-language first, while raw job IDs, recipe
-  IDs, backend details, logs, command context, and material counts are behind
-  Inspect/Settings/details.
+  Tune fields, gesture action descriptors, memory browsing, latent-region
+  descriptions, and the instrument loop strip. Branch UI is product-language
+  first, while raw job IDs, recipe IDs, backend details, logs, command context,
+  and material counts are behind Inspect/Settings/details.
 - The latest consolidation passes add a unified product Source shelf, a visible
   remembered-material browser, selected-take queue actions for
   keep/maybe/reject, remember, continue, and branch, branch trajectory listening
   controls, shared bundle-to-gesture reuse semantics, and a named
-  `useGestureWorkbench` hook for gesture/Tune/action state. Submit mutations,
+  `useGestureWorkbench` hook for gesture/Tune/action state. The top-level
+  product composition now lives in `SoundInstrumentSurface`; submit mutations,
   pending landing side effects, and archive/recover persistence stay in
   `App.tsx` because they coordinate backend mutations and job-event
   subscriptions.

@@ -59,7 +59,9 @@ For the broader stack direction and promotion triggers, see
    mutations, job-event landing, archive/recover, pending-take selection, and
    other side effects. The descriptor layer is now the approved extraction for
    labels, readiness, disabled reasons, source requirements, and intent copy;
-   it must remain pure and mutation-free.
+   it must remain pure and mutation-free. The visible product composition now
+   belongs to `SoundInstrumentSurface`, which means `App.tsx` is no longer the
+   place where the three-rail dashboard shape is preserved.
 
 6. Keep Tune slimmer than the backend.
    Tune now uses source-aware fields, product-language labels, exact submitted
@@ -245,10 +247,12 @@ or memory atlas. Fine-tuning and style-domain adaptation belong in
 
 0. Visual grammar.
    The first reference-vibe pass now has a canonical grammar in
-   `docs/visual-design-grammar.md`. The app uses paper texture, watercolor
-   gradients, pencil-line modules, gradient control cells, richer transport
-   wheels, and subtle workbench flow fields. Future visual passes should keep
-   lines/nodes tied to real lineage, provenance, memory, or playback state.
+   `docs/visual-design-grammar.md`. The app uses paper texture, track grids,
+   black-line modules, gradient control cells, richer transport wheels, a
+   data-backed product-loop strip, and a composed sound bench with attached
+   material bay, take field, Tune bank, Memory, and Evidence zones. Future
+   visual passes should keep lines/nodes tied to real lineage, provenance,
+   memory, or playback state.
 
 1. Responsive visual QA.
    Keep checking desktop and mobile screenshots for text collision, oversized
