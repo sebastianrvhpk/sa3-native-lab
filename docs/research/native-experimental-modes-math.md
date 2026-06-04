@@ -675,12 +675,28 @@ predictability: can h_psi predict it from z?
 intervenability: can a sampler/edit change it reliably?
 ```
 
-## Mode 13: Fine-Tuning Scaffold
+## Mode 13: LoRA Adaptation Notebook
 
-Mode 13 remains a scaffold, not an active runtime path. Use
-[dada-bots/underfit](https://github.com/dada-bots/underfit) on a Colab A100 for
-serious fine-tuning or style/domain adaptation work, then bring resulting audio
-or analysis artifacts back into this lab as material for notebook experiments.
+Mode 13 is now a notebook-native LoRA adaptation bench, using
+[dada-bots/underfit](https://github.com/dada-bots/underfit) as the workflow
+reference without carrying over its dashboard/server scaffolding.
+
+The notebook path is:
+
+```text
+dataset folder
+-> metadata/prompt audit
+-> caption staging folder
+-> optional SAME pre-encoded latents
+-> SA3 base LoRA/DoRA/BoRA training command
+-> checkpoint/loss monitor
+-> checkpoint audition through the notebook audio player
+```
+
+Research hypothesis: LoRA checkpoints should be selected by listening,
+generalization, and loss-shape diagnostics rather than only by the lowest final
+loss. In particular, the "creative underfit" region near the early loss elbow may
+be more useful than later checkpoints that memorize training structure.
 
 ## Mode 15: SAME Geometry and Intervention Audit
 

@@ -107,5 +107,14 @@ They document Mode 0h: latent dynamics, soft clipping, latent-time FFT gain and
 phase operators, magnitude/phase grafting, PCA component gain, SA3 polish, and
 MIR descriptor audits.
 
+The current notebook research map and next-method backlog is:
+
+`docs/research/notebook-research-map-and-next-methods.md`
+
+It inventories the repo's notebook/primitives capabilities, summarizes relevant
+external SA3/SAME, LoRA, flow, guidance, control, audio-generation, and
+activation-steering research, and proposes notebook-native experiments without
+app scaffolding.
+
 Older root-level research notes are historical context from before this repo was
 consolidated around the combined SA3 Native Lab implementation.
