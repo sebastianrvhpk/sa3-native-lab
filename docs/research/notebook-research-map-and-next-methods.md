@@ -844,6 +844,71 @@ Stop criteria:
 11. Cross-model baseline harness.
    - Useful after core SA3/SAME methods are stabilized.
 
+## Implementation Status
+
+Implemented in the notebook after the backlog pass:
+
+| Backlog item | Notebook mode | Local helper support | Status |
+|---|---:|---|---|
+| Flow attribution prompt microscope | 16 | `flow_prompt.py` attribution rows | implemented |
+| Loss-by-timestep flow panel | 17 | `flow_prompt.py` loss rows and summaries | implemented |
+| SAME control lanes | 18 | `control_lanes.py` | implemented |
+| Dataset memory curriculum | 19 | `curriculum.py` | implemented |
+| Latent OT style transfer bench | 20 | existing `geometry.py`, `style.py` | implemented |
+| Continuation as bridge search | 21 | existing `composition.py` | implemented |
+| Residual feature atlas | 22 | existing `residual_features.py` | implemented |
+| SA3 null-condition inversion probe | 23 | notebook probe over SA3 conditioning tensors | implemented as probe |
+| Guidance-gradient latent edit | 24 | existing `guidance.py` | implemented as latent edit plus SA3 polish |
+| Audio-to-audio posterior guidance | 25 | existing `guidance.py` plus source/reference summaries | implemented as scaffold |
+| Cross-model baseline harness | 26 | notebook command harness plus descriptors/player | implemented |
+
+Implementation boundary:
+
+- Modes 16-22 are ordinary notebook research cells around existing or new
+  helper APIs.
+- Modes 23-25 are intentionally labeled probes/scaffolds because they depend on
+  exact SA3 conditioner/sampler behavior with loaded weights.
+- Mode 26 does not vendor other model repos; it accepts external commands and
+  compares returned audio through this notebook's descriptor/player path.
+- LoRA remains external to Underfit.
+
+## Post-Implementation Re-Review Ideas
+
+Now that the backlog has notebook cells and helper APIs, the next implementable
+ideas are smaller and sharper:
+
+1. Probe-bank cache.
+   - Save target latent, timesteps, noise seeds, and per-prompt rows so Mode 16
+     and Mode 17 reuse identical probes across sessions.
+2. Flow-plus-descriptor prompt search.
+   - Score hard/readable prompts by a weighted combination of SA3 flow loss and
+     decoded descriptor deltas after a short audition generation.
+3. Control-lane retrieval.
+   - Add lane similarity to `LatentMemoryIndex` so memory retrieval can combine
+     latent summary, descriptor target, and time-varying lane shape.
+4. Geometry-aware donor selector.
+   - Rank donor candidates for graft/DSP/OT by Mahalanobis distance, lane
+     similarity, and boundary compatibility.
+5. Residual temporal patching.
+   - Extend Mode 22 from layer-level feature atlas to layer x denoising-step or
+     layer x latent-time patch tests.
+6. Guidance objective mixer.
+   - Let Mode 24 choose profile, boundary, period, lane, and preservation losses
+     from a compact JSON recipe.
+7. Null-condition edit audition.
+   - After Mode 23 optimizes null conditioning, generate fixed prompt edits and
+     compare source preservation against Mode 1 soft prompt and plain
+     audio-to-audio.
+8. Novelty/source-preservation panel.
+   - For every generated artifact, show nearest memory rows plus descriptor
+     deltas so "kept source identity" and "copied dataset item" are separated.
+9. Seed-family atlas.
+   - For a fixed method recipe, generate a seed grid and cluster outputs by SAME
+     summaries, descriptor deltas, and listening tags.
+10. Notebook report packager.
+    - Export selected manifest rows, audio paths, descriptor tables, and
+      annotations into a static HTML report without introducing an app server.
+
 ## Open Questions
 
 - Does the native flow score predict generated-audio similarity, or only
