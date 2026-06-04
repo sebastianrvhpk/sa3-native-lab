@@ -4,7 +4,11 @@ import pytest
 
 from latent_audio_primitives.flow_prompt import (
     flow_velocity_target,
+    logsnr_from_timestep,
+    prompt_leave_one_out_attribution,
+    sa3_flow_loss_rows_for_prompts,
     sa3_flow_losses_for_prompts,
+    summarize_flow_loss_rows,
     timesteps_from_logsnr_values,
 )
 
@@ -48,6 +52,55 @@ def test_sa3_flow_losses_support_probe_bank_and_delta_term():
 
     assert len(losses) == 2
     assert all(loss >= 0 for loss in losses)
+
+
+def test_sa3_flow_loss_rows_keep_per_timestep_diagnostics():
+    model = FakeStableModel()
+    target = torch.zeros((1, 2, 4), dtype=torch.float32)
+
+    rows = sa3_flow_loss_rows_for_prompts(
+        model,
+        target,
+        ["quiet texture", "warm target"],
+        duration=1.0,
+        seed=7,
+        logsnr_values=[2.0, 0.0],
+        shared_noise=True,
+        normalize_mse=False,
+    )
+    summary = summarize_flow_loss_rows(rows)
+
+    assert len(rows) == 4
+    assert {row.probe_index for row in rows} == {0, 1}
+    assert rows[0].logsnr == pytest.approx(logsnr_from_timestep(rows[0].timestep))
+    assert summary[0]["prompt"] == "warm target"
+
+
+def test_prompt_leave_one_out_attribution_scores_helpful_tokens():
+    def loss_scorer(prompts):
+        losses = []
+        for prompt in prompts:
+            loss = 10.0
+            if "warm" in prompt:
+                loss -= 3.0
+            if "wide" in prompt:
+                loss -= 1.0
+            if "cold" in prompt:
+                loss += 2.0
+            losses.append(loss)
+        return losses
+
+    rows = prompt_leave_one_out_attribution(
+        "warm narrow texture",
+        loss_scorer,
+        replacement_candidates=["wide", "cold"],
+    )
+
+    assert rows[0].token == "warm"
+    assert rows[0].contribution == pytest.approx(3.0)
+    narrow = next(row for row in rows if row.token == "narrow")
+    assert narrow.best_replacement == "wide"
+    assert narrow.best_replacement_delta == pytest.approx(1.0)
 
 
 def test_flow_velocity_target_convention_is_explicit():
