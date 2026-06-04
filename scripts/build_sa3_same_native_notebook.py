@@ -150,8 +150,11 @@ The exact target convention is an implementation detail. The research claim is n
 0c. Latent-selective renoise playground
 0e. Cross-audio latent channel graft
 0d. Latent blur playground
+0h. Neural latent DSP playground
 0f. Cyclic time-roll loop lab
+0g. Cyclic roll inside the denoising trajectory
 1. Audio -> soft prompt
+1b. Generate with a soft prompt
 2. Audio -> babble / hard prompt
 3. Audio -> readable prompt
 4. Dataset -> soft prompt
@@ -163,8 +166,20 @@ The exact target convention is an implementation detail. The research claim is n
 10. Noise / trajectory optimization scaffold
 11. Inpainting / continuation as composition
 12. LatCH-style control heads
-13. LoRA adaptation scaffold
+13. LoRA handoff to Underfit
 14. Latent memory instrument
+15. SAME geometry and intervention audit
+16. Flow attribution prompt microscope
+17. Loss-by-timestep flow panel
+18. SAME control lanes
+19. Dataset memory curriculum
+20. Latent OT style transfer bench
+21. Continuation bridge search
+22. Residual feature atlas
+23. SA3 null-condition inversion probe
+24. Guidance-gradient latent edit probe
+25. Audio-to-audio posterior guidance scaffold
+26. Cross-model baseline harness
 
 Interpretation rule:
 
@@ -261,7 +276,7 @@ LMDM adaptation is conceptual unless SA3 attention/sampler code is modified and 
 | 10. Trajectory optimization | noise / \(z_t\) / sampler state | DITTO, training-free guidance |
 | 11. Inpainting / continuation | masked SAME latent \(z_{missing}\) | SA3 inpainting, guidance-gradient music editing |
 | 12. LatCH-style control head | sidecar \(h_\psi(z)\) | LatCH, training-free guidance |
-| 13. LoRA | low-rank weight delta \(\Delta W\) | lightweight adaptation/fine-tuning |
+| 13. LoRA handoff | external Underfit artifacts | use Underfit; no local backlog expansion |
 | 14. Latent memory | stored \(z, s(z), metadata\) | retrieval, dataset geometry, composition systems |
 """
     ),
@@ -515,7 +530,7 @@ import json
 import math
 import random
 import shutil
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 
 import numpy as np
 
@@ -552,10 +567,13 @@ from latent_audio_primitives.geometry import (
     covariance_transport,
     fit_latent_geometry,
     geometry_report,
+    latent_barycenter,
     mahalanobis_summary_distance,
 )
-from latent_audio_primitives.periodic import periodicity_report
+from latent_audio_primitives.periodic import loop_boundary_loss, periodicity_report
 from latent_audio_primitives.observability import fit_linear_control_probe, predict_control
+from latent_audio_primitives.guidance import gradient_guidance_step
+from latent_audio_primitives.residual_features import fit_residual_feature_basis, project_residual_features
 from latent_audio_primitives.prompt_optimization import (
     beam_token_prompt_search,
     coordinate_prompt_search,
@@ -565,8 +583,28 @@ from latent_audio_primitives.prompt_optimization import (
 )
 from latent_audio_primitives.flow_prompt import (
     flow_velocity_target,
+    prompt_leave_one_out_attribution,
+    sa3_flow_loss_rows_for_prompts,
     sa3_flow_losses_for_prompts,
+    summarize_flow_loss_rows,
     timesteps_from_logsnr_values,
+)
+from latent_audio_primitives.control_lanes import (
+    audio_envelope_lane,
+    control_lane_distance,
+    control_lane_similarity,
+    control_lane_svg,
+    latent_channel_energy_lane,
+    latent_motion_lane,
+    load_control_lanes,
+    normalize_control_lane,
+    resample_control_lane,
+    save_control_lanes,
+)
+from latent_audio_primitives.curriculum import (
+    build_memory_curriculum,
+    heldout_split_item_ids,
+    nearest_memory_rows,
 )
 from latent_audio_primitives.schema import LatentItem
 from latent_audio_primitives.latent_blur import (
@@ -606,6 +644,7 @@ from latent_audio_primitives.style import (
     fit_style_profile,
     style_direction,
     apply_profile_attraction,
+    apply_profile_to_item,
     apply_style_direction,
     save_style_profile,
     load_style_profile,
@@ -5164,11 +5203,10 @@ def load_geometry_audit_items():
         return load_items(MEMORY_DIR)
     if GEOMETRY_AUDIT_SOURCE == "dataset":
         require_models()
-        return encode_audio_directory(
+        return encode_audio_folder_to_items(
             DATASET_DIR,
             limit=DATASET_LIMIT,
             duration=DATASET_DURATION,
-            item_id_prefix="geometry_dataset",
             use_chunks=DATASET_USE_CHUNKS,
             chunk_duration=DATASET_CHUNK_DURATION,
             hop_duration=DATASET_HOP_DURATION,
@@ -5257,6 +5295,714 @@ if RUN_MODE_15_GEOMETRY_AUDIT:
     GEOMETRY_AUDIT_OUTPUT.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     print(json.dumps(payload, indent=2)[:6000])
     print("saved:", GEOMETRY_AUDIT_OUTPUT)
+"""
+    ),
+    md(
+        r"""
+## Backlog Methods. Notebook-Native Research Extensions
+
+These cells implement the non-LoRA backlog as notebook instruments:
+
+```text
+flow attribution -> loss-by-timestep panel -> control lanes -> memory curriculum
+-> latent OT bench -> bridge search -> residual atlas -> null-condition probe
+-> guidance-gradient latent editing -> posterior-guided audio edit -> baselines
+```
+
+All cells default to off. Each cell writes JSON/audio artifacts under
+`OUTPUT_DIR` and uses the existing custom audio player when audio is produced.
+"""
+    ),
+    code(
+        r"""
+# @title Mode 16. Flow attribution prompt microscope
+
+RUN_MODE_16_FLOW_ATTRIBUTION = False
+
+FLOW_ATTRIBUTION_TARGET_AUDIO = INPUT_DIR / "target.wav"
+FLOW_ATTRIBUTION_PROMPT = "warm wide evolving audio texture"
+FLOW_ATTRIBUTION_REPLACEMENTS = [
+    "warm",
+    "cold",
+    "bright",
+    "dark",
+    "wide",
+    "narrow",
+    "dense",
+    "sparse",
+    "loop",
+    "texture",
+]
+FLOW_ATTRIBUTION_DURATION = 8.0
+FLOW_ATTRIBUTION_LOGSNR_VALUES = [2.0, 0.0, -2.0]
+FLOW_ATTRIBUTION_SEED = 123
+FLOW_ATTRIBUTION_OUTPUT = OUTPUT_DIR / "mode_16_flow_attribution.json"
+
+
+def mode16_flow_loss_scorer(target_latents, *, duration, logsnr_values, seed):
+    timesteps = timesteps_from_logsnr_values(logsnr_values)
+
+    def scorer(prompts):
+        return sa3_flow_losses_for_prompts(
+            sa3_model,
+            target_latents,
+            prompts,
+            duration=duration,
+            seed=seed,
+            timestep_values=timesteps,
+            shared_noise=True,
+            antithetic_noise=True,
+            normalize_mse=True,
+            cosine_weight=0.25,
+            velocity_convention=FLOW_TARGET_CONVENTION,
+        )
+
+    return scorer
+
+
+if RUN_MODE_16_FLOW_ATTRIBUTION:
+    require_models()
+    target_item = encode_audio_file_to_item(
+        FLOW_ATTRIBUTION_TARGET_AUDIO,
+        item_id="mode16_target",
+        duration=FLOW_ATTRIBUTION_DURATION,
+    )
+    target_latents = item_to_sa3_tensor(target_item, device=DEVICE)
+    scorer = mode16_flow_loss_scorer(
+        target_latents,
+        duration=target_item.duration_seconds,
+        logsnr_values=FLOW_ATTRIBUTION_LOGSNR_VALUES,
+        seed=FLOW_ATTRIBUTION_SEED,
+    )
+    attribution_rows = prompt_leave_one_out_attribution(
+        FLOW_ATTRIBUTION_PROMPT,
+        scorer,
+        replacement_candidates=FLOW_ATTRIBUTION_REPLACEMENTS,
+    )
+    payload = {
+        "target_audio": str(FLOW_ATTRIBUTION_TARGET_AUDIO),
+        "prompt": FLOW_ATTRIBUTION_PROMPT,
+        "logsnr_values": FLOW_ATTRIBUTION_LOGSNR_VALUES,
+        "rows": [asdict(row) for row in attribution_rows],
+    }
+    FLOW_ATTRIBUTION_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+    FLOW_ATTRIBUTION_OUTPUT.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    try:
+        import pandas as pd
+
+        display(pd.DataFrame(payload["rows"]))
+    except Exception:
+        print(json.dumps(payload, indent=2)[:6000])
+    print("saved:", FLOW_ATTRIBUTION_OUTPUT)
+"""
+    ),
+    code(
+        r"""
+# @title Mode 17. Loss-by-timestep flow panel
+
+RUN_MODE_17_FLOW_TIMESTEP_PANEL = False
+
+FLOW_TIMESTEP_TARGET_AUDIO = FLOW_ATTRIBUTION_TARGET_AUDIO
+FLOW_TIMESTEP_PROMPTS = [
+    "warm wide evolving audio texture",
+    "sparse glassy ambient loop",
+    "bright rhythmic synthetic music",
+]
+FLOW_TIMESTEP_DURATION = 8.0
+FLOW_TIMESTEP_LOGSNR_VALUES = [4.0, 2.0, 0.0, -2.0, -4.0]
+FLOW_TIMESTEP_SEED = 321
+FLOW_TIMESTEP_OUTPUT = OUTPUT_DIR / "mode_17_flow_timestep_panel.json"
+
+
+if RUN_MODE_17_FLOW_TIMESTEP_PANEL:
+    require_models()
+    target_item = encode_audio_file_to_item(
+        FLOW_TIMESTEP_TARGET_AUDIO,
+        item_id="mode17_target",
+        duration=FLOW_TIMESTEP_DURATION,
+    )
+    target_latents = item_to_sa3_tensor(target_item, device=DEVICE)
+    rows = sa3_flow_loss_rows_for_prompts(
+        sa3_model,
+        target_latents,
+        FLOW_TIMESTEP_PROMPTS,
+        duration=target_item.duration_seconds,
+        logsnr_values=FLOW_TIMESTEP_LOGSNR_VALUES,
+        seed=FLOW_TIMESTEP_SEED,
+        shared_noise=True,
+        antithetic_noise=True,
+        normalize_mse=True,
+        cosine_weight=0.25,
+        velocity_convention=FLOW_TARGET_CONVENTION,
+    )
+    payload = {
+        "target_audio": str(FLOW_TIMESTEP_TARGET_AUDIO),
+        "rows": [asdict(row) for row in rows],
+        "summary": summarize_flow_loss_rows(rows),
+    }
+    FLOW_TIMESTEP_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+    FLOW_TIMESTEP_OUTPUT.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    try:
+        import pandas as pd
+
+        display(pd.DataFrame(payload["summary"]))
+        display(pd.DataFrame(payload["rows"]))
+    except Exception:
+        print(json.dumps(payload, indent=2)[:6000])
+    print("saved:", FLOW_TIMESTEP_OUTPUT)
+"""
+    ),
+    code(
+        r"""
+# @title Mode 18. SAME control lanes
+
+RUN_MODE_18_CONTROL_LANES = False
+
+CONTROL_LANE_AUDIO = INPUT_DIR / "source.wav"
+CONTROL_LANE_DURATION = 12.0
+CONTROL_LANE_FRAME_SECONDS = 0.10
+CONTROL_LANE_OUTPUT = OUTPUT_DIR / "mode_18_control_lanes.json"
+CONTROL_LANE_SVG = OUTPUT_DIR / "mode_18_control_lanes.svg"
+
+
+if RUN_MODE_18_CONTROL_LANES:
+    require_models()
+    source_item = encode_audio_file_to_item(
+        CONTROL_LANE_AUDIO,
+        item_id="mode18_source",
+        duration=CONTROL_LANE_DURATION,
+    )
+    audio, sample_rate = load_audio(
+        CONTROL_LANE_AUDIO,
+        target_sample_rate=sa3.sample_rate,
+        duration=CONTROL_LANE_DURATION,
+        stereo=True,
+    )
+    lanes = [
+        normalize_control_lane(audio_envelope_lane(audio, sample_rate, frame_seconds=CONTROL_LANE_FRAME_SECONDS, name="rms_envelope"), mode="minmax"),
+        normalize_control_lane(audio_envelope_lane(audio, sample_rate, frame_seconds=CONTROL_LANE_FRAME_SECONDS, name="spectral_centroid_hz"), mode="minmax"),
+        normalize_control_lane(latent_motion_lane(source_item, latent_rate=source_item.latent_rate, source=str(CONTROL_LANE_AUDIO)), mode="minmax"),
+        normalize_control_lane(latent_channel_energy_lane(source_item, latent_rate=source_item.latent_rate, source=str(CONTROL_LANE_AUDIO)), mode="minmax"),
+    ]
+    save_control_lanes(lanes, CONTROL_LANE_OUTPUT)
+    svg = control_lane_svg(lanes)
+    CONTROL_LANE_SVG.write_text(svg, encoding="utf-8")
+    try:
+        from IPython.display import HTML, display
+
+        display(HTML(svg))
+    except Exception:
+        print(svg[:2000])
+    print("saved:", CONTROL_LANE_OUTPUT)
+"""
+    ),
+    code(
+        r"""
+# @title Mode 19. Dataset memory as prompt/control curriculum
+
+RUN_MODE_19_MEMORY_CURRICULUM = False
+
+MEMORY_CURRICULUM_SOURCE = "memory"  # "memory" or "dataset"
+MEMORY_CURRICULUM_CLUSTERS = 4
+MEMORY_CURRICULUM_DATASET_LIMIT = DATASET_LIMIT
+MEMORY_CURRICULUM_HOLDOUT_FRACTION = 0.2
+MEMORY_CURRICULUM_QUERY_AUDIO = INPUT_DIR / "query.wav"
+MEMORY_CURRICULUM_RUN_QUERY = False
+MEMORY_CURRICULUM_OUTPUT = OUTPUT_DIR / "mode_19_memory_curriculum.json"
+
+
+def mode19_load_items():
+    if MEMORY_CURRICULUM_SOURCE == "memory":
+        return load_items(MEMORY_DIR)
+    if MEMORY_CURRICULUM_SOURCE == "dataset":
+        require_models()
+        return encode_audio_folder_to_items(
+            DATASET_DIR,
+            limit=MEMORY_CURRICULUM_DATASET_LIMIT,
+            duration=DATASET_DURATION,
+            use_chunks=DATASET_USE_CHUNKS,
+            chunk_duration=DATASET_CHUNK_DURATION,
+            hop_duration=DATASET_HOP_DURATION,
+            max_chunks_per_file=DATASET_MAX_CHUNKS_PER_FILE,
+            drop_last=DATASET_DROP_LAST_CHUNK,
+        )
+    raise ValueError("MEMORY_CURRICULUM_SOURCE must be 'memory' or 'dataset'")
+
+
+if RUN_MODE_19_MEMORY_CURRICULUM:
+    items = mode19_load_items()
+    if len(items) < 1:
+        raise ValueError("Mode 19 needs at least one latent memory item.")
+    clusters = build_memory_curriculum(
+        items,
+        cluster_count=MEMORY_CURRICULUM_CLUSTERS,
+        seed=0,
+    )
+    split = heldout_split_item_ids(clusters, holdout_fraction=MEMORY_CURRICULUM_HOLDOUT_FRACTION)
+    nearest_rows = []
+    if MEMORY_CURRICULUM_RUN_QUERY:
+        require_models()
+        query_item = encode_audio_file_to_item(MEMORY_CURRICULUM_QUERY_AUDIO, item_id="mode19_query", duration=DATASET_DURATION)
+        nearest_rows = nearest_memory_rows(query_item, items, top_k=8)
+    payload = {
+        "source": MEMORY_CURRICULUM_SOURCE,
+        "item_count": len(items),
+        "clusters": [cluster.to_dict() for cluster in clusters],
+        "split": split,
+        "nearest_query_rows": nearest_rows,
+    }
+    MEMORY_CURRICULUM_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+    MEMORY_CURRICULUM_OUTPUT.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    try:
+        import pandas as pd
+
+        display(pd.DataFrame([{k: v for k, v in row.items() if k != "centroid"} for row in payload["clusters"]]))
+        if nearest_rows:
+            display(pd.DataFrame(nearest_rows))
+    except Exception:
+        print(json.dumps(payload, indent=2)[:6000])
+    print("saved:", MEMORY_CURRICULUM_OUTPUT)
+"""
+    ),
+    code(
+        r"""
+# @title Mode 20. Latent OT style transfer bench
+
+RUN_MODE_20_LATENT_OT_BENCH = False
+
+LATENT_OT_SOURCE_AUDIO = INPUT_DIR / "source.wav"
+LATENT_OT_REFERENCE_DIR = INPUT_DIR / "reference_style"
+LATENT_OT_DURATION = 12.0
+LATENT_OT_ALPHA = 0.75
+LATENT_OT_PROMPT = "audio texture"
+LATENT_OT_POLISH = True
+LATENT_OT_POLISH_NOISE = 0.08
+LATENT_OT_POLISH_STEPS = 8
+LATENT_OT_OUTPUT_DIR = OUTPUT_DIR / "mode_20_latent_ot"
+
+
+def mode20_item_to_output(item, name):
+    tensor = item_to_sa3_tensor(item, device=DEVICE)
+    path = LATENT_OT_OUTPUT_DIR / f"{name}.wav"
+    decode_sa3_latents_to_file_cropped(tensor, path, duration=LATENT_OT_DURATION)
+    return path
+
+
+if RUN_MODE_20_LATENT_OT_BENCH:
+    require_models()
+    LATENT_OT_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    source_item = encode_audio_file_to_item(LATENT_OT_SOURCE_AUDIO, item_id="mode20_source", duration=LATENT_OT_DURATION)
+    reference_items = encode_audio_folder_to_items(LATENT_OT_REFERENCE_DIR, duration=LATENT_OT_DURATION, limit=DATASET_LIMIT)
+    if not reference_items:
+        raise ValueError("Mode 20 needs at least one reference audio file.")
+
+    profile = fit_style_profile(reference_items, name="mode20_reference")
+    profile_item = apply_profile_to_item(source_item, profile, alpha=LATENT_OT_ALPHA, item_id="mode20_profile")
+    transported = covariance_transport(source_item, reference_items, alpha=LATENT_OT_ALPHA)
+    transport_item = LatentItem(
+        item_id="mode20_covariance_transport",
+        latent=transported,
+        latent_rate=source_item.latent_rate,
+        sample_rate=source_item.sample_rate,
+        prompt=LATENT_OT_PROMPT,
+        metadata={"operator": "covariance_transport", "alpha": LATENT_OT_ALPHA},
+    )
+    output_items = [source_item, profile_item, transport_item]
+    equal_length_refs = [item for item in reference_items if item.latent.shape == source_item.latent.shape]
+    if equal_length_refs:
+        bary = latent_barycenter([source_item, equal_length_refs[0]], weights=[1.0 - LATENT_OT_ALPHA, LATENT_OT_ALPHA])
+        output_items.append(
+            LatentItem(
+                item_id="mode20_barycenter",
+                latent=bary,
+                latent_rate=source_item.latent_rate,
+                sample_rate=source_item.sample_rate,
+                prompt=LATENT_OT_PROMPT,
+                metadata={"operator": "latent_barycenter", "alpha": LATENT_OT_ALPHA},
+            )
+        )
+
+    output_paths = []
+    labels = []
+    reports = []
+    for item in output_items:
+        direct_path = mode20_item_to_output(item, item.item_id)
+        output_paths.append(direct_path)
+        labels.append(item.item_id)
+        audio, sample_rate = load_audio(direct_path, stereo=True)
+        reports.append({"item_id": item.item_id, "direct_path": str(direct_path), "descriptors": audio_descriptor_report(audio, sample_rate)})
+        if LATENT_OT_POLISH and item.item_id != source_item.item_id:
+            init_tensor = item_to_sa3_tensor(item, device=DEVICE)
+            polished = sa3_sample_from_init_latents(
+                sa3_model,
+                init_tensor,
+                prompt=LATENT_OT_PROMPT,
+                duration=LATENT_OT_DURATION,
+                steps=LATENT_OT_POLISH_STEPS,
+                init_noise_level=LATENT_OT_POLISH_NOISE,
+                seed=0,
+            )
+            polished_path = LATENT_OT_OUTPUT_DIR / f"{item.item_id}_polished.wav"
+            decode_sa3_latents_to_file_cropped(polished, polished_path, duration=LATENT_OT_DURATION)
+            output_paths.append(polished_path)
+            labels.append(f"{item.item_id} polished")
+            reports[-1]["polished_path"] = str(polished_path)
+
+    payload = {"source": str(LATENT_OT_SOURCE_AUDIO), "reference_dir": str(LATENT_OT_REFERENCE_DIR), "reports": reports}
+    (LATENT_OT_OUTPUT_DIR / "report.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    play_audio_files(output_paths, labels=labels, title="Mode 20 latent OT style transfer")
+    print("saved:", LATENT_OT_OUTPUT_DIR / "report.json")
+"""
+    ),
+    code(
+        r"""
+# @title Mode 21. Continuation as bridge search
+
+RUN_MODE_21_BRIDGE_SEARCH = False
+
+BRIDGE_SEARCH_SOURCE = "memory"
+BRIDGE_SEARCH_START_ID = ""
+BRIDGE_SEARCH_END_ID = ""
+BRIDGE_SEARCH_TOP_K = 12
+BRIDGE_SEARCH_OUTPUT = OUTPUT_DIR / "mode_21_bridge_search.json"
+
+
+if RUN_MODE_21_BRIDGE_SEARCH:
+    items = load_items(MEMORY_DIR) if BRIDGE_SEARCH_SOURCE == "memory" else mode19_load_items()
+    if len(items) < 3:
+        raise ValueError("Mode 21 needs at least three memory items.")
+    start = next((item for item in items if item.item_id == BRIDGE_SEARCH_START_ID), items[0])
+    end = next((item for item in items if item.item_id == BRIDGE_SEARCH_END_ID), items[-1])
+    continuation_rows = [
+        {"item_id": item.item_id, "cost": float(cost), "prompt": item.prompt or ""}
+        for item, cost in ranked_continuations(start, items, k=8)[:BRIDGE_SEARCH_TOP_K]
+    ]
+    bridge_rows = [
+        {"item_id": item.item_id, "cost": float(cost), "prompt": item.prompt or ""}
+        for item, cost in ranked_bridges(start, end, items, k=8)[:BRIDGE_SEARCH_TOP_K]
+    ]
+    try:
+        path_items, path_cost = best_path(items, start.item_id, end.item_id, max_hops=3)
+        path_row = {"cost": float(path_cost), "item_ids": [item.item_id for item in path_items]}
+    except Exception as exc:
+        path_row = {"error": str(exc)}
+    payload = {
+        "start_id": start.item_id,
+        "end_id": end.item_id,
+        "continuations": continuation_rows,
+        "bridges": bridge_rows,
+        "best_path": path_row,
+    }
+    BRIDGE_SEARCH_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+    BRIDGE_SEARCH_OUTPUT.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    try:
+        import pandas as pd
+
+        display(pd.DataFrame(continuation_rows))
+        display(pd.DataFrame(bridge_rows))
+    except Exception:
+        print(json.dumps(payload, indent=2)[:6000])
+    print("saved:", BRIDGE_SEARCH_OUTPUT)
+"""
+    ),
+    code(
+        r"""
+# @title Mode 22. Residual feature atlas
+
+RUN_MODE_22_RESIDUAL_FEATURE_ATLAS = False
+
+RESIDUAL_ATLAS_AXIS = "brightness"
+RESIDUAL_ATLAS_NUM_PAIRS = 4
+RESIDUAL_ATLAS_LAYERS = [8, 12, 16, 20]
+RESIDUAL_ATLAS_DURATION = 6.0
+RESIDUAL_ATLAS_STEPS = 6
+RESIDUAL_ATLAS_OUTPUT = OUTPUT_DIR / "mode_22_residual_feature_atlas.json"
+
+
+if RUN_MODE_22_RESIDUAL_FEATURE_ATLAS:
+    require_models()
+    pairs = pairs_for_axis(RESIDUAL_ATLAS_AXIS)[:RESIDUAL_ATLAS_NUM_PAIRS]
+    extractor = SA3ActivationVectorExtractor(sa3, layer_indices=RESIDUAL_ATLAS_LAYERS)
+    examples = extractor.collect_examples(
+        pairs,
+        duration=RESIDUAL_ATLAS_DURATION,
+        steps=RESIDUAL_ATLAS_STEPS,
+        cfg_scale=1.0,
+        seed=0,
+    )
+    atlas_rows = []
+    for layer in RESIDUAL_ATLAS_LAYERS:
+        activations = [example.layer_activations[layer].float().cpu().numpy() for example in examples if layer in example.layer_activations]
+        if len(activations) < 2:
+            atlas_rows.append({"layer": layer, "error": "not enough activations"})
+            continue
+        basis = fit_residual_feature_basis(activations, layer=str(layer), n_components=8)
+        projected = [project_residual_features(value, basis, whiten=True) for value in activations]
+        labels = [example.label for example in examples if layer in example.layer_activations]
+        pos = np.stack([row for row, label in zip(projected, labels) if label == 1]).mean(axis=0)
+        neg = np.stack([row for row, label in zip(projected, labels) if label == 0]).mean(axis=0)
+        atlas_rows.append(
+            {
+                "layer": layer,
+                "example_count": len(activations),
+                "explained_variance": basis.variances.astype(float).tolist(),
+                "contrastive_feature_delta": (pos - neg).astype(float).tolist(),
+            }
+        )
+    payload = {"axis": RESIDUAL_ATLAS_AXIS, "rows": atlas_rows}
+    RESIDUAL_ATLAS_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+    RESIDUAL_ATLAS_OUTPUT.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    print(json.dumps(payload, indent=2)[:6000])
+    print("saved:", RESIDUAL_ATLAS_OUTPUT)
+"""
+    ),
+    code(
+        r"""
+# @title Mode 23. SA3 null-condition inversion probe
+
+RUN_MODE_23_NULL_CONDITION_INVERSION = False
+
+NULL_INVERSION_TARGET_AUDIO = INPUT_DIR / "target.wav"
+NULL_INVERSION_PROMPT = "audio texture"
+NULL_INVERSION_DURATION = 8.0
+NULL_INVERSION_STEPS = 40
+NULL_INVERSION_LR = 5e-3
+NULL_INVERSION_LOGSNR_VALUES = [2.0, 0.0, -2.0]
+NULL_INVERSION_OUTPUT = OUTPUT_DIR / "mode_23_null_condition_inversion.json"
+
+
+def mode23_conditioning_inputs(prompt, target, duration):
+    core = sa3_model.model
+    dtype = next(core.model.parameters()).dtype
+    conditioning = [{"prompt": prompt, "seconds_total": duration}]
+    cond = dict(core.conditioner(conditioning, DEVICE))
+    batch, channels, frames = target.shape
+    cond["inpaint_mask"] = [torch.zeros((batch, 1, frames), device=DEVICE)]
+    cond["inpaint_masked_input"] = [torch.zeros((batch, channels, frames), device=DEVICE, dtype=dtype)]
+    return {
+        key: value.to(dtype) if isinstance(value, torch.Tensor) and value.is_floating_point() else value
+        for key, value in core.get_conditioning_inputs(cond).items()
+    }
+
+
+if RUN_MODE_23_NULL_CONDITION_INVERSION:
+    require_models()
+    target_item = encode_audio_file_to_item(NULL_INVERSION_TARGET_AUDIO, item_id="mode23_target", duration=NULL_INVERSION_DURATION)
+    target = item_to_sa3_tensor(target_item, device=DEVICE, dtype=next(sa3_model.model.model.parameters()).dtype)
+    timesteps = timesteps_from_logsnr_values(NULL_INVERSION_LOGSNR_VALUES)
+    null_inputs = mode23_conditioning_inputs("", target, target_item.duration_seconds)
+    trainable = {
+        key: value.detach().clone().requires_grad_(True)
+        for key, value in null_inputs.items()
+        if isinstance(value, torch.Tensor) and value.is_floating_point()
+    }
+    static_inputs = {key: value for key, value in null_inputs.items() if key not in trainable}
+    optimizer = torch.optim.Adam(list(trainable.values()), lr=NULL_INVERSION_LR)
+    losses = []
+    core = sa3_model.model
+    for step in range(NULL_INVERSION_STEPS):
+        optimizer.zero_grad(set_to_none=True)
+        total = 0.0
+        for timestep in timesteps:
+            generator = torch.Generator(device=DEVICE)
+            generator.manual_seed(1000 + step)
+            noise = torch.randn(target.shape, device=DEVICE, dtype=target.dtype, generator=generator)
+            t = torch.full((target.shape[0],), float(timestep), device=DEVICE)
+            z_t = (1 - t[:, None, None].to(target.dtype)) * target + t[:, None, None].to(target.dtype) * noise
+            wanted = flow_velocity_target(target, noise, convention=FLOW_TARGET_CONVENTION)
+            pred = core.model(z_t, t, **{**static_inputs, **trainable}, cfg_scale=1.0, batch_cfg=True)
+            total = total + torch.mean((pred.float() - wanted.float()) ** 2)
+        loss = total / max(len(timesteps), 1)
+        loss.backward()
+        optimizer.step()
+        losses.append(float(loss.detach().cpu()))
+    payload = {"target_audio": str(NULL_INVERSION_TARGET_AUDIO), "prompt": NULL_INVERSION_PROMPT, "losses": losses}
+    NULL_INVERSION_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+    NULL_INVERSION_OUTPUT.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    print("initial/final loss:", losses[0], losses[-1])
+    print("saved:", NULL_INVERSION_OUTPUT)
+"""
+    ),
+    code(
+        r"""
+# @title Mode 24. Guidance-gradient latent edit probe
+
+RUN_MODE_24_GUIDANCE_GRADIENT = False
+
+GUIDANCE_SOURCE_AUDIO = INPUT_DIR / "source.wav"
+GUIDANCE_REFERENCE_AUDIO = INPUT_DIR / "reference.wav"
+GUIDANCE_DURATION = 8.0
+GUIDANCE_STEPS = 24
+GUIDANCE_SCALE = 0.02
+GUIDANCE_POLISH = True
+GUIDANCE_POLISH_NOISE = 0.08
+GUIDANCE_PROMPT = "audio texture"
+GUIDANCE_OUTPUT_DIR = OUTPUT_DIR / "mode_24_guidance_gradient"
+
+
+def torch_latent_summary(z):
+    time_major = z[0].transpose(0, 1)
+    mean = time_major.mean(dim=0)
+    std = time_major.std(dim=0, unbiased=False)
+    if time_major.shape[0] > 1:
+        velocity = torch.abs(time_major[1:] - time_major[:-1]).mean(dim=0)
+    else:
+        velocity = torch.zeros_like(mean)
+    return torch.cat([mean, std, velocity], dim=0)
+
+
+if RUN_MODE_24_GUIDANCE_GRADIENT:
+    require_models()
+    GUIDANCE_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    source_item = encode_audio_file_to_item(GUIDANCE_SOURCE_AUDIO, item_id="mode24_source", duration=GUIDANCE_DURATION)
+    reference_item = encode_audio_file_to_item(GUIDANCE_REFERENCE_AUDIO, item_id="mode24_reference", duration=GUIDANCE_DURATION)
+    source = item_to_sa3_tensor(source_item, device=DEVICE)
+    target_summary = torch.as_tensor(latent_summary(reference_item), device=DEVICE, dtype=source.dtype)
+    current = source
+    trace = []
+    for _step in range(GUIDANCE_STEPS):
+        result = gradient_guidance_step(
+            current,
+            lambda z: torch.mean((torch_latent_summary(z) - target_summary) ** 2),
+            scale=GUIDANCE_SCALE,
+            normalize=True,
+        )
+        current = result.latents
+        trace.append({"loss": result.loss, "grad_norm": result.grad_norm})
+    direct_path = GUIDANCE_OUTPUT_DIR / "guided_direct.wav"
+    source_path = GUIDANCE_OUTPUT_DIR / "source_direct.wav"
+    decode_sa3_latents_to_file_cropped(source, source_path, duration=GUIDANCE_DURATION)
+    decode_sa3_latents_to_file_cropped(current, direct_path, duration=GUIDANCE_DURATION)
+    paths = [source_path, direct_path]
+    labels = ["source", "guided direct"]
+    if GUIDANCE_POLISH:
+        polished = sa3_sample_from_init_latents(
+            sa3_model,
+            current,
+            prompt=GUIDANCE_PROMPT,
+            duration=GUIDANCE_DURATION,
+            steps=8,
+            init_noise_level=GUIDANCE_POLISH_NOISE,
+            seed=0,
+        )
+        polished_path = GUIDANCE_OUTPUT_DIR / "guided_polished.wav"
+        decode_sa3_latents_to_file_cropped(polished, polished_path, duration=GUIDANCE_DURATION)
+        paths.append(polished_path)
+        labels.append("guided polished")
+    (GUIDANCE_OUTPUT_DIR / "trace.json").write_text(json.dumps(trace, indent=2), encoding="utf-8")
+    play_audio_files(paths, labels=labels, title="Mode 24 guidance-gradient latent edit")
+    print("saved:", GUIDANCE_OUTPUT_DIR)
+"""
+    ),
+    code(
+        r"""
+# @title Mode 25. Audio-to-audio posterior guidance scaffold
+
+RUN_MODE_25_AUDIO_POSTERIOR_GUIDANCE = False
+
+POSTERIOR_SOURCE_AUDIO = INPUT_DIR / "source.wav"
+POSTERIOR_REFERENCE_AUDIO = INPUT_DIR / "reference.wav"
+POSTERIOR_DURATION = 8.0
+POSTERIOR_STEPS = 24
+POSTERIOR_GUIDANCE_SCALE = 0.015
+POSTERIOR_PRESERVE_WEIGHT = 0.5
+POSTERIOR_PROMPT = "audio texture"
+POSTERIOR_OUTPUT_DIR = OUTPUT_DIR / "mode_25_audio_posterior_guidance"
+
+
+if RUN_MODE_25_AUDIO_POSTERIOR_GUIDANCE:
+    require_models()
+    POSTERIOR_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    source_item = encode_audio_file_to_item(POSTERIOR_SOURCE_AUDIO, item_id="mode25_source", duration=POSTERIOR_DURATION)
+    reference_item = encode_audio_file_to_item(POSTERIOR_REFERENCE_AUDIO, item_id="mode25_reference", duration=POSTERIOR_DURATION)
+    source = item_to_sa3_tensor(source_item, device=DEVICE)
+    current = source.detach().clone()
+    target_summary = torch.as_tensor(latent_summary(reference_item), device=DEVICE, dtype=current.dtype)
+    source_summary = torch.as_tensor(latent_summary(source_item), device=DEVICE, dtype=current.dtype)
+    trace = []
+    for _step in range(POSTERIOR_STEPS):
+        def posterior_loss(z):
+            summary = torch_latent_summary(z)
+            target_loss = torch.mean((summary - target_summary) ** 2)
+            preserve_loss = torch.mean((summary[: source_summary.shape[0]] - source_summary) ** 2)
+            return target_loss + POSTERIOR_PRESERVE_WEIGHT * preserve_loss
+
+        result = gradient_guidance_step(current, posterior_loss, scale=POSTERIOR_GUIDANCE_SCALE, normalize=True)
+        current = result.latents
+        trace.append({"loss": result.loss, "grad_norm": result.grad_norm})
+    direct_path = POSTERIOR_OUTPUT_DIR / "posterior_guided_direct.wav"
+    decode_sa3_latents_to_file_cropped(current, direct_path, duration=POSTERIOR_DURATION)
+    polished = sa3_sample_from_init_latents(
+        sa3_model,
+        current,
+        prompt=POSTERIOR_PROMPT,
+        duration=POSTERIOR_DURATION,
+        steps=8,
+        init_noise_level=0.08,
+        seed=0,
+    )
+    polished_path = POSTERIOR_OUTPUT_DIR / "posterior_guided_polished.wav"
+    decode_sa3_latents_to_file_cropped(polished, polished_path, duration=POSTERIOR_DURATION)
+    (POSTERIOR_OUTPUT_DIR / "trace.json").write_text(json.dumps(trace, indent=2), encoding="utf-8")
+    play_audio_files([direct_path, polished_path], labels=["posterior direct", "posterior polished"], title="Mode 25 posterior guidance")
+    print("saved:", POSTERIOR_OUTPUT_DIR)
+"""
+    ),
+    code(
+        r"""
+# @title Mode 26. Cross-model baseline harness
+
+RUN_MODE_26_CROSS_MODEL_BASELINES = False
+
+CROSS_MODEL_PROMPTS = [
+    "sparse glassy ambient loop",
+    "bright rhythmic synthetic music",
+]
+CROSS_MODEL_DURATION = 8.0
+CROSS_MODEL_STEPS = 8
+CROSS_MODEL_SEED = 42
+CROSS_MODEL_EXTERNAL_COMMANDS = []  # Example: [["python", "external_generate.py", "--prompt", "{prompt}", "--output", "{output}"]]
+CROSS_MODEL_OUTPUT_DIR = OUTPUT_DIR / "mode_26_cross_model_baselines"
+
+
+def format_cross_model_command(command, *, prompt, output):
+    return [str(part).format(prompt=prompt, output=output, duration=CROSS_MODEL_DURATION, seed=CROSS_MODEL_SEED) for part in command]
+
+
+if RUN_MODE_26_CROSS_MODEL_BASELINES:
+    require_models()
+    import subprocess
+
+    CROSS_MODEL_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    rows = []
+    paths = []
+    labels = []
+    for prompt_index, prompt in enumerate(CROSS_MODEL_PROMPTS):
+        sa3_latents = sa3.generate_latents(
+            prompt=prompt,
+            duration=CROSS_MODEL_DURATION,
+            steps=CROSS_MODEL_STEPS,
+            cfg_scale=1.0,
+            seed=CROSS_MODEL_SEED + prompt_index,
+        )
+        sa3_path = CROSS_MODEL_OUTPUT_DIR / f"sa3_{prompt_index}.wav"
+        decode_sa3_latents_to_file_cropped(sa3_latents, sa3_path, duration=CROSS_MODEL_DURATION)
+        audio, sample_rate = load_audio(sa3_path, stereo=True)
+        rows.append({"model": "sa3", "prompt": prompt, "path": str(sa3_path), "descriptors": audio_descriptor_report(audio, sample_rate)})
+        paths.append(sa3_path)
+        labels.append(f"sa3 - {prompt}")
+        for model_index, command_template in enumerate(CROSS_MODEL_EXTERNAL_COMMANDS):
+            out_path = CROSS_MODEL_OUTPUT_DIR / f"external_{model_index}_{prompt_index}.wav"
+            command = format_cross_model_command(command_template, prompt=prompt, output=out_path)
+            print(" ".join(map(str, command)))
+            subprocess.run(command, check=True)
+            audio, sample_rate = load_audio(out_path, stereo=True)
+            rows.append({"model": f"external_{model_index}", "prompt": prompt, "path": str(out_path), "descriptors": audio_descriptor_report(audio, sample_rate)})
+            paths.append(out_path)
+            labels.append(f"external {model_index} - {prompt}")
+    (CROSS_MODEL_OUTPUT_DIR / "report.json").write_text(json.dumps(rows, indent=2), encoding="utf-8")
+    play_audio_files(paths, labels=labels, title="Mode 26 cross-model baseline harness")
+    print("saved:", CROSS_MODEL_OUTPUT_DIR / "report.json")
 """
     ),
     md(
@@ -5390,6 +6136,17 @@ manifest = {
         "13_lora_audition_checkpoint": RUN_MODE_13_AUDITION_CHECKPOINT,
         "14_memory": RUN_MODE_14_LATENT_MEMORY,
         "15_geometry_audit": RUN_MODE_15_GEOMETRY_AUDIT,
+        "16_flow_attribution": RUN_MODE_16_FLOW_ATTRIBUTION,
+        "17_flow_timestep_panel": RUN_MODE_17_FLOW_TIMESTEP_PANEL,
+        "18_control_lanes": RUN_MODE_18_CONTROL_LANES,
+        "19_memory_curriculum": RUN_MODE_19_MEMORY_CURRICULUM,
+        "20_latent_ot_bench": RUN_MODE_20_LATENT_OT_BENCH,
+        "21_bridge_search": RUN_MODE_21_BRIDGE_SEARCH,
+        "22_residual_feature_atlas": RUN_MODE_22_RESIDUAL_FEATURE_ATLAS,
+        "23_null_condition_inversion": RUN_MODE_23_NULL_CONDITION_INVERSION,
+        "24_guidance_gradient": RUN_MODE_24_GUIDANCE_GRADIENT,
+        "25_audio_posterior_guidance": RUN_MODE_25_AUDIO_POSTERIOR_GUIDANCE,
+        "26_cross_model_baselines": RUN_MODE_26_CROSS_MODEL_BASELINES,
         "combined_chain": RUN_COMBINED_CHAIN,
     },
 }
