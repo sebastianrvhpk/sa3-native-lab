@@ -4338,7 +4338,11 @@ if RUN_MODE_12_CONTROL_HEAD:
     ),
     md(
         r"""
-## Mode 13. LoRA Adaptation Scaffold
+## Mode 13. LoRA Adaptation Notebook
+
+This mode uses the [dada-bots/underfit](https://github.com/dada-bots/underfit)
+MIT-licensed training workflow as the reference, but keeps the interaction
+notebook-native: no dashboard, no server, no detached run registry.
 
 LoRA changes weights through low-rank adapters:
 
@@ -4356,41 +4360,708 @@ $$
 A \in \mathbb{R}^{r \times d_{in}}, \qquad B \in \mathbb{R}^{d_{out} \times r}
 $$
 
-Use LoRA when you want a dataset/style/domain to become more native to generation.
+Underfit's useful notebook-facing ideas:
 
-Do not use it as the first answer for every control. Prompt inversion, SAME edits, and residual steering are better diagnostic probes.
+```text
+dataset folder -> metadata/prompt audit -> caption staging folder
+caption staging folder -> optional SAME pre-encoded latents
+raw audio or encoded latents -> SA3 base LoRA training
+checkpoints + CSV/logs -> loss curve, checkpoint table, listening audition
+```
+
+Recommended default: train `medium-base`, audition on `medium`, use `dora-rows`,
+save many checkpoints, and stop by listening around the loss elbow rather than
+by chasing the lowest loss.
 """
     ),
     code(
         r"""
-# @title Mode 13. LoRA scaffold
+# @title Mode 13a. LoRA dataset prompt audit and caption staging
 
-RUN_MODE_13_LORA_SCAFFOLD = False
+RUN_MODE_13_DATASET_AUDIT = False
+RUN_MODE_13_PREPARE_CAPTION_FOLDER = False
 
 LORA_DATASET_DIR = DATASET_DIR
 LORA_OUTPUT_DIR = OUTPUT_DIR / "mode_13_lora"
+LORA_PREPARED_DATASET_DIR = LORA_OUTPUT_DIR / "captioned_dataset"
+LORA_PREPARE_OVERWRITE = False
 
-if RUN_MODE_13_LORA_SCAFFOLD:
-    # This is a scaffold because the released SA3 LoRA script names/args should
-    # be verified against the exact repo commit installed in Colab.
-    # Inspect first:
-    #   !find /content/sa3-native-lab -iname "*lora*" -o -iname "*train*"
-    #
-    # Desired training state:
-    #   freeze base SA3/SAME weights
-    #   train only LoRA adapter parameters
-    #   log prompts, audio paths, duration, seed, loss curve
-    #
-    # Pseudocommand shape:
-    command = [
-        "python",
-        str(Path(PROJECT_DIR) / "scripts" / "train_lora.py"),
-        "--model", SA3_MODEL_NAME,
-        "--data", str(LORA_DATASET_DIR),
-        "--output", str(LORA_OUTPUT_DIR),
+# Prompt composition mirrors underfit's notebook-relevant logic:
+# combine existing tags, path text, fixed text, and an optional trigger word.
+LORA_PROMPT_USE_TAGS = True
+LORA_PROMPT_USE_PATH = True
+LORA_PROMPT_USE_FIXED = True
+LORA_PROMPT_FIXED_TEXT = "custom audio style"
+LORA_TRIGGER_WORD = ""  # Example: "zzsa3style"
+LORA_TRIGGER_PERCENT = 80
+LORA_PROMPT_BALANCE = {"tags": 50, "path": 25, "fixed": 25}
+LORA_TAG_KEYS = ["prompt", "title", "artist", "album", "genre", "label", "date", "composer", "bpm", "mood"]
+LORA_HIDE_TAG_NAMES = False
+LORA_HIDE_COMMAS = False
+LORA_SPLIT_COMMAS = True
+LORA_PATH_HIDE_EXTENSION = True
+LORA_PATH_HIDE_TOPMOST_DIR = False
+LORA_MAX_AUDIT_ROWS = 120
+LORA_PROMPT_AUDIT_JSON = LORA_OUTPUT_DIR / "dataset_prompt_audit.json"
+
+RUN_MODE_13_LORA_SCAFFOLD = False  # legacy manifest flag kept false.
+
+
+def lora_find_audio_files(root, *, limit=None):
+    root = Path(root)
+    paths = [
+        path
+        for path in sorted(root.rglob("*"))
+        if path.is_file() and not path.name.startswith("._") and path.suffix.lower() in AUDIO_EXTS
     ]
-    print("Verify official script path/args before running:")
-    print(" ".join(command))
+    return paths[:limit] if limit else paths
+
+
+def lora_read_json_sidecar(audio_path):
+    path = Path(audio_path)
+    candidates = [
+        path.with_suffix(".json"),
+        path.parent.parent / "json" / f"{path.stem}.json",
+    ]
+    for candidate in candidates:
+        if not candidate.exists():
+            continue
+        try:
+            payload = json.loads(candidate.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        if isinstance(payload, dict):
+            return {
+                str(key): str(value)
+                for key, value in payload.items()
+                if value is not None and isinstance(value, (str, int, float))
+            }
+    return {}
+
+
+def lora_read_txt_sidecar(audio_path):
+    path = Path(audio_path)
+    candidates = [
+        path.with_suffix(".txt"),
+        path.parent.parent / "txt" / f"{path.stem}.txt",
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            value = candidate.read_text(encoding="utf-8", errors="replace").strip()
+            if value:
+                return value
+    return ""
+
+
+def lora_read_embedded_tags(audio_path):
+    try:
+        import audio_metadata
+    except Exception:
+        return {}
+    try:
+        track = audio_metadata.load(str(audio_path))
+    except Exception:
+        return {}
+    tags = track.get("tags", {})
+    out = {}
+    for key in LORA_TAG_KEYS:
+        if key not in tags:
+            continue
+        value = tags[key]
+        if isinstance(value, (list, tuple)):
+            value = value[0] if value else ""
+        value = str(value).strip()
+        if value:
+            out[key] = value
+    return out
+
+
+def lora_metadata_for_audio(audio_path, root):
+    path = Path(audio_path)
+    root = Path(root)
+    try:
+        relpath = path.relative_to(root)
+    except ValueError:
+        relpath = Path(path.name)
+    metadata = {
+        "path": str(path),
+        "relpath": str(relpath),
+        "stem": path.stem,
+    }
+    metadata.update(lora_read_embedded_tags(path))
+    metadata.update(lora_read_json_sidecar(path))
+    txt_prompt = lora_read_txt_sidecar(path)
+    if txt_prompt:
+        metadata["prompt"] = txt_prompt
+    return metadata
+
+
+def lora_tag_prompt(metadata):
+    display = {
+        "title": "Title",
+        "artist": "Artist",
+        "album": "Album",
+        "genre": "Genre",
+        "label": "Label",
+        "date": "Year",
+        "composer": "Composer",
+        "bpm": "BPM",
+        "prompt": "Prompt",
+        "mood": "Mood",
+    }
+    parts = []
+    for key in LORA_TAG_KEYS:
+        value = str(metadata.get(key, "")).strip()
+        if not value:
+            continue
+        label = display.get(key, key)
+        values = [value]
+        if LORA_SPLIT_COMMAS and "," in value:
+            values = [chunk.strip() for chunk in value.split(",") if chunk.strip()]
+        for item in values:
+            parts.append(item if LORA_HIDE_TAG_NAMES else f"{label}: {item}")
+    return (" " if LORA_HIDE_COMMAS else ", ").join(parts)
+
+
+def lora_path_prompt(metadata):
+    relpath = str(metadata.get("relpath", "")).replace("\\", "/")
+    if not relpath:
+        return ""
+    parts = relpath.split("/")
+    filename = parts[-1]
+    dirs = parts[:-1]
+    if LORA_PATH_HIDE_EXTENSION:
+        filename = str(Path(filename).with_suffix(""))
+    if LORA_PATH_HIDE_TOPMOST_DIR and dirs:
+        dirs = dirs[1:]
+    return "/".join([*dirs, filename]) if dirs else filename
+
+
+def lora_compose_prompt(metadata, *, rng=None):
+    rng = rng or random
+    candidates = []
+    if LORA_PROMPT_USE_TAGS:
+        candidates.append(("tags", lora_tag_prompt(metadata), float(LORA_PROMPT_BALANCE.get("tags", 0))))
+    if LORA_PROMPT_USE_PATH:
+        candidates.append(("path", lora_path_prompt(metadata), float(LORA_PROMPT_BALANCE.get("path", 0))))
+    if LORA_PROMPT_USE_FIXED:
+        candidates.append(("fixed", LORA_PROMPT_FIXED_TEXT.strip(), float(LORA_PROMPT_BALANCE.get("fixed", 0))))
+
+    weighted_candidates = [(kind, prompt, weight) for kind, prompt, weight in candidates if prompt and weight > 0]
+    if weighted_candidates:
+        kind, prompt, _ = rng.choices(
+            weighted_candidates,
+            weights=[weight for _, _, weight in weighted_candidates],
+            k=1,
+        )[0]
+    else:
+        kind, prompt = "fallback", str(metadata.get("prompt") or metadata.get("stem") or "audio").strip()
+
+    if LORA_TRIGGER_WORD and rng.random() * 100 < float(LORA_TRIGGER_PERCENT):
+        separator = ", " if kind == "tags" and not LORA_HIDE_COMMAS else " "
+        prompt = f"{LORA_TRIGGER_WORD.strip()}{separator}{prompt}" if prompt else LORA_TRIGGER_WORD.strip()
+    return prompt
+
+
+def lora_dataset_prompt_rows(root, *, limit=None, seed=0):
+    rng = random.Random(seed)
+    rows = []
+    for path in lora_find_audio_files(root, limit=limit):
+        metadata = lora_metadata_for_audio(path, root)
+        prompt = lora_compose_prompt(metadata, rng=rng)
+        rows.append(
+            {
+                "path": str(path),
+                "relpath": metadata.get("relpath", path.name),
+                "prompt": prompt,
+                "metadata": metadata,
+            }
+        )
+    return rows
+
+
+def prepare_lora_caption_folder(rows, output_dir, *, overwrite=False):
+    output_dir = Path(output_dir)
+    if output_dir.exists() and overwrite:
+        shutil.rmtree(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    manifest = []
+    import os
+
+    for row in rows:
+        src = Path(row["path"])
+        rel = Path(row["relpath"])
+        audio_out = output_dir / rel
+        audio_out.parent.mkdir(parents=True, exist_ok=True)
+        if not audio_out.exists():
+            try:
+                os.symlink(src, audio_out)
+                link_mode = "symlink"
+            except OSError:
+                shutil.copy2(src, audio_out)
+                link_mode = "copy"
+        else:
+            link_mode = "existing"
+        txt_out = audio_out.with_suffix(".txt")
+        json_out = audio_out.with_suffix(".json")
+        txt_out.write_text(row["prompt"].strip() + "\n", encoding="utf-8")
+        sidecar = dict(row["metadata"])
+        sidecar["prompt"] = row["prompt"]
+        sidecar["source_audio_path"] = row["path"]
+        json_out.write_text(json.dumps(sidecar, indent=2), encoding="utf-8")
+        manifest.append({**row, "staged_audio": str(audio_out), "link_mode": link_mode})
+    manifest_path = output_dir / "lora_caption_manifest.json"
+    manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    return manifest_path, manifest
+
+
+if RUN_MODE_13_DATASET_AUDIT or RUN_MODE_13_PREPARE_CAPTION_FOLDER:
+    LORA_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    audit_rows = lora_dataset_prompt_rows(LORA_DATASET_DIR, limit=LORA_MAX_AUDIT_ROWS)
+    LORA_PROMPT_AUDIT_JSON.write_text(json.dumps(audit_rows, indent=2), encoding="utf-8")
+    print("audio files audited:", len(audit_rows))
+    print("audit json:", LORA_PROMPT_AUDIT_JSON)
+    preview_rows = [{k: row[k] for k in ["relpath", "prompt"]} for row in audit_rows[:20]]
+    try:
+        import pandas as pd
+
+        display(pd.DataFrame(preview_rows))
+    except Exception:
+        print(json.dumps(preview_rows, indent=2))
+
+    if RUN_MODE_13_PREPARE_CAPTION_FOLDER:
+        manifest_path, staged_rows = prepare_lora_caption_folder(
+            audit_rows,
+            LORA_PREPARED_DATASET_DIR,
+            overwrite=LORA_PREPARE_OVERWRITE,
+        )
+        print("caption staging folder:", LORA_PREPARED_DATASET_DIR)
+        print("caption staging manifest:", manifest_path)
+"""
+    ),
+    code(
+        r"""
+# @title Mode 13b. Optional pre-encode captioned dataset for LoRA training
+
+RUN_MODE_13_PREENCODE_DATASET = False
+
+LORA_PREENCODE_INPUT_DIR = LORA_PREPARED_DATASET_DIR
+LORA_ENCODED_DIR = LORA_OUTPUT_DIR / "encoded_latents"
+LORA_PREENCODE_MODEL = "same-l"
+LORA_PREENCODE_BATCH_SIZE = 1
+LORA_PREENCODE_DURATION = 47.0  # shorter crops are often better for style without memorizing structure
+LORA_PREENCODE_MODEL_HALF = True
+LORA_PREENCODE_PAD = False
+
+
+def lora_aligned_sample_size(seconds, *, sample_rate=44100, downsampling_ratio=4096):
+    samples = int(round(float(seconds) * sample_rate))
+    return max(downsampling_ratio, (samples // downsampling_ratio) * downsampling_ratio)
+
+
+def lora_preencode_command():
+    import sys
+
+    project_root = Path(globals().get("PROJECT_DIR", Path.cwd()))
+    command = [
+        sys.executable,
+        str(project_root / "scripts" / "pre_encode_dataset.py"),
+        "--model",
+        LORA_PREENCODE_MODEL,
+        "--data_dir",
+        str(LORA_PREENCODE_INPUT_DIR),
+        "--output_path",
+        str(LORA_ENCODED_DIR),
+        "--batch_size",
+        str(LORA_PREENCODE_BATCH_SIZE),
+        "--sample_size",
+        str(lora_aligned_sample_size(LORA_PREENCODE_DURATION)),
+    ]
+    if LORA_PREENCODE_MODEL_HALF:
+        command.append("--model_half")
+    if LORA_PREENCODE_PAD:
+        command.append("--pad")
+    return command
+
+
+preencode_command = lora_preencode_command()
+print("pre-encode command:")
+print(" ".join(map(str, preencode_command)))
+
+if RUN_MODE_13_PREENCODE_DATASET:
+    import subprocess
+
+    LORA_ENCODED_DIR.mkdir(parents=True, exist_ok=True)
+    subprocess.run(preencode_command, check=True)
+"""
+    ),
+    code(
+        r"""
+# @title Mode 13c. LoRA training command and cell runner
+
+RUN_MODE_13_TRAIN_LORA = False
+
+LORA_TRAIN_INPUT_MODE = "captions"  # captions or encoded
+LORA_TRAIN_DATA_DIR = LORA_PREPARED_DATASET_DIR
+LORA_TRAIN_ENCODED_DIR = LORA_ENCODED_DIR
+LORA_RUN_NAME = "sa3-native-notebook-lora"
+LORA_BASE_MODEL = "medium-base"
+LORA_SAVE_DIR = LORA_OUTPUT_DIR / "runs"
+LORA_LOG_PATH = LORA_OUTPUT_DIR / f"{LORA_RUN_NAME}.log"
+
+# Underfit-derived defaults: DoRA rows first, shorter random crops, frequent checkpoints.
+LORA_ADAPTER_TYPE = "dora-rows"  # lora, dora-rows, dora-cols, bora, lora-xs, dora-rows-xs, dora-cols-xs, bora-xs
+LORA_RANK = 16
+LORA_ALPHA = None  # None means rank
+LORA_DROPOUT = 0.0
+LORA_LR = 1e-4
+LORA_TRAIN_STEPS = 10000
+LORA_BATCH_SIZE = 1
+LORA_TRAIN_DURATION = 47.0
+LORA_CHECKPOINT_EVERY = 500
+LORA_DEMO_EVERY = 500
+LORA_LOG_EVERY = 50
+LORA_NUM_WORKERS = 2
+LORA_BASE_PRECISION = "bf16"
+LORA_RESUME_CHECKPOINT = ""
+LORA_SVD_BASES_PATH = ""
+LORA_INCLUDE_FILTERS = []  # Example: ["transformer.layers[0-11]"]
+LORA_EXCLUDE_FILTERS = ["seconds_total"]  # common small-dataset guard
+
+
+def lora_training_command():
+    import sys
+
+    project_root = Path(globals().get("PROJECT_DIR", Path.cwd()))
+    command = [
+        sys.executable,
+        str(project_root / "scripts" / "train_lora.py"),
+        "--model",
+        LORA_BASE_MODEL,
+        "--rank",
+        str(LORA_RANK),
+        "--adapter_type",
+        LORA_ADAPTER_TYPE,
+        "--dropout",
+        str(LORA_DROPOUT),
+        "--lr",
+        str(LORA_LR),
+        "--steps",
+        str(LORA_TRAIN_STEPS),
+        "--batch_size",
+        str(LORA_BATCH_SIZE),
+        "--duration",
+        str(LORA_TRAIN_DURATION),
+        "--name",
+        LORA_RUN_NAME,
+        "--save_dir",
+        str(LORA_SAVE_DIR),
+        "--checkpoint_every",
+        str(LORA_CHECKPOINT_EVERY),
+        "--demo_every",
+        str(LORA_DEMO_EVERY),
+        "--log_every",
+        str(LORA_LOG_EVERY),
+        "--num_workers",
+        str(LORA_NUM_WORKERS),
+        "--logger",
+        "csv",
+        "--base_precision",
+        LORA_BASE_PRECISION,
+    ]
+    if LORA_TRAIN_INPUT_MODE == "encoded":
+        command.extend(["--encoded_dir", str(LORA_TRAIN_ENCODED_DIR)])
+    elif LORA_TRAIN_INPUT_MODE == "captions":
+        command.extend(["--data_dir", str(LORA_TRAIN_DATA_DIR)])
+    else:
+        raise ValueError("LORA_TRAIN_INPUT_MODE must be 'captions' or 'encoded'")
+    if LORA_ALPHA is not None:
+        command.extend(["--lora_alpha", str(LORA_ALPHA)])
+    if LORA_RESUME_CHECKPOINT:
+        command.extend(["--lora_checkpoint", str(LORA_RESUME_CHECKPOINT)])
+    if LORA_SVD_BASES_PATH:
+        command.extend(["--svd_bases_path", str(LORA_SVD_BASES_PATH)])
+    if LORA_INCLUDE_FILTERS:
+        command.append("--include")
+        command.extend(str(item) for item in LORA_INCLUDE_FILTERS)
+    if LORA_EXCLUDE_FILTERS:
+        command.append("--exclude")
+        command.extend(str(item) for item in LORA_EXCLUDE_FILTERS)
+    return command
+
+
+def run_command_streaming_to_log(command, log_path, *, cwd=None):
+    import os
+    import subprocess
+
+    log_path = Path(log_path)
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    env = os.environ.copy()
+    env.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
+    with log_path.open("a", encoding="utf-8") as log_file:
+        log_file.write("\n\n=== command ===\n")
+        log_file.write(" ".join(map(str, command)) + "\n")
+        log_file.flush()
+        proc = subprocess.Popen(
+            [str(part) for part in command],
+            cwd=cwd,
+            env=env,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            bufsize=1,
+        )
+        assert proc.stdout is not None
+        for line in proc.stdout:
+            print(line, end="")
+            log_file.write(line)
+            log_file.flush()
+        returncode = proc.wait()
+        log_file.write(f"\n=== exit {returncode} ===\n")
+    if returncode != 0:
+        raise RuntimeError(f"LoRA training failed with exit code {returncode}")
+    return returncode
+
+
+lora_command = lora_training_command()
+LORA_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+(LORA_OUTPUT_DIR / "last_training_command.json").write_text(
+    json.dumps({"command": lora_command}, indent=2),
+    encoding="utf-8",
+)
+print("training command:")
+print(" ".join(map(str, lora_command)))
+print("command json:", LORA_OUTPUT_DIR / "last_training_command.json")
+print("log path:", LORA_LOG_PATH)
+
+if RUN_MODE_13_TRAIN_LORA:
+    run_command_streaming_to_log(lora_command, LORA_LOG_PATH, cwd=Path(globals().get("PROJECT_DIR", Path.cwd())))
+"""
+    ),
+    code(
+        r"""
+# @title Mode 13d. LoRA loss/checkpoint monitor
+
+RUN_MODE_13_SHOW_STATUS = False
+
+LORA_STATUS_SAVE_DIR = LORA_SAVE_DIR
+LORA_STATUS_LOG_PATH = LORA_LOG_PATH
+
+
+def lora_checkpoint_rows(save_dir):
+    import re
+
+    rows = []
+    for path in sorted(Path(save_dir).rglob("*.safetensors")):
+        match = re.search(r"step=(\d+)", path.name)
+        step = int(match.group(1)) if match else None
+        rows.append(
+            {
+                "step": step,
+                "path": str(path),
+                "name": path.name,
+                "mb": round(path.stat().st_size / 1_000_000, 2),
+                "modified": path.stat().st_mtime,
+            }
+        )
+    rows.sort(key=lambda row: (-1 if row["step"] is None else row["step"], row["path"]))
+    return rows
+
+
+def lora_metric_rows(save_dir=None, log_path=None):
+    import csv
+    import re
+
+    rows = []
+    if save_dir:
+        for path in Path(save_dir).rglob("metrics.csv"):
+            with path.open(newline="", encoding="utf-8") as handle:
+                for row in csv.DictReader(handle):
+                    step_value = row.get("step") or row.get("global_step") or row.get("trainer/global_step")
+                    loss_key = next((key for key in row if "loss" in key.lower() and row.get(key)), None)
+                    if not step_value or not loss_key:
+                        continue
+                    try:
+                        rows.append({"step": int(float(step_value)), "loss": float(row[loss_key]), "source": str(path)})
+                    except ValueError:
+                        pass
+    if log_path and Path(log_path).exists():
+        pattern = re.compile(r"(?:train/loss|loss)[=:'\" ]+([0-9.+\\-eE]+)")
+        step_pattern = re.compile(r"(?:Step|global_step)[=:'\" ]*(\\d+)")
+        for index, line in enumerate(Path(log_path).read_text(encoding="utf-8", errors="replace").splitlines()):
+            loss_match = pattern.search(line)
+            if not loss_match:
+                continue
+            step_match = step_pattern.search(line)
+            try:
+                rows.append(
+                    {
+                        "step": int(step_match.group(1)) if step_match else index,
+                        "loss": float(loss_match.group(1)),
+                        "source": str(log_path),
+                    }
+                )
+            except ValueError:
+                pass
+    rows.sort(key=lambda row: row["step"])
+    return rows
+
+
+def lora_loss_svg(rows, *, width=720, height=180):
+    if not rows:
+        return "<div>No loss rows found yet.</div>"
+    points = [(float(row["step"]), float(row["loss"])) for row in rows if math.isfinite(float(row["loss"]))]
+    if not points:
+        return "<div>No finite loss values found.</div>"
+    xs = [point[0] for point in points]
+    ys = [point[1] for point in points]
+    min_x, max_x = min(xs), max(xs)
+    min_y, max_y = min(ys), max(ys)
+    if max_x == min_x:
+        max_x += 1
+    if max_y == min_y:
+        max_y += 1
+    pad = 18
+
+    def sx(x):
+        return pad + (x - min_x) / (max_x - min_x) * (width - 2 * pad)
+
+    def sy(y):
+        return height - pad - (y - min_y) / (max_y - min_y) * (height - 2 * pad)
+
+    polyline = " ".join(f"{sx(x):.1f},{sy(y):.1f}" for x, y in points)
+    return f'''
+<svg viewBox="0 0 {width} {height}" width="100%" height="{height}" role="img" aria-label="LoRA loss curve">
+  <rect x="0" y="0" width="{width}" height="{height}" fill="#111318"/>
+  <line x1="{pad}" y1="{height-pad}" x2="{width-pad}" y2="{height-pad}" stroke="#59606b" stroke-width="1"/>
+  <line x1="{pad}" y1="{pad}" x2="{pad}" y2="{height-pad}" stroke="#59606b" stroke-width="1"/>
+  <polyline points="{polyline}" fill="none" stroke="#62d6a0" stroke-width="2"/>
+  <text x="{pad}" y="{pad - 4}" fill="#ccd3df" font-size="11">loss {min_y:.4g} - {max_y:.4g}</text>
+  <text x="{width-pad-130}" y="{height - 5}" fill="#ccd3df" font-size="11">step {int(min_x)} - {int(max_x)}</text>
+</svg>
+'''
+
+
+def lora_status_html(save_dir=LORA_STATUS_SAVE_DIR, log_path=LORA_STATUS_LOG_PATH):
+    import html
+    import datetime
+
+    metrics = lora_metric_rows(save_dir=save_dir, log_path=log_path)
+    checkpoints = lora_checkpoint_rows(save_dir)
+    latest = checkpoints[-1] if checkpoints else None
+    latest_text = html.escape(latest["name"]) if latest else "none"
+    checkpoint_rows = "\n".join(
+        f"<tr><td>{row['step'] if row['step'] is not None else ''}</td><td>{html.escape(row['name'])}</td><td>{row['mb']}</td></tr>"
+        for row in checkpoints[-12:]
+    )
+    updated = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    return f'''
+<div style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: #e8edf5; background: #0f1117; padding: 12px; border: 1px solid #2b303b;">
+  <div style="display:flex; gap:24px; flex-wrap:wrap; margin-bottom:10px;">
+    <div><strong>metrics</strong><br>{len(metrics)}</div>
+    <div><strong>checkpoints</strong><br>{len(checkpoints)}</div>
+    <div><strong>latest</strong><br>{latest_text}</div>
+    <div><strong>updated</strong><br>{updated}</div>
+  </div>
+  {lora_loss_svg(metrics)}
+  <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+    <thead><tr><th align="left">step</th><th align="left">checkpoint</th><th align="left">MB</th></tr></thead>
+    <tbody>{checkpoint_rows}</tbody>
+  </table>
+</div>
+'''
+
+
+if RUN_MODE_13_SHOW_STATUS:
+    try:
+        from IPython.display import HTML, display
+
+        display(HTML(lora_status_html()))
+    except Exception:
+        print(lora_checkpoint_rows(LORA_STATUS_SAVE_DIR)[-12:])
+"""
+    ),
+    code(
+        r"""
+# @title Mode 13e. Audition LoRA checkpoints through the notebook audio player
+
+RUN_MODE_13_AUDITION_CHECKPOINT = False
+
+LORA_AUDITION_CHECKPOINT = ""  # empty means latest checkpoint under LORA_SAVE_DIR
+LORA_AUDITION_MODEL = "medium"  # trained on medium-base, usually audition on ARC medium
+LORA_AUDITION_PROMPTS = [
+    LORA_TRIGGER_WORD or LORA_PROMPT_FIXED_TEXT or "custom audio style",
+    f"{LORA_TRIGGER_WORD or LORA_PROMPT_FIXED_TEXT}, sparse glassy ambient loop",
+]
+LORA_AUDITION_STRENGTHS = [0.65, 1.0]
+LORA_AUDITION_DURATION = 12.0
+LORA_AUDITION_STEPS = 8
+LORA_AUDITION_CFG_SCALE = 1.0
+LORA_AUDITION_SEED = 123
+LORA_AUDITION_OUTPUT_DIR = LORA_OUTPUT_DIR / "auditions"
+
+
+def latest_lora_checkpoint(save_dir=LORA_SAVE_DIR):
+    rows = lora_checkpoint_rows(save_dir)
+    if not rows:
+        return None
+    rows_with_steps = [row for row in rows if row["step"] is not None]
+    return Path((rows_with_steps or rows)[-1]["path"])
+
+
+def lora_audition_commands():
+    import sys
+
+    checkpoint = Path(LORA_AUDITION_CHECKPOINT) if LORA_AUDITION_CHECKPOINT else latest_lora_checkpoint()
+    if checkpoint is None:
+        raise FileNotFoundError(f"No .safetensors checkpoints found under {LORA_SAVE_DIR}")
+    LORA_AUDITION_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    commands = []
+    for prompt_index, prompt in enumerate(LORA_AUDITION_PROMPTS):
+        for strength in LORA_AUDITION_STRENGTHS:
+            safe_prompt = "".join(ch if ch.isalnum() else "_" for ch in prompt.lower())[:42].strip("_") or "prompt"
+            out_path = LORA_AUDITION_OUTPUT_DIR / f"lora_s{strength:.2f}_p{prompt_index}_{safe_prompt}.wav"
+            command = [
+                sys.executable,
+                "-m",
+                "stable_audio_3.cli",
+                "--model",
+                LORA_AUDITION_MODEL,
+                "--lora-ckpt-path",
+                str(checkpoint),
+                "--lora-strength",
+                str(strength),
+                "-p",
+                prompt,
+                "--duration",
+                str(LORA_AUDITION_DURATION),
+                "--steps",
+                str(LORA_AUDITION_STEPS),
+                "--cfg-scale",
+                str(LORA_AUDITION_CFG_SCALE),
+                "--seed",
+                str(LORA_AUDITION_SEED),
+                "-o",
+                str(out_path),
+            ]
+            commands.append({"command": command, "output": out_path, "prompt": prompt, "strength": strength})
+    return commands
+
+
+audition_plan = lora_audition_commands() if RUN_MODE_13_AUDITION_CHECKPOINT else []
+if RUN_MODE_13_AUDITION_CHECKPOINT:
+    import subprocess
+
+    outputs = []
+    labels = []
+    for item in audition_plan:
+        print(" ".join(map(str, item["command"])))
+        subprocess.run(item["command"], check=True)
+        outputs.append(item["output"])
+        labels.append(f"strength {item['strength']:.2f} - {item['prompt']}")
+    play_audio_files(outputs, labels=labels, title="Mode 13 LoRA checkpoint auditions")
+else:
+    print("Set RUN_MODE_13_AUDITION_CHECKPOINT=True after checkpoints exist.")
 """
     ),
     md(
@@ -4711,7 +5382,12 @@ manifest = {
         "10_flow_state_opt": RUN_MODE_10_FLOW_STATE_OPT,
         "11_continuation": RUN_MODE_11_CONTINUATION,
         "12_control_head": RUN_MODE_12_CONTROL_HEAD,
-        "13_lora_scaffold": RUN_MODE_13_LORA_SCAFFOLD,
+        "13_lora_dataset_audit": RUN_MODE_13_DATASET_AUDIT,
+        "13_lora_prepare_caption_folder": RUN_MODE_13_PREPARE_CAPTION_FOLDER,
+        "13_lora_preencode_dataset": RUN_MODE_13_PREENCODE_DATASET,
+        "13_lora_train": RUN_MODE_13_TRAIN_LORA,
+        "13_lora_status": RUN_MODE_13_SHOW_STATUS,
+        "13_lora_audition_checkpoint": RUN_MODE_13_AUDITION_CHECKPOINT,
         "14_memory": RUN_MODE_14_LATENT_MEMORY,
         "15_geometry_audit": RUN_MODE_15_GEOMETRY_AUDIT,
         "combined_chain": RUN_COMBINED_CHAIN,
