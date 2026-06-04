@@ -1,7 +1,6 @@
 __pycache__/
 *.py[cod]
 *.so
-*.tsbuildinfo
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
@@ -11,7 +10,6 @@ venv/
 env/
 build/
 dist/
-node_modules/
 *.egg-info/
 
 # Local/generated audio and model outputs
@@ -26,7 +24,6 @@ node_modules/
 *.pt
 *.pth
 outputs/
-.sa3_lab/
 memory/
 vectors/
 wandb/

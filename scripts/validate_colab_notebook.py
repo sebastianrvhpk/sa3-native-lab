@@ -78,10 +78,11 @@ def main() -> None:
         for index, cell in enumerate(nb.get("cells", [])):
             if cell.get("cell_type") != "code":
                 continue
-            if args.skip_setup and index == 6:
-                continue
             source = "".join(cell.get("source", []))
             title = _cell_title(source, index)
+            if args.skip_setup and _is_setup_cell(title):
+                continue
+            source = _local_validation_source(source, title, args=args, work_dir=work_dir)
             try:
                 exec(compile(source, f"{notebook_path}:cell-{index}", "exec"), namespace)
             except Exception:
@@ -112,6 +113,25 @@ def _cell_title(source: str, index: int) -> str:
         if stripped.startswith("# @title"):
             return stripped
     return f"cell {index}"
+
+
+def _is_setup_cell(title: str) -> bool:
+    return "setup" in title.lower() or "install" in title.lower() or "auth" in title.lower()
+
+
+def _local_validation_source(source: str, title: str, *, args: argparse.Namespace, work_dir: Path) -> str:
+    lower_title = title.lower()
+    source = source.replace(
+        'WORK_DIR = Path("/content/sa3_same_native_experiments")',
+        f"WORK_DIR = Path({str(work_dir)!r})",
+    )
+    if "hugging face login and model loading" in lower_title:
+        load_models = bool(args.with_models or args.with_smoke)
+        source = source.replace("LOAD_MODELS = True", f"LOAD_MODELS = {load_models!r}")
+        source = source.replace("HF_LOGIN = True", f"HF_LOGIN = {load_models!r}")
+    if "smoke test" in lower_title:
+        source = source.replace("RUN_SMOKE_TEST = True", f"RUN_SMOKE_TEST = {bool(args.with_smoke)!r}")
+    return source
 
 
 if __name__ == "__main__":

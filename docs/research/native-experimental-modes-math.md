@@ -675,13 +675,12 @@ predictability: can h_psi predict it from z?
 intervenability: can a sampler/edit change it reliably?
 ```
 
-## Mode 13: Fine-Tuning Delegated
+## Mode 13: Fine-Tuning Scaffold
 
-Fine-tuning and style/domain adaptation are no longer part of SA3 Native Lab's
-local app/runtime surface. Use
+Mode 13 remains a scaffold, not an active runtime path. Use
 [dada-bots/underfit](https://github.com/dada-bots/underfit) on a Colab A100 for
-that work, then bring resulting audio or analysis artifacts back into this lab
-only as material to listen to, compare, remember, or inspect.
+serious fine-tuning or style/domain adaptation work, then bring resulting audio
+or analysis artifacts back into this lab as material for notebook experiments.
 
 ## Mode 15: SAME Geometry and Intervention Audit
 
