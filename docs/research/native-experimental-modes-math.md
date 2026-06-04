@@ -675,28 +675,27 @@ predictability: can h_psi predict it from z?
 intervenability: can a sampler/edit change it reliably?
 ```
 
-## Mode 13: LoRA Adaptation Notebook
+## Mode 13: External LoRA Handoff
 
-Mode 13 is now a notebook-native LoRA adaptation bench, using
-[dada-bots/underfit](https://github.com/dada-bots/underfit) as the workflow
-reference without carrying over its dashboard/server scaffolding.
+Mode 13 is now a boundary, not an active local research backlog. For LoRA,
+use [dada-bots/underfit](https://github.com/dada-bots/underfit) as the training
+and checkpoint-selection path instead of growing another local LoRA surface.
 
-The notebook path is:
+The external path is:
 
 ```text
 dataset folder
 -> metadata/prompt audit
 -> caption staging folder
 -> optional SAME pre-encoded latents
--> SA3 base LoRA/DoRA/BoRA training command
--> checkpoint/loss monitor
--> checkpoint audition through the notebook audio player
+-> SA3 base LoRA/DoRA/BoRA training in Underfit
+-> Underfit checkpoint/loss monitor
+-> Underfit checkpoint auditions
 ```
 
-Research hypothesis: LoRA checkpoints should be selected by listening,
-generalization, and loss-shape diagnostics rather than only by the lowest final
-loss. In particular, the "creative underfit" region near the early loss elbow may
-be more useful than later checkpoints that memorize training structure.
+This repo can still import audio outputs or analysis artifacts from Underfit for
+comparison against frozen SA3/SAME methods. It should not prioritize new local
+LoRA cells, adapter controls, checkpoint dashboards, or training infrastructure.
 
 ## Mode 15: SAME Geometry and Intervention Audit
 

@@ -8,17 +8,19 @@ Scope:
 - Keep the expanded Colab notebook as the main research instrument.
 - Keep methods cell-based, inspectable, and runnable without app scaffolding.
 - Treat SA3 and SAME as the native objects of study.
-- Prefer frozen-model probes, sidecar predictors, notebook LoRA runs, and
-  measurement cells before heavier training.
+- Prefer frozen-model probes, sidecar predictors, and measurement cells before
+  heavier training.
+- Treat LoRA as an external handoff to Underfit, not as an active local
+  implementation backlog.
 
 This document combines:
 
 - Local repo capabilities confirmed from `colab/`,
   `scripts/build_sa3_same_native_notebook.py`, `latent_audio_primitives/`,
   `scripts/`, `tests/`, and `docs/research/`.
-- External research and repo survey across Stable Audio 3, SAME, Underfit, LoRA
-  variants, flow matching, music/audio control, prompt inversion, activation
-  steering, neural codecs, and older neural audio systems.
+- External research and repo survey across Stable Audio 3, SAME, Underfit as
+  the external LoRA reference, flow matching, music/audio control, prompt
+  inversion, activation steering, neural codecs, and older neural audio systems.
 
 ## Evidence Labels
 
@@ -39,7 +41,7 @@ Primary SA3/SAME:
 - [Stable Audio Open paper](https://arxiv.org/abs/2407.14358)
 - [Fast Timing-Conditioned Latent Audio Diffusion](https://arxiv.org/abs/2402.04825)
 
-LoRA and adapter sources:
+External LoRA and adapter context:
 
 - [dada-bots/underfit](https://github.com/dada-bots/underfit)
 - [LoRA](https://arxiv.org/abs/2106.09685)
@@ -109,7 +111,7 @@ The notebook's current research stance, `confirmed`:
 freeze SA3
 freeze SAME
 edit prompts, soft conditioning, SAME latents, SA3 sampler states, residual activations,
-or train small sidecars/adapters
+or train small sidecars/control heads
 measure with native flow losses, latent geometry, audio descriptors, listening notes,
 and experiment manifests
 ```
@@ -148,7 +150,7 @@ colab/sa3_same_native_experimental_modes.ipynb
 | 10 | flow-state optimization scaffold | confirmed | intermediate flow state | optimized latent state |
 | 11 | continuation/inpainting composition | confirmed | mask + continuation region | generated extension/edit |
 | 12 | LatCH-style sidecar head | confirmed | control predictor over z | `.pt` sidecar |
-| 13 | notebook LoRA adaptation | confirmed | SA3 base LoRA/DoRA/BoRA | `.safetensors` checkpoints |
+| 13 | external LoRA handoff | confirmed | Underfit reference workflow | external checkpoints/audio |
 | 14 | latent memory instrument | confirmed | indexed `LatentItem`s | memory index |
 | 15 | geometry/intervention audit | confirmed | latent collection | geometry report |
 
@@ -176,8 +178,8 @@ colab/sa3_same_native_experimental_modes.ipynb
 Research scripts, `confirmed`:
 
 - `encode_dataset_same.py`: encode audio folders into SAME memory.
-- `pre_encode_dataset.py`: pre-encode LoRA training datasets.
-- `train_lora.py`: SA3 LoRA/DoRA/BoRA/XS training.
+- `pre_encode_dataset.py`, `train_lora.py`: legacy/local LoRA support, not part
+  of the active notebook-method backlog now that Underfit is the chosen path.
 - `optimize_sa3_soft_prompt.py`: soft prompt optimization from target audio.
 - `extract_sa3_vectors.py`: prompt-derived SA3 residual vectors.
 - `extract_audio_residual_vectors.py`: audio-derived residual vectors.
@@ -212,10 +214,10 @@ prompt pairs or labeled audio sets
   -> alpha sweeps
   -> generated outputs + probe reports
 
-captioned dataset
-  -> optional SAME pre-encoded latents
-  -> SA3 base LoRA training
-  -> checkpoint table + loss curve + notebook audition matrix
+LoRA/style fine-tuning need
+  -> leave this repo's active method path
+  -> use Underfit
+  -> optionally bring back generated audio/checkpoints as external comparison artifacts
 ```
 
 ## Runtime and Dependency Assumptions
@@ -226,7 +228,9 @@ captioned dataset
 - SA3 Medium uses SAME-L and requires CUDA plus FlashAttention for normal use.
 - SA3 Small Music/SFX use SAME-S and are CPU-capable according to the upstream repo.
 - The notebook can validate without model loading via `scripts/validate_colab_notebook.py --skip-setup`.
-- LoRA training is practical on GPU; Underfit reports 16 GB VRAM as a workable target and 8 GB as possible with low settings.
+- LoRA training is externalized to Underfit. This repo should not grow another
+  LoRA training/control surface unless there is a specific research reason
+  Underfit cannot cover.
 
 `unknown`:
 
@@ -246,17 +250,16 @@ High-value existing controls, `confirmed`:
 - Looping: roll fraction, projection strength, polish noise, loop metric windows.
 - Style/profile: alpha, mean/std attraction, direction alpha, covariance transport alpha.
 - Residual steering: layer, alpha, prompt/audio pair set, baseline strategy.
-- LoRA: adapter type, rank, alpha, dropout, duration/crop, base precision, include/exclude filters, checkpoint/demo cadence, strength at audition.
 - Mode 15: PCA components, covariance shrinkage, periodicity windows, linear probe labels.
 
 Missing but promising controls, `hypothesis`:
 
 - Time-varying control lanes for loudness, density, onset strength, pitch/chroma, stereo width, brightness, and periodicity.
 - Prompt-token attribution over SA3 flow score.
-- Per-timestep loss curves for prompt inversion and LoRA checkpoints.
+- Per-timestep loss curves for prompt inversion, soft prompts, residual steering,
+  and guidance experiments.
 - Residual-layer causal patching strength by flow timestep.
-- LoRA strength schedule across denoising time, not only global LoRA strength.
-- Dataset nearest-neighbor / memorization score for each generated checkpoint demo.
+- Dataset nearest-neighbor / memory score for generated outputs.
 
 ## Research Reading: What Matters for This Notebook
 
@@ -286,14 +289,16 @@ and path text, DoRA as a default, short random crops, frequent demos/checkpoints
 loss-by-timestep monitoring, checkpoint audition, and stopping around the
 creative underfit elbow rather than maximum memorization.
 
-Implication for this repo:
+Decision for this repo:
 
-- Mode 13 should stay a notebook training/listening bench, not a dashboard.
-- The useful carryover is dataset prompt audit, caption staging, pre-encode
-  command generation, checkpoint/loss visualization, and audition with strength
-  sweeps.
-- Underfit's loss-by-timestep idea is especially valuable and not yet mirrored
-  enough in this notebook.
+- Underfit is the LoRA path.
+- Do not expand local LoRA training, checkpoint inspection, dashboarding, or
+  adapter-control methods here.
+- Keep only boundary knowledge that helps this notebook interpret external
+  Underfit artifacts if needed.
+- Reuse Underfit's research discipline more generally: loss-by-timestep views,
+  fixed audition grids, and early stopping by listening are useful for prompt,
+  residual, and guidance experiments too.
 
 ### LoRA, DoRA, BoRA, LoRA-XS
 
@@ -305,11 +310,10 @@ SVD-derived low-rank bases and trains a much smaller core matrix.
 
 Implication for this repo:
 
-- Existing adapter types in `train_lora.py` are worth comparing empirically in
-  the notebook. Do not assume one type wins for audio style.
-- SA3 LoRA experiments should be judged by generalization, not just lower loss.
-- LoRA-XS-style bases suggest a notebook experiment: SVD basis reuse across
-  related datasets/styles, then compare adapter capacity versus memorization.
+- Adapter papers stay as context for understanding external Underfit results.
+- They are not active local implementation targets.
+- If adapter experiments become necessary later, start by running them in
+  Underfit and importing only the resulting audio/analysis artifacts.
 
 ### Flow Matching and Native Prompt Scoring
 
@@ -374,8 +378,8 @@ control_lane = {
 ```
 
 - First use lanes for measurement, retrieval, and guidance gradients.
-- Only after a lane is observable and useful should it become a sidecar adapter
-  or LoRA conditioning experiment.
+- Only after a lane is observable and useful should it become a sidecar control
+  or sampler-guidance experiment.
 
 ### Textual Inversion, Null-Text Inversion, and Prompt Editing
 
@@ -472,15 +476,15 @@ Risk:
 
 ### 2. Loss-by-Timestep Flow Panel
 
-Evidence: `confirmed` Mode 2 flow helper, `confirmed` Underfit loss-by-timestep
-idea.
+Evidence: `confirmed` Mode 2 flow helper, `paper-inferred` flow matching and
+guidance-diagnostic practice.
 
-Goal: expose whether a prompt, LoRA, or soft prompt explains clean, middle, or
-noisy parts of the SA3 path.
+Goal: expose whether a prompt, soft prompt, residual intervention, or guided
+sample explains clean, middle, or noisy parts of the SA3 path.
 
 Notebook cells:
 
-1. Score prompts/checkpoints over a logSNR grid.
+1. Score prompts/interventions over a logSNR grid.
 2. Plot loss curves by logSNR.
 3. Mark where conditional-delta helps or hurts.
 4. Compare:
@@ -488,7 +492,8 @@ Notebook cells:
    - hard inverted prompt,
    - readable prompt,
    - soft prompt,
-   - LoRA checkpoint.
+   - residual-steered output,
+   - guidance-edited output.
 
 Why it is useful:
 
@@ -648,58 +653,32 @@ Why it is useful:
 - Helps identify stable SA3 layers for mood, density, brightness, rhythm, and
   section role.
 
-### 8. LoRA Underfit Elbow Workbench
+### 8. Dataset Memory as Prompt and Control Curriculum
 
-Evidence: `confirmed` Mode 13, `confirmed` Underfit recommendations.
+Evidence: `confirmed` latent memory, clustering, prompt family, geometry,
+observability, and residual-vector primitives.
 
-Goal: treat LoRA training as a listening research process, not a single final
-checkpoint.
-
-Notebook cells:
-
-1. Read checkpoints and metrics.
-2. Plot total loss and loss-by-timestep if logs permit.
-3. Generate a fixed prompt grid across checkpoints and strengths.
-4. Retrieve nearest training clips for each generated demo.
-5. Flag likely memorization:
-
-```text
-memorization_hint =
-  high similarity to training clip
-  + low prompt generalization
-  + low diversity across seeds
-```
-
-Why it is useful:
-
-- Makes "creative underfit" operational.
-- Gives a clean notebook answer to "which checkpoint should I keep?"
-
-### 9. Dataset Memory as Prompt/LoRA Curriculum
-
-Evidence: `confirmed` latent memory, clustering, prompt family, LoRA captions.
-
-Goal: use latent memory and geometry to build better training captions and
-checkpoint evaluations.
+Goal: use latent memory and geometry to build better prompt search seeds,
+control-lane targets, residual contrast sets, and evaluation splits.
 
 Notebook cells:
 
 1. Encode dataset to memory.
 2. Cluster by SAME summaries plus descriptor lanes.
-3. Generate prompt/caption candidates per cluster.
-4. Stage captions with trigger, tags, paths, and cluster labels.
-5. Train LoRA on different caption curricula:
-   - fixed trigger only,
-   - fixed + tags,
-   - fixed + cluster label,
-   - cluster-specific prompts.
+3. Generate prompt seeds and readable axes per cluster.
+4. Extract representative control lanes per cluster.
+5. Build positive/reference sets for residual vectors and SAME directions.
+6. Create held-out evaluation splits for every method.
+7. Retrieve nearest memory items for any generated output.
 
 Why it is useful:
 
-- Directly tests whether captions change LoRA generalization.
-- Keeps data preparation visible inside the notebook.
+- Converts the dataset from passive material into an experiment curriculum.
+- Gives prompt inversion, residual steering, control lanes, and geometry tests
+  the same source/evaluation structure.
+- Provides a local memorization/novelty check without adding fine-tuning here.
 
-### 10. Continuation as Bridge Search
+### 9. Continuation as Bridge Search
 
 Evidence: `confirmed` composition module and Mode 11, `paper-inferred` music
 production guidance tasks.
@@ -719,7 +698,7 @@ Why it is useful:
 - Turns continuation into a measurable composition primitive.
 - Supports loop and transition experiments without a DAW/app layer.
 
-### 11. Cross-Model Baseline Harness
+### 10. Cross-Model Baseline Harness
 
 Evidence: `paper-inferred` AudioCraft/MusicGen, AudioLDM, TANGO, Stable Audio
 Open.
@@ -743,7 +722,7 @@ Boundary:
 - Do not add app scaffolding or package-lock churn. Keep this optional and
   notebook-local.
 
-### 12. Audio-to-Audio Posterior Guidance
+### 11. Audio-to-Audio Posterior Guidance
 
 Evidence: `paper-inferred` DPS, FreeDoM, Universal Guidance, Apple music
 guidance, `confirmed` SA3 audio-to-audio and inpainting routes.
@@ -775,10 +754,11 @@ Why it is useful:
 P0, required for trust:
 
 - Per-output manifest row with source, operator, seed, prompt, model, params,
-  checkpoint, descriptors, and annotation link.
+  descriptors, and annotation link.
 - A/B/C audio player rows: source, direct decode, SA3 polish.
-- Loss-by-timestep panel for Mode 2 and Mode 13.
-- Checkpoint audition matrix: checkpoint x LoRA strength x prompt.
+- Loss-by-timestep panel for Mode 2, soft prompts, residual steering, and
+  guidance experiments.
+- Memory nearest-neighbor panel for any generated output.
 
 P1, makes research faster:
 
@@ -786,15 +766,18 @@ P1, makes research faster:
 - Control lane editor: compact SVG/HTML envelope editor stored as JSON.
 - Geometry report panel: PCA variance, Mahalanobis movement, boundary loss,
   descriptor deltas.
-- Memory nearest-neighbor panel for any generated output.
+- Dataset curriculum panel: clusters, representative clips, prompt seeds,
+  control lanes, and held-out splits.
 
 P2, expands research cognition:
 
 - Residual feature atlas: layer x feature heatmap with probe accuracy and
   audition links.
 - Latent OT bench: profile/direction/covariance transport/barycenter comparison.
-- LoRA curriculum comparer: caption strategy x checkpoint x memorization hint.
+- Continuation bridge search panel with transition costs and calibration clips.
 - Guidance-gradient sweep panel with loss traces and audio rows.
+- Null-condition inversion comparison panel.
+- Cross-model baseline report for a small fixed task set.
 
 P3, polish only:
 
@@ -836,19 +819,29 @@ Stop criteria:
 
 1. Flow attribution prompt microscope.
    - Minimal code, builds on `flow_prompt.py` and Mode 2.
-2. LoRA underfit elbow workbench.
-   - Builds directly on Mode 13 and Underfit ideas.
+2. Loss-by-timestep flow panel.
+   - Uses the same probe-bank machinery and immediately improves Mode 2
+     interpretability.
 3. SAME control lanes as JSON plus visual editor.
    - Measurement first, no sampler integration yet.
-4. Latent OT style transfer bench.
+4. Dataset memory as prompt and control curriculum.
+   - Gives later prompt, residual, lane, and guidance methods shared evaluation
+     splits and nearest-neighbor checks.
+5. Latent OT style transfer bench.
    - Mostly existing `geometry.py`.
-5. Residual feature atlas.
+6. Continuation as bridge search.
+   - Mostly existing `composition.py`, looping metrics, descriptors, and player
+     rows.
+7. Residual feature atlas.
    - Needs SA3 hooks and careful runtime testing.
-6. Guidance-gradient sampler mode.
-   - Highest payoff, highest integration risk.
-7. SA3 null-condition inversion.
+8. SA3 null-condition inversion.
    - Requires inspecting conditioner/CFG internals.
-8. Cross-model baseline harness.
+9. Guidance-gradient sampler mode.
+   - Highest payoff, highest integration risk; benefits from control lanes and
+     geometry/loss panels first.
+10. Audio-to-audio posterior guidance.
+   - Builds on sampler guidance plus source-preservation losses.
+11. Cross-model baseline harness.
    - Useful after core SA3/SAME methods are stabilized.
 
 ## Open Questions
@@ -863,11 +856,9 @@ Stop criteria:
   intervenable?
 - Does covariance transport outperform mean/std style transfer audibly?
 - Which residual layers carry stable music/audio controls?
-- How early can a LoRA checkpoint be kept before it underfits too much?
-- Can loss-by-timestep predict LoRA checkpoint usefulness better than total
-  loss?
-- Does LoRA strength scheduling across denoising time preserve structure better
-  than global strength?
+- Can memory nearest-neighbor checks separate useful source preservation from
+  memorization-like copying?
+- Which dataset clusters produce prompt/control curricula that generalize?
 - Can sampler-level guidance improve loopability without half-period collapse?
 
 ## Bottom Line
@@ -877,10 +868,14 @@ next move is not more scaffolding. It is better measurement and sharper
 interventions:
 
 ```text
-flow microscope -> checkpoint/listening workbench -> control lanes -> geometry/OT bench
--> residual atlas -> sampler guidance
+flow microscope -> loss-by-timestep panel -> control lanes -> memory curriculum
+-> geometry/OT bench -> bridge search -> residual atlas -> sampler guidance
 ```
 
 This sequence keeps every new method grounded in SA3/SAME objects, preserves the
 expanded notebook, and avoids building product infrastructure before the research
 knows what its controls actually mean.
+
+LoRA is intentionally outside that sequence. When LoRA is needed, use Underfit
+and treat any returned audio/checkpoints as external artifacts for comparison,
+not as a reason to grow local adapter infrastructure here.

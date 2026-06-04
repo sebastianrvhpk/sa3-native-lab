@@ -111,10 +111,10 @@ The current notebook research map and next-method backlog is:
 
 `docs/research/notebook-research-map-and-next-methods.md`
 
-It inventories the repo's notebook/primitives capabilities, summarizes relevant
-external SA3/SAME, LoRA, flow, guidance, control, audio-generation, and
-activation-steering research, and proposes notebook-native experiments without
-app scaffolding.
+It inventories the repo's notebook/primitives capabilities, treats Underfit as
+the external LoRA path, summarizes relevant SA3/SAME, flow, guidance, control,
+audio-generation, and activation-steering research, and proposes
+notebook-native experiments without app scaffolding.
 
 Older root-level research notes are historical context from before this repo was
 consolidated around the combined SA3 Native Lab implementation.
