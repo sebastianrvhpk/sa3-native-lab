@@ -1,5 +1,9 @@
 # Latent Memory to Composition: Primitive Architecture
 
+Status: archived reference. This note predates the current notebook-first SA3
+Native Lab structure. Use it for historical context and vocabulary, not as the
+active implementation plan.
+
 This document turns the previous research ideas into implementation primitives. It is intentionally staged: the first code layer works with already-computed latents or synthetic latents. SAME/SA3 integration comes later, after the local math and data contracts are stable.
 
 Core idea:

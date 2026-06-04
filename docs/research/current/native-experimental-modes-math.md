@@ -1,6 +1,11 @@
 # SA3/SAME Native Experimental Modes: Current Math and Implementation Notes
 
-Status: current for this repo's Colab notebook and helper package as of the latest implementation pass. This document describes experimental primitives built on top of the released Stable Audio 3 code in this repository. It is not an official Stability AI document and it does not claim that these methods are part of SA3 training.
+Status: current core math for this repo's Colab notebook and helper package.
+This document describes experimental primitives built on top of the released
+Stable Audio 3 code in this repository. It is not an official Stability AI
+document and it does not claim that these methods are part of SA3 training. For
+the full current repo/backlog map, see
+`docs/research/current/notebook-research-map-and-next-methods.md`.
 
 Main notebook:
 
@@ -702,7 +707,7 @@ LoRA cells, adapter controls, checkpoint dashboards, or training infrastructure.
 Mode 15 is a measurement mode for the seven stronger operators documented in:
 
 ```text
-docs/research/seven-better-operators.md
+docs/research/methods/seven-better-operators.md
 ```
 
 It starts from a latent collection:

@@ -1,5 +1,8 @@
 # Neural Audio Math Methods for Creative Technologists
 
+Status: archived reference. This is an educational math survey, not the current
+SA3 Native Lab implementation map.
+
 This note threads the mathematical evolution of neural audio generation from a creative-technologist point of view. The goal is not to turn the math into vague metaphors. The goal is to keep the equations visible while translating what each equation means as an artistic machine.
 
 Working perspective:

@@ -1,5 +1,8 @@
 # Neural Audio Generation: Architecture, Math, and Research Timeline
 
+Status: archived reference. This note is a broad historical survey, not the
+current SA3 Native Lab implementation map.
+
 This note is a conceptual bridge from earlier neural audio practice, such as SampleRNN, WaveNet, mel-spectrogram VAEs, Dance Diffusion, and MusicGen, to the current latent/audio-diffusion/control landscape. It is written for experimentation: to make the model families, equations, infrastructure shifts, and internal-representation perspectives legible enough to support later notebooks and implementations.
 
 Core framing:

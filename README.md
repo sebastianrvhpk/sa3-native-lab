@@ -6,7 +6,8 @@ This repository is a combined Colab/research workspace:
 - SAME/SA3 native latent-memory, steering, and prompt-inversion primitives in `latent_audio_primitives/`
 - Colab notebooks in `colab/`
 - research scripts in `scripts/`
-- current experimental math notes in `docs/research/`
+- current notebook research notes in `docs/research/current/`
+- reusable method notes in `docs/research/methods/`
 
 The goal is exploratory research over native SA3/SAME spaces, not a finished product.
 
@@ -81,19 +82,36 @@ The research layer focuses on:
 
 ## Research Docs
 
-The current repo-specific math and implementation map is:
+Start with the research documentation index:
 
-`docs/research/native-experimental-modes-math.md`
+`docs/research/README.md`
+
+The current repo and Markdown structure map is:
+
+`docs/research/current/repo-structure-map.md`
+
+The current notebook research map and next-method backlog is:
+
+`docs/research/current/notebook-research-map-and-next-methods.md`
+
+It inventories the repo's notebook/primitives capabilities, treats Underfit as
+the external LoRA path, summarizes relevant SA3/SAME, flow, guidance, control,
+audio-generation, and activation-steering research, and tracks notebook-native
+experiments without app scaffolding.
+
+The current repo-specific math and implementation notes are:
+
+`docs/research/current/native-experimental-modes-math.md`
 
 That document covers the current Colab modes, including renoise, selective latent
 renoise, blur/sharpen/filtering, cross-audio grafting, cyclic sampler mixing,
 neural latent DSP, soft prompt inversion, Mode 2 beam prompt inversion, SAME
 statistical controls, residual steering, LatCH-style sidecars, LoRA boundaries,
-and Mode 15 geometry audits.
+Mode 15 geometry audits, and the newer notebook backlog modes.
 
 The seven-operator research layer is:
 
-`docs/research/seven-better-operators.md`
+`docs/research/methods/seven-better-operators.md`
 
 It maps latent geometry, covariance transport, periodic operators, direct
 guidance, prompt inversion, residual feature discovery, and control
@@ -101,20 +119,17 @@ observability to the current helper modules and Colab exposure.
 
 The neural-latent DSP notes are:
 
-`docs/research/neural-latent-dsp.md`
+`docs/research/methods/neural-latent-dsp.md`
 
 They document Mode 0h: latent dynamics, soft clipping, latent-time FFT gain and
 phase operators, magnitude/phase grafting, PCA component gain, SA3 polish, and
 MIR descriptor audits.
 
-The current notebook research map and next-method backlog is:
+Older root-level research notes now live in `docs/archive/`. They are historical
+context from before this repo was consolidated around the combined SA3 Native
+Lab implementation.
 
-`docs/research/notebook-research-map-and-next-methods.md`
-
-It inventories the repo's notebook/primitives capabilities, treats Underfit as
-the external LoRA path, summarizes relevant SA3/SAME, flow, guidance, control,
-audio-generation, and activation-steering research, and proposes
-notebook-native experiments without app scaffolding.
-
-Older root-level research notes are historical context from before this repo was
-consolidated around the combined SA3 Native Lab implementation.
+Stable Audio 3 upstream docs are preserved in `docs/guides/` and
+`docs/workflows/`. Local LoRA material there is legacy/upstream reference only;
+the active LoRA path for this project is an external handoff to
+`dada-bots/underfit`.

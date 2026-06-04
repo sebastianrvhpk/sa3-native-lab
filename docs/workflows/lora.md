@@ -1,5 +1,11 @@
 # LoRA in Stable Audio 3
 
+> SA3 Native Lab status: this is legacy/upstream Stable Audio 3 LoRA reference
+> material. The active LoRA path for this notebook-first project is externalized
+> to [dada-bots/underfit](https://github.com/dada-bots/underfit). Do not treat
+> this document as an active local backlog for new notebook cells, dashboards, or
+> training infrastructure.
+
 LoRA fine-tuning lets you adapt a Stable Audio 3 model to a specific style, sound, or domain without retraining the whole model. The result is a small `.safetensors` file (~50–200 MB) that you load on top of any base checkpoint at inference time — stackable, adjustable in strength, and swappable without touching the base weights.
 
 ## What You Need

@@ -4,7 +4,7 @@ Current implementation note: this is an earlier research map. The current
 repo-specific Colab mode math and implementation notes live in:
 
 ```text
-docs/research/native-experimental-modes-math.md
+docs/research/current/native-experimental-modes-math.md
 ```
 
 Scope: open-ended research notes on Stable Audio 3, SAME, LatCH, activation steering, inference-time guidance, and LMDM-style live diffusion. This document is not an implementation plan for a final product. It is a measurement and experiment map for discovering what current audio latent models afford.
@@ -18,7 +18,7 @@ Evidence labels used below:
 - Speculative direction: possible future work that likely needs training, architecture changes, new data, or all three.
 - Unknown: not established from the sources inspected.
 
-Historical workspace status for this note: this document was originally written before the combined SA3 Native Lab repo was assembled. It is kept for literature context. For current implementation details, use `docs/research/native-experimental-modes-math.md`.
+Historical workspace status for this note: this document was originally written before the combined SA3 Native Lab repo was assembled. It is kept for literature context. For current implementation details, use `docs/research/current/native-experimental-modes-math.md`.
 
 ## Primary Sources
 
