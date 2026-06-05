@@ -2,21 +2,46 @@
 
 Status: current as of 2026-06-04.
 
-This audit classifies tracked Python files from the current notebook-first
-perspective. It separates files used by the expanded Colab notebook from
-standalone research scripts, vendored upstream SA3 code, MLX reference code, and
-tests.
+This audit describes the Python surface after removing the vendored
+`Stability-AI/stable-audio-3` source copy. This repo now owns the notebook,
+research primitives, scripts, and tests. The SA3 runtime is an external checkout
+installed by the notebook setup.
 
-## Counts
+## Current Python Areas
 
-| Area | Files | Current role |
-|---|---:|---|
-| `latent_audio_primitives/` | 34 | Notebook library and tested research primitives. |
-| `scripts/` | 15 | Notebook-adjacent command-line helpers and validation. |
-| `stable_audio_3/` | 31 | Vendored SA3 runtime/source package. |
-| `optimized/mlx/` | 16 | Separate Apple Silicon / MLX reference path. |
-| `tests/` | 27 | Primitive and adapter tests. |
-| `colab/` | 1 | Older standalone Colab helper script. |
+| Area | Role |
+|---|---|
+| `latent_audio_primitives/` | Notebook library and tested SA3/SAME research primitives. |
+| `scripts/` | Notebook-adjacent command-line helpers and validation. |
+| `tests/` | Primitive and adapter tests using fake models/synthetic tensors. |
+
+Removed upstream/reference areas:
+
+- `stable_audio_3/`
+- `optimized/mlx/`
+- `docs/guides/`
+- `docs/workflows/`
+- `README.stable-audio-3.md`
+- `LICENSE.stability-ai-stable-audio-3`
+
+## Runtime Boundary
+
+The repo still uses `stable_audio_3` as a runtime import, but the module now
+comes from an external upstream checkout:
+
+```text
+https://github.com/Stability-AI/stable-audio-3
+```
+
+The Colab setup installs upstream SA3 first, then installs this repo:
+
+```text
+/content/stable-audio-3     -> provides stable_audio_3
+/content/sa3-native-lab     -> provides latent_audio_primitives and notebook assets
+```
+
+Local scripts that load model weights require the same boundary: install the
+upstream SA3 package before running them.
 
 ## Keep
 
@@ -33,8 +58,7 @@ the test suite covers the core primitive families:
 - Control lanes, curricula, observability, guidance, residual features,
   descriptors, tokenizer vocabulary, and Colab audio player helpers.
 
-Package `__init__.py` files are not standalone features, but they are needed for
-imports and package exports.
+Package `__init__.py` files are needed for imports and package exports.
 
 ### `scripts/`
 
@@ -50,88 +74,34 @@ Keep the documented research/validation scripts:
 - `extract_audio_residual_vectors.py`: audio-pair residual vectors.
 - `extract_audio_style_vectors.py`: SAME direction extraction from audio folders.
 - `run_sa3_alpha_sweep.py`: residual steering sweep wrapper.
+- `pre_encode_dataset.py`: captioned `.npy`/`.json` exporter that depends on
+  upstream `stable_audio_3.data`.
 - `_runtime.py`: helper imported by direct script execution as `_runtime`.
-
-### `stable_audio_3/` Runtime
-
-Keep the inference/model side:
-
-- `stable_audio_3/__init__.py`
-- `stable_audio_3/model.py`
-- `stable_audio_3/cli.py`
-- `stable_audio_3/model_configs.py`
-- `stable_audio_3/loading_utils.py`
-- `stable_audio_3/factory.py`
-- `stable_audio_3/inference/`
-- `stable_audio_3/models/`
-- `stable_audio_3/data/`
-- `stable_audio_3/verbose.py`
-
-`stable_audio_3/data/` is still used by `scripts/pre_encode_dataset.py` and by
-looping helpers that reuse upstream padding utilities.
-
-Keep `stable_audio_3/models/lora/` for now because `stable_audio_3/model.py` and
-`stable_audio_3/models/dit.py` import LoRA helpers as part of the upstream
-runtime wrapper.
 
 ### `tests/`
 
-Keep the full test suite. It is currently the main protection for reusable
-research math without requiring model weights.
+Keep the full test suite. It is the main protection for reusable research math
+without requiring model weights.
 
-## Delete Candidates
+## Removed In This Cleanup
 
-These look safe to remove in a cleanup commit:
-
-| File | Reason |
+| Path | Reason |
 |---|---|
-| `colab/sa3_medium_l4_latent_memory.py` | Older notebook-style standalone helper. It has no active references and duplicates the expanded notebook/runbook path. |
-| `scripts/build_positive_audio_style_profile.py` | Undocumented convenience wrapper. Its behavior is covered by `encode_dataset_same.py` plus `build_same_style_profile.py`. |
-| `stable_audio_3/training/diffusion.py` | No active notebook/script references; import currently fails because it imports the removed `stable_audio_3.interface` package. |
-| `stable_audio_3/training/utils.py` | No active notebook/script references; import currently fails because it imports the removed `stable_audio_3.interface` package. |
+| `colab/sa3_medium_l4_latent_memory.py` | Older notebook-style helper duplicated by the expanded notebook/runbook. |
+| `scripts/build_positive_audio_style_profile.py` | Undocumented wrapper covered by `encode_dataset_same.py` plus `build_same_style_profile.py`. |
+| `stable_audio_3/` | Upstream source now cloned/installed externally. |
+| `optimized/mlx/` | Upstream/reference implementation now left to upstream SA3. |
+| `docs/guides/`, `docs/workflows/`, upstream README/license/images | Upstream reference material now lives in the upstream repo. |
 
-The two training files are the clearest technical residue: they are neither
-part of the current notebook workflow nor importable after the interface cleanup.
+## Remaining Review Items
 
-## Review Before Deleting
-
-| Path | Why review first |
+| Path | Question |
 |---|---|
-| `scripts/pre_encode_dataset.py` | Older `.npy`/`.json` latent exporter using upstream `stable_audio_3.data`. It is referenced in docs and can support captioned latent datasets, but it overlaps with the canonical `encode_dataset_same.py` memory format. |
-| `optimized/mlx/` | Separate MLX reference path, not imported by the notebook. Keep if Apple Silicon inference remains useful; remove if the repo is meant to be Colab/notebook-only. |
-| `stable_audio_3/data/` | Keep while `pre_encode_dataset.py` and looping helpers use it. Revisit only if those paths are removed or rewritten. |
-| `stable_audio_3/models/lora/` | Runtime import dependency for the SA3 wrapper and DiT. Removing it requires intentionally stripping LoRA support from upstream model code. |
+| `scripts/pre_encode_dataset.py` | Keep as captioned latent exporter, or fold into `encode_dataset_same.py` so all dataset encoding writes the same memory format? |
 
-## Import Checks
+## Validation Commands
 
-Observed during audit:
-
-```text
-uv run python scripts/*.py --help
-```
-
-All script help paths completed.
-
-```text
-import stable_audio_3.training.diffusion
-import stable_audio_3.training.utils
-```
-
-Both training imports fail because they reference `stable_audio_3.interface`,
-which is no longer present.
-
-## Recommended Cleanup Order
-
-1. Remove the two direct orphans:
-   - `colab/sa3_medium_l4_latent_memory.py`
-   - `scripts/build_positive_audio_style_profile.py`
-2. Remove `stable_audio_3/training/` because it is broken and outside the
-   current notebook workflow.
-3. Decide whether `scripts/pre_encode_dataset.py` remains useful as a captioned
-   latent exporter or should be folded into `encode_dataset_same.py`.
-4. Decide whether `optimized/mlx/` is still a desired separate reference path.
-
-After each deletion pass, run:
+After Python-surface cleanup, run:
 
 ```bash
 uv run python scripts/validate_colab_notebook.py --skip-setup

@@ -28,13 +28,7 @@ alongside native SA3/SAME methods.
 | `tests/` | Unit tests for reusable primitives, adapters, notebook helpers, and math utilities. | Active |
 | `docs/research/current/` | Current notebook map, mode math, and repo structure. | Active |
 | `docs/research/methods/` | Method notes that support active or near-term notebook modes. | Active reference |
-| `docs/guides/` | Stable Audio 3 upstream/reference model docs and images. | Reference |
-| `docs/workflows/` | Stable Audio 3 upstream/reference workflow docs. | Reference |
-| `stable_audio_3/` | Vendored Stable Audio 3 source package. | Upstream base |
-| `optimized/mlx/` | Experimental MLX implementation/reference path. | Separate reference |
 | `.codex/skills/` | Repo-local Codex skill instructions for notebook research work. | Agent workflow |
-| `README.stable-audio-3.md` | Preserved upstream Stable Audio 3 README. | Upstream reference |
-| `LICENSE.stability-ai-stable-audio-3` | Preserved upstream license. | Required reference |
 
 ## Execution Surfaces
 
@@ -43,7 +37,7 @@ alongside native SA3/SAME methods.
 | Colab notebook | `colab/sa3_same_native_experimental_modes.ipynb` | Audio files, prompts, SA3/SAME checkpoints, datasets | Audio files, tables, manifests, plots, player cells | Main research instrument |
 | Notebook validation | `scripts/validate_colab_notebook.py` | Notebook JSON | validation result | Run after notebook changes |
 | Primitive tests | `tests/test_*.py` | Fake tensors/models and helper fixtures | pytest results | Protect reusable math without model weights |
-| SA3 CLI | `stable-audio` / `stable_audio_3.cli` | Prompts/audio/checkpoints | generated audio | Upstream package surface |
+| Upstream SA3 runtime | external `Stability-AI/stable-audio-3` checkout | Prompts/audio/checkpoints | generated audio and SAME latents | Installed separately by notebook setup |
 | Research scripts | `scripts/*.py` | datasets, prompts, model handles | latents, vectors, profiles, audio | Script support for notebook experiments |
 
 ## Capability Map
@@ -103,16 +97,6 @@ dataset folders
 | `colab/sa3_medium_l4_runbook.md` | Practical Colab L4 runbook and historical notebook notes. |
 | `docs/codex_skills.md` | Repo-local Codex skill usage and install notes. |
 
-### Stable Audio 3 Reference Docs
-
-| File | Role |
-|---|---|
-| `README.stable-audio-3.md` | Upstream Stable Audio 3 README. |
-| `docs/guides/model-overview.md` | Upstream/reference SA3 model overview. |
-| `docs/guides/prompting.md` | Upstream/reference prompt guide. |
-| `docs/workflows/autoencoder.md` | Upstream/reference SAME autoencoder workflow. |
-| `docs/workflows/inference.md` | Upstream/reference inference workflow. |
-
 ### Local Agent Workflow Docs
 
 | File | Role |
@@ -121,20 +105,13 @@ dataset folders
 | `.codex/skills/sa3-same-primitive-researcher/SKILL.md` | Tested SA3/SAME primitive implementation workflow. |
 | `.codex/skills/sa3-research-map-curator/SKILL.md` | Current research documentation workflow. |
 
-### Separate Reference
-
-| File | Role |
-|---|---|
-| `optimized/mlx/README.md` | Experimental pure-MLX SA3 reference path. |
-
 ## Documentation Ownership
 
 - Current notebook implementation claims belong in `docs/research/current/`.
 - Reusable method notes belong in `docs/research/methods/`.
 - Add broad literature material when it is distilled into current notebook
   decisions.
-- Stable Audio 3 upstream/reference docs live under `docs/guides/` and
-  `docs/workflows/`.
+- Stable Audio 3 upstream/reference docs live in the external upstream repo.
 - Notebook behavior should be changed directly in
   `colab/sa3_same_native_experimental_modes.ipynb`, with reusable code moved
   into `latent_audio_primitives/` when it becomes shared or test-worthy.

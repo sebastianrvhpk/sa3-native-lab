@@ -26,8 +26,8 @@ def _require_stable_audio_3():
         from stable_audio_3 import AutoencoderModel, StableAudioModel
     except ImportError as exc:
         raise StableAudio3IntegrationError(
-            "stable_audio_3 is not importable. Install the released Stability-AI/stable-audio-3 "
-            "package or add that repository to PYTHONPATH."
+            "stable_audio_3 is not importable. Clone and install "
+            "https://github.com/Stability-AI/stable-audio-3 or add that repository to PYTHONPATH."
         ) from exc
     return StableAudioModel, AutoencoderModel
 

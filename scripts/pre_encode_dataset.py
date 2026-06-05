@@ -27,14 +27,28 @@ import numpy as np
 import torch
 from torch.nn import functional as F
 
-from stable_audio_3 import AutoencoderModel
-from stable_audio_3.model_configs import ae_models
-from stable_audio_3.data.dataset import (
-    LocalDatasetConfig,
-    SampleDataset,
-    collation_fn,
-)
 from _runtime import resolve_torch_device
+
+
+UPSTREAM_SA3_ERROR = (
+    "stable_audio_3 is not importable. Clone and install "
+    "https://github.com/Stability-AI/stable-audio-3 before running this script."
+)
+
+SA3_AUTOENCODER_MODELS = ("same-s", "same-l")
+
+
+def _load_stable_audio_dataset_api():
+    try:
+        from stable_audio_3 import AutoencoderModel
+        from stable_audio_3.data.dataset import (
+            LocalDatasetConfig,
+            SampleDataset,
+            collation_fn,
+        )
+    except ImportError as exc:
+        raise RuntimeError(UPSTREAM_SA3_ERROR) from exc
+    return AutoencoderModel, LocalDatasetConfig, SampleDataset, collation_fn
 
 
 def caption_metadata_fn(info, _audio):
@@ -46,6 +60,9 @@ def caption_metadata_fn(info, _audio):
 
 def main(args):
     device = resolve_torch_device(args.device)
+    AutoencoderModel, LocalDatasetConfig, SampleDataset, collation_fn = (
+        _load_stable_audio_dataset_api()
+    )
 
     ae = AutoencoderModel.from_pretrained(args.model, device=str(device))
     if args.model_half:
@@ -135,7 +152,7 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Pre-encode audio dataset to latents")
-    parser.add_argument("--model", choices=list(ae_models), default="same-l")
+    parser.add_argument("--model", choices=SA3_AUTOENCODER_MODELS, default="same-l")
     parser.add_argument(
         "--data_dir",
         required=True,

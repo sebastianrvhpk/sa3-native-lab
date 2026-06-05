@@ -32,11 +32,13 @@ Then verify:
 Expected GPU: NVIDIA L4, usually 24 GB VRAM.
 
 The notebook `sa3_same_native_experimental_modes.ipynb` is configured as a
-top-to-bottom Colab L4 setup for the combined Git repo. The setup/model/smoke-test defaults are ON. The
+top-to-bottom Colab L4 setup for upstream SA3 plus this notebook repo. The
+setup/model/smoke-test defaults are ON. The
 only expected manual actions are:
 
-1. Confirm `COMBINED_REPO_URL` points to `https://github.com/sebastianrvhpk/sa3-native-lab.git`.
-2. Paste a Hugging Face token when prompted.
+1. Confirm `SA3_REPO_URL` points to `https://github.com/Stability-AI/stable-audio-3.git`.
+2. Confirm `COMBINED_REPO_URL` points to `https://github.com/sebastianrvhpk/sa3-native-lab.git`.
+3. Paste a Hugging Face token when prompted.
 
 ## Access Requirements
 
@@ -73,16 +75,20 @@ the notebook is actually executing.
 
 Colab images change over time, so the safest pattern is:
 
-1. Clone this combined repo to `/content/sa3-native-lab`.
-2. Install its dependencies into the Colab Python environment with `uv pip install --system`.
-3. Install Flash Attention 2 after Torch is present.
-4. Restart the runtime if Colab asks.
+1. Clone upstream SA3 to `/content/stable-audio-3`.
+2. Clone this repo to `/content/sa3-native-lab`.
+3. Install both repos into the Colab Python environment with `uv pip install --system`.
+4. Install Flash Attention 2 after Torch is present.
+5. Restart the runtime if Colab asks.
 
 Before Flash Attention, force the PyTorch wheel tuple expected by the SA3 repo:
 
 ```bash
 pip install -U uv
 uv pip install --system torch==2.7.1 torchaudio==2.7.1 --index-url https://download.pytorch.org/whl/cu126
+git clone https://github.com/Stability-AI/stable-audio-3.git /content/stable-audio-3
+git clone https://github.com/sebastianrvhpk/sa3-native-lab.git /content/sa3-native-lab
+uv pip install --system -e /content/stable-audio-3
 uv pip install --system -e /content/sa3-native-lab
 uv pip install --system --force-reinstall numpy==2.2.6
 python -m pip uninstall -y scipy scikit-learn sklearn torchvision

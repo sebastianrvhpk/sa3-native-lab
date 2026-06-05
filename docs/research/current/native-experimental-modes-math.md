@@ -2,8 +2,8 @@
 
 Status: current core math for this repo's Colab notebook and helper package.
 This document describes experimental primitives built on top of the released
-Stable Audio 3 code in this repository. For the full current repo/backlog map, see
-`docs/research/current/notebook-research-map-and-next-methods.md`.
+Stable Audio 3 code installed from the upstream repository. For the full current
+repo/backlog map, see `docs/research/current/notebook-research-map-and-next-methods.md`.
 
 Main notebook:
 

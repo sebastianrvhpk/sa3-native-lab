@@ -1,8 +1,7 @@
 # SA3 Native Lab
 
-This repository is a combined Colab/research workspace:
+This repository is a Colab/research workspace:
 
-- official Stable Audio 3 source package in `stable_audio_3/`
 - SAME/SA3 native latent-memory, steering, and prompt-inversion primitives in `latent_audio_primitives/`
 - Colab notebooks in `colab/`
 - research scripts in `scripts/`
@@ -13,17 +12,12 @@ The goal is exploratory research over native SA3/SAME spaces.
 
 ## Upstream
 
-The Stable Audio 3 source in this repository comes from:
+Stable Audio 3 is used as an external upstream runtime:
 
 https://github.com/Stability-AI/stable-audio-3
 
-The upstream README is preserved as:
-
-`README.stable-audio-3.md`
-
-The upstream license is preserved as:
-
-`LICENSE.stability-ai-stable-audio-3`
+The Colab setup clones and installs that repo separately, then installs this
+repo's notebook/primitives layer.
 
 ## Colab L4
 
@@ -34,10 +28,11 @@ Push this repo to GitHub, then use the Colab notebook:
 The notebook is already configured to clone:
 
 ```python
+SA3_REPO_URL = "https://github.com/Stability-AI/stable-audio-3.git"
 COMBINED_REPO_URL = "https://github.com/sebastianrvhpk/sa3-native-lab.git"
 ```
 
-The notebook installs this single repo. No zip upload is needed.
+The notebook installs upstream SA3 plus this repo. No zip upload is needed.
 
 ## Local Install
 
@@ -45,10 +40,20 @@ The notebook installs this single repo. No zip upload is needed.
 uv pip install --system -e .
 ```
 
+Install upstream Stable Audio 3 separately when running scripts that load
+SA3/SAME weights:
+
+```bash
+git clone https://github.com/Stability-AI/stable-audio-3.git ../stable-audio-3
+uv pip install --system -e ../stable-audio-3
+uv pip install --system -e .
+```
+
 For SA3 Medium on Linux CUDA:
 
 ```bash
 uv pip install --system torch==2.7.1 torchaudio==2.7.1 --index-url https://download.pytorch.org/whl/cu126
+uv pip install --system -e ../stable-audio-3
 uv pip install --system -e .
 uv pip install --system --force-reinstall numpy==2.2.6
 python -m pip uninstall -y scipy scikit-learn sklearn torchvision
@@ -128,6 +133,5 @@ MIR descriptor audits.
 The current roadmap distills earlier broad research notes. Git history preserves
 the source notes.
 
-Stable Audio 3 upstream docs are preserved in `docs/guides/` and
-`docs/workflows/`. LoRA work uses `dada-bots/underfit`, with exported artifacts
-available for notebook comparison.
+LoRA work uses `dada-bots/underfit`, with exported artifacts available for
+notebook comparison.

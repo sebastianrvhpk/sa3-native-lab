@@ -20,9 +20,9 @@ are organized around that scope:
 - [Native experimental modes math](current/native-experimental-modes-math.md):
   core SA3/SAME math, mode taxonomy, prompt-flow scoring, and implementation
   notes for the expanded Colab notebook.
-- [Python surface audit](current/python-surface-audit.md): current keep/delete
-  map for notebook libraries, research scripts, upstream SA3 code, MLX
-  reference code, and tests.
+- [Python surface audit](current/python-surface-audit.md): current Python
+  surface map for notebook libraries, research scripts, tests, and external SA3
+  runtime assumptions.
 
 ## Method References
 
@@ -37,10 +37,9 @@ are organized around that scope:
 - [Colab L4 runbook](../../colab/sa3_medium_l4_runbook.md): historical and
   practical Colab notes for SA3 Medium on L4.
 - [Codex skills](../codex_skills.md): repo-local agent workflow skills.
-- [Stable Audio 3 guide docs](../guides/model-overview.md): upstream/reference
-  model documentation.
-- [Stable Audio 3 workflow docs](../workflows/inference.md): upstream/reference
-  inference and autoencoder documentation.
+Stable Audio 3 runtime docs live in the upstream
+[Stability-AI/stable-audio-3](https://github.com/Stability-AI/stable-audio-3)
+repo.
 
 LoRA work uses [dada-bots/underfit](https://github.com/dada-bots/underfit).
 Exported Underfit audio, checkpoints, and run notes can be compared through the
