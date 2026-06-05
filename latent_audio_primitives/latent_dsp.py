@@ -1,3 +1,5 @@
+"""DSP-like operations over learned SAME latent trajectories."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

@@ -1,3 +1,5 @@
+"""Shared notebook records for searchable SAME latent audio items."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

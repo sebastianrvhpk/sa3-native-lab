@@ -1,3 +1,5 @@
+"""Periodicity and loop-boundary measurements over SAME latent trajectories."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -10,6 +12,8 @@ from .schema import LatentItem
 
 @dataclass(frozen=True, slots=True)
 class PeriodicityReport:
+    """Compact loop and periodicity diagnostics for one latent sequence."""
+
     best_lag: int
     best_score: float
     boundary_l2: float
@@ -105,6 +109,8 @@ def periodicity_report(
     max_lag: int | None = None,
     boundary_window: int = 8,
 ) -> PeriodicityReport:
+    """Compute loop-boundary and latent-time periodicity diagnostics."""
+
     lag, score = best_period_lag(latent, min_lag=min_lag, max_lag=max_lag)
     _total, boundary, velocity = loop_boundary_loss(latent, window=boundary_window)
     centroid = latent_spectral_centroid(latent)

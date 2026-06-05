@@ -1,3 +1,5 @@
+"""Selective SAME channel/time renoise and donor-graft helpers."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

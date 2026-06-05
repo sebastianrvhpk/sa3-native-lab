@@ -1,3 +1,5 @@
+"""SAME latent geometry, whitening, distance, and transport utilities."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -89,6 +91,8 @@ def fit_latent_geometry(
 
 
 def pca_project(latent: LatentItem | np.ndarray, geometry: LatentGeometry, *, whiten: bool = False) -> np.ndarray:
+    """Project latent frames into the fitted PCA geometry."""
+
     z = _check_latent_dim(as_time_major(latent), geometry.dim)
     coeffs = (z - geometry.mean) @ geometry.components.T
     if whiten:
@@ -97,6 +101,8 @@ def pca_project(latent: LatentItem | np.ndarray, geometry: LatentGeometry, *, wh
 
 
 def pca_reconstruct(coeffs: np.ndarray, geometry: LatentGeometry, *, whitened: bool = False) -> np.ndarray:
+    """Reconstruct latent frames from PCA coefficients."""
+
     c = np.asarray(coeffs, dtype=np.float32)
     if c.ndim != 2 or c.shape[1] != geometry.components.shape[0]:
         raise ValueError(

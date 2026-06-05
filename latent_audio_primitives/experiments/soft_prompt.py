@@ -1,3 +1,5 @@
+"""Soft conditioning optimization and audition hooks for frozen SA3."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

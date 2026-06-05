@@ -1,3 +1,5 @@
+"""Time-varying evidence lanes for audio and SAME latent trajectories."""
+
 from __future__ import annotations
 
 import json
@@ -138,6 +140,8 @@ def audio_envelope_lane(
 
 
 def normalize_control_lane(lane: ControlLane, *, mode: str = "minmax", eps: float = 1e-8) -> ControlLane:
+    """Normalize lane values while preserving alignment metadata."""
+
     values = lane.values.astype(np.float32)
     if mode == "minmax":
         lo = float(values.min())
@@ -162,6 +166,8 @@ def normalize_control_lane(lane: ControlLane, *, mode: str = "minmax", eps: floa
 
 
 def resample_control_lane(lane: ControlLane, target_frames: int, *, target_rate_hz: float | None = None) -> ControlLane:
+    """Interpolate a lane to a target frame count for comparison or display."""
+
     target_frames = int(target_frames)
     if target_frames < 1:
         raise ValueError("target_frames must be at least 1")
@@ -184,6 +190,8 @@ def resample_control_lane(lane: ControlLane, target_frames: int, *, target_rate_
 
 
 def control_lane_distance(a: ControlLane, b: ControlLane, *, normalize: bool = True) -> float:
+    """Return RMS distance between two lanes after frame-count alignment."""
+
     frames = max(a.frames, b.frames)
     av = resample_control_lane(a, frames).values
     bv = resample_control_lane(b, frames).values
@@ -194,6 +202,8 @@ def control_lane_distance(a: ControlLane, b: ControlLane, *, normalize: bool = T
 
 
 def control_lane_similarity(a: ControlLane, b: ControlLane) -> float:
+    """Return cosine similarity between z-scored, frame-aligned lane values."""
+
     frames = max(a.frames, b.frames)
     av = normalize_control_lane(ControlLane(a.name, resample_control_lane(a, frames).values, a.rate_hz), mode="zscore").values
     bv = normalize_control_lane(ControlLane(b.name, resample_control_lane(b, frames).values, b.rate_hz), mode="zscore").values
@@ -202,6 +212,8 @@ def control_lane_similarity(a: ControlLane, b: ControlLane) -> float:
 
 
 def save_control_lanes(lanes: Sequence[ControlLane], path: str | Path) -> Path:
+    """Save notebook control lanes as a portable JSON artifact."""
+
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps([lane.to_dict() for lane in lanes], indent=2), encoding="utf-8")
@@ -209,6 +221,8 @@ def save_control_lanes(lanes: Sequence[ControlLane], path: str | Path) -> Path:
 
 
 def load_control_lanes(path: str | Path) -> list[ControlLane]:
+    """Load notebook control lanes from a JSON artifact."""
+
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
     if not isinstance(payload, list):
         raise ValueError("control lane file must contain a list")

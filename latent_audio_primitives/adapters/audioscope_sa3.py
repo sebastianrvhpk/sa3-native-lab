@@ -1,3 +1,5 @@
+"""Residual activation capture and steering hooks for SA3 research cells."""
+
 from __future__ import annotations
 
 from contextlib import contextmanager
@@ -58,6 +60,8 @@ def get_dit_layers(model: Any) -> list[Any]:
 
 @dataclass
 class LayerActivationStore:
+    """Captured residual activations for one SA3 transformer layer."""
+
     layer_idx: int
     activations: list[Any] = field(default_factory=list)
 

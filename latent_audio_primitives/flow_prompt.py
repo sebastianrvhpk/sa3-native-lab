@@ -1,3 +1,5 @@
+"""Frozen-SA3 flow prompt scoring and prompt attribution helpers."""
+
 from __future__ import annotations
 
 import math
@@ -61,8 +63,9 @@ def sa3_flow_losses_for_prompts(
     """Score prompts against target SAME/SA3 latents with a frozen flow model.
 
     Lower loss means the frozen SA3 vector field better matches the straight
-    data-to-noise velocity for the target latent under that text condition. The
-    app wraps these losses as higher-is-better scores by negating them.
+    data-to-noise velocity for the target latent under that text condition.
+    Notebook ranking cells can negate these losses when a higher-is-better
+    score is more convenient.
     """
 
     torch = _require_torch()
@@ -266,16 +269,22 @@ def prompt_leave_one_out_attribution(
 
 
 def timesteps_from_logsnr_values(logsnr_values: Sequence[float] | str | None) -> list[float]:
+    """Convert logSNR probe values to SA3 flow timesteps."""
+
     values = parse_float_sequence(logsnr_values)
     return [float(1.0 / (1.0 + math.exp(float(value)))) for value in values]
 
 
 def logsnr_from_timestep(timestep: float, *, eps: float = 1e-8) -> float:
+    """Convert a flow timestep to the matching logSNR value."""
+
     t = min(max(float(timestep), eps), 1.0 - eps)
     return float(math.log((1.0 - t) / t))
 
 
 def parse_float_sequence(value: Sequence[float] | str | None) -> list[float]:
+    """Parse comma/semicolon text or numeric sequences into float probes."""
+
     if value is None:
         return []
     if isinstance(value, str):
@@ -285,6 +294,8 @@ def parse_float_sequence(value: Sequence[float] | str | None) -> list[float]:
 
 
 def flow_velocity_target(target: Any, noise: Any, *, convention: str):
+    """Return the straight-flow velocity target under an explicit convention."""
+
     if convention == "noise_minus_data":
         return noise - target
     if convention == "data_minus_noise":

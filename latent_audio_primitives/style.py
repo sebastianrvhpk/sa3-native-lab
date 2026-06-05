@@ -1,3 +1,5 @@
+"""SAME latent style profiles, contrastive directions, and persistence."""
+
 from __future__ import annotations
 
 import json
@@ -168,6 +170,8 @@ def apply_profile_to_item(
     match_std: bool = True,
     item_id: str | None = None,
 ) -> LatentItem:
+    """Return a new LatentItem after profile attraction, preserving metadata."""
+
     latent = apply_profile_attraction(item, profile, alpha=alpha, match_std=match_std)
     metadata = dict(item.metadata)
     metadata["style_profile"] = profile.name
@@ -186,6 +190,8 @@ def apply_profile_to_item(
 
 
 def save_style_profile(profile: LatentStyleProfile, path: str | Path) -> Path:
+    """Save a SAME latent style profile as an ``.npz`` artifact."""
+
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     np.savez(
@@ -203,6 +209,8 @@ def save_style_profile(profile: LatentStyleProfile, path: str | Path) -> Path:
 
 
 def load_style_profile(path: str | Path) -> LatentStyleProfile:
+    """Load a SAME latent style profile from an ``.npz`` artifact."""
+
     with np.load(Path(path), allow_pickle=False) as data:
         return LatentStyleProfile(
             name=str(data["name"]),
@@ -216,6 +224,8 @@ def load_style_profile(path: str | Path) -> LatentStyleProfile:
 
 
 def save_style_direction(direction: LatentStyleDirection, path: str | Path) -> Path:
+    """Save a SAME latent style direction as an ``.npz`` artifact."""
+
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     np.savez(
@@ -234,6 +244,8 @@ def save_style_direction(direction: LatentStyleDirection, path: str | Path) -> P
 
 
 def load_style_direction(path: str | Path) -> LatentStyleDirection:
+    """Load a SAME latent style direction from an ``.npz`` artifact."""
+
     with np.load(Path(path), allow_pickle=False) as data:
         return LatentStyleDirection(
             name=str(data["name"]),

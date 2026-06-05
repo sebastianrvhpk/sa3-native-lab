@@ -1,3 +1,5 @@
+"""Core latent shape, summary, distance, and boundary math helpers."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -59,6 +61,8 @@ def latent_summary(
 
 
 def cosine_similarity(a: np.ndarray, b: np.ndarray, *, eps: float = 1e-8) -> float:
+    """Return cosine similarity for two flat latent summary vectors."""
+
     va = np.asarray(a, dtype=np.float32).reshape(-1)
     vb = np.asarray(b, dtype=np.float32).reshape(-1)
     if va.shape != vb.shape:
@@ -70,6 +74,8 @@ def cosine_similarity(a: np.ndarray, b: np.ndarray, *, eps: float = 1e-8) -> flo
 
 
 def euclidean_distance(a: np.ndarray, b: np.ndarray) -> float:
+    """Return Euclidean distance for two flat latent summary vectors."""
+
     va = np.asarray(a, dtype=np.float32).reshape(-1)
     vb = np.asarray(b, dtype=np.float32).reshape(-1)
     if va.shape != vb.shape:

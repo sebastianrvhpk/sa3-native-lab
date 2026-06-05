@@ -1,3 +1,5 @@
+"""Small descriptor-target scoring helpers for memory and selection tasks."""
+
 from __future__ import annotations
 
 from collections.abc import Mapping

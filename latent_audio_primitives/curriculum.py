@@ -1,3 +1,5 @@
+"""Dataset-memory clustering and heldout selection for notebook curricula."""
+
 from __future__ import annotations
 
 import re

@@ -1,3 +1,5 @@
+"""Audio-set residual vector extraction for SA3 steering probes."""
+
 from __future__ import annotations
 
 import json
@@ -15,6 +17,8 @@ from latent_audio_primitives.experiments.activation_vectors import (
 
 @dataclass(frozen=True, slots=True)
 class AudioExample:
+    """One audio file assigned to a positive or reference residual set."""
+
     path: Path
     label: int
     group: str
@@ -22,6 +26,8 @@ class AudioExample:
 
 @dataclass(slots=True)
 class AudioResidualExtractionResult:
+    """Residual vectors plus provenance for an audio-set extraction run."""
+
     vectors: SteeringVectors
     examples: list[ActivationExample] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)

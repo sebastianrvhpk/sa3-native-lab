@@ -1,3 +1,5 @@
+"""Residual activation bases and directions for SA3 feature atlas probes."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -45,6 +47,8 @@ def fit_residual_feature_basis(
 
 
 def project_residual_features(activation: np.ndarray, basis: ResidualFeatureBasis, *, whiten: bool = False) -> np.ndarray:
+    """Project one residual activation into a fitted feature basis."""
+
     row = np.asarray(activation, dtype=np.float32).reshape(-1)
     if row.shape != basis.mean.shape:
         raise ValueError(f"activation shape {row.shape} does not match basis shape {basis.mean.shape}")

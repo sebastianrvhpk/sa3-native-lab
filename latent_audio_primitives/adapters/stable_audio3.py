@@ -1,3 +1,5 @@
+"""Thin adapters around upstream Stable Audio 3 and SAME model wrappers."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -78,6 +80,8 @@ def _downsampling_ratio(model: Any, fallback: int = 4096) -> int:
 
 
 def stable_audio3_latent_rate(model: Any, model_config: dict[str, Any] | None = None) -> float:
+    """Return the SAME latent frame rate implied by sample rate and downsampling."""
+
     return _sample_rate(model, model_config) / _downsampling_ratio(model)
 
 

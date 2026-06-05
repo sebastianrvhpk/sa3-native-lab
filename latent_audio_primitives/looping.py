@@ -1,3 +1,5 @@
+"""Cyclic latent/audio rolling, loop metrics, and sampler projection helpers."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

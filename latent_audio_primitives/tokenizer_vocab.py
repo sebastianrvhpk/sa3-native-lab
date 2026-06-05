@@ -1,3 +1,5 @@
+"""Native SA3 tokenizer vocabulary extraction for hard prompt search."""
+
 from __future__ import annotations
 
 import re

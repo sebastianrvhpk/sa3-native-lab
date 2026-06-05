@@ -1,3 +1,5 @@
+"""JSON and NumPy persistence helpers for LatentItem notebook artifacts."""
+
 from __future__ import annotations
 
 import json
@@ -26,6 +28,8 @@ def save_item(item: LatentItem, directory: str | Path) -> Path:
 
 
 def load_item(directory: str | Path) -> LatentItem:
+    """Load one latent-memory item from ``latent.npy`` + ``metadata.json``."""
+
     directory = Path(directory)
     with (directory / "metadata.json").open("r", encoding="utf-8") as f:
         metadata: dict[str, Any] = json.load(f)
@@ -43,6 +47,8 @@ def load_item(directory: str | Path) -> LatentItem:
 
 
 def save_items(items: list[LatentItem], root: str | Path) -> list[Path]:
+    """Save multiple latent-memory items and a manifest under one root."""
+
     root = Path(root)
     root.mkdir(parents=True, exist_ok=True)
     paths = []
@@ -60,6 +66,8 @@ def save_items(items: list[LatentItem], root: str | Path) -> list[Path]:
 
 
 def load_items(root: str | Path) -> list[LatentItem]:
+    """Load all latent-memory items from a manifest root or item directories."""
+
     root = Path(root)
     manifest_path = root / "manifest.json"
     if manifest_path.exists():

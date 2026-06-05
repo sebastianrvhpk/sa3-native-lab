@@ -1,3 +1,5 @@
+"""Alpha-sweep helpers for auditioning SA3 residual steering vectors."""
+
 from __future__ import annotations
 
 import json
@@ -12,6 +14,8 @@ from latent_audio_primitives.io import save_items
 
 @dataclass(slots=True)
 class SweepOutput:
+    """Artifact paths for one residual-steering alpha value."""
+
     alpha: float
     item_id: str
     latent_path: str | None = None

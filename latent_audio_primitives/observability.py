@@ -1,3 +1,5 @@
+"""Linear probes for whether controls are visible in latent summaries."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -68,6 +70,8 @@ def fit_linear_control_probe(
 
 
 def predict_control(probe: LinearControlProbe, latent: LatentItem | np.ndarray) -> float:
+    """Predict a scalar control from one latent item or array."""
+
     summary = latent_summary(latent)
     if summary.shape != probe.weights.shape:
         raise ValueError(f"summary shape {summary.shape} does not match probe weights {probe.weights.shape}")
@@ -76,6 +80,8 @@ def predict_control(probe: LinearControlProbe, latent: LatentItem | np.ndarray) 
 
 
 def r2_score(y_true: np.ndarray, y_pred: np.ndarray) -> float:
+    """Return coefficient of determination for probe diagnostics."""
+
     y = np.asarray(y_true, dtype=np.float32).reshape(-1)
     pred = np.asarray(y_pred, dtype=np.float32).reshape(-1)
     if y.shape != pred.shape:

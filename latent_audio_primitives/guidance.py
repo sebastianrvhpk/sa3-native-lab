@@ -1,3 +1,5 @@
+"""Differentiable latent guidance primitives for notebook sampler probes."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -6,6 +8,8 @@ from typing import Any, Callable
 
 @dataclass(frozen=True, slots=True)
 class GuidanceStepResult:
+    """Result of one differentiable latent guidance update."""
+
     latents: Any
     loss: float
     grad_norm: float

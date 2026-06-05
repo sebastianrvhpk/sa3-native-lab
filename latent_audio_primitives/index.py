@@ -1,3 +1,5 @@
+"""In-memory retrieval over LatentItem summaries and descriptor controls."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -15,6 +17,8 @@ Metric = Literal["cosine", "euclidean"]
 
 @dataclass(slots=True)
 class SearchResult:
+    """One ranked latent-memory retrieval result."""
+
     item: LatentItem
     score: float
     distance: float

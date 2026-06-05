@@ -1,3 +1,5 @@
+"""SAME latent smoothing, sharpening, filtering, and SA3 polish helpers."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

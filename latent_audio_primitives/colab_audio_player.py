@@ -1,3 +1,5 @@
+"""Self-contained Colab audio player, waveform preview, and annotation helpers."""
+
 from __future__ import annotations
 
 import base64

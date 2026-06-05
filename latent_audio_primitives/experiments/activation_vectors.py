@@ -1,3 +1,5 @@
+"""Prompt-pair residual activation vector extraction for SA3 steering probes."""
+
 from __future__ import annotations
 
 import json
@@ -15,6 +17,8 @@ from latent_audio_primitives.experiments.prompt_pairs import DEFAULT_PROMPT_PAIR
 
 @dataclass(slots=True)
 class ActivationExample:
+    """One generated prompt example and its mean residual activations."""
+
     layer_activations: dict[int, Any]
     label: int
     prompt: str
@@ -25,6 +29,8 @@ class ActivationExample:
 
 @dataclass(slots=True)
 class VectorExtractionResult:
+    """Steering vectors plus provenance for a prompt-pair extraction run."""
+
     vectors: SteeringVectors
     examples: list[ActivationExample] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
@@ -164,6 +170,8 @@ class SA3ActivationVectorExtractor:
 
 
 def vectors_from_examples(examples: list[ActivationExample], *, normalize: bool = True) -> SteeringVectors:
+    """Collapse labeled activation examples into mean-difference vectors."""
+
     torch = _require_torch()
     if not examples:
         raise ValueError("at least one activation example is required")

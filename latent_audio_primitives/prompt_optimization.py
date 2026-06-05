@@ -1,3 +1,5 @@
+"""Hard/readable prompt search helpers with pluggable notebook scorers."""
+
 from __future__ import annotations
 
 import re
@@ -13,6 +15,8 @@ BatchPromptScorer = Callable[[list[str]], Sequence[float]]
 
 @dataclass(frozen=True, slots=True)
 class PromptOptimizationResult:
+    """Result of coordinate prompt modifier search."""
+
     prompt: str
     score: float
     history: list[tuple[str, float]] = field(default_factory=list)
@@ -20,6 +24,8 @@ class PromptOptimizationResult:
 
 @dataclass(frozen=True, slots=True)
 class GreedyPromptSearchResult:
+    """Result of greedy hard-token prompt synthesis."""
+
     prompt: str
     score: float
     tokens: list[str]
@@ -28,6 +34,8 @@ class GreedyPromptSearchResult:
 
 @dataclass(frozen=True, slots=True)
 class BeamPromptSearchResult:
+    """Result of beam hard-token prompt synthesis."""
+
     prompt: str
     score: float
     tokens: list[str]
@@ -38,8 +46,8 @@ class BeamPromptSearchResult:
 def prompt_seed_from_audio_path(path: str | Path, *, extra_tags: list[str] | None = None) -> str:
     """Make a crude prompt seed from path tokens.
 
-    This is not a captioner. It is a deterministic fallback that turns file and
-    folder names into a starting prompt for later CLAP/caption/LLM optimization.
+    This deterministic fallback turns file and folder names into a starting
+    prompt for later notebook scoring.
     """
 
     path = Path(path)
@@ -64,10 +72,10 @@ def coordinate_prompt_search(
 ) -> PromptOptimizationResult:
     """Small coordinate search over prompt modifiers using a pluggable scorer.
 
-    This does not generate audio by itself. In Colab, the scorer can be CLAP
-    audio-text similarity, a prompt-adherence model, or a custom human-in-loop
-    score. It is useful for audio-to-prompt work, but it is still text search,
-    not soft-prompt gradient optimization.
+    This does not generate audio by itself. In Colab, the scorer can be native
+    SA3 flow agreement, decoded-audio descriptors, or a listening-review score.
+    It is useful for audio-to-prompt work, but it is still text search, not
+    soft-prompt gradient optimization.
     """
 
     best_prompt = seed_prompt.strip()
@@ -108,8 +116,8 @@ def greedy_token_prompt_search(
 
     This is hard-token prompt synthesis with a pluggable objective: build a
     prompt one token at a time by evaluating many candidate next tokens against a
-    target embedding/objective. The scorer can be CLAP, an SA3 teacher-forcing
-    loss wrapped as a negative score, or a human-in-loop model.
+    target objective. The scorer can be an SA3 teacher-forcing loss wrapped as a
+    negative score, descriptor movement, or a listening-review score.
     """
 
     if not vocabulary:
@@ -250,6 +258,8 @@ def beam_token_prompt_search(
 
 
 def default_modifier_axes() -> list[list[str]]:
+    """Return lightweight readable modifier axes for coordinate prompt search."""
+
     return [
         ["bright", "dark", "warm", "cold", "muted", "shimmering"],
         ["sparse", "dense", "minimal", "layered", "busy"],

@@ -1,3 +1,5 @@
+"""Prompt-pair presets for contrastive residual steering axes."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -5,6 +7,8 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True, slots=True)
 class PromptPair:
+    """Positive/negative prompts for one residual steering comparison."""
+
     positive: str
     negative: str
     axis: str
@@ -64,5 +68,7 @@ DEFAULT_PROMPT_PAIRS: list[PromptPair] = [
 
 
 def pairs_for_axis(axis: str, pairs: list[PromptPair] | None = None) -> list[PromptPair]:
+    """Return prompt pairs matching one residual steering axis."""
+
     source = pairs if pairs is not None else DEFAULT_PROMPT_PAIRS
     return [pair for pair in source if pair.axis == axis]

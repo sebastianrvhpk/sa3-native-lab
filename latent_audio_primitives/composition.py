@@ -1,3 +1,5 @@
+"""Latent-memory transition, continuation, loop, and bridge ranking helpers."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -9,6 +11,8 @@ from .schema import LatentItem
 
 @dataclass(frozen=True, slots=True)
 class TransitionWeights:
+    """Weights for boundary-state and boundary-velocity transition costs."""
+
     state: float = 1.0
     velocity: float = 0.25
 
