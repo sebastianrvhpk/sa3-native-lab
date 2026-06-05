@@ -61,7 +61,7 @@ uv pip install --system flash-attn --no-build-isolation --no-cache-dir --no-deps
 The NumPy/scipy/sklearn/torchvision reset is mainly for Colab. It prevents
 Transformers' optional scientific/vision import paths from reaching stale binary
 packages after Torch/NumPy are repinned. Restart the Colab runtime once after
-the install phase so old binary modules are cleared from memory.
+the install phase so loaded binary modules are cleared from memory.
 
 ## Native Spaces
 

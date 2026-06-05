@@ -1,7 +1,7 @@
 # SA3 Native Lab Source Context
 
-Status: migrated source context for notebook-first SA3 Native Lab research as
-of 2026-06-05.
+Status: source context for notebook-first SA3 Native Lab research as of
+2026-06-05.
 
 This document answers: which external papers/repos shaped the notebook, what
 idea each source contributes, how that idea affects the local research, and
@@ -136,7 +136,7 @@ L_flow(prompt) = E ||v_theta(z_t, t, C(prompt)) - u_t||^2
 
 - Source: [DreamBooth](https://arxiv.org/abs/2208.12242)
 - Relevant idea: Personalization by adapting model behavior to a subject.
-- Notebook impact: Contrast point for this repo: prefer frozen-model probes and Underfit for external fine-tuning rather than local personalization code.
+- Notebook impact: Local personalization work routes through frozen-model probes or external Underfit fine-tuning artifacts.
 - Status: source context.
 
 ### Prompt-to-Prompt

@@ -23,9 +23,9 @@ The repo keeps:
 - current research notes,
 - a Colab L4 setup runbook.
 
-It intentionally does not keep an app, script harness, test harness, vendored
-Stable Audio 3 tree, or local product interface. Stable Audio 3 is installed
-from the external upstream repository when model weights are needed.
+Stable Audio 3 is installed from the external upstream repository when model
+weights are needed. Local code stays focused on notebook cells, helper
+primitives, research notes, and Colab runtime setup.
 
 LoRA work is externalized to [dada-bots/underfit](https://github.com/dada-bots/underfit).
 This notebook can compare exported Underfit audio, checkpoints, and run notes
@@ -81,8 +81,7 @@ and experiment manifests
 
 ## Notebook Science Ontology Inventory
 
-The active notebook no longer uses numbered implementation cells as its public
-structure. Experiments are grouped by native object, intervention type, and
+The active notebook is organized by native object, intervention type, and
 evidence role. The first four strata are object/intervention strata; the last
 two are evidence and comparison infrastructure.
 
@@ -158,7 +157,7 @@ LoRA/style fine-tuning need
 - Colab L4 is the intended notebook runtime for SA3 Medium.
 - SA3 Medium uses SAME-L and requires CUDA plus FlashAttention for normal use.
 - SA3 Small Music/SFX use SAME-S and are CPU-capable according to the upstream repo.
-- This repo no longer keeps a separate script/test harness. Validation is notebook execution, JSON integrity, Colab smoke runs, descriptor deltas, manifests, and listening notes.
+- Validation centers on notebook execution, JSON integrity, Colab smoke runs, descriptor deltas, manifests, and listening notes.
 - Stable Audio 3 upstream/reference docs live in the external upstream repo.
 - Underfit LoRA runs are validated in Underfit, then imported as audio/checkpoint comparison artifacts.
 

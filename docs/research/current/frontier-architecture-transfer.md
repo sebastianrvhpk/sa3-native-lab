@@ -197,7 +197,7 @@ Notebook impact:
 | Flow-matching image edit | Prompt/audio edit over SA3 flow probes | `flow_prompt.py` rows, decoded audition | flow improvement predicts better edits | flow score may only measure teacher-forced agreement |
 | Video spacetime patches | Audio segments, control lanes, loop windows | lane similarity, periodicity, boundary metrics | temporal metrics match listening | avoid visual metaphors that hide audio structure |
 | In-context image editing | Multi-turn prompt/audio edit chain | source-preservation rows, descriptor drift | edits stack without identity collapse | iterative polish may erase prior edits |
-| Long-form song planning | Segment prompts, bridge plans, curriculum rows | continuation/bridge scores, ledger notes | structure improves without app scaffolding | full song planning can become a separate project |
+| Long-form song planning | Segment prompts, bridge plans, curriculum rows | continuation/bridge scores, ledger notes | structure improves within notebook evidence packets | full song planning can become a separate project |
 | Neural codec/generative compression | SAME bottleneck stress tests | direct decode, SA3 polish, descriptors | separates semantic from acoustic preservation | not all codec lessons transfer to continuous SAME latents |
 | Contrastive multimodal embeddings | Optional external semantic/lane descriptors | CLAP/T-CLAP/ImageBind versus SAME memory | improves retrieval or novelty checks | external embeddings can reward wrong semantics |
 | Preference optimization | Annotation-weighted recipe selection | player notes, ledger decisions | repeated decisions identify robust recipes | tiny preference sets are easy to overfit |
@@ -321,8 +321,7 @@ Drop or revise if: notes are too sparse or inconsistent to guide decisions.
 
 ## Priority Order
 
-Do not displace the current measurement-first backlog. Fold this scout pass into
-that sequence:
+Use the measurement-first backlog sequence:
 
 ```text
 probe-bank cache

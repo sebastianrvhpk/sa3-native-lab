@@ -61,7 +61,7 @@ plain SA3/audio-to-audio baseline.
 | `CAUSAL_STEERING` | intervention stratum | prompt/audio residual steering, feature atlas, control head, cyclic trajectory, flow-state optimization, gradient edit, audio posterior guidance | Which inference-time interventions causally move generated audio rather than only measuring it? |
 | `DATASET_MEMORY_COMPOSITION` | collection/composition stratum | prompt family, memory index, curriculum, continuation, bridge search | How do collections become memory, donor context, structure, or continuity without simply copying? |
 | `EVIDENCE_DECISION_PROTOCOL` | lab infrastructure | player, annotations, descriptors, control lanes, manifest, ledger, combined chain | What evidence decides whether an effect is real, audible, useful, repeatable, or only a microscope? |
-| `EXTERNAL_COMPARISON` | lab infrastructure | Underfit handoff, cross-model harness, optional external embedding lanes | What should frozen SA3/SAME be compared against without importing local app/training scaffolding? |
+| `EXTERNAL_COMPARISON` | lab infrastructure | Underfit handoff, cross-model harness, optional external embedding lanes | What should frozen SA3/SAME be compared against while training and product infrastructure remain external? |
 
 ## Evidence Panels
 

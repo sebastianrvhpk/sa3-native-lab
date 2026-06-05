@@ -258,7 +258,7 @@ Promote if:
 
 Drop or revise if:
 
-- report generation becomes a product/app direction,
+- report generation stops serving notebook research,
 - it distracts from notebook-first research.
 
 ## Frontier-Informed Additions
@@ -330,7 +330,7 @@ Promote if:
 Drop or revise if:
 
 - segment boundaries dominate artifacts,
-- the workflow becomes song-app scaffolding instead of notebook research.
+- the workflow stops being notebook research.
 
 ### D. External Temporal Embedding Lane
 

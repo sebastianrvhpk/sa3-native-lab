@@ -48,8 +48,8 @@ rows over a new runtime framework.
 
 ## Capability Clusters
 
-The library is not organized as a product SDK. It is organized as a set of
-notebook-facing capabilities that support the science ontology.
+The library is organized as notebook-facing capabilities that support the
+science ontology.
 
 ### 1. Model Boundary
 
@@ -215,7 +215,7 @@ prompt pairs or labeled audio
   `selective_renoise.py`, `looping.py`, `style.py`, or `guidance.py`.
 - Put SA3/SAME external wrapper code in `adapters/`.
 - Put notebook-facing experiment harnesses with model hooks in `experiments/`.
-- Keep app, server, dashboard, route, session, artifact-UI, and product-control
+- Keep service, dashboard, route, session, artifact-UI, and product-control
   concepts out of this package.
 
 ## Current Structure Debt

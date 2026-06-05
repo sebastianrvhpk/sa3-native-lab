@@ -22,8 +22,8 @@ This repo is a notebook research instrument. It keeps:
 - a notebook-facing primitive library,
 - research docs and run protocol.
 
-It does not keep an app, product UI, service API, generic experiment platform,
-or vendored Stable Audio 3 runtime.
+Upstream runtimes, training tools, service APIs, and product interfaces stay
+outside this repository boundary.
 
 ## Native Objects
 

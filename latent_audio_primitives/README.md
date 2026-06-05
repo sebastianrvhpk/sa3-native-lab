@@ -1,7 +1,6 @@
 # Latent Audio Primitives
 
-This package is the notebook library for SA3 Native Lab. It is not an app layer,
-service layer, or product SDK.
+This package is the notebook library for SA3 Native Lab.
 
 The library supports one Colab-first research loop:
 
@@ -47,5 +46,6 @@ The bottom-up object/capability map lives in
 ## Maintenance Rule
 
 Keep new code notebook-facing. A primitive should expose a compact function,
-dataclass, or row object that a Colab cell can call directly. Avoid app
-scaffolding, server contracts, dashboard state, or product-interface plumbing.
+dataclass, or row object that a Colab cell can call directly. Service contracts,
+dashboard state, and product-interface plumbing stay outside the primitive
+library.

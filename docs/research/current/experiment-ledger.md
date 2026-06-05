@@ -6,9 +6,8 @@ This document answers: what was run, what audio came out, what changed in the
 measurements, what listening said, and whether the method should be kept,
 revised, dropped, or investigated further.
 
-The previous research notes contained method plans and validation rules. This
-ledger is the missing results layer. It should be updated from real Colab runs,
-not from speculation.
+This ledger is the results layer for the lab. It should be updated from real
+Colab runs, not from speculation.
 
 Use [Run protocol](run-protocol.md) for the run spine, evidence panels, minimum
 run packet, and promote/revise/drop rules.
@@ -149,7 +148,7 @@ Each promoted experiment should fill as many of these as relevant:
 
 ## Initial Ledger
 
-No completed runs have been recorded in this reorganized ledger yet.
+No completed runs have been recorded in this ledger yet.
 
 | Date | Ontology / Experiment | Question | Outputs | Decision | Notes |
 |---|---|---|---|---|---|
