@@ -9,7 +9,7 @@ This repository is a combined Colab/research workspace:
 - current notebook research notes in `docs/research/current/`
 - reusable method notes in `docs/research/methods/`
 
-The goal is exploratory research over native SA3/SAME spaces, not a finished product.
+The goal is exploratory research over native SA3/SAME spaces.
 
 ## Upstream
 
@@ -94,10 +94,10 @@ The current notebook research map and next-method backlog is:
 
 `docs/research/current/notebook-research-map-and-next-methods.md`
 
-It inventories the repo's notebook/primitives capabilities, treats Underfit as
-the external LoRA path, summarizes relevant SA3/SAME, flow, guidance, control,
+It inventories the repo's notebook/primitives capabilities, uses Underfit for
+LoRA work, summarizes relevant SA3/SAME, flow, guidance, control,
 audio-generation, and activation-steering research, and tracks notebook-native
-experiments without app scaffolding.
+experiments.
 
 The current repo-specific math and implementation notes are:
 
@@ -106,7 +106,7 @@ The current repo-specific math and implementation notes are:
 That document covers the current Colab modes, including renoise, selective latent
 renoise, blur/sharpen/filtering, cross-audio grafting, cyclic sampler mixing,
 neural latent DSP, soft prompt inversion, Mode 2 beam prompt inversion, SAME
-statistical controls, residual steering, LatCH-style sidecars, LoRA boundaries,
+statistical controls, residual steering, LatCH-style sidecars, Underfit handoff,
 Mode 15 geometry audits, and the newer notebook backlog modes.
 
 The seven-operator research layer is:
@@ -125,10 +125,9 @@ They document Mode 0h: latent dynamics, soft clipping, latent-time FFT gain and
 phase operators, magnitude/phase grafting, PCA component gain, SA3 polish, and
 MIR descriptor audits.
 
-Older broad research notes were distilled into the current roadmap and removed
-from the active tree. Git history preserves the originals.
+The current roadmap distills earlier broad research notes. Git history preserves
+the source notes.
 
 Stable Audio 3 upstream docs are preserved in `docs/guides/` and
-`docs/workflows/`. Local LoRA training and UI material has been removed from the
-active repo; the LoRA path for this project is an external handoff to
-`dada-bots/underfit`.
+`docs/workflows/`. LoRA work uses `dada-bots/underfit`, with exported artifacts
+available for notebook comparison.

@@ -2,9 +2,7 @@
 
 Status: current core math for this repo's Colab notebook and helper package.
 This document describes experimental primitives built on top of the released
-Stable Audio 3 code in this repository. It is not an official Stability AI
-document and it does not claim that these methods are part of SA3 training. For
-the full current repo/backlog map, see
+Stable Audio 3 code in this repository. For the full current repo/backlog map, see
 `docs/research/current/notebook-research-map-and-next-methods.md`.
 
 Main notebook:
@@ -674,11 +672,10 @@ predictability: can h_psi predict it from z?
 intervenability: can a sampler/edit change it reliably?
 ```
 
-## Mode 13: External LoRA Handoff
+## Mode 13: Underfit LoRA Handoff
 
-Mode 13 is now a boundary, not an active local research backlog. For LoRA,
-use [dada-bots/underfit](https://github.com/dada-bots/underfit) as the training
-and checkpoint-selection path instead of growing another local LoRA surface.
+Mode 13 points LoRA work to [dada-bots/underfit](https://github.com/dada-bots/underfit)
+for training, monitoring, checkpoint selection, and adapter-specific logic.
 
 The external path is:
 
@@ -692,9 +689,8 @@ dataset folder
 -> Underfit checkpoint auditions
 ```
 
-This repo can still import audio outputs or analysis artifacts from Underfit for
-comparison against frozen SA3/SAME methods. It should not prioritize new local
-LoRA cells, adapter controls, checkpoint dashboards, or training infrastructure.
+This repo can import audio outputs or analysis artifacts from Underfit for
+comparison against frozen SA3/SAME methods.
 
 ## Mode 15: SAME Geometry and Intervention Audit
 
@@ -726,8 +722,8 @@ explained_variance_k = lambda_k / trace(Sigma)
 kept_variance_fraction = sum_{k in kept} lambda_k / trace(Sigma)
 ```
 
-This matters because 16 retained components should not pretend to explain 100%
-of the dataset unless they actually do.
+This matters because retained components explain only the measured retained
+fraction of dataset variance.
 
 Whole-clip latent distances use the PCA covariance:
 

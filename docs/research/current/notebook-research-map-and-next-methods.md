@@ -6,12 +6,13 @@ Status: research synthesis for the notebook-only SA3 Native Lab direction as of
 Scope:
 
 - Keep the expanded Colab notebook as the main research instrument.
-- Keep methods cell-based, inspectable, and runnable without app scaffolding.
+- Keep methods cell-based, inspectable, and runnable as notebook-native
+  experiments.
 - Treat SA3 and SAME as the native objects of study.
 - Prefer frozen-model probes, sidecar predictors, and measurement cells before
   heavier training.
-- Treat LoRA as an external handoff to Underfit, not as an active local
-  implementation backlog.
+- Use Underfit for LoRA work and compare exported artifacts through the
+  notebook.
 
 This document combines:
 
@@ -236,9 +237,8 @@ prompt pairs or labeled audio sets
   -> generated outputs + probe reports
 
 LoRA/style fine-tuning need
-  -> leave this repo's active method path
   -> use Underfit
-  -> optionally bring back generated audio/checkpoints as external comparison artifacts
+  -> bring back generated audio/checkpoints as comparison artifacts
 ```
 
 ## Runtime and Dependency Assumptions
@@ -249,9 +249,8 @@ LoRA/style fine-tuning need
 - SA3 Medium uses SAME-L and requires CUDA plus FlashAttention for normal use.
 - SA3 Small Music/SFX use SAME-S and are CPU-capable according to the upstream repo.
 - The notebook can validate without model loading via `scripts/validate_colab_notebook.py --skip-setup`.
-- LoRA training is externalized to Underfit. This repo should not grow another
-  LoRA training/control surface unless there is a specific research reason
-  Underfit cannot cover.
+- LoRA training uses Underfit, with exported artifacts available for notebook
+  comparison.
 
 `unknown`:
 
@@ -313,10 +312,7 @@ creative underfit elbow rather than maximum memorization.
 Decision for this repo:
 
 - Underfit is the LoRA path.
-- Do not expand local LoRA training, checkpoint inspection, dashboarding, or
-  adapter-control methods here.
-- Keep only boundary knowledge that helps this notebook interpret external
-  Underfit artifacts if needed.
+- Use Underfit artifacts for notebook comparison and evaluation.
 - Reuse Underfit's research discipline more generally: loss-by-timestep views,
   fixed audition grids, and early stopping by listening are useful for prompt,
   residual, and guidance experiments too.
@@ -332,9 +328,8 @@ SVD-derived low-rank bases and trains a much smaller core matrix.
 Implication for this repo:
 
 - Adapter papers stay as context for understanding external Underfit results.
-- They are not active local implementation targets.
-- If adapter experiments become necessary later, start by running them in
-  Underfit and importing only the resulting audio/analysis artifacts.
+- Adapter experiments start in Underfit, then return to this notebook as
+  audio/analysis artifacts.
 
 ### Flow Matching and Native Prompt Scoring
 
@@ -367,8 +362,8 @@ Implication for this repo:
 
 - `latent_audio_primitives.guidance.gradient_guidance_step` should become a
   real notebook mode once integrated carefully into the SA3 sampler.
-- A first target should not be "perfect music control." It should be a small
-  control loss that is cheap and differentiable over SAME latents:
+- A first target is a small control loss that is cheap and differentiable over
+  SAME latents:
 
 ```text
 L_control(z_t) =
@@ -717,7 +712,7 @@ Notebook cells:
 Why it is useful:
 
 - Turns continuation into a measurable composition primitive.
-- Supports loop and transition experiments without a DAW/app layer.
+- Supports loop and transition experiments inside the notebook.
 
 ### 10. Cross-Model Baseline Harness
 
@@ -738,10 +733,9 @@ Why it is useful:
 - If a proposed SA3 method only beats a weak baseline, it is not enough.
 - If SA3/SAME has unique strengths, the comparison will show where.
 
-Boundary:
+Implementation notes:
 
-- Do not add app scaffolding or package-lock churn. Keep this optional and
-  notebook-local.
+- Keep the harness optional and notebook-local.
 
 ### 11. Audio-to-Audio Posterior Guidance
 
@@ -883,16 +877,15 @@ Implemented in the notebook after the backlog pass:
 | Audio-to-audio posterior guidance | 25 | existing `guidance.py` plus source/reference summaries | implemented as scaffold |
 | Cross-model baseline harness | 26 | notebook command harness plus descriptors/player | implemented |
 
-Implementation boundary:
+Implementation notes:
 
 - Modes 16-22 are ordinary notebook research cells around existing or new
   helper APIs.
 - Modes 23-25 are intentionally labeled probes/scaffolds because they depend on
   exact SA3 conditioner/sampler behavior with loaded weights.
-- Mode 26 does not vendor other model repos; it accepts external commands and
-  compares returned audio through this notebook's descriptor/player path.
-- LoRA remains external to Underfit; local LoRA training cells and scripts have
-  been removed from the active repo.
+- Mode 26 accepts external commands and compares returned audio through this
+  notebook's descriptor/player path.
+- LoRA uses Underfit artifacts for notebook comparison.
 
 ## Post-Implementation Re-Review Ideas
 
@@ -910,7 +903,7 @@ ideas are smaller and sharper:
      latent summary, descriptor target, and time-varying lane shape.
 4. Geometry-aware donor selector.
    - Rank donor candidates for graft/DSP/OT by Mahalanobis distance, lane
-     similarity, and boundary compatibility.
+     similarity, and transition fit.
 5. Residual temporal patching.
    - Extend Mode 22 from layer-level feature atlas to layer x denoising-step or
      layer x latent-time patch tests.
@@ -929,7 +922,7 @@ ideas are smaller and sharper:
      summaries, descriptor deltas, and listening tags.
 10. Notebook report packager.
     - Export selected manifest rows, audio paths, descriptor tables, and
-      annotations into a static HTML report without introducing an app server.
+      annotations into a static HTML report.
 
 ## Open Questions
 
@@ -950,19 +943,16 @@ ideas are smaller and sharper:
 
 ## Bottom Line
 
-The project already has a strong notebook-native research base. The most valuable
-next move is not more scaffolding. It is better measurement and sharper
-interventions:
+The project already has a strong notebook-native research base. The most
+valuable next move is better measurement and sharper interventions:
 
 ```text
 flow microscope -> loss-by-timestep panel -> control lanes -> memory curriculum
 -> geometry/OT bench -> bridge search -> residual atlas -> sampler guidance
 ```
 
-This sequence keeps every new method grounded in SA3/SAME objects, preserves the
-expanded notebook, and avoids building product infrastructure before the research
-knows what its controls actually mean.
+This sequence keeps every new method grounded in SA3/SAME objects and preserves
+the expanded notebook while the research learns what its controls actually mean.
 
-LoRA is intentionally outside that sequence. When LoRA is needed, use Underfit
-and treat any returned audio/checkpoints as external artifacts for comparison,
-not as a reason to grow local adapter infrastructure here.
+When LoRA is useful, use Underfit and bring returned audio/checkpoints back as
+comparison artifacts.

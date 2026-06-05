@@ -91,9 +91,9 @@ python -m pip uninstall -y scipy scikit-learn sklearn torchvision
 The NumPy/scipy/sklearn/torchvision cleanup is Colab-specific. `uv` resolves the
 SA3 dependency graph, but Colab already has optional packages outside that
 graph. Transformers can opportunistically import `scipy`, `sklearn`, and
-`torchvision` while loading T5Gemma; those wheels may be ABI/API-incompatible
-after Torch/NumPy are repinned. SA3/T5Gemma does not need them for inference,
-so the notebook removes them.
+`torchvision` while loading T5Gemma; those wheels may fail after Torch/NumPy
+are repinned. SA3/T5Gemma does not need them for inference, so the notebook
+removes them.
 
 The notebook intentionally restarts the Colab runtime once after the first
 install. Rerun cell 0 after reconnect; it will skip installs and verify imports.
@@ -658,7 +658,7 @@ Scale up only after the smoke test works.
 Flash Attention import failure:
 
 ```text
-Check Python, Torch, CUDA, and flash_attn wheel compatibility.
+Check Python, Torch, CUDA, and flash_attn wheel versions.
 For L4 source builds, use TORCH_CUDA_ARCH_LIST="8.9".
 ```
 

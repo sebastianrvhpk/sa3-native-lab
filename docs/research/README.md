@@ -4,7 +4,7 @@ Status: current documentation index for the notebook-first SA3 Native Lab
 direction.
 
 This repo keeps the expanded Colab notebook as the research instrument. The docs
-are organized around that boundary:
+are organized around that scope:
 
 - `current/`: current notebook map, current math notes, repo structure map.
 - `methods/`: reusable method notes that support current or near-term notebook
@@ -13,8 +13,7 @@ are organized around that boundary:
 ## Current
 
 - [Repo structure map](current/repo-structure-map.md): top-level repo map,
-  Markdown inventory, active/inactive boundaries, artifact graph, and doc
-  ownership rules.
+  Markdown inventory, artifact graph, and doc ownership rules.
 - [Notebook research map and next methods](current/notebook-research-map-and-next-methods.md):
   capability map, research survey, implemented backlog status, and next
   implementable ideas.
@@ -40,12 +39,12 @@ are organized around that boundary:
 - [Stable Audio 3 workflow docs](../workflows/inference.md): upstream/reference
   inference and autoencoder documentation.
 
-Local LoRA work is not an active SA3 Native Lab backlog. The active LoRA path is
-externalized to [dada-bots/underfit](https://github.com/dada-bots/underfit);
-local LoRA training docs, scripts, and notebook cells have been removed.
+LoRA work uses [dada-bots/underfit](https://github.com/dada-bots/underfit).
+Exported Underfit audio, checkpoints, and run notes can be compared through the
+notebook's descriptor, memory, player, and annotation cells.
 
-Earlier broad research notes were distilled into the current roadmap and then
-removed from the active tree. Git history preserves the originals.
+The current roadmap distills earlier broad research notes. Git history preserves
+the source notes.
 
 ## Documentation Rules
 
@@ -54,7 +53,5 @@ removed from the active tree. Git history preserves the originals.
 - New notebook methods should update
   `current/notebook-research-map-and-next-methods.md` and, when math changes,
   `current/native-experimental-modes-math.md`.
-- Historical surveys should not be reintroduced unless they directly drive a
-  current notebook cell.
-- Do not add app, dashboard, API, or product-interface docs for this project
-  direction.
+- Add historical survey material when it directly supports a current notebook
+  cell.

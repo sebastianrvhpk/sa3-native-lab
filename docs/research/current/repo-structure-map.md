@@ -1,7 +1,7 @@
 # SA3 Native Lab Repo Structure Map
 
 Status: current as of 2026-06-04. This map reflects the notebook-first research
-direction after removal of the abandoned app/control-plane path.
+direction.
 
 ## Direction
 
@@ -12,13 +12,11 @@ latent experiments. The source of truth is the expanded Colab notebook:
 colab/sa3_same_native_experimental_modes.ipynb
 ```
 
-This repo should grow notebook cells, helper primitives, tests, and research
-notes. It should not grow app shells, dashboards, API servers, product
-interfaces, or control-plane plumbing.
+This repo grows notebook cells, helper primitives, tests, and research notes.
 
-LoRA is externalized to [dada-bots/underfit](https://github.com/dada-bots/underfit).
-This repo may document an Underfit handoff and compare Underfit outputs, but it
-should not rebuild Underfit locally.
+LoRA work uses [dada-bots/underfit](https://github.com/dada-bots/underfit).
+Notebook cells can compare exported Underfit audio, checkpoints, and run notes
+alongside native SA3/SAME methods.
 
 ## Top-Level Map
 
@@ -31,14 +29,12 @@ should not rebuild Underfit locally.
 | `docs/research/current/` | Current notebook map, mode math, and repo structure. | Active |
 | `docs/research/methods/` | Method notes that support active or near-term notebook modes. | Active reference |
 | `docs/guides/` | Stable Audio 3 upstream/reference model docs and images. | Reference |
-| `docs/workflows/` | Stable Audio 3 upstream/reference workflow docs. | Reference; LoRA is legacy for this repo |
+| `docs/workflows/` | Stable Audio 3 upstream/reference workflow docs. | Reference |
 | `stable_audio_3/` | Vendored Stable Audio 3 source package. | Upstream base |
 | `optimized/mlx/` | Experimental MLX implementation/reference path. | Separate reference |
 | `.codex/skills/` | Repo-local Codex skill instructions for research/interface work. | Agent workflow |
 | `README.stable-audio-3.md` | Preserved upstream Stable Audio 3 README. | Upstream reference |
 | `LICENSE.stability-ai-stable-audio-3` | Preserved upstream license. | Required reference |
-
-Empty app-era directories are not part of the active repo.
 
 ## Execution Surfaces
 
@@ -66,7 +62,7 @@ Empty app-era directories are not part of the active repo.
 | Control lanes and curricula | `control_lanes.py`, `curriculum.py` | Confirmed |
 | Audio descriptors and audits | `audio_descriptors.py`, tests, notebook tables | Confirmed |
 | Cross-model comparison harness | notebook Mode 26 | Confirmed scaffold |
-| LoRA fine-tuning | external Underfit only; no local training/notebook surface | Externalized |
+| LoRA fine-tuning | Underfit training plus exported comparison artifacts | External tool |
 
 ## Artifact Graph
 
@@ -133,10 +129,10 @@ dataset folders
 
 - Current notebook implementation claims belong in `docs/research/current/`.
 - Reusable method notes belong in `docs/research/methods/`.
-- Older broad literature surveys should stay out of the active tree unless they
-  are distilled into current notebook decisions.
-- Stable Audio 3 upstream/reference docs stay under `docs/guides/` and
-  `docs/workflows/` unless they are replaced by repo-specific notebook docs.
+- Add broad literature material when it is distilled into current notebook
+  decisions.
+- Stable Audio 3 upstream/reference docs live under `docs/guides/` and
+  `docs/workflows/`.
 - Notebook behavior should be changed directly in
   `colab/sa3_same_native_experimental_modes.ipynb`, with reusable code moved
   into `latent_audio_primitives/` when it becomes shared or test-worthy.
@@ -147,5 +143,5 @@ dataset folders
   tests; unit tests only verify helper math and fake-model behavior.
 - Notebook cells that depend on GPU Colab runtimes should be validated with
   `scripts/validate_colab_notebook.py` locally and then smoke-tested on Colab L4.
-- External LoRA behavior should be validated in Underfit, then imported back as
-  audio/checkpoint comparison artifacts rather than reimplemented here.
+- Underfit LoRA runs can be validated in Underfit and imported as
+  audio/checkpoint comparison artifacts.
