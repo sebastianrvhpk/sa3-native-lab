@@ -32,7 +32,6 @@ should not rebuild Underfit locally.
 | `tests/` | Unit tests for reusable primitives, adapters, notebook helpers, and math utilities. | Active |
 | `docs/research/current/` | Current notebook map, mode math, and repo structure. | Active |
 | `docs/research/methods/` | Method notes that support active or near-term notebook modes. | Active reference |
-| `docs/archive/` | Historical research surveys and pre-consolidation notes. | Archived reference |
 | `docs/guides/` | Stable Audio 3 upstream/reference model docs and images. | Reference |
 | `docs/workflows/` | Stable Audio 3 upstream/reference workflow docs. | Reference; LoRA is legacy for this repo |
 | `stable_audio_3/` | Vendored Stable Audio 3 source package. | Upstream base |
@@ -121,16 +120,6 @@ dataset folders
 | `docs/workflows/inference.md` | Upstream/reference inference workflow. |
 | `docs/workflows/lora.md` | Legacy/upstream LoRA reference; active LoRA work is Underfit. |
 
-### Archived Research Notes
-
-| File | Role |
-|---|---|
-| `docs/archive/README.md` | Archive index and usage rules. |
-| `docs/archive/latent-audio-research-notes.md` | Earlier broad SA3/SAME/LatCH/guidance research map. |
-| `docs/archive/latent-memory-composition-primitives.md` | Earlier latent memory and composition primitive architecture. |
-| `docs/archive/neural-audio-evolution-timeline.md` | Historical neural audio architecture and research timeline. |
-| `docs/archive/neural-audio-math-methods-creative-tech.md` | Educational neural audio math survey. |
-
 ### Local Agent Workflow Docs
 
 | File | Role |
@@ -148,7 +137,8 @@ dataset folders
 
 - Current notebook implementation claims belong in `docs/research/current/`.
 - Reusable method notes belong in `docs/research/methods/`.
-- Older literature surveys belong in `docs/archive/`.
+- Older broad literature surveys should stay out of the active tree unless they
+  are distilled into current notebook decisions.
 - Stable Audio 3 upstream/reference docs stay under `docs/guides/` and
   `docs/workflows/` unless they are replaced by repo-specific notebook docs.
 - Notebook behavior should be changed in

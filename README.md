@@ -125,9 +125,8 @@ They document Mode 0h: latent dynamics, soft clipping, latent-time FFT gain and
 phase operators, magnitude/phase grafting, PCA component gain, SA3 polish, and
 MIR descriptor audits.
 
-Older root-level research notes now live in `docs/archive/`. They are historical
-context from before this repo was consolidated around the combined SA3 Native
-Lab implementation.
+Older broad research notes were distilled into the current roadmap and removed
+from the active tree. Git history preserves the originals.
 
 Stable Audio 3 upstream docs are preserved in `docs/guides/` and
 `docs/workflows/`. Local LoRA material there is legacy/upstream reference only;

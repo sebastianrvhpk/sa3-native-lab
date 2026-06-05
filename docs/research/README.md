@@ -9,8 +9,6 @@ are organized around that boundary:
 - `current/`: current notebook map, current math notes, repo structure map.
 - `methods/`: reusable method notes that support current or near-term notebook
   cells.
-- `../archive/`: historical research notes kept for context, not current
-  implementation plans.
 
 ## Current
 
@@ -46,6 +44,9 @@ Local LoRA work is not an active SA3 Native Lab backlog. The active LoRA path is
 externalized to [dada-bots/underfit](https://github.com/dada-bots/underfit);
 local LoRA docs and scripts are preserved only as upstream/reference context.
 
+Earlier broad research notes were distilled into the current roadmap and then
+removed from the active tree. Git history preserves the originals.
+
 ## Documentation Rules
 
 - Current implementation claims should point to `colab/`,
@@ -54,7 +55,7 @@ local LoRA docs and scripts are preserved only as upstream/reference context.
 - New notebook methods should update
   `current/notebook-research-map-and-next-methods.md` and, when math changes,
   `current/native-experimental-modes-math.md`.
-- Historical surveys belong in `docs/archive/` unless they directly drive a
+- Historical surveys should not be reintroduced unless they directly drive a
   current notebook cell.
 - Do not add app, dashboard, API, or product-interface docs for this project
   direction.

@@ -124,6 +124,28 @@ scripts/build_sa3_same_native_notebook.py
 colab/sa3_same_native_experimental_modes.ipynb
 ```
 
+## Research Discipline
+
+Carried forward from the earlier broad research notes:
+
+- Treat latent metrics as candidate generators, not final truth. Every promising
+  latent/control score needs decoded audio, descriptor deltas, and listening
+  notes before it becomes a claim.
+- Separate every control into three questions: observability, predictability,
+  and intervenability. A descriptor can be measurable without being controllable;
+  a probe can predict a control without proving a causal edit.
+- Establish prompt-only and branch-and-rank baselines before internal steering,
+  sampler guidance, or sidecar training. This keeps model variance from being
+  mistaken for a new control method.
+- Prefer pairwise human labels for subjective qualities such as tension,
+  section role, prompt adherence, transition quality, loop usability, and
+  musical coherence.
+- Log exact checkpoint/config/runtime details for every experiment; SA3 wrapper
+  paths, conditioning tensors, hooks, and sampler defaults are part of the
+  result.
+- Drop a method when it cannot move a measured signal, or when it moves the
+  signal but listening repeatedly rejects the output.
+
 ## Capability Map
 
 ### Notebook Modes
