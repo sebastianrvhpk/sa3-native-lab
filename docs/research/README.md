@@ -12,6 +12,7 @@ are organized as a lab record:
   notebook primitive library.
 - `current/frontier-architecture-transfer.md`: current multimodal/audio
   architecture scout and transfer map into notebook experiments.
+- `current/run-protocol.md`: how notebook runs become evidence.
 - `current/source-context.md`: why the source literature/repos matter here.
 - `current/experiment-ledger.md`: what was actually run and decided.
 - `current/backlog.md`: what to try next.
@@ -30,6 +31,8 @@ are organized as a lab record:
 - [Frontier architecture transfer](current/frontier-architecture-transfer.md):
   source-checked multimodal/audio SOTA scout, architecture deltas, transfer
   matrix, and candidate SA3/SAME notebook experiments.
+- [Run protocol](current/run-protocol.md): research frame, run spine, mode
+  families, evidence panels, minimum run packet, and decision rules.
 - [Source context](current/source-context.md): external papers/repos summarized
   as source, relevant idea, notebook impact, and status.
 - [Experiment ledger](current/experiment-ledger.md): template and initial empty
@@ -69,6 +72,7 @@ notebook's descriptor, memory, player, and annotation cells.
   `current/backlog.md` as appropriate.
 - Current/SOTA architecture scouting should update
   `current/frontier-architecture-transfer.md` and cite checked primary sources.
+- Notebook execution discipline should follow `current/run-protocol.md`.
 - Real notebook runs should update `current/experiment-ledger.md`.
 - Add external survey material only when it directly supports a current notebook
   cell or source-context entry.

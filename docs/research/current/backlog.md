@@ -23,6 +23,9 @@ Drop or revise if:
 Do not add a method just because a paper exists. Add it only when it can become
 a concrete notebook run over SA3/SAME objects.
 
+Use [Run protocol](run-protocol.md) before promoting a backlog item into a
+notebook implementation or a kept method.
+
 ## Implemented Backlog Reference
 
 These items from the previous research map now have notebook cells or probes:

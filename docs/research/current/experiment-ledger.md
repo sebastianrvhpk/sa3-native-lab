@@ -10,6 +10,9 @@ The previous research notes contained method plans and validation rules. This
 ledger is the missing results layer. It should be updated from real Colab runs,
 not from speculation.
 
+Use [Run protocol](run-protocol.md) for the run spine, evidence panels, minimum
+run packet, and promote/revise/drop rules.
+
 ## Ledger Rules
 
 - Record only actual runs or deliberately planned run slots.
@@ -162,4 +165,3 @@ No completed runs have been recorded in this reorganized ledger yet.
 - Which control lanes are observable, predictable, and intervenable?
 - Which residual layers produce stable causal audio controls?
 - Can sampler-level guidance improve loopability without half-period collapse?
-

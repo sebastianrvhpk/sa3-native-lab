@@ -116,6 +116,13 @@ The current multimodal/audio architecture transfer note is:
 It summarizes current source-checked architecture changes and translates them
 into SA3/SAME notebook experiment candidates.
 
+The run protocol is:
+
+`docs/research/current/run-protocol.md`
+
+It defines the object/intervention/measurement/claim/decision frame and the
+minimum evidence packet for notebook runs.
+
 The external source context is:
 
 `docs/research/current/source-context.md`

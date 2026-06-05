@@ -32,6 +32,20 @@ The upstream SA3 repo remains external. This repo keeps notebook-native
 research code: scoring, measurement, latent operators, memory, probes, and
 listening support.
 
+## Primitive Contract
+
+Each primitive should expose the lab frame, not hide it:
+
+```text
+Object: native object under study
+Intervention or measurement: what changes or what is reported
+Evidence artifact: dataclass, row, latent item, descriptor dict, audio output, or note
+Decision use: promote, revise, drop, unknown, or microscope only
+```
+
+This is why the package favors small functions, dataclasses, and JSON-friendly
+rows over a new runtime framework.
+
 ## Capability Clusters
 
 ### 1. Model Boundary

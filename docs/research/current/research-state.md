@@ -46,6 +46,7 @@ against frozen SA3/SAME methods.
 | `colab/` | Expanded notebook plus Colab L4 runbook. | Active |
 | `latent_audio_primitives/` | Notebook library for SAME/SA3 latent math, prompt scoring, controls, DSP, geometry, residual probes, memory, and descriptors. | Active |
 | `docs/research/current/` | Current project state, methods/math, source context, experiment ledger, and backlog. | Active |
+| `docs/research/current/run-protocol.md` | Operational run spine and evidence rules for turning notebook outputs into decisions. | Active |
 
 ## Execution Surfaces
 
