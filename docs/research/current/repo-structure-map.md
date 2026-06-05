@@ -6,11 +6,9 @@ direction after removal of the abandoned app/control-plane path.
 ## Direction
 
 SA3 Native Lab is a Colab and Python research workspace for frozen SA3/SAME
-latent experiments. The source of truth is the notebook builder plus the
-generated Colab notebook:
+latent experiments. The source of truth is the expanded Colab notebook:
 
 ```text
-scripts/build_sa3_same_native_notebook.py
 colab/sa3_same_native_experimental_modes.ipynb
 ```
 
@@ -26,8 +24,8 @@ should not rebuild Underfit locally.
 
 | Path | Role | Status |
 |---|---|---|
-| `colab/` | Generated notebook and Colab-facing helper scripts. | Active |
-| `scripts/` | Notebook builder, validation, dataset encoding, vector extraction, soft prompt/style helpers. | Active |
+| `colab/` | Source notebook and Colab-facing helper scripts. | Active |
+| `scripts/` | Notebook validation, dataset encoding, vector extraction, soft prompt/style helpers. | Active |
 | `latent_audio_primitives/` | Reusable SAME/SA3 latent math, prompt scoring, controls, DSP, geometry, observability, and experiment helpers. | Active |
 | `tests/` | Unit tests for reusable primitives, adapters, notebook helpers, and math utilities. | Active |
 | `docs/research/current/` | Current notebook map, mode math, and repo structure. | Active |
@@ -46,9 +44,8 @@ Empty app-era directories are not part of the active repo.
 
 | Surface | Entry Point | Inputs | Outputs | Notes |
 |---|---|---|---|---|
-| Notebook builder | `scripts/build_sa3_same_native_notebook.py` | Local helper code, cell templates | `colab/sa3_same_native_experimental_modes.ipynb` | Source of truth for notebook edits |
 | Colab notebook | `colab/sa3_same_native_experimental_modes.ipynb` | Audio files, prompts, SA3/SAME checkpoints, datasets | Audio files, tables, manifests, plots, player cells | Main research instrument |
-| Notebook validation | `scripts/validate_colab_notebook.py` | Notebook JSON | validation result | Run after builder/notebook changes |
+| Notebook validation | `scripts/validate_colab_notebook.py` | Notebook JSON | validation result | Run after notebook changes |
 | Primitive tests | `tests/test_*.py` | Fake tensors/models and helper fixtures | pytest results | Protect reusable math without model weights |
 | SA3 CLI | `stable-audio` / `stable_audio_3.cli` | Prompts/audio/checkpoints | generated audio | Upstream package surface |
 | Research scripts | `scripts/*.py` | datasets, prompts, model handles | latents, vectors, profiles, audio | Script support for notebook experiments |
@@ -140,9 +137,9 @@ dataset folders
   are distilled into current notebook decisions.
 - Stable Audio 3 upstream/reference docs stay under `docs/guides/` and
   `docs/workflows/` unless they are replaced by repo-specific notebook docs.
-- Notebook behavior should be changed in
-  `scripts/build_sa3_same_native_notebook.py` and regenerated into
-  `colab/sa3_same_native_experimental_modes.ipynb`.
+- Notebook behavior should be changed directly in
+  `colab/sa3_same_native_experimental_modes.ipynb`, with reusable code moved
+  into `latent_audio_primitives/` when it becomes shared or test-worthy.
 
 ## Unknowns And Verification Plan
 

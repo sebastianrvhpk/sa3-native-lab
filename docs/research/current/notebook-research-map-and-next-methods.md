@@ -16,9 +16,8 @@ Scope:
 This document combines:
 
 - Local repo capabilities confirmed from `colab/`,
-  `scripts/build_sa3_same_native_notebook.py`, `latent_audio_primitives/`,
-  `scripts/`, `tests/`, `docs/research/current/`, and
-  `docs/research/methods/`.
+  `latent_audio_primitives/`, `scripts/`, `tests/`,
+  `docs/research/current/`, and `docs/research/methods/`.
 - External research and repo survey across Stable Audio 3, SAME, Underfit as
   the external LoRA reference, flow matching, music/audio control, prompt
   inversion, activation steering, neural codecs, and older neural audio systems.
@@ -120,7 +119,6 @@ and experiment manifests
 Primary source of truth, `confirmed`:
 
 ```text
-scripts/build_sa3_same_native_notebook.py
 colab/sa3_same_native_experimental_modes.ipynb
 ```
 

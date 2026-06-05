@@ -50,8 +50,7 @@ removed from the active tree. Git history preserves the originals.
 ## Documentation Rules
 
 - Current implementation claims should point to `colab/`,
-  `scripts/build_sa3_same_native_notebook.py`, `latent_audio_primitives/`, or
-  `tests/`.
+  `latent_audio_primitives/`, `scripts/`, or `tests/`.
 - New notebook methods should update
   `current/notebook-research-map-and-next-methods.md` and, when math changes,
   `current/native-experimental-modes-math.md`.

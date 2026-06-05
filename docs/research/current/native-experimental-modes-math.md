@@ -13,12 +13,6 @@ Main notebook:
 colab/sa3_same_native_experimental_modes.ipynb
 ```
 
-Notebook source of truth:
-
-```text
-scripts/build_sa3_same_native_notebook.py
-```
-
 ## Evidence Levels
 
 - Confirmed SA3/SAME fact: matches released repo docs, model interfaces, or paper/model-card framing.
