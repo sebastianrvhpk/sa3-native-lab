@@ -31,7 +31,7 @@ Then verify:
 
 Expected GPU: NVIDIA L4, usually 24 GB VRAM.
 
-The notebook `sa3_same_native_experimental_modes.ipynb` is configured as a
+The notebook `sa3_native_research_programs.ipynb` is configured as a
 top-to-bottom Colab L4 setup for upstream SA3 plus this notebook repo. The
 setup/model/smoke-test defaults are ON. The
 only expected manual actions are:
@@ -191,7 +191,7 @@ audio = model.generate(
 After the setup and smoke test work, continue in:
 
 ```text
-colab/sa3_same_native_experimental_modes.ipynb
+colab/sa3_native_research_programs.ipynb
 ```
 
 The notebook contains the research workflows for SAME memory, native flow prompt
@@ -214,7 +214,7 @@ chunked_decode: True if decoding long audio
 
 Scale up only after the smoke test works.
 
-## Failure Modes
+## Failure Cases
 
 Flash Attention import failure:
 

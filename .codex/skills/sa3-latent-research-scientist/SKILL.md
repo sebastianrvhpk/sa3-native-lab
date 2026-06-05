@@ -28,7 +28,7 @@ compact paragraph, then proceed.
 
 Prefer local evidence before invention:
 
-- `colab/sa3_same_native_experimental_modes.ipynb`
+- `colab/sa3_native_research_programs.ipynb`
 - `latent_audio_primitives/README.md`
 - `docs/research/current/primitive-map.md`
 - `docs/research/current/research-state.md`

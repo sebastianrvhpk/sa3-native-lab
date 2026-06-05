@@ -21,7 +21,7 @@ repo's notebook/primitives layer.
 
 Push this repo to GitHub, then use the Colab notebook:
 
-`colab/sa3_same_native_experimental_modes.ipynb`
+`colab/sa3_native_research_programs.ipynb`
 
 The notebook is already configured to clone:
 
@@ -98,7 +98,7 @@ The current methods and math notes are:
 `docs/research/current/methods-and-math.md`
 
 That document covers SA3/SAME objects, frozen-model principles, native flow
-prompt scoring, mode equations, latent DSP, geometry, control observability,
+prompt scoring, program equations, latent DSP, geometry, control observability,
 guidance, residual steering, and implementation safety notes.
 
 The primitive library map is:
