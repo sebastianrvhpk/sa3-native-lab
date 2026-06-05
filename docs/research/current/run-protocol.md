@@ -39,7 +39,7 @@ probes:
 choose source audio / dataset / prompt family
 -> encode or load SAME latents
 -> record baseline output or baseline measurements
--> choose one research program and one intervention
+-> choose one ontology stratum and one intervention
 -> run the method with explicit seed, steps, duration, and prompt
 -> measure descriptor, flow, latent, memory, geometry, lane, or residual evidence
 -> audition with the custom player
@@ -52,17 +52,16 @@ Do not skip the baseline. For prompt and flow methods, reuse the same probe bank
 when comparing prompts. For audio edit methods, include the source audio and a
 plain SA3/audio-to-audio baseline.
 
-## Research Programs
+## Science Ontology
 
-| Program | Experiments | Primary Question |
-|---|---|---|
-| `LATENT` | neighborhood renoise, selective renoise, graft, blur bottleneck, neural DSP, loop repair | Which SAME latent edits produce predictable audio changes after direct decode or SA3 polish? |
-| `CONDITION` | soft prompt inversion, hard/readable prompt search, dataset prompt, flow attribution, timestep panel, null inversion | Which prompt or conditioning object best explains target audio through frozen SA3 dynamics? |
-| `MEMORY` | prompt family, style profile/direction, control head, latent memory, geometry audit, lanes, curriculum, OT transfer, bridge search | Which dataset structures, lanes, and geometry summaries help select, transfer, or audit audio behavior? |
-| `RESIDUAL` | prompt steering, audio steering, feature atlas | Which internal SA3 representations carry usable or diagnostic audio controls? |
-| `GUIDANCE` | cyclic trajectory, flow-state optimization, continuation, gradient edit, audio posterior guidance | Which sampler-state or objective-guided edits are worth promoting beyond microscope status? |
-| `BASELINE` | Underfit handoff, cross-model harness | What should frozen SA3/SAME be compared against without importing local app/training scaffolding? |
-| `REVIEW` | player, combined chain, manifest, ledger | Which outputs deserve to be kept, revised, or dropped? |
+| Stratum | Kind | Experiments | Primary Question |
+|---|---|---|---|
+| `SAME_REPRESENTATION` | native representation stratum | neighborhood renoise, selective renoise, graft, blur bottleneck, neural DSP, style statistics, geometry, OT, loop repair | What does SAME preserve, erase, linearize, or make editable in audio latents? |
+| `SA3_FLOW_CONDITIONING` | flow-conditioning stratum | flow sign diagnostic, soft prompt inversion/audition, hard/readable prompt search, dataset soft prompt, attribution, timestep panel, null inversion | What prompt or conditioning object best explains target audio through frozen SA3 flow dynamics? |
+| `CAUSAL_STEERING` | intervention stratum | prompt/audio residual steering, feature atlas, control head, cyclic trajectory, flow-state optimization, gradient edit, audio posterior guidance | Which inference-time interventions causally move generated audio rather than only measuring it? |
+| `DATASET_MEMORY_COMPOSITION` | collection/composition stratum | prompt family, memory index, curriculum, continuation, bridge search | How do collections become memory, donor context, structure, or continuity without simply copying? |
+| `EVIDENCE_DECISION_PROTOCOL` | lab infrastructure | player, annotations, descriptors, control lanes, manifest, ledger, combined chain | What evidence decides whether an effect is real, audible, useful, repeatable, or only a microscope? |
+| `EXTERNAL_COMPARISON` | lab infrastructure | Underfit handoff, cross-model harness, optional external embedding lanes | What should frozen SA3/SAME be compared against without importing local app/training scaffolding? |
 
 ## Evidence Panels
 
@@ -85,7 +84,7 @@ For a method to be reviewable, collect:
 
 ```text
 commit hash
-program and experiment slug
+ontology stratum and experiment slug
 model ID / SA3 checkpoint
 runtime and GPU
 source/donor audio paths

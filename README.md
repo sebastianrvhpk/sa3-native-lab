@@ -98,7 +98,7 @@ The current methods and math notes are:
 `docs/research/current/methods-and-math.md`
 
 That document covers SA3/SAME objects, frozen-model principles, native flow
-prompt scoring, program equations, latent DSP, geometry, control observability,
+prompt scoring, ontology equations, latent DSP, geometry, control observability,
 guidance, residual steering, and implementation safety notes.
 
 The primitive library map is:
@@ -108,6 +108,13 @@ The primitive library map is:
 It explains how `latent_audio_primitives/` is clustered into model-boundary,
 latent-object, measurement, prompt-inversion, intervention, dataset, and
 listening-loop modules.
+
+The bottom-up capability map is:
+
+`docs/research/current/capability-map.md`
+
+It maps native objects, real I/O, artifacts, parameters, and the next notebook
+shape directly from current code and cells.
 
 The current multimodal/audio architecture transfer note is:
 

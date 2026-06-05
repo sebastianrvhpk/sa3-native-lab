@@ -1,6 +1,6 @@
 # SA3 Native Lab Backlog
 
-Status: future work and open questions for the research-program notebook.
+Status: future work and open questions for the science-ontology notebook.
 
 This document answers: what should be tried next, why it matters, what evidence
 would promote or drop it, and which questions remain open.
@@ -15,7 +15,7 @@ Every backlog item should state:
 ```text
 Goal:
 Evidence already available:
-Program touchpoints:
+Ontology touchpoints:
 Promote if:
 Drop or revise if:
 ```
@@ -26,36 +26,36 @@ a concrete notebook run over SA3/SAME objects.
 Use [Run protocol](run-protocol.md) before promoting a backlog item into a
 notebook implementation or a kept method.
 
-## Implemented Program Reference
+## Implemented Ontology Reference
 
 These items now have notebook cells or probes:
 
-| Item | Program Experiment | Helper Support | Status |
+| Item | Notebook Experiment | Helper Support | Status |
 |---|---|---|---|
-| Flow attribution prompt microscope | `CONDITION.flow_attribution` | `flow_prompt.py` attribution rows | implemented |
-| Loss-by-timestep flow panel | `CONDITION.flow_timestep_panel` | `flow_prompt.py` loss rows and summaries | implemented |
-| SAME control lanes | `MEMORY.control_lanes` | `control_lanes.py` | implemented |
-| Dataset memory curriculum | `MEMORY.curriculum` | `curriculum.py` | implemented |
-| Latent OT style transfer bench | `MEMORY.ot_style_transfer` | `geometry.py`, `style.py` | implemented |
-| Continuation as bridge search | `MEMORY.bridge_search` | `composition.py` | implemented |
-| Residual feature atlas | `RESIDUAL.feature_atlas` | `residual_features.py` | implemented |
-| SA3 null-condition inversion probe | `CONDITION.null_inversion` | notebook probe over SA3 conditioning tensors | scaffold |
-| Guidance-gradient latent edit | `GUIDANCE.gradient_edit` | `guidance.py` | scaffold |
-| Audio-to-audio posterior guidance | `GUIDANCE.audio_posterior` | `guidance.py`, source/reference summaries | scaffold |
-| Cross-model baseline harness | `BASELINE.cross_model` | notebook command harness plus descriptors/player | scaffold |
+| Flow attribution prompt microscope | `SA3_FLOW_CONDITIONING.flow_attribution` | `flow_prompt.py` attribution rows | implemented |
+| Loss-by-timestep flow panel | `SA3_FLOW_CONDITIONING.flow_timestep_panel` | `flow_prompt.py` loss rows and summaries | implemented |
+| SAME control lanes | `EVIDENCE_DECISION_PROTOCOL.control_lanes` | `control_lanes.py` | implemented |
+| Dataset memory curriculum | `DATASET_MEMORY_COMPOSITION.curriculum` | `curriculum.py` | implemented |
+| Latent OT style transfer bench | `SAME_REPRESENTATION.ot_style_transfer` | `geometry.py`, `style.py` | implemented |
+| Continuation as bridge search | `DATASET_MEMORY_COMPOSITION.bridge_search` | `composition.py` | implemented |
+| Residual feature atlas | `CAUSAL_STEERING.residual_feature_atlas` | `residual_features.py` | implemented |
+| SA3 null-condition inversion probe | `SA3_FLOW_CONDITIONING.null_inversion` | notebook probe over SA3 conditioning tensors | scaffold |
+| Guidance-gradient latent edit | `CAUSAL_STEERING.gradient_edit` | `guidance.py` | scaffold |
+| Audio-to-audio posterior guidance | `CAUSAL_STEERING.audio_posterior` | `guidance.py`, source/reference summaries | scaffold |
+| Cross-model baseline harness | `EXTERNAL_COMPARISON.cross_model` | notebook command harness plus descriptors/player | scaffold |
 
 ## Immediate Priorities
 
 ### 1. Probe-Bank Cache
 
 Goal: save target latent, timesteps, noise seeds, and per-prompt rows so
-`CONDITION.flow_attribution` and `CONDITION.flow_timestep_panel` reuse identical
+`SA3_FLOW_CONDITIONING.flow_attribution` and `SA3_FLOW_CONDITIONING.flow_timestep_panel` reuse identical
 probes across sessions.
 
 Evidence already available: shared probe banks reduce prompt-score variance and
 make A/B prompt comparisons fair.
 
-Program touchpoints: `CONDITION.hard_prompt_search`, `CONDITION.flow_attribution`, `CONDITION.flow_timestep_panel`.
+Ontology touchpoints: `SA3_FLOW_CONDITIONING.hard_prompt_search`, `SA3_FLOW_CONDITIONING.flow_attribution`, `SA3_FLOW_CONDITIONING.flow_timestep_panel`.
 
 Promote if:
 
@@ -76,7 +76,7 @@ short audition generations.
 Evidence already available: flow score measures teacher-forced vector-field
 agreement; descriptors measure decoded audio movement.
 
-Program touchpoints: `CONDITION.hard_prompt_search`, `CONDITION.readable_prompt_search`, flow-microscope cells, descriptor/player cells.
+Ontology touchpoints: `SA3_FLOW_CONDITIONING.hard_prompt_search`, `SA3_FLOW_CONDITIONING.readable_prompt_search`, flow-microscope cells, descriptor/player cells.
 
 Promote if:
 
@@ -94,10 +94,10 @@ Drop or revise if:
 Goal: add lane similarity to memory retrieval so searches can combine latent
 summary, descriptor targets, and time-varying lane shape.
 
-Evidence already available: `MEMORY.control_lanes` extracts and compares control lanes;
-`MEMORY.index_instrument` provides latent memory search.
+Evidence already available: `EVIDENCE_DECISION_PROTOCOL.control_lanes` extracts and compares control lanes;
+`DATASET_MEMORY_COMPOSITION.memory_index` provides latent memory search.
 
-Program touchpoints: `MEMORY.index_instrument`, `MEMORY.control_lanes`, `MEMORY.curriculum`, `MEMORY.bridge_search`.
+Ontology touchpoints: `DATASET_MEMORY_COMPOSITION.memory_index`, `EVIDENCE_DECISION_PROTOCOL.control_lanes`, `DATASET_MEMORY_COMPOSITION.curriculum`, `DATASET_MEMORY_COMPOSITION.bridge_search`.
 
 Promote if:
 
@@ -118,7 +118,7 @@ distance, lane similarity, descriptor fit, and transition cost.
 Evidence already available: geometry, memory, bridge search, control lanes, and
 descriptor reports already exist.
 
-Program touchpoints: `LATENT.audio_graft`, `LATENT.neural_dsp`, `MEMORY.geometry_audit`, `MEMORY.control_lanes`, `MEMORY.ot_style_transfer`, `MEMORY.bridge_search`.
+Ontology touchpoints: `SAME_REPRESENTATION.audio_graft`, `SAME_REPRESENTATION.neural_dsp`, `SAME_REPRESENTATION.geometry_audit`, `EVIDENCE_DECISION_PROTOCOL.control_lanes`, `SAME_REPRESENTATION.ot_style_transfer`, `DATASET_MEMORY_COMPOSITION.bridge_search`.
 
 Promote if:
 
@@ -133,13 +133,13 @@ Drop or revise if:
 
 ### 5. Residual Temporal Patching
 
-Goal: extend `RESIDUAL.feature_atlas` from layer-level residual feature atlas to layer x
+Goal: extend `CAUSAL_STEERING.residual_feature_atlas` from layer-level residual feature atlas to layer x
 denoising-step or layer x latent-time patch tests.
 
 Evidence already available: residual vectors and feature bases exist; activation
 steering sources support causal intervention tests.
 
-Program touchpoints: `RESIDUAL.prompt_steering`, `RESIDUAL.audio_steering`, `RESIDUAL.feature_atlas`.
+Ontology touchpoints: `CAUSAL_STEERING.prompt_residual`, `CAUSAL_STEERING.audio_residual`, `CAUSAL_STEERING.residual_feature_atlas`.
 
 Promote if:
 
@@ -155,13 +155,13 @@ Drop or revise if:
 
 ### 6. Guidance Objective Mixer
 
-Goal: let `GUIDANCE.gradient_edit` choose profile, boundary, period, lane, descriptor, and
+Goal: let `CAUSAL_STEERING.gradient_edit` choose profile, boundary, period, lane, descriptor, and
 preservation losses from a compact JSON recipe.
 
-Evidence already available: generic gradient guidance exists; `MEMORY.geometry_audit`,
-`MEMORY.control_lanes`, and `LATENT.neural_dsp` provide measurable loss candidates.
+Evidence already available: generic gradient guidance exists; `SAME_REPRESENTATION.geometry_audit`,
+`EVIDENCE_DECISION_PROTOCOL.control_lanes`, and `SAME_REPRESENTATION.neural_dsp` provide measurable loss candidates.
 
-Program touchpoints: `MEMORY.geometry_audit`, `MEMORY.control_lanes`, `GUIDANCE.gradient_edit`, `GUIDANCE.audio_posterior`.
+Ontology touchpoints: `SAME_REPRESENTATION.geometry_audit`, `EVIDENCE_DECISION_PROTOCOL.control_lanes`, `CAUSAL_STEERING.gradient_edit`, `CAUSAL_STEERING.audio_posterior`.
 
 Promote if:
 
@@ -176,14 +176,14 @@ Drop or revise if:
 
 ### 7. Null-Condition Edit Audition
 
-Goal: after `CONDITION.null_inversion` optimizes null conditioning, generate
+Goal: after `SA3_FLOW_CONDITIONING.null_inversion` optimizes null conditioning, generate
 fixed prompt edits and compare source preservation against
-`CONDITION.soft_prompt_inversion` and plain audio-to-audio.
+`SA3_FLOW_CONDITIONING.soft_prompt_inversion` and plain audio-to-audio.
 
 Evidence already available: null-text inversion motivates branch-specific
 conditioning; SA3 has CFG-like conditional/null behavior.
 
-Program touchpoints: `CONDITION.soft_prompt_inversion`, `CONDITION.hard_prompt_search`, `CONDITION.null_inversion`.
+Ontology touchpoints: `SA3_FLOW_CONDITIONING.soft_prompt_inversion`, `SA3_FLOW_CONDITIONING.hard_prompt_search`, `SA3_FLOW_CONDITIONING.null_inversion`.
 
 Promote if:
 
@@ -205,10 +205,10 @@ deltas so "kept source identity" and "copied dataset item" are separated.
 Evidence already available: memory index, descriptors, manifest, player, and
 annotation cells exist.
 
-Program touchpoints: all generation/editing experiments, especially
-`LATENT.neighborhood_renoise`, `LATENT.audio_graft`, `LATENT.neural_dsp`,
-`MEMORY.ot_style_transfer`, `MEMORY.bridge_search`, `GUIDANCE.gradient_edit`,
-and `GUIDANCE.audio_posterior`.
+Ontology touchpoints: all generation/editing experiments, especially
+`SAME_REPRESENTATION.neighborhood_renoise`, `SAME_REPRESENTATION.audio_graft`, `SAME_REPRESENTATION.neural_dsp`,
+`SAME_REPRESENTATION.ot_style_transfer`, `DATASET_MEMORY_COMPOSITION.bridge_search`, `CAUSAL_STEERING.gradient_edit`,
+and `CAUSAL_STEERING.audio_posterior`.
 
 Promote if:
 
@@ -228,7 +228,7 @@ SAME summaries, descriptor deltas, and listening tags.
 
 Evidence already available: memory clustering and descriptor reports exist.
 
-Program touchpoints: `LATENT.neighborhood_renoise`, `CONDITION.hard_prompt_search`, `RESIDUAL.prompt_steering`, `MEMORY.ot_style_transfer`, `GUIDANCE.gradient_edit`, `BASELINE.cross_model`.
+Ontology touchpoints: `SAME_REPRESENTATION.neighborhood_renoise`, `SA3_FLOW_CONDITIONING.hard_prompt_search`, `CAUSAL_STEERING.prompt_residual`, `SAME_REPRESENTATION.ot_style_transfer`, `CAUSAL_STEERING.gradient_edit`, `EXTERNAL_COMPARISON.cross_model`.
 
 Promote if:
 
@@ -248,7 +248,7 @@ annotations into a static report.
 
 Evidence already available: manifest/player/descriptors already exist.
 
-Program touchpoints: manifest cell, player, descriptor tables, experiment ledger.
+Ontology touchpoints: manifest cell, player, descriptor tables, experiment ledger.
 
 Promote if:
 
@@ -276,7 +276,7 @@ Evidence already available: SAME is the local native latent object; latent blur,
 latent DSP, geometry, direct decode, SA3 polish, descriptors, and flow scoring
 already exist.
 
-Program touchpoints: `LATENT.blur_bottleneck`, `LATENT.neural_dsp`, `MEMORY.geometry_audit`, `CONDITION.flow_attribution`, `CONDITION.flow_timestep_panel`.
+Ontology touchpoints: `SAME_REPRESENTATION.blur_bottleneck`, `SAME_REPRESENTATION.neural_dsp`, `SAME_REPRESENTATION.geometry_audit`, `SA3_FLOW_CONDITIONING.flow_attribution`, `SA3_FLOW_CONDITIONING.flow_timestep_panel`.
 
 Promote if:
 
@@ -298,7 +298,7 @@ Evidence already available: flow attribution, null-condition inversion scaffold,
 soft prompts, source-preservation guidance scaffold, descriptors, and memory
 nearest-neighbor checks exist.
 
-Program touchpoints: `CONDITION.soft_prompt_inversion`, `CONDITION.hard_prompt_search`, `CONDITION.flow_attribution`, `CONDITION.flow_timestep_panel`, `CONDITION.null_inversion`, `GUIDANCE.audio_posterior`.
+Ontology touchpoints: `SA3_FLOW_CONDITIONING.soft_prompt_inversion`, `SA3_FLOW_CONDITIONING.hard_prompt_search`, `SA3_FLOW_CONDITIONING.flow_attribution`, `SA3_FLOW_CONDITIONING.flow_timestep_panel`, `SA3_FLOW_CONDITIONING.null_inversion`, `CAUSAL_STEERING.audio_posterior`.
 
 Promote if:
 
@@ -319,7 +319,7 @@ controls per segment, then assembling with continuation and bridge search.
 Evidence already available: chunk windows, prompt family search, memory
 curriculum, control lanes, continuation, bridge ranking, and manifests exist.
 
-Program touchpoints: `MEMORY.prompt_family`, `GUIDANCE.continuation_composition`, `MEMORY.index_instrument`, `MEMORY.control_lanes`, `MEMORY.curriculum`, `MEMORY.bridge_search`.
+Ontology touchpoints: `DATASET_MEMORY_COMPOSITION.prompt_family`, `DATASET_MEMORY_COMPOSITION.continuation`, `DATASET_MEMORY_COMPOSITION.memory_index`, `EVIDENCE_DECISION_PROTOCOL.control_lanes`, `DATASET_MEMORY_COMPOSITION.curriculum`, `DATASET_MEMORY_COMPOSITION.bridge_search`.
 
 Promote if:
 
@@ -340,7 +340,7 @@ semantic or temporal embedding distances.
 Evidence already available: memory index, descriptors, control lanes, and
 cross-model baseline harness exist.
 
-Program touchpoints: `MEMORY.index_instrument`, `MEMORY.control_lanes`, `MEMORY.curriculum`, `BASELINE.cross_model`, player/ledger cells.
+Ontology touchpoints: `DATASET_MEMORY_COMPOSITION.memory_index`, `EVIDENCE_DECISION_PROTOCOL.control_lanes`, `DATASET_MEMORY_COMPOSITION.curriculum`, `EXTERNAL_COMPARISON.cross_model`, player/ledger cells.
 
 Promote if:
 
@@ -363,7 +363,7 @@ Evidence already available: SA3 supports fast generation/editing; local
 experiments already sweep renoise, latent edits, cyclic sampler probes, and
 guidance.
 
-Program touchpoints: `LATENT.neighborhood_renoise`, `LATENT.blur_bottleneck`, `LATENT.neural_dsp`, `GUIDANCE.cyclic_trajectory`, `GUIDANCE.gradient_edit`, `GUIDANCE.audio_posterior`.
+Ontology touchpoints: `SAME_REPRESENTATION.neighborhood_renoise`, `SAME_REPRESENTATION.blur_bottleneck`, `SAME_REPRESENTATION.neural_dsp`, `CAUSAL_STEERING.cyclic_trajectory`, `CAUSAL_STEERING.gradient_edit`, `CAUSAL_STEERING.audio_posterior`.
 
 Promote if:
 
@@ -384,9 +384,9 @@ without pretending to train a preference model.
 Evidence already available: custom player, annotation search, descriptor rows,
 manifests, and experiment ledger exist.
 
-Program touchpoints: player, manifest, experiment ledger,
-`LATENT.neighborhood_renoise`, `CONDITION.hard_prompt_search`,
-`MEMORY.ot_style_transfer`, `GUIDANCE.gradient_edit`, `BASELINE.cross_model`.
+Ontology touchpoints: player, manifest, experiment ledger,
+`SAME_REPRESENTATION.neighborhood_renoise`, `SA3_FLOW_CONDITIONING.hard_prompt_search`,
+`SAME_REPRESENTATION.ot_style_transfer`, `CAUSAL_STEERING.gradient_edit`, `EXTERNAL_COMPARISON.cross_model`.
 
 Promote if:
 
@@ -403,7 +403,7 @@ Drop or revise if:
 
 - Better visual styling for notebook panels.
 - Compact printable manifest summaries.
-- Cross-model fixed task packs beyond `BASELINE.cross_model`.
+- Cross-model fixed task packs beyond `EXTERNAL_COMPARISON.cross_model`.
 - Prompt-token replacement suggestions beyond leave-one-out attribution.
 - Control-lane editor for hand-drawn or imported lanes.
 - Layer/time residual patch heatmaps.

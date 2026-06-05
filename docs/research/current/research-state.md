@@ -3,8 +3,8 @@
 Status: current project snapshot for the notebook-first SA3 Native Lab direction
 as of 2026-06-05.
 
-This document answers: what exists now, what the repo is for, which research
-programs and helper primitives are active, and which parts are confirmed versus
+This document answers: what exists now, what the repo is for, which science
+strata and helper primitives are active, and which parts are confirmed versus
 scaffolded.
 
 ## Direction
@@ -79,21 +79,21 @@ measure with native flow losses, latent geometry, audio descriptors, listening n
 and experiment manifests
 ```
 
-## Notebook Research Program Inventory
+## Notebook Science Ontology Inventory
 
 The active notebook no longer uses numbered implementation cells as its public
-structure. Experiments are grouped by the native SA3/SAME object they probe or
-edit.
+structure. Experiments are grouped by native object, intervention type, and
+evidence role. The first four strata are object/intervention strata; the last
+two are evidence and comparison infrastructure.
 
-| Program | Experiments | Main Object | Main Artifact | Status |
-|---|---|---|---|---|
-| `LATENT` | neighborhood renoise; channel-selective renoise; annotation retrieval; cross-audio graft; blur bottleneck; neural latent DSP; cyclic loop repair | SAME latent `z0`, latent channels, latent-time trajectories, source/donor latents | generated variants, direct decodes, SA3-polished audio, descriptor reports, annotation rows | implemented |
-| `CONDITION` | soft prompt inversion; soft prompt audition; hard prompt search; readable prompt search; dataset soft prompt; flow sign diagnostic; flow attribution; loss-by-timestep panel; null-condition inversion | SA3 conditioning `C(p)`, optimized conditioning tensors, frozen flow probes | `.pt` conditioning states, prompt candidates, flow-loss rows, attribution tables, timestep panels | implemented plus null-inversion scaffold |
-| `MEMORY` | dataset prompt family; style profile; style direction; control head; latent memory instrument; geometry audit; control lanes; memory curriculum; latent OT style transfer; bridge search | `LatentItem` memory rows, SAME summary statistics, covariance/profile geometry, control lanes | memory indices, profile/direction files, geometry reports, lane JSON/SVG, curriculum rows, bridge rankings | implemented |
-| `RESIDUAL` | prompt-derived steering; audio-derived steering; residual feature atlas | SA3 residual activations and feature bases | steering vectors, alpha sweeps, probe reports, feature atlas JSON | implemented |
-| `GUIDANCE` | cyclic denoising trajectory; flow-state optimization; continuation/inpainting composition; guidance-gradient edit; audio posterior guidance | sampler state, intermediate flow state, masked continuation region, differentiable objectives | loop variants, continuation audio, edited/polished variants, guidance reports | implemented plus sampler-guidance scaffolds |
-| `BASELINE` | Underfit LoRA handoff; cross-model baseline harness | external fine-tuning artifacts and fixed comparison task packs | external audio/checkpoints/run notes, comparison reports | external/scaffold |
-| `REVIEW` | custom audio player; combined chain; experiment manifest/log template; experiment ledger handoff | evidence packet and decision loop | embedded player rows, manifests, listening notes, promote/revise/drop decisions | implemented |
+| Stratum | Kind | Experiments | Main Object | Main Artifact | Status |
+|---|---|---|---|---|---|
+| `SAME_REPRESENTATION` | native representation stratum | neighborhood renoise; channel-selective renoise; cross-audio graft; blur bottleneck; neural latent DSP; style profile; style direction; geometry audit; latent OT style transfer; cyclic loop repair | SAME latent `z0`, latent channels, latent-time trajectories, source/donor latents, latent statistics/covariance | direct decodes, SA3-polished audio, descriptor reports, profile/direction files, geometry reports, transport comparisons | implemented |
+| `SA3_FLOW_CONDITIONING` | flow-conditioning stratum | flow sign diagnostic; soft prompt inversion; soft prompt audition; hard prompt search; readable prompt search; dataset soft prompt; flow attribution; loss-by-timestep panel; null-condition inversion | SA3 conditioning `C(p)`, optimized conditioning tensors, frozen flow probes | `.pt` conditioning states, prompt candidates, flow-loss rows, attribution tables, timestep panels | implemented plus null-inversion scaffold |
+| `CAUSAL_STEERING` | intervention stratum | prompt-derived residual steering; audio-derived residual steering; flow-state optimization; cyclic denoising projection; LatCH-style control head; residual feature atlas; guidance-gradient edit; audio posterior guidance | DiT residual activations, sampler state, intermediate flow state, sidecar probes, differentiable guidance objectives | steering vectors, alpha sweeps, feature atlas JSON, guided variants, probe reports | implemented plus sampler-guidance scaffolds |
+| `DATASET_MEMORY_COMPOSITION` | collection/composition stratum | dataset prompt family; latent memory instrument; memory curriculum; continuation/inpainting composition; bridge search | `LatentItem` memory rows, dataset clusters, source/donor candidates, continuation paths | memory indices, curriculum rows, ranked bridges, composition outputs | implemented |
+| `EVIDENCE_DECISION_PROTOCOL` | lab infrastructure | custom audio player; annotation retrieval; control lanes; combined chain; manifest/log template; experiment ledger handoff | evidence packets, descriptor/lane rows, annotations, manifests, listening notes | embedded player rows, lane JSON/SVG, manifests, promote/revise/drop decisions | implemented |
+| `EXTERNAL_COMPARISON` | lab infrastructure | Underfit LoRA handoff; cross-model baseline harness | external fine-tuning artifacts and fixed comparison task packs | external audio/checkpoints/run notes, comparison reports | external/scaffold |
 
 ## Reusable Local Modules
 
@@ -118,7 +118,8 @@ edit.
   `colab_audio_player.py`, and `experiments/` support dataset selection,
   sweeps, auditioning, annotation, and promote/revise/drop decisions.
 
-The detailed module map is [Primitive map](primitive-map.md).
+The detailed module map is [Primitive map](primitive-map.md). The bottom-up
+object/capability map is [Capability map](capability-map.md).
 
 ## Artifact Graph
 

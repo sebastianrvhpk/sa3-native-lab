@@ -10,6 +10,8 @@ are organized as a lab record:
 - `current/methods-and-math.md`: how the notebook methods work.
 - `current/primitive-map.md`: how the helper modules cluster into a coherent
   notebook primitive library.
+- `current/capability-map.md`: bottom-up map of native objects, real
+  capabilities, artifacts, controls, and justified notebook interfaces.
 - `current/frontier-architecture-transfer.md`: current multimodal/audio
   architecture scout and transfer map into notebook experiments.
 - `current/run-protocol.md`: how notebook runs become evidence.
@@ -20,19 +22,22 @@ are organized as a lab record:
 ## Current
 
 - [Research state](current/research-state.md): current project direction, repo
-  surfaces, notebook research program inventory, active helper modules,
+  surfaces, notebook science ontology inventory, active helper modules,
   artifact graph, runtime assumptions, and current unknowns.
 - [Methods and math](current/methods-and-math.md): SA3/SAME objects, frozen-model
-  principle, flow scoring, program equations, latent DSP, geometry, control
+  principle, flow scoring, ontology equations, latent DSP, geometry, control
   observability, guidance, residual steering, and implementation safety notes.
 - [Primitive map](current/primitive-map.md): module clusters, artifact flow,
   placement rules, structure debt, and promotion criteria for
   `latent_audio_primitives/`.
+- [Capability map](current/capability-map.md): evidence-backed capability
+  cards, I/O graph, parameter inventory, and the next notebook shape derived
+  from actual code and notebook cells.
 - [Frontier architecture transfer](current/frontier-architecture-transfer.md):
   source-checked multimodal/audio SOTA scout, architecture deltas, transfer
   matrix, and candidate SA3/SAME notebook experiments.
 - [Run protocol](current/run-protocol.md): research frame, run spine,
-  research programs, evidence panels, minimum run packet, and decision rules.
+  science strata, evidence panels, minimum run packet, and decision rules.
 - [Source context](current/source-context.md): external papers/repos summarized
   as source, relevant idea, notebook impact, and status.
 - [Experiment ledger](current/experiment-ledger.md): template and initial empty
@@ -68,7 +73,8 @@ notebook's descriptor, memory, player, and annotation cells.
 - Current implementation claims should point to `colab/`,
   `latent_audio_primitives/`, or current research docs.
 - New notebook methods should update `current/research-state.md`,
-  `current/methods-and-math.md`, `current/primitive-map.md`, and
+  `current/methods-and-math.md`, `current/primitive-map.md`,
+  `current/capability-map.md`, and
   `current/backlog.md` as appropriate.
 - Current/SOTA architecture scouting should update
   `current/frontier-architecture-transfer.md` and cite checked primary sources.

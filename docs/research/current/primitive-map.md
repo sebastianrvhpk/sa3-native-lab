@@ -48,6 +48,9 @@ rows over a new runtime framework.
 
 ## Capability Clusters
 
+The library is not organized as a product SDK. It is organized as a set of
+notebook-facing capabilities that support the science ontology.
+
 ### 1. Model Boundary
 
 Purpose: touch external SA3/SAME objects without making the notebook depend on
@@ -61,9 +64,10 @@ upstream internals everywhere.
 Constraint: these modules may follow upstream SA3 internals. Keep that coupling
 isolated here or in a clearly named sampler experiment.
 
-### 2. Latent Objects and Persistence
+### 2. Native Records and Persistence
 
-Purpose: make latents, summaries, and memory entries inspectable across cells.
+Purpose: make latents, summaries, memory entries, and saved artifacts
+inspectable across cells.
 
 | Module | Evidence | Role |
 |---|---|---|
@@ -76,7 +80,7 @@ Purpose: make latents, summaries, and memory entries inspectable across cells.
 Narrative role: this is the lab notebook's vocabulary for "what did we make and
 how do we compare it?"
 
-### 3. Measurement and Observability
+### 3. Evidence and Observability
 
 Purpose: turn latent/audio behavior into rows, scores, and plots before claiming
 an operator is useful.
@@ -93,10 +97,26 @@ an operator is useful.
 Narrative role: these modules keep the project honest. A control is not real
 until it is measurable, audible, and repeatable.
 
-### 4. Prompt Inversion and Prompt Search
+### 4. SAME Representation
 
-Purpose: ask frozen SA3 what prompt best explains a target latent under its own
-flow field.
+Purpose: probe what SAME preserves, erases, linearizes, or makes editable.
+
+| Module | Evidence | Role |
+|---|---|---|
+| `latent_blur.py` | confirmed | Temporal/channel blur, low-rank projection, sharpening, FFT filters, SA3 polish from init latents. |
+| `latent_dsp.py` | confirmed | Gain, dynamics, saturation, latent-time FFT EQ/phase, donor magnitude/phase, PCA gain. |
+| `selective_renoise.py` | confirmed | Channel selection, masks, masked noise, grafting, selective SA3 renoise/graft. |
+| `style.py` | confirmed | Style profiles, directions, profile attraction, save/load. |
+| `geometry.py` | confirmed | PCA, whitening, Mahalanobis distance, barycenters, covariance transport. |
+| `periodic.py` | confirmed | Autocorrelation, periodicity, spectral centroid, and loop boundary probes. |
+
+Narrative role: this stratum asks what the SAME bottleneck itself affords
+before claiming SA3 prompt or sampler control.
+
+### 5. SA3 Flow and Conditioning
+
+Purpose: ask frozen SA3 what prompt or conditioning object explains a target
+latent under its own flow field.
 
 | Module | Evidence | Role |
 |---|---|---|
@@ -104,40 +124,57 @@ flow field.
 | `prompt_optimization.py` | confirmed | Coordinate, greedy-token, and beam prompt search. |
 | `tokenizer_vocab.py` | confirmed | Native tokenizer vocabulary extraction and preview. |
 | `experiments/soft_prompt.py` | confirmed | Soft prompt optimization and generation hooks. |
-| `experiments/prompt_pairs.py` | confirmed | Prompt-pair presets for residual steering probes. |
 
 Narrative role: this is not captioning. It is SA3-native prompt inversion by
 teacher-forced flow agreement.
 
-### 5. Latent Operators and Interventions
+### 6. Causal Steering
 
-Purpose: edit SAME latents or SA3 flow states, then measure whether the edit
-survives decode or SA3 polish.
+Purpose: test whether an inference-time intervention changes generated audio,
+not just whether a signal is measurable.
 
 | Module | Evidence | Role |
 |---|---|---|
-| `latent_blur.py` | confirmed | Temporal/channel blur, low-rank projection, sharpening, FFT filters, SA3 polish from init latents. |
-| `latent_dsp.py` | confirmed | Gain, dynamics, saturation, latent-time FFT EQ/phase, donor magnitude/phase, PCA gain. |
-| `selective_renoise.py` | confirmed | Channel selection, masks, masked noise, grafting, selective SA3 renoise/graft. |
-| `looping.py` | confirmed | Cyclic roll, loop preview, seam metrics, sampler-time cyclic roll interventions. |
-| `style.py` | confirmed | Style profiles, directions, profile attraction, save/load. |
+| `adapters/audioscope_sa3.py` | confirmed | Residual activation capture and audioscope-style residual steering. |
+| `experiments/activation_vectors.py` | confirmed | SA3 activation-vector extraction from prompt pairs. |
+| `experiments/audio_residual_vectors.py` | confirmed | Residual vectors from audio examples. |
+| `experiments/prompt_pairs.py` | confirmed | Prompt-pair presets for residual steering probes. |
+| `experiments/sa3_sweeps.py` | confirmed | Alpha sweep generation and optional audio export. |
+| `residual_features.py` | confirmed | Residual activation bases and directions. |
+| `observability.py` | confirmed | Linear probes for whether candidate controls are predictable from latent summaries. |
 | `guidance.py` | confirmed | Differentiable latent guidance step and loss combination. |
+| `looping.py` | confirmed | Sampler-time cyclic roll interventions plus loop metrics. |
+
+Narrative role: these are the highest-risk methods. They stay microscopes or
+scaffolds until causal interventions survive audio review and baselines.
+
+### 7. Dataset Memory and Composition
+
+Purpose: turn collections into memory, donor selection, curriculum, bridges, or
+composition plans without confusing source preservation with copying.
+
+| Module | Evidence | Role |
+|---|---|---|
+| `index.py` | confirmed | Latent memory search over summaries, controls, and hybrid scores. |
+| `curriculum.py` | confirmed | Cluster memory, pick representatives, split heldout rows, show nearest-memory evidence. |
 | `composition.py` | confirmed | Continuation, loop, bridge, and path ranking. |
+| `control_lanes.py` | confirmed | Lane similarity can support retrieval and bridge selection after evidence validation. |
+| `audio_descriptors.py` | confirmed | Descriptor summaries support donor/source comparison and novelty checks. |
 
-Narrative role: these are probes first and controls second. They become
-"instrument controls" only after descriptors and listening notes agree.
+Narrative role: memory is a selection and evidence system, not a generic bucket
+for every dataset-level method.
 
-### 6. Dataset Workflow and Listening Loop
+### 8. Evidence Decision Protocol
 
 Purpose: turn many clips and many variants into decisions.
 
 | Module | Evidence | Role |
 |---|---|---|
-| `curriculum.py` | confirmed | Cluster memory, pick representatives, split heldout rows, show nearest-memory evidence. |
 | `colab_audio_player.py` | confirmed | Self-contained Colab waveform player, loop audition, annotation save/search. |
-| `experiments/activation_vectors.py` | confirmed | SA3 activation-vector extraction from prompt pairs. |
-| `experiments/audio_residual_vectors.py` | confirmed | Residual vectors from audio examples. |
-| `experiments/sa3_sweeps.py` | confirmed | Alpha sweep generation and optional audio export. |
+| `audio_descriptors.py` | confirmed | Lightweight audio descriptor reports and deltas. |
+| `control_lanes.py` | confirmed | Time-varying evidence lanes, SVG visualization, persistence. |
+| Notebook manifest cell | confirmed | Run metadata, experiment switches, model/runtime context. |
+| `docs/research/current/experiment-ledger.md` | confirmed | Listening notes and promote/revise/drop decisions. |
 
 Narrative role: this closes the loop from method idea to listening evidence and
 promote/revise/drop decisions.

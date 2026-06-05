@@ -16,7 +16,7 @@ Intervention:
 What is edited, optimized, selected, steered, or measured?
 
 Notebook Touchpoints:
-Existing mode/cell:
+Existing ontology stratum/cell:
 Existing primitive module:
 New cell or helper needed:
 
