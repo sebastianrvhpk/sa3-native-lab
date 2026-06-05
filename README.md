@@ -5,7 +5,6 @@ This repository is a Colab/research workspace:
 - SAME/SA3 native latent-memory, steering, and prompt-inversion primitives in `latent_audio_primitives/`
 - Colab notebooks in `colab/`
 - current notebook research notes in `docs/research/current/`
-- reusable method notes in `docs/research/methods/`
 
 The goal is exploratory research over native SA3/SAME spaces.
 
@@ -90,44 +89,39 @@ Start with the research documentation index:
 
 `docs/research/README.md`
 
-The current repo and Markdown structure map is:
+The current project state is:
 
-`docs/research/current/repo-structure-map.md`
+`docs/research/current/research-state.md`
 
-The current notebook research map and next-method backlog is:
+The current methods and math notes are:
 
-`docs/research/current/notebook-research-map-and-next-methods.md`
+`docs/research/current/methods-and-math.md`
 
-It inventories the repo's notebook/primitives capabilities, uses Underfit for
-LoRA work, summarizes relevant SA3/SAME, flow, guidance, control,
-audio-generation, and activation-steering research, and tracks notebook-native
-experiments.
+That document covers SA3/SAME objects, frozen-model principles, native flow
+prompt scoring, mode equations, latent DSP, geometry, control observability,
+guidance, residual steering, and implementation safety notes.
 
-The current repo-specific math and implementation notes are:
+The external source context is:
 
-`docs/research/current/native-experimental-modes-math.md`
+`docs/research/current/source-context.md`
 
-That document covers the current Colab modes, including renoise, selective latent
-renoise, blur/sharpen/filtering, cross-audio grafting, cyclic sampler mixing,
-neural latent DSP, soft prompt inversion, Mode 2 beam prompt inversion, SAME
-statistical controls, residual steering, LatCH-style sidecars, Underfit handoff,
-Mode 15 geometry audits, and the newer notebook backlog modes.
+It summarizes relevant SA3/SAME, Underfit, flow, guidance, control,
+audio-generation, neural-audio, and activation-steering sources by notebook
+impact.
 
-The native-operator measurement layer is:
+The actual run ledger is:
 
-`docs/research/methods/native-operators-and-measurement.md`
+`docs/research/current/experiment-ledger.md`
 
-It maps latent geometry, covariance transport, periodic operators, direct
-guidance, prompt inversion, residual feature discovery, and control
-observability to the current helper modules and Colab exposure.
+Use it for Colab runs, listening notes, descriptor deltas, and keep/revise/drop
+decisions.
 
-The neural-latent DSP notes are:
+The next-work backlog is:
 
-`docs/research/methods/neural-latent-dsp.md`
+`docs/research/current/backlog.md`
 
-They document Mode 0h: latent dynamics, soft clipping, latent-time FFT gain and
-phase operators, magnitude/phase grafting, PCA component gain, SA3 polish, and
-MIR descriptor audits.
+It tracks priorities, open questions, promote/drop criteria, and implementation
+order.
 
 LoRA work uses `dada-bots/underfit`, with exported artifacts available for
 notebook comparison.

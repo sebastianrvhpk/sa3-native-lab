@@ -46,7 +46,6 @@ against frozen SA3/SAME methods.
 | `colab/` | Expanded notebook plus Colab L4 runbook. | Active |
 | `latent_audio_primitives/` | Notebook library for SAME/SA3 latent math, prompt scoring, controls, DSP, geometry, residual probes, memory, and descriptors. | Active |
 | `docs/research/current/` | Current project state, methods/math, source context, experiment ledger, and backlog. | Active |
-| `docs/research/methods/` | Superseded once this reorganization is complete. Content is migrated into `methods-and-math.md`. | Transitional |
 
 ## Execution Surfaces
 
@@ -204,4 +203,3 @@ LoRA/style fine-tuning need
 - Do sampler-level guidance probes improve audio without off-manifold artifacts?
 - Can memory nearest-neighbor checks separate useful source preservation from memorization-like copying?
 - Which notebook scaffolds should be promoted after Colab/listening validation?
-
