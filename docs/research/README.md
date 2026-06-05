@@ -10,6 +10,8 @@ are organized as a lab record:
 - `current/methods-and-math.md`: how the notebook methods work.
 - `current/primitive-map.md`: how the helper modules cluster into a coherent
   notebook primitive library.
+- `current/frontier-architecture-transfer.md`: current multimodal/audio
+  architecture scout and transfer map into notebook experiments.
 - `current/source-context.md`: why the source literature/repos matter here.
 - `current/experiment-ledger.md`: what was actually run and decided.
 - `current/backlog.md`: what to try next.
@@ -25,6 +27,9 @@ are organized as a lab record:
 - [Primitive map](current/primitive-map.md): module clusters, artifact flow,
   placement rules, structure debt, and promotion criteria for
   `latent_audio_primitives/`.
+- [Frontier architecture transfer](current/frontier-architecture-transfer.md):
+  source-checked multimodal/audio SOTA scout, architecture deltas, transfer
+  matrix, and candidate SA3/SAME notebook experiments.
 - [Source context](current/source-context.md): external papers/repos summarized
   as source, relevant idea, notebook impact, and status.
 - [Experiment ledger](current/experiment-ledger.md): template and initial empty
@@ -62,6 +67,8 @@ notebook's descriptor, memory, player, and annotation cells.
 - New notebook methods should update `current/research-state.md`,
   `current/methods-and-math.md`, `current/primitive-map.md`, and
   `current/backlog.md` as appropriate.
+- Current/SOTA architecture scouting should update
+  `current/frontier-architecture-transfer.md` and cite checked primary sources.
 - Real notebook runs should update `current/experiment-ledger.md`.
 - Add external survey material only when it directly supports a current notebook
   cell or source-context entry.

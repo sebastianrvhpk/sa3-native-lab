@@ -254,6 +254,142 @@ Drop or revise if:
 - report generation becomes a product/app direction,
 - it distracts from notebook-first research.
 
+## Frontier-Informed Additions
+
+These items come from the source-checked
+[Frontier architecture transfer](frontier-architecture-transfer.md) pass. They
+should enter implementation only as concrete notebook runs.
+
+### A. SAME Bottleneck Stress Test
+
+Goal: identify what SAME preserves semantically, acoustically, structurally, and
+what SA3 polish reconstructs from the prior.
+
+Evidence already available: SAME is the local native latent object; latent blur,
+latent DSP, geometry, direct decode, SA3 polish, descriptors, and flow scoring
+already exist.
+
+Notebook touchpoints: Modes 0d, 0h, 15, 16, 17.
+
+Promote if:
+
+- perturbation families reveal stable preservation/failure patterns across clips,
+- direct decode and SA3 polish differences are audible and measurable,
+- the result clarifies which operators are controls versus microscopes.
+
+Drop or revise if:
+
+- results reduce to loudness, silence, clipping, or decoder artifacts,
+- SA3 polish erases every measured difference.
+
+### B. Multi-Turn Audio Edit Consistency
+
+Goal: test whether SA3/SAME supports iterative audio editing without losing
+source identity or accumulating drift.
+
+Evidence already available: flow attribution, null-condition inversion scaffold,
+soft prompts, source-preservation guidance scaffold, descriptors, and memory
+nearest-neighbor checks exist.
+
+Notebook touchpoints: Modes 1, 2, 16, 17, 23, 25.
+
+Promote if:
+
+- each edit obeys the new target while preserving declared source attributes,
+- flow/descriptor/listening evidence agrees,
+- source-preservation rows detect drift early.
+
+Drop or revise if:
+
+- each turn behaves like unrelated regeneration,
+- source identity collapses or prompt edits stop working.
+
+### C. Segment / Block Prompt Plan
+
+Goal: borrow long-form music structure discipline by scoring prompts and
+controls per segment, then assembling with continuation and bridge search.
+
+Evidence already available: chunk windows, prompt family search, memory
+curriculum, control lanes, continuation, bridge ranking, and manifests exist.
+
+Notebook touchpoints: Modes 5, 11, 14, 18, 19, 21.
+
+Promote if:
+
+- segment plans improve continuity versus one global prompt,
+- bridge/control-lane scores predict listening results,
+- generated structures remain auditable in manifest rows.
+
+Drop or revise if:
+
+- segment boundaries dominate artifacts,
+- the workflow becomes song-app scaffolding instead of notebook research.
+
+### D. External Temporal Embedding Lane
+
+Goal: optionally compare SAME-native evidence against CLAP/T-CLAP/ImageBind-like
+semantic or temporal embedding distances.
+
+Evidence already available: memory index, descriptors, control lanes, and
+cross-model baseline harness exist.
+
+Notebook touchpoints: Modes 14, 18, 19, 26, player/ledger cells.
+
+Promote if:
+
+- external embeddings catch failures that SAME summaries miss,
+- disagreement rows improve review decisions,
+- dependencies fit Colab without destabilizing SA3.
+
+Drop or revise if:
+
+- embedding scores reward wrong semantics,
+- setup cost outweighs evidence value,
+- external embeddings obscure SAME-native claims.
+
+### E. Step / Polish Tradeoff Audit
+
+Goal: map runtime, step count, init noise, and SA3 polish settings against
+flow loss, descriptors, source preservation, and listening quality.
+
+Evidence already available: SA3 supports fast generation/editing; local modes
+already sweep renoise, latent edits, cyclic sampler probes, and guidance.
+
+Notebook touchpoints: Modes 0, 0d, 0h, 0g, 24, 25.
+
+Promote if:
+
+- a small settings grid gives stable quality/runtime guidance,
+- low-step outputs remain useful for notebook audition,
+- failure modes are visible before long runs.
+
+Drop or revise if:
+
+- upstream sampler internals hide the relevant controls,
+- quality varies too much by prompt/seed for a compact rule.
+
+### F. Annotation-Weighted Recipe Selection
+
+Goal: convert player annotations and ledger notes into recipe-level evidence
+without pretending to train a preference model.
+
+Evidence already available: custom player, annotation search, descriptor rows,
+manifests, and experiment ledger exist.
+
+Notebook touchpoints: player, manifest, experiment ledger, Modes 0, 2, 20, 24,
+26.
+
+Promote if:
+
+- repeated annotations identify robust recipes and failure families,
+- descriptor/listening disagreement becomes visible,
+- recipe summaries improve future run selection.
+
+Drop or revise if:
+
+- notes are too sparse or inconsistent,
+- scalar ratings hide useful qualitative judgement.
+
 ## Lower-Priority Ideas
 
 - Better visual styling for notebook panels.
@@ -262,6 +398,8 @@ Drop or revise if:
 - Prompt-token replacement suggestions beyond leave-one-out attribution.
 - Control-lane editor for hand-drawn or imported lanes.
 - Layer/time residual patch heatmaps.
+- Segment/block prompt planner after bridge-search evidence improves.
+- External temporal embedding lane if Colab dependencies remain manageable.
 
 ## Open Questions
 
@@ -275,6 +413,10 @@ Drop or revise if:
 - Which dataset clusters produce prompt/control curricula that generalize?
 - Can sampler-level guidance improve loopability without half-period collapse?
 - Which latent DSP operations are microscopes only, and which become useful controls?
+- Which SAME perturbations reveal semantic versus acoustic bottleneck behavior?
+- Can multi-turn audio edits preserve source identity under repeated prompt changes?
+- Do external semantic/temporal embeddings disagree productively with SAME-native memory?
+- What is the cheapest SA3 step/polish setting that still supports reliable audition?
 
 ## Priority Order
 
@@ -284,12 +426,18 @@ Recommended next sequence:
 probe-bank cache
 -> flow-plus-descriptor prompt search
 -> novelty/source-preservation panel
+-> SAME bottleneck stress test
+-> multi-turn audio edit consistency
 -> control-lane retrieval
 -> geometry-aware donor selector
+-> segment/block prompt plan
+-> external temporal embedding lane
 -> residual temporal patching
 -> guidance objective mixer
 -> null-condition edit audition
+-> step/polish tradeoff audit
 -> seed-family atlas
+-> annotation-weighted recipe selection
 -> report packager
 ```
 
@@ -300,4 +448,3 @@ Rationale:
 - Then add preservation/copying checks.
 - Then promote memory/control/geometry into selection tools.
 - Only after that invest in sampler and residual interventions.
-

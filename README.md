@@ -109,6 +109,13 @@ It explains how `latent_audio_primitives/` is clustered into model-boundary,
 latent-object, measurement, prompt-inversion, intervention, dataset, and
 listening-loop modules.
 
+The current multimodal/audio architecture transfer note is:
+
+`docs/research/current/frontier-architecture-transfer.md`
+
+It summarizes current source-checked architecture changes and translates them
+into SA3/SAME notebook experiment candidates.
+
 The external source context is:
 
 `docs/research/current/source-context.md`

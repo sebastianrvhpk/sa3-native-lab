@@ -10,6 +10,10 @@ whether it is source context, implemented, or still a hypothesis.
 These notes are a curated research map, not primary sources. The linked papers
 and repositories are the sources.
 
+For a source-checked current architecture scout and translation into concrete
+SA3/SAME notebook experiments, see
+[Frontier architecture transfer](frontier-architecture-transfer.md).
+
 ## Primary SA3/SAME Sources
 
 ### Stable Audio 3 Paper
@@ -260,6 +264,87 @@ L_flow(prompt) = E ||v_theta(z_t, t, C(prompt)) - u_t||^2
 - Notebook impact: Mode 26 can compare SA3 outputs against external model commands when available.
 - Status: source context; no local model management.
 
+### ACE-Step and ACE-Step 1.5
+
+- Sources:
+  - [ACE-Step](https://arxiv.org/abs/2506.00045)
+  - [ACE-Step 1.5](https://arxiv.org/abs/2602.00744)
+- Relevant idea: Open music foundation model work combining planning, diffusion-transformer rendering, semantic alignment, long compositions, and editing/personalization claims.
+- Notebook impact: Source context for separating prompt/structure planning from acoustic rendering and for Mode 26 external comparison.
+- Status: source context; no local model management.
+
+### DiffRhythm 2
+
+- Source: [DiffRhythm 2](https://arxiv.org/abs/2510.22950)
+- Relevant idea: Semi-autoregressive block flow matching for long, controllable song generation.
+- Notebook impact: Supports segment/block prompt plans, bridge search, and control-lane continuity experiments.
+- Status: source context; local transfer is a hypothesis.
+
+### YuE
+
+- Source: [YuE](https://arxiv.org/abs/2503.08638)
+- Relevant idea: Long-form lyrics-to-song foundation model using LLaMA-style autoregression, track decoupling, structural conditioning, and music representations.
+- Notebook impact: Source context for treating long-form structure, source/reference preservation, and acoustic rendering as separate evidence streams.
+- Status: source context; no local model management.
+
+### SongGen
+
+- Source: [SongGen](https://arxiv.org/abs/2502.13128)
+- Relevant idea: Single-stage autoregressive text-to-song model with controllable attributes and mixed/dual-track generation modes.
+- Notebook impact: External baseline context for Mode 26 and dual-track/source-donor evaluation ideas.
+- Status: source context.
+
+## Multimodal Architecture Transfer Sources
+
+### DiT
+
+- Source: [Scalable Diffusion Models with Transformers](https://arxiv.org/abs/2212.09748)
+- Relevant idea: Diffusion transformers scale with model depth/width/token count.
+- Notebook impact: Supports treating SA3 transformer internals as measurable residual objects, not black-box UI outputs.
+- Status: source context.
+
+### Sora Technical Report
+
+- Source: [Video generation models as world simulators](https://openai.com/research/video-generation-models-as-world-simulators)
+- Relevant idea: Variable-duration/resolution video generation through compressed latent spacetime patches and a diffusion transformer.
+- Notebook impact: Transfers as temporal segment/control-lane reasoning, not as visual interface metaphor.
+- Status: source context.
+
+### Movie Gen
+
+- Source: [Movie Gen](https://huggingface.co/papers/2410.13720)
+- Relevant idea: Media foundation models covering video, synchronized audio, editing, and personalization tasks.
+- Notebook impact: Source context for temporal alignment, source preservation, and multi-turn edit evaluation.
+- Status: source context.
+
+### FLUX.1 Kontext
+
+- Source: [FLUX.1 Kontext](https://arxiv.org/abs/2506.15742)
+- Relevant idea: Flow-matching in-context image generation/editing with multi-turn consistency and preservation benchmarks.
+- Notebook impact: Motivates multi-turn audio edit consistency tests over source identity, descriptor drift, and flow losses.
+- Status: source context; local transfer is a hypothesis.
+
+### Consistency Models
+
+- Source: [Consistency Models](https://arxiv.org/abs/2303.01469)
+- Relevant idea: One/few-step generation and distillation-style acceleration for generative models.
+- Notebook impact: Motivates SA3 step/polish/runtime audits rather than adding a new sampler abstraction.
+- Status: source context.
+
+### ImageBind
+
+- Source: [ImageBind](https://arxiv.org/abs/2305.05665)
+- Relevant idea: Joint embedding across image, text, audio, depth, thermal, and IMU modalities.
+- Notebook impact: Optional external semantic embedding lane for retrieval and novelty/source-preservation checks.
+- Status: source context; external embeddings are judges, not SAME-native truth.
+
+### T-CLAP
+
+- Source: [T-CLAP](https://arxiv.org/abs/2404.17806)
+- Relevant idea: Temporal-enhanced contrastive language-audio pretraining for better temporal audio/text alignment.
+- Notebook impact: Candidate external temporal descriptor for comparing against SAME control lanes.
+- Status: source context; local integration is a hypothesis.
+
 ## Neural Audio Representation Anchors
 
 ### SoundStream
@@ -275,6 +360,20 @@ L_flow(prompt) = E ||v_theta(z_t, t, C(prompt)) - u_t||^2
 - Relevant idea: High-quality neural audio codec representation.
 - Notebook impact: Background for latent audio memory and codec-style editing comparisons.
 - Status: source context.
+
+### Descript Audio Codec
+
+- Source: [descript-audio-codec](https://github.com/descriptinc/descript-audio-codec)
+- Relevant idea: High-fidelity RVQGAN codec for 44.1 kHz audio and audio language modeling pipelines.
+- Notebook impact: Background for codec-latent baselines and external comparisons; SAME remains the local native object.
+- Status: source context.
+
+### Generative Audio Compression
+
+- Source: [High-Fidelity Generative Audio Compression at 0.275kbps](https://arxiv.org/abs/2602.00648)
+- Relevant idea: Task-oriented ultra-low-bitrate compression that relies on a powerful generative receiver prior.
+- Notebook impact: Motivates SAME bottleneck stress tests and direct-decode versus SA3-polish comparisons.
+- Status: source context; local transfer is a hypothesis.
 
 ### RAVE
 
@@ -319,4 +418,3 @@ L_flow(prompt) = E ||v_theta(z_t, t, C(prompt)) - u_t||^2
 - Local claims need notebook runs, descriptors, manifests, and listening notes.
 - Adapter-training sources stay in the Underfit lane unless exported artifacts are brought back for comparison.
 - Prompt/guidance/control sources are translated into SA3/SAME-native measurements before becoming notebook controls.
-
