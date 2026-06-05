@@ -45,7 +45,7 @@ notebook's descriptor, memory, player, and annotation cells.
 ## Documentation Rules
 
 - Current implementation claims should point to `colab/`,
-  `latent_audio_primitives/`, `scripts/`, or `tests/`.
+  `latent_audio_primitives/`, or current research docs.
 - New notebook methods should update
   `current/notebook-research-map-and-next-methods.md` and, when math changes,
   `current/native-experimental-modes-math.md`.

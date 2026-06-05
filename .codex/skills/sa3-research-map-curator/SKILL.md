@@ -22,16 +22,16 @@ Write from the current notebook-first perspective. Prefer positive statements
 about the active research path:
 
 - expanded Colab notebook as source of truth
-- reusable SA3/SAME primitives with tests
+- reusable SA3/SAME primitives used by notebook cells
 - native flow scoring, latent memory, DSP, geometry, controls, residual probes
 - Underfit artifacts as the LoRA comparison path
-- validation through notebook execution, JSON checks, unit tests, and listening
-  notes
+- validation through notebook execution, JSON checks, Colab smoke runs, and
+  listening notes
 
 ## Workflow
 
 1. Inspect code before changing claims.
-   - Confirm files, tests, mode numbers, helper names, and scripts with `rg`.
+   - Confirm files, mode numbers, helper names, and notebook references with `rg`.
    - Mark research status as confirmed, scaffold, hypothesis, or unknown when
      useful.
 
@@ -51,7 +51,7 @@ about the active research path:
 
 4. Validate.
    - Run local Markdown link checks after moving or deleting docs.
-   - Run notebook validation when docs describe changed notebook behavior.
+   - Run notebook JSON validation when docs describe changed notebook behavior.
    - Run `git diff --check`.
 
 ## Output
@@ -59,6 +59,6 @@ about the active research path:
 Report:
 
 - docs updated
-- claims verified from code/notebook/tests
+- claims verified from code/notebook
 - validation performed
 - open research questions that remain

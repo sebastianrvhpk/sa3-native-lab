@@ -28,8 +28,8 @@ Use $sa3-research-map-curator
 
 ## Included Skills
 
-- `sa3-notebook-steward`: edit and validate the expanded Colab notebook.
-- `sa3-same-primitive-researcher`: implement tested SA3/SAME latent-audio helpers.
+- `sa3-notebook-steward`: edit and smoke-check the expanded Colab notebook.
+- `sa3-same-primitive-researcher`: implement notebook-native SA3/SAME latent-audio helpers.
 - `sa3-research-map-curator`: keep current research docs and maps aligned.
 
 The usual workflow is:

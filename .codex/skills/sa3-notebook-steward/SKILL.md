@@ -11,7 +11,6 @@ Use this skill for work centered on:
 
 - `colab/sa3_same_native_experimental_modes.ipynb`
 - `colab/sa3_medium_l4_runbook.md`
-- `scripts/validate_colab_notebook.py`
 - notebook mode text, code cells, toggles, manifests, and Colab setup behavior
 
 The expanded notebook is the research object. Keep notebook edits direct,
@@ -22,8 +21,8 @@ cell-based, and easy to inspect in diff.
 1. Inspect the relevant notebook cells.
    - Read cell headings and surrounding markdown/code before editing.
    - Preserve existing mode ordering, toggles, manifests, and validation paths.
-   - Keep reusable math in `latent_audio_primitives/` when it is shared or
-     test-worthy.
+   - Keep reusable math in `latent_audio_primitives/` when it is shared across
+     notebook cells.
 
 2. Edit conservatively.
    - Use `apply_patch` for small JSON source updates.
@@ -34,8 +33,8 @@ cell-based, and easy to inspect in diff.
 
 3. Validate.
    - `python -m json.tool colab/sa3_same_native_experimental_modes.ipynb >/tmp/sa3_notebook.json`
-   - `uv run python scripts/validate_colab_notebook.py --skip-setup`
-   - Run focused primitive tests when code paths imported by the notebook change.
+   - Import-smoke changed helpers locally when practical.
+   - Smoke-test changed model-weight behavior in Colab.
    - Run `git diff --check`.
 
 ## Notebook Checks

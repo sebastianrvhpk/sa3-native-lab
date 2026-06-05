@@ -4,7 +4,6 @@ This repository is a Colab/research workspace:
 
 - SAME/SA3 native latent-memory, steering, and prompt-inversion primitives in `latent_audio_primitives/`
 - Colab notebooks in `colab/`
-- research scripts in `scripts/`
 - current notebook research notes in `docs/research/current/`
 - reusable method notes in `docs/research/methods/`
 
@@ -40,8 +39,8 @@ The notebook installs upstream SA3 plus this repo. No zip upload is needed.
 uv pip install --system -e .
 ```
 
-Install upstream Stable Audio 3 separately when running scripts that load
-SA3/SAME weights:
+Install upstream Stable Audio 3 separately when running local notebook helpers
+that load SA3/SAME weights:
 
 ```bash
 git clone https://github.com/Stability-AI/stable-audio-3.git ../stable-audio-3

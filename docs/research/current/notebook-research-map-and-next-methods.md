@@ -1,7 +1,7 @@
 # SA3 Native Lab Notebook Research Map and Next Methods
 
 Status: research synthesis for the notebook-only SA3 Native Lab direction as of
-2026-06-04.
+2026-06-05.
 
 Scope:
 
@@ -17,7 +17,7 @@ Scope:
 This document combines:
 
 - Local repo capabilities confirmed from `colab/`,
-  `latent_audio_primitives/`, `scripts/`, `tests/`,
+  `latent_audio_primitives/`,
   `docs/research/current/`, and `docs/research/methods/`.
 - External research and repo survey across Stable Audio 3, SAME, Underfit as
   the external LoRA reference, flow matching, music/audio control, prompt
@@ -197,18 +197,6 @@ Carried forward from the earlier broad research notes:
 - `index.py`, `schema.py`, `io.py`: latent memory item, search, persistence.
 - `colab_audio_player.py`: waveform player, annotation save/search, notebook listening bench.
 
-Research scripts, `confirmed`:
-
-- `encode_dataset_same.py`: encode audio folders into SAME memory.
-- `pre_encode_dataset.py`: encode captioned/audio folders into reusable latent
-  datasets when useful for notebook experiments.
-- `optimize_sa3_soft_prompt.py`: soft prompt optimization from target audio.
-- `extract_sa3_vectors.py`: prompt-derived SA3 residual vectors.
-- `extract_audio_residual_vectors.py`: audio-derived residual vectors.
-- `run_sa3_alpha_sweep.py`: steering alpha sweeps.
-- `generate_sa3_with_*`: apply soft prompts, style profiles, style directions, audio directions.
-- `validate_colab_notebook.py`: notebook cell validation.
-
 ## I/O and Artifact Graph
 
 ```text
@@ -248,7 +236,9 @@ LoRA/style fine-tuning need
 - Colab L4 is the intended notebook runtime.
 - SA3 Medium uses SAME-L and requires CUDA plus FlashAttention for normal use.
 - SA3 Small Music/SFX use SAME-S and are CPU-capable according to the upstream repo.
-- The notebook can validate without model loading via `scripts/validate_colab_notebook.py --skip-setup`.
+- This repo no longer keeps a separate script/test harness; validation is
+  notebook execution, JSON integrity, Colab smoke runs, descriptors, manifests,
+  and listening notes.
 - LoRA training uses Underfit, with exported artifacts available for notebook
   comparison.
 
@@ -802,12 +792,11 @@ P3, polish only:
 
 ## Verification Plan
 
-Short-term notebook tests:
+Short-term notebook checks:
 
-1. Validate all new cells with toggles off using
-   `uv run python scripts/validate_colab_notebook.py --skip-setup`.
-2. Add fake-model tests for any scorer/guidance helper.
-3. Add small synthetic-latent tests for control lanes, transport, and ranking.
+1. Keep notebook JSON valid after every edit.
+2. Import-smoke changed `latent_audio_primitives` helpers when practical.
+3. Run changed cells in Colab with model weights when audio behavior matters.
 
 Audio validation protocol:
 
