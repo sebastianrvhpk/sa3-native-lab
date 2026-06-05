@@ -1,6 +1,12 @@
-# Seven Better Operators for SA3/SAME Research
+# Native Operators and Measurement for SA3/SAME Research
 
-This note turns the "less naive" direction into a concrete operator map. The goal is to replace accidental latent edits with measurable operators over:
+Status: current method note for the notebook's measurable SA3/SAME operators.
+
+This note maps reusable operators to the measurements that decide whether they
+are useful. The working rule is simple: an operator is not a control until it
+moves a measurable signal and survives listening review.
+
+The main objects are:
 
 ```text
 SAME latent geometry     z
@@ -51,7 +57,8 @@ explained_variance_k = lambda_k / trace(Sigma)
 kept_variance_fraction = sum_k lambda_k / trace(Sigma)
 ```
 
-Why it matters: this gives retrieval and intervention distances that respect dataset covariance instead of raw Euclidean scale.
+Why it matters: this gives retrieval and intervention distances that respect
+dataset covariance instead of raw Euclidean scale.
 
 ## 2. Optimal Transport / Barycenters
 
@@ -74,7 +81,8 @@ Soft edit:
 z_alpha = (1 - alpha) z + alpha z'
 ```
 
-Why it matters: this is a stronger version of the current mean/std style profile. It respects cross-channel covariance, not only per-channel variance.
+Why it matters: this extends mean/std style profiles with cross-channel
+covariance instead of treating every SAME channel as independent.
 
 ## 3. Fourier / Periodic Latent Operators
 
@@ -105,7 +113,8 @@ L_loop = ||mean(z_start) - mean(z_end)||_2
        + lambda ||mean(Delta z_start) - mean(Delta z_end)||_2
 ```
 
-Why it matters: loopability and continuity should be measured through periodic structure, not only by listening to repeated waveform previews.
+Why it matters: loopability and continuity should be measured through periodic
+structure, not only by listening to repeated waveform previews.
 
 The same latent-time frequency view now supports neural-latent DSP:
 
@@ -139,9 +148,11 @@ Sampler-level target:
 v_guided = v_theta(z_t,t,c) - gamma grad_{z_t} L_control(z_t)
 ```
 
-Current status: the generic differentiable step exists. A full SA3 sampler-guidance mode still needs careful integration into the RF sampler loop and validation against VRAM/runtime.
+Current status: the generic differentiable step exists. A full SA3
+sampler-guidance mode still needs careful integration into the RF sampler loop
+and validation against VRAM/runtime.
 
-## 5. Better Prompt Inversion
+## 5. Native Prompt Inversion
 
 Implemented in Mode 2:
 
@@ -201,7 +212,9 @@ Contrastive residual direction:
 v_l = mean(a_l^positive) - mean(a_l^reference)
 ```
 
-Current status: feature fitting and projection exist as math primitives. Full causal validation still requires generation-time activation patching and careful handling of compiled model internals.
+Current status: feature fitting and projection exist as math primitives. Full
+causal validation still requires generation-time activation patching and careful
+handling of compiled model internals.
 
 ## 7. Control Observability
 
@@ -250,7 +263,9 @@ optional covariance transport demo
 optional linear control probes
 ```
 
-This should be run before trusting a steering mode. If an edit has no measurable latent effect, or a control is not predictable from latent summaries, it is probably not ready to become a knob.
+This should be run before trusting a steering mode. If an edit has no measurable
+latent effect, or a control is not predictable from latent summaries, it is not
+ready to become a notebook control.
 
 ## Implementation Status Matrix
 
@@ -266,6 +281,5 @@ This should be run before trusting a steering mode. If an edit has no measurable
 | Control observability | `observability.py` | Mode 15 | no for saved labelled latents | sidecar/probe only |
 
 The deliberate gap is sampler integration. The math primitives are in place; the
-next step is choosing one or two operators with audible promise and then wiring
-them into an SA3 generation loop without pretending that every edit is already a
-finished instrument.
+next step is choosing operators with audible promise and then wiring them into
+SA3 generation paths only after measurement and listening agree.

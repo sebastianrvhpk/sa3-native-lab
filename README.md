@@ -29,7 +29,7 @@ The notebook is already configured to clone:
 
 ```python
 SA3_REPO_URL = "https://github.com/Stability-AI/stable-audio-3.git"
-COMBINED_REPO_URL = "https://github.com/sebastianrvhpk/sa3-native-lab.git"
+LAB_REPO_URL = "https://github.com/sebastianrvhpk/sa3-native-lab.git"
 ```
 
 The notebook installs upstream SA3 plus this repo. No zip upload is needed.
@@ -60,7 +60,7 @@ python -m pip uninstall -y scipy scikit-learn sklearn torchvision
 uv pip install --system flash-attn --no-build-isolation --no-cache-dir --no-deps
 ```
 
-The NumPy/scipy/sklearn/torchvision cleanup is mainly for Colab. It prevents
+The NumPy/scipy/sklearn/torchvision reset is mainly for Colab. It prevents
 Transformers' optional scientific/vision import paths from reaching stale binary
 packages after Torch/NumPy are repinned. Restart the Colab runtime once after
 the install phase so old binary modules are cleared from memory.
@@ -114,9 +114,9 @@ neural latent DSP, soft prompt inversion, Mode 2 beam prompt inversion, SAME
 statistical controls, residual steering, LatCH-style sidecars, Underfit handoff,
 Mode 15 geometry audits, and the newer notebook backlog modes.
 
-The seven-operator research layer is:
+The native-operator measurement layer is:
 
-`docs/research/methods/seven-better-operators.md`
+`docs/research/methods/native-operators-and-measurement.md`
 
 It maps latent geometry, covariance transport, periodic operators, direct
 guidance, prompt inversion, residual feature discovery, and control
@@ -129,9 +129,6 @@ The neural-latent DSP notes are:
 They document Mode 0h: latent dynamics, soft clipping, latent-time FFT gain and
 phase operators, magnitude/phase grafting, PCA component gain, SA3 polish, and
 MIR descriptor audits.
-
-The current roadmap distills earlier broad research notes. Git history preserves
-the source notes.
 
 LoRA work uses `dada-bots/underfit`, with exported artifacts available for
 notebook comparison.

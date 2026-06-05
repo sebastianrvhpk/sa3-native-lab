@@ -40,6 +40,19 @@ alongside native SA3/SAME methods.
 | Upstream SA3 runtime | external `Stability-AI/stable-audio-3` checkout | Prompts/audio/checkpoints | generated audio and SAME latents | Installed separately by notebook setup |
 | Research scripts | `scripts/*.py` | datasets, prompts, model handles | latents, vectors, profiles, audio | Script support for notebook experiments |
 
+## Python Surface
+
+| Area | Role |
+|---|---|
+| `latent_audio_primitives/` | Notebook library and tested SA3/SAME research primitives. |
+| `latent_audio_primitives/adapters/` | Thin adapters around upstream SA3/SAME and audioscope-style hooks. |
+| `latent_audio_primitives/experiments/` | Small reusable experiment records and helpers for scripts/notebook cells. |
+| `scripts/` | Notebook validation, dataset encoding, vector extraction, soft-prompt helpers, style/profile helpers, and generation wrappers. |
+| `tests/` | Primitive and adapter tests using fake models and synthetic tensors. |
+
+`stable_audio_3` is intentionally external. The notebook setup installs
+`Stability-AI/stable-audio-3` before this repo when model weights are needed.
+
 ## Capability Map
 
 | Capability | Primary Files | Evidence |
@@ -91,10 +104,9 @@ dataset folders
 | `docs/research/current/repo-structure-map.md` | This repo map and Markdown inventory. |
 | `docs/research/current/notebook-research-map-and-next-methods.md` | Current capability map, research synthesis, backlog status, and next methods. |
 | `docs/research/current/native-experimental-modes-math.md` | Current notebook math and mode implementation notes. |
-| `docs/research/current/python-surface-audit.md` | Current Python keep/delete audit. |
-| `docs/research/methods/seven-better-operators.md` | Active method reference for stronger SA3/SAME operators. |
+| `docs/research/methods/native-operators-and-measurement.md` | Active method reference for measurable SA3/SAME operators. |
 | `docs/research/methods/neural-latent-dsp.md` | Active method reference for SAME latent DSP. |
-| `colab/sa3_medium_l4_runbook.md` | Practical Colab L4 runbook and historical notebook notes. |
+| `colab/sa3_medium_l4_runbook.md` | Practical Colab L4 runtime setup and failure-mode notes. |
 | `docs/codex_skills.md` | Repo-local Codex skill usage and install notes. |
 
 ### Local Agent Workflow Docs

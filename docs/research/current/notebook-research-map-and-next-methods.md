@@ -764,7 +764,7 @@ Why it is useful:
 - SA3 already supports editing; this makes edit strength measurable.
 - It may produce better source preservation than global init noise alone.
 
-## Interface Backlog for the Notebook
+## Notebook Measurement Panels
 
 P0, required for trust:
 

@@ -20,13 +20,10 @@ are organized around that scope:
 - [Native experimental modes math](current/native-experimental-modes-math.md):
   core SA3/SAME math, mode taxonomy, prompt-flow scoring, and implementation
   notes for the expanded Colab notebook.
-- [Python surface audit](current/python-surface-audit.md): current Python
-  surface map for notebook libraries, research scripts, tests, and external SA3
-  runtime assumptions.
 
 ## Method References
 
-- [Seven better operators](methods/seven-better-operators.md): geometry,
+- [Native operators and measurement](methods/native-operators-and-measurement.md): geometry,
   covariance transport, periodic operators, guidance, prompt inversion,
   residual discovery, and observability.
 - [Neural latent DSP](methods/neural-latent-dsp.md): SAME latent-time dynamics,
@@ -34,8 +31,8 @@ are organized around that scope:
 
 ## Related Docs
 
-- [Colab L4 runbook](../../colab/sa3_medium_l4_runbook.md): historical and
-  practical Colab notes for SA3 Medium on L4.
+- [Colab L4 runbook](../../colab/sa3_medium_l4_runbook.md): runtime setup,
+  access, Flash Attention, smoke-test, and failure-mode notes for SA3 Medium on L4.
 - [Codex skills](../codex_skills.md): repo-local agent workflow skills.
 Stable Audio 3 runtime docs live in the upstream
 [Stability-AI/stable-audio-3](https://github.com/Stability-AI/stable-audio-3)
@@ -45,9 +42,6 @@ LoRA work uses [dada-bots/underfit](https://github.com/dada-bots/underfit).
 Exported Underfit audio, checkpoints, and run notes can be compared through the
 notebook's descriptor, memory, player, and annotation cells.
 
-The current roadmap distills earlier broad research notes. Git history preserves
-the source notes.
-
 ## Documentation Rules
 
 - Current implementation claims should point to `colab/`,
@@ -55,5 +49,5 @@ the source notes.
 - New notebook methods should update
   `current/notebook-research-map-and-next-methods.md` and, when math changes,
   `current/native-experimental-modes-math.md`.
-- Add historical survey material when it directly supports a current notebook
-  cell.
+- Add external survey material only when it directly supports a current notebook
+  cell or method note.

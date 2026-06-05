@@ -106,10 +106,10 @@ def greedy_token_prompt_search(
 ) -> GreedyPromptSearchResult:
     """Greedy hard-token prompt synthesis with a pluggable batch scorer.
 
-    This is the transferable part of the old CLIP "image to text" notebook:
-    build a prompt one token at a time by evaluating many candidate next tokens
-    against a target embedding/objective. The scorer can be CLAP, an SA3
-    teacher-forcing loss wrapped as a negative score, or a human-in-loop model.
+    This is hard-token prompt synthesis with a pluggable objective: build a
+    prompt one token at a time by evaluating many candidate next tokens against a
+    target embedding/objective. The scorer can be CLAP, an SA3 teacher-forcing
+    loss wrapped as a negative score, or a human-in-loop model.
     """
 
     if not vocabulary:

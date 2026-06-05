@@ -534,7 +534,8 @@ a subjective control exists.
 
 ## Mode 0f: Cyclic Time-Roll Loop Lab
 
-This is the older boundary-repair experiment:
+Mode 0f relocates a boundary into the interior of the signal, asks SA3/SAME to
+repair that interior region, then restores the original temporal origin:
 
 ```text
 R_s(z)_t = z_{(t-s) mod T}
@@ -552,7 +553,8 @@ Another path rolls waveform audio and uses SA3 inpainting on the internal seam. 
 
 ## Mode 0g: Cyclic Roll Inside Denoising
 
-This is the closer analogue to old image tiling tricks.
+Mode 0g applies cyclic projection inside the denoising trajectory instead of
+repairing only a finished waveform or latent.
 
 Let the sampler state be:
 
@@ -694,10 +696,10 @@ comparison against frozen SA3/SAME methods.
 
 ## Mode 15: SAME Geometry and Intervention Audit
 
-Mode 15 is a measurement mode for the seven stronger operators documented in:
+Mode 15 is a measurement mode for the native operators documented in:
 
 ```text
-docs/research/methods/seven-better-operators.md
+docs/research/methods/native-operators-and-measurement.md
 ```
 
 It starts from a latent collection:
