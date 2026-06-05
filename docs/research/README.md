@@ -20,6 +20,9 @@ are organized around that scope:
 - [Native experimental modes math](current/native-experimental-modes-math.md):
   core SA3/SAME math, mode taxonomy, prompt-flow scoring, and implementation
   notes for the expanded Colab notebook.
+- [Python surface audit](current/python-surface-audit.md): current keep/delete
+  map for notebook libraries, research scripts, upstream SA3 code, MLX
+  reference code, and tests.
 
 ## Method References
 

@@ -97,6 +97,7 @@ dataset folders
 | `docs/research/current/repo-structure-map.md` | This repo map and Markdown inventory. |
 | `docs/research/current/notebook-research-map-and-next-methods.md` | Current capability map, research synthesis, backlog status, and next methods. |
 | `docs/research/current/native-experimental-modes-math.md` | Current notebook math and mode implementation notes. |
+| `docs/research/current/python-surface-audit.md` | Current Python keep/delete audit. |
 | `docs/research/methods/seven-better-operators.md` | Active method reference for stronger SA3/SAME operators. |
 | `docs/research/methods/neural-latent-dsp.md` | Active method reference for SAME latent DSP. |
 | `colab/sa3_medium_l4_runbook.md` | Practical Colab L4 runbook and historical notebook notes. |
