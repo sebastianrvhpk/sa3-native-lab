@@ -124,25 +124,26 @@ and experiment manifests
 
 `latent_audio_primitives`, current role:
 
-- `flow_prompt.py`: frozen SA3 flow prompt loss, logSNR timesteps, explicit velocity conventions, prompt attribution, per-timestep loss rows.
-- `prompt_optimization.py`: coordinate, greedy-token, and beam hard-prompt search.
-- `latent_dsp.py`: latent gain, dynamics, soft clipping, FFT EQ, phase, donor magnitude/phase, PCA gain.
-- `latent_blur.py`: temporal/channel blur, low-rank projection, unsharp masking, FFT filters, SA3 polish helpers.
-- `selective_renoise.py`: channel selection, masks, masked noise, grafting, sampler helpers.
-- `looping.py`: cyclic roll, cyclic mix, repeated previews, loop metrics, sampler-level cyclic projection.
-- `geometry.py`: PCA geometry, whitening, Mahalanobis distance, covariance transport, barycenters.
-- `periodic.py`: autocorrelation, best period lag, FFT energy, spectral centroid, boundary loss.
-- `style.py`: style profiles and directions.
-- `residual_features.py`: residual activation basis and directions.
-- `observability.py`: linear control probes and intervention effect.
-- `audio_descriptors.py`: lightweight audio descriptor reports.
-- `control_lanes.py`: time-varying lane extraction, normalization, comparison, SVG rendering, save/load.
-- `curriculum.py`: memory clustering, heldout splits, nearest-memory rows.
-- `composition.py`: transition, loop, bridge, and path ranking.
-- `index.py`, `schema.py`, `io.py`: latent memory item, search, persistence.
-- `colab_audio_player.py`: waveform player, annotation save/search, notebook listening bench.
-- `adapters/`: thin wrappers around external SA3/SAME and residual-hook surfaces.
-- `experiments/`: small notebook-facing experiment records for soft prompts, activation vectors, residual vectors, prompt pairs, and sweeps.
+- Model boundary: `adapters/` isolates official SA3/SAME loading, encoding,
+  generation, and residual-hook surfaces.
+- Latent objects and persistence: `schema.py`, `io.py`, `latent_math.py`,
+  `index.py`, and `controls.py` define what the notebook stores, searches, and
+  compares.
+- Measurement and observability: `audio_descriptors.py`, `periodic.py`,
+  `geometry.py`, `control_lanes.py`, `observability.py`, and
+  `residual_features.py` turn audio/latent behavior into rows, metrics, lanes,
+  probes, and feature bases.
+- Prompt inversion and prompt search: `flow_prompt.py`,
+  `prompt_optimization.py`, `tokenizer_vocab.py`, and prompt/soft-prompt
+  experiment helpers score prompts through frozen SA3 dynamics.
+- Latent operators and interventions: `latent_blur.py`, `latent_dsp.py`,
+  `selective_renoise.py`, `looping.py`, `style.py`, `guidance.py`, and
+  `composition.py` edit, rank, steer, bridge, or polish SAME/SA3 states.
+- Dataset workflow and listening loop: `curriculum.py`,
+  `colab_audio_player.py`, and `experiments/` support dataset selection,
+  sweeps, auditioning, annotation, and promote/revise/drop decisions.
+
+The detailed module map is [Primitive map](primitive-map.md).
 
 ## Artifact Graph
 

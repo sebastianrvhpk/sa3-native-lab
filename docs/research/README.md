@@ -8,6 +8,8 @@ are organized as a lab record:
 
 - `current/research-state.md`: what exists now.
 - `current/methods-and-math.md`: how the notebook methods work.
+- `current/primitive-map.md`: how the helper modules cluster into a coherent
+  notebook primitive library.
 - `current/source-context.md`: why the source literature/repos matter here.
 - `current/experiment-ledger.md`: what was actually run and decided.
 - `current/backlog.md`: what to try next.
@@ -20,6 +22,9 @@ are organized as a lab record:
 - [Methods and math](current/methods-and-math.md): SA3/SAME objects, frozen-model
   principle, flow scoring, mode equations, latent DSP, geometry, control
   observability, guidance, residual steering, and implementation safety notes.
+- [Primitive map](current/primitive-map.md): module clusters, artifact flow,
+  placement rules, structure debt, and promotion criteria for
+  `latent_audio_primitives/`.
 - [Source context](current/source-context.md): external papers/repos summarized
   as source, relevant idea, notebook impact, and status.
 - [Experiment ledger](current/experiment-ledger.md): template and initial empty
@@ -47,7 +52,8 @@ notebook's descriptor, memory, player, and annotation cells.
 - Current implementation claims should point to `colab/`,
   `latent_audio_primitives/`, or current research docs.
 - New notebook methods should update `current/research-state.md`,
-  `current/methods-and-math.md`, and `current/backlog.md` as appropriate.
+  `current/methods-and-math.md`, `current/primitive-map.md`, and
+  `current/backlog.md` as appropriate.
 - Real notebook runs should update `current/experiment-ledger.md`.
 - Add external survey material only when it directly supports a current notebook
   cell or source-context entry.

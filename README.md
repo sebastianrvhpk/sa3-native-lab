@@ -101,6 +101,14 @@ That document covers SA3/SAME objects, frozen-model principles, native flow
 prompt scoring, mode equations, latent DSP, geometry, control observability,
 guidance, residual steering, and implementation safety notes.
 
+The primitive library map is:
+
+`docs/research/current/primitive-map.md`
+
+It explains how `latent_audio_primitives/` is clustered into model-boundary,
+latent-object, measurement, prompt-inversion, intervention, dataset, and
+listening-loop modules.
+
 The external source context is:
 
 `docs/research/current/source-context.md`

@@ -1,4 +1,10 @@
-"""Research primitives for latent audio memory and composition."""
+"""Notebook-facing SA3/SAME latent audio primitives.
+
+The package is organized around the research loop used by the Colab notebook:
+model boundary wrappers, latent objects and persistence, measurement and
+observability, prompt inversion, latent interventions, dataset workflow, and
+listening/annotation support.
+"""
 
 from .composition import (
     TransitionWeights,
