@@ -221,7 +221,7 @@ prompt pairs or labeled audio
 ## Current Structure Debt
 
 - `latent_audio_primitives/__init__.py` is intentionally broad for notebook
-  convenience, but it should remain a compatibility surface, not the main mental
+  convenience, but it should remain a convenience surface, not the main mental
   model.
 - The notebook setup cell is grouped by this map. Keep future primitive imports
   in those groups so the notebook keeps reading as a lab workflow.

@@ -5,7 +5,7 @@ Status: bottom-up capability map for the current notebook and
 
 This document answers: what the repo can actually do, which native objects it
 moves, which artifacts it produces, and which next notebook interfaces are
-justified by local code rather than legacy labels.
+justified by local code and notebook evidence.
 
 Evidence labels:
 
@@ -289,7 +289,8 @@ ledger decision
 
 ## Next Notebook Shape
 
-The notebook should read as a lab bench, not as numbered legacy modes:
+The notebook should read as a lab bench organized by native objects,
+interventions, and evidence:
 
 1. Runtime and model boundary.
 2. Shared evidence/player/manifest helpers.
@@ -311,7 +312,7 @@ claim
 decision
 ```
 
-That shape is the replacement for legacy mode IDs.
+That shape is the stable grammar for future notebook cells.
 
 ## Unknowns And Verification Plan
 
