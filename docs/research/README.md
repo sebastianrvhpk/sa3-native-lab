@@ -39,6 +39,14 @@ are organized as a lab record:
 - [Colab L4 runbook](../../colab/sa3_medium_l4_runbook.md): runtime setup,
   access, Flash Attention, smoke-test, and failure-mode notes for SA3 Medium on L4.
 
+## Repo-Local Research Skills
+
+- `.codex/skills/sa3-latent-research-scientist`: frames notebook work as
+  object, intervention, measurement, claim, and decision.
+- `.codex/skills/multimodal-ai-research-scout`: surveys current multimodal AI
+  sources and translates architecture changes into SA3/SAME notebook
+  experiments.
+
 Stable Audio 3 runtime docs live in the upstream
 [Stability-AI/stable-audio-3](https://github.com/Stability-AI/stable-audio-3)
 repo.
