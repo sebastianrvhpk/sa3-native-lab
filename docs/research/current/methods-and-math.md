@@ -51,7 +51,7 @@ z_sa3 = transpose z_memory from T x C to C x T
 
 ## Frozen-Model Principle
 
-Most modes keep SA3 and SAME frozen:
+Most experiments keep SA3 and SAME frozen:
 
 ```text
 theta_SA3 unchanged
@@ -113,7 +113,7 @@ This is not captioning. It is prompt inversion through SA3's own latent dynamics
 
 ### LogSNR Timesteps
 
-Mode 2 and later flow panels can use logSNR values:
+Conditioning and flow-microscope panels can use logSNR values:
 
 ```text
 logSNR = log((1 - t) / t)
@@ -204,7 +204,7 @@ L = L_norm
 
 ## Hard Prompt Search
 
-Mode 2 searches hard text by scoring prompt candidates through the frozen flow
+Hard prompt search scores text candidates through the frozen flow
 loss:
 
 ```text
@@ -220,7 +220,7 @@ beam_token_prompt_search
 prompt_seed_from_audio_path
 ```
 
-Mode 3 constrains the search to readable descriptor axes:
+Readable prompt search constrains the search to descriptor axes:
 
 ```text
 p = base_prompt + selected modifiers
@@ -229,13 +229,13 @@ p = base_prompt + selected modifiers
 Tradeoff:
 
 ```text
-Mode 2 = more expressive but may babble
-Mode 3 = less expressive but usable as normal SA3 prompting
+`CONDITION.hard_prompt_search` = more expressive but may babble
+`CONDITION.readable_prompt_search` = less expressive but usable as normal SA3 prompting
 ```
 
-## Mode Math
+## Program Math
 
-### Mode 0: Renoise Variations
+### `LATENT.neighborhood_renoise`: Local Neighborhood Sampling
 
 Encode arbitrary audio:
 
@@ -258,7 +258,7 @@ z_prime = sample_theta(z_T, c, sigma)
 Hypothesis: small `sigma` explores a local neighborhood around the input, while
 larger `sigma` lets SA3 reinterpret the audio under the prompt prior.
 
-### Mode 0c: Latent-Selective Renoise
+### `LATENT.selective_renoise`: Channel-Selective Renoise
 
 Given a binary mask:
 
@@ -275,7 +275,7 @@ z_T = (1 - M) z + M [(1 - sigma) z + sigma epsilon]
 Direct SAME decode often sounds off-manifold. SA3 sampler polish can reproject
 the edited state toward plausible latents.
 
-### Mode 0d: Latent Blur, Sharpen, and Filters
+### `LATENT.blur_bottleneck`: Blur, Sharpen, and Filters
 
 General form:
 
@@ -313,7 +313,7 @@ Hypothesis: SAME latent time contains meaningful low/high temporal variation,
 but channel order is learned and must be treated as a probe rather than a
 guaranteed topology.
 
-### Mode 0e: Cross-Audio Latent Graft
+### `LATENT.audio_graft`: Cross-Audio Latent Graft
 
 Source and donor:
 
@@ -331,7 +331,7 @@ z_prime = z_a + alpha M (z_b - z_a)
 Hypothesis: donor latent channels can transfer texture, density, or gesture
 families without full prompt conditioning.
 
-### Mode 0h: Neural Latent DSP
+### `LATENT.neural_dsp`: Neural Latent DSP
 
 SAME gives a learned latent signal:
 
@@ -466,7 +466,7 @@ stereo_correlation
 
 These are measurement hooks, not subjective labels.
 
-Practical Mode 0h use:
+Practical neural-latent-DSP use:
 
 ```text
 LATENT_DSP_RUN_DIRECT_DECODE = False
@@ -489,7 +489,7 @@ LATENT_DSP_DONOR_AUDIO = INPUT_DIR / "donor_9s.wav"
 LATENT_DSP_INCLUDE_DONOR_SPECS = True
 ```
 
-Open Mode 0h questions:
+Open neural-latent-DSP questions:
 
 - Which latent DSP operators survive SA3 polish without being erased?
 - Which descriptor deltas correlate with listening notes?
@@ -499,7 +499,7 @@ Open Mode 0h questions:
 - Can latent dynamics reduce artifacts after harsher blur or channel edits?
 - Which operations are useful only as microscopes, and which become instrument controls?
 
-### Mode 0f: Cyclic Time-Roll Loop Lab
+### `LATENT.loop_repair`: Cyclic Time-Roll Loop Repair
 
 Relocate a boundary into the interior, repair it, then restore the temporal
 origin:
@@ -514,7 +514,7 @@ z_out = R_{-s}(z_repaired)
 Waveform rolling plus inpainting is useful, but distinct from sampler-level
 cyclic constraints.
 
-### Mode 0g: Cyclic Roll Inside Denoising
+### `GUIDANCE.cyclic_trajectory`: Cyclic Projection Inside Denoising
 
 Sampler state:
 
@@ -544,7 +544,7 @@ x_{i+1} = P_beta(x_{i+1/2})
 Hypothesis: repeated cyclic projection may produce loop continuity or
 half-period collapse depending on `beta`.
 
-### Modes 1 and 4: Soft Prompt Optimization
+### `CONDITION.soft_prompt_inversion` and `CONDITION.dataset_soft_prompt`: Soft Prompt Optimization
 
 Optimize continuous conditioning while base model weights stay frozen:
 
@@ -552,10 +552,10 @@ Optimize continuous conditioning while base model weights stay frozen:
 c_star = argmin_c E_{t,epsilon} L_flow(z_0,c)
 ```
 
-Mode 1 targets one audio item. Mode 4 targets a dataset-level shared
-conditioning object.
+Single-audio soft prompt inversion targets one item. Dataset soft prompt
+inversion targets a shared conditioning object.
 
-### Mode 5: Dataset Prompt Family
+### `MEMORY.prompt_family`: Dataset Prompt Family
 
 Cluster SAME summaries, then search prompt candidates per cluster:
 
@@ -566,7 +566,7 @@ Cluster SAME summaries, then search prompt candidates per cluster:
 The result is a family of prompts that describe dataset regions, not one global
 caption.
 
-### Modes 6 and 7: SAME Statistical Controls
+### `MEMORY.style_profile` and `MEMORY.style_direction`: SAME Statistical Controls
 
 Style profile:
 
@@ -592,7 +592,7 @@ z_prime = z + alpha v
 Hypothesis: some dataset-level timbral or structural properties are linearly
 visible in simple SAME statistics.
 
-### Modes 8 and 9: SA3 Residual Steering
+### `RESIDUAL.prompt_steering` and `RESIDUAL.audio_steering`: SA3 Residual Steering
 
 Prompt-derived direction:
 
@@ -613,7 +613,7 @@ This edits internal DiT representations without training SA3 weights. Hooking
 may fail under optimized/compiled paths, so generation-time validation is
 required.
 
-### Mode 10: Flow-State Optimization
+### `GUIDANCE.flow_state_optimization`: Flow-State Optimization
 
 Optimize an intermediate flow state or related latent variable while keeping
 model weights frozen:
@@ -624,7 +624,7 @@ z_t_star = argmin_z L_target(z, t, c)
 
 This is a scaffold until the target loss and sampler integration prove useful.
 
-### Mode 11 and Mode 21: Continuation, Inpainting, Bridge Search
+### `GUIDANCE.continuation_composition` and `MEMORY.bridge_search`: Continuation, Inpainting, Bridge Search
 
 Continuation/inpainting treats known and missing regions separately:
 
@@ -642,7 +642,7 @@ cost(path) = cost_transition(a,b) + cost_transition(b,c) + optional loop terms
 Useful bridge candidates must be measured and auditioned; transition cost is a
 candidate generator.
 
-### Mode 12: LatCH-Style Sidecar Heads
+### `MEMORY.control_head`: LatCH-Style Sidecar Heads
 
 A sidecar head predicts controls over SAME latents:
 
@@ -664,7 +664,7 @@ predictability: can h_psi predict it from z?
 intervenability: can a sampler/edit change it reliably?
 ```
 
-### Mode 13: Underfit LoRA Handoff
+### `BASELINE.underfit_handoff`: Underfit LoRA Handoff
 
 LoRA training uses Underfit. Notebook comparison path:
 
@@ -679,7 +679,7 @@ dataset folder
 -> imported audio/checkpoints for this notebook
 ```
 
-### Mode 14: Latent Memory
+### `MEMORY.index_instrument`: Latent Memory
 
 Memory items:
 
@@ -698,7 +698,7 @@ LatentItem = {
 Retrieval can use latent summaries, descriptor targets, hybrid scores, and later
 control lanes or geometry-aware donor selection.
 
-### Mode 15: SAME Geometry and Intervention Audit
+### `MEMORY.geometry_audit`: SAME Geometry and Intervention Audit
 
 Start from a latent collection:
 
@@ -754,15 +754,15 @@ Latent barycenter:
 z_bar = weighted average over aligned latent trajectories
 ```
 
-### Modes 16 and 17: Flow Microscope Panels
+### `CONDITION.flow_attribution` and `CONDITION.flow_timestep_panel`: Flow Microscope Panels
 
-Mode 16 computes token/phrase attribution over the same flow probe bank:
+`CONDITION.flow_attribution` computes token/phrase attribution over the same flow probe bank:
 
 ```text
 contribution(token_i) = L(prompt without token_i) - L(prompt)
 ```
 
-Mode 17 displays losses by timestep/logSNR:
+`CONDITION.flow_timestep_panel` displays losses by timestep/logSNR:
 
 ```text
 loss_row = {
@@ -778,7 +778,7 @@ loss_row = {
 
 These panels turn prompt inversion into diagnostics rather than a single scalar.
 
-### Mode 18: SAME Control Lanes
+### `MEMORY.control_lanes`: SAME Control Lanes
 
 Control lanes are time-varying notebook controls:
 
@@ -812,7 +812,7 @@ retrieval second
 guidance/control only after observability and listening agree
 ```
 
-### Mode 19: Dataset Memory Curriculum
+### `MEMORY.curriculum`: Dataset Memory Curriculum
 
 Dataset memory can become a curriculum:
 
@@ -827,7 +827,7 @@ Use cases:
 - build prompt/control families,
 - test whether edits generalize to heldout memory rows.
 
-### Mode 20: Latent OT Style Transfer Bench
+### `MEMORY.ot_style_transfer`: Latent OT Style Transfer Bench
 
 Compare style/profile methods:
 
@@ -841,7 +841,7 @@ barycenter
 Measurement should include descriptor deltas, nearest-memory rows, flow score
 changes, and listening notes.
 
-### Mode 22: Residual Feature Atlas
+### `RESIDUAL.feature_atlas`: Residual Feature Atlas
 
 Residual feature basis:
 
@@ -863,7 +863,7 @@ Atlas goals:
 - measure feature projection,
 - test causal interventions by generation-time patching.
 
-### Mode 23: Null-Condition Inversion Probe
+### `CONDITION.null_inversion`: Null-Condition Inversion Probe
 
 Analogy to null-text inversion:
 
@@ -876,7 +876,7 @@ edit human prompt later
 Goal: preserve source identity through the null branch while allowing prompt
 edits through the conditional branch.
 
-### Modes 24 and 25: Guidance and Posterior Guidance
+### `GUIDANCE.gradient_edit` and `GUIDANCE.audio_posterior`: Guidance and Posterior Guidance
 
 Generic differentiable guidance:
 
@@ -909,7 +909,7 @@ L = L_prompt_or_flow
 
 These are scaffolds until sampler integration and audio results are validated.
 
-### Mode 26: Cross-Model Baseline Harness
+### `BASELINE.cross_model`: Cross-Model Baseline Harness
 
 Use fixed prompts and optional external generation commands:
 
@@ -946,16 +946,16 @@ intervenability: can an edit reliably move h(z) and the audio?
 
 | Operator | Local Code | Colab Exposure | Needs SA3 Weights? | Training? |
 |---|---|---:|---:|---:|
-| Latent geometry | `geometry.py` | Mode 15 | no for saved latents, yes for fresh encoding | no |
-| Covariance transport | `geometry.py` | Mode 15 and Mode 20 | no for saved latents, yes for fresh encode/decode | no |
-| Fourier/periodic latent probes | `periodic.py` | Mode 15 | no for saved latents | no |
-| Neural latent DSP | `latent_dsp.py`, `audio_descriptors.py` | Mode 0h | yes for decode/polish | no |
-| Direct gradient guidance | `guidance.py` | Modes 24/25 probes | yes for sampler integration | no base training |
-| Prompt inversion | `prompt_optimization.py`, `flow_prompt.py` | Modes 2/3/16/17 | yes | no |
-| Residual feature discovery | `residual_features.py` | Mode 22 | yes for activation capture | no |
-| Control observability | `observability.py` | Modes 12/15 | no for saved labeled latents | sidecar/probe only |
-| Control lanes | `control_lanes.py` | Mode 18 | no for saved latents/audio descriptors, yes for fresh encode/decode | no |
-| Memory curriculum | `curriculum.py`, `index.py` | Modes 14/19 | no for saved memory | no |
+| Latent geometry | `geometry.py` | `MEMORY.geometry_audit` | no for saved latents, yes for fresh encoding | no |
+| Covariance transport | `geometry.py` | `MEMORY.geometry_audit`, `MEMORY.ot_style_transfer` | no for saved latents, yes for fresh encode/decode | no |
+| Fourier/periodic latent probes | `periodic.py` | `MEMORY.geometry_audit` | no for saved latents | no |
+| Neural latent DSP | `latent_dsp.py`, `audio_descriptors.py` | `LATENT.neural_dsp` | yes for decode/polish | no |
+| Direct gradient guidance | `guidance.py` | `GUIDANCE.gradient_edit`, `GUIDANCE.audio_posterior` probes | yes for sampler integration | no base training |
+| Prompt inversion | `prompt_optimization.py`, `flow_prompt.py` | `CONDITION.hard_prompt_search`, `CONDITION.readable_prompt_search`, flow microscopes | yes | no |
+| Residual feature discovery | `residual_features.py` | `RESIDUAL.feature_atlas` | yes for activation capture | no |
+| Control observability | `observability.py` | `MEMORY.control_head`, `MEMORY.geometry_audit` | no for saved labeled latents | sidecar/probe only |
+| Control lanes | `control_lanes.py` | `MEMORY.control_lanes` | no for saved latents/audio descriptors, yes for fresh encode/decode | no |
+| Memory curriculum | `curriculum.py`, `index.py` | `MEMORY.index_instrument`, `MEMORY.curriculum` | no for saved memory | no |
 
 The deliberate gap is full sampler integration. The math primitives are in
 place; the notebook should promote only operators with audible promise after

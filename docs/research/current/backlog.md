@@ -1,6 +1,6 @@
 # SA3 Native Lab Backlog
 
-Status: future work and open questions after the notebook backlog pass.
+Status: future work and open questions for the research-program notebook.
 
 This document answers: what should be tried next, why it matters, what evidence
 would promote or drop it, and which questions remain open.
@@ -15,7 +15,7 @@ Every backlog item should state:
 ```text
 Goal:
 Evidence already available:
-Notebook touchpoints:
+Program touchpoints:
 Promote if:
 Drop or revise if:
 ```
@@ -26,35 +26,36 @@ a concrete notebook run over SA3/SAME objects.
 Use [Run protocol](run-protocol.md) before promoting a backlog item into a
 notebook implementation or a kept method.
 
-## Implemented Backlog Reference
+## Implemented Program Reference
 
-These items from the previous research map now have notebook cells or probes:
+These items now have notebook cells or probes:
 
-| Item | Notebook Mode | Helper Support | Status |
-|---|---:|---|---|
-| Flow attribution prompt microscope | 16 | `flow_prompt.py` attribution rows | implemented |
-| Loss-by-timestep flow panel | 17 | `flow_prompt.py` loss rows and summaries | implemented |
-| SAME control lanes | 18 | `control_lanes.py` | implemented |
-| Dataset memory curriculum | 19 | `curriculum.py` | implemented |
-| Latent OT style transfer bench | 20 | `geometry.py`, `style.py` | implemented |
-| Continuation as bridge search | 21 | `composition.py` | implemented |
-| Residual feature atlas | 22 | `residual_features.py` | implemented |
-| SA3 null-condition inversion probe | 23 | notebook probe over SA3 conditioning tensors | scaffold |
-| Guidance-gradient latent edit | 24 | `guidance.py` | scaffold |
-| Audio-to-audio posterior guidance | 25 | `guidance.py`, source/reference summaries | scaffold |
-| Cross-model baseline harness | 26 | notebook command harness plus descriptors/player | scaffold |
+| Item | Program Experiment | Helper Support | Status |
+|---|---|---|---|
+| Flow attribution prompt microscope | `CONDITION.flow_attribution` | `flow_prompt.py` attribution rows | implemented |
+| Loss-by-timestep flow panel | `CONDITION.flow_timestep_panel` | `flow_prompt.py` loss rows and summaries | implemented |
+| SAME control lanes | `MEMORY.control_lanes` | `control_lanes.py` | implemented |
+| Dataset memory curriculum | `MEMORY.curriculum` | `curriculum.py` | implemented |
+| Latent OT style transfer bench | `MEMORY.ot_style_transfer` | `geometry.py`, `style.py` | implemented |
+| Continuation as bridge search | `MEMORY.bridge_search` | `composition.py` | implemented |
+| Residual feature atlas | `RESIDUAL.feature_atlas` | `residual_features.py` | implemented |
+| SA3 null-condition inversion probe | `CONDITION.null_inversion` | notebook probe over SA3 conditioning tensors | scaffold |
+| Guidance-gradient latent edit | `GUIDANCE.gradient_edit` | `guidance.py` | scaffold |
+| Audio-to-audio posterior guidance | `GUIDANCE.audio_posterior` | `guidance.py`, source/reference summaries | scaffold |
+| Cross-model baseline harness | `BASELINE.cross_model` | notebook command harness plus descriptors/player | scaffold |
 
 ## Immediate Priorities
 
 ### 1. Probe-Bank Cache
 
-Goal: save target latent, timesteps, noise seeds, and per-prompt rows so Modes
-16 and 17 reuse identical probes across sessions.
+Goal: save target latent, timesteps, noise seeds, and per-prompt rows so
+`CONDITION.flow_attribution` and `CONDITION.flow_timestep_panel` reuse identical
+probes across sessions.
 
 Evidence already available: shared probe banks reduce prompt-score variance and
 make A/B prompt comparisons fair.
 
-Notebook touchpoints: Modes 2, 16, 17.
+Program touchpoints: `CONDITION.hard_prompt_search`, `CONDITION.flow_attribution`, `CONDITION.flow_timestep_panel`.
 
 Promote if:
 
@@ -75,7 +76,7 @@ short audition generations.
 Evidence already available: flow score measures teacher-forced vector-field
 agreement; descriptors measure decoded audio movement.
 
-Notebook touchpoints: Modes 2, 3, 16, 17, descriptor/player cells.
+Program touchpoints: `CONDITION.hard_prompt_search`, `CONDITION.readable_prompt_search`, flow-microscope cells, descriptor/player cells.
 
 Promote if:
 
@@ -93,10 +94,10 @@ Drop or revise if:
 Goal: add lane similarity to memory retrieval so searches can combine latent
 summary, descriptor targets, and time-varying lane shape.
 
-Evidence already available: Mode 18 extracts and compares control lanes; Mode
-14 provides latent memory search.
+Evidence already available: `MEMORY.control_lanes` extracts and compares control lanes;
+`MEMORY.index_instrument` provides latent memory search.
 
-Notebook touchpoints: Modes 14, 18, 19, 21.
+Program touchpoints: `MEMORY.index_instrument`, `MEMORY.control_lanes`, `MEMORY.curriculum`, `MEMORY.bridge_search`.
 
 Promote if:
 
@@ -117,7 +118,7 @@ distance, lane similarity, descriptor fit, and transition cost.
 Evidence already available: geometry, memory, bridge search, control lanes, and
 descriptor reports already exist.
 
-Notebook touchpoints: Modes 0e, 0h, 15, 18, 20, 21.
+Program touchpoints: `LATENT.audio_graft`, `LATENT.neural_dsp`, `MEMORY.geometry_audit`, `MEMORY.control_lanes`, `MEMORY.ot_style_transfer`, `MEMORY.bridge_search`.
 
 Promote if:
 
@@ -132,13 +133,13 @@ Drop or revise if:
 
 ### 5. Residual Temporal Patching
 
-Goal: extend Mode 22 from layer-level residual feature atlas to layer x
+Goal: extend `RESIDUAL.feature_atlas` from layer-level residual feature atlas to layer x
 denoising-step or layer x latent-time patch tests.
 
 Evidence already available: residual vectors and feature bases exist; activation
 steering sources support causal intervention tests.
 
-Notebook touchpoints: Modes 8, 9, 22.
+Program touchpoints: `RESIDUAL.prompt_steering`, `RESIDUAL.audio_steering`, `RESIDUAL.feature_atlas`.
 
 Promote if:
 
@@ -154,13 +155,13 @@ Drop or revise if:
 
 ### 6. Guidance Objective Mixer
 
-Goal: let Mode 24 choose profile, boundary, period, lane, descriptor, and
+Goal: let `GUIDANCE.gradient_edit` choose profile, boundary, period, lane, descriptor, and
 preservation losses from a compact JSON recipe.
 
-Evidence already available: generic gradient guidance exists; Modes 15, 18, and
-0h provide measurable loss candidates.
+Evidence already available: generic gradient guidance exists; `MEMORY.geometry_audit`,
+`MEMORY.control_lanes`, and `LATENT.neural_dsp` provide measurable loss candidates.
 
-Notebook touchpoints: Modes 15, 18, 24, 25.
+Program touchpoints: `MEMORY.geometry_audit`, `MEMORY.control_lanes`, `GUIDANCE.gradient_edit`, `GUIDANCE.audio_posterior`.
 
 Promote if:
 
@@ -175,13 +176,14 @@ Drop or revise if:
 
 ### 7. Null-Condition Edit Audition
 
-Goal: after Mode 23 optimizes null conditioning, generate fixed prompt edits and
-compare source preservation against Mode 1 soft prompt and plain audio-to-audio.
+Goal: after `CONDITION.null_inversion` optimizes null conditioning, generate
+fixed prompt edits and compare source preservation against
+`CONDITION.soft_prompt_inversion` and plain audio-to-audio.
 
 Evidence already available: null-text inversion motivates branch-specific
 conditioning; SA3 has CFG-like conditional/null behavior.
 
-Notebook touchpoints: Modes 1, 2, 23.
+Program touchpoints: `CONDITION.soft_prompt_inversion`, `CONDITION.hard_prompt_search`, `CONDITION.null_inversion`.
 
 Promote if:
 
@@ -203,8 +205,10 @@ deltas so "kept source identity" and "copied dataset item" are separated.
 Evidence already available: memory index, descriptors, manifest, player, and
 annotation cells exist.
 
-Notebook touchpoints: all generation/editing modes, especially 0, 0e, 0h, 20,
-21, 24, 25.
+Program touchpoints: all generation/editing experiments, especially
+`LATENT.neighborhood_renoise`, `LATENT.audio_graft`, `LATENT.neural_dsp`,
+`MEMORY.ot_style_transfer`, `MEMORY.bridge_search`, `GUIDANCE.gradient_edit`,
+and `GUIDANCE.audio_posterior`.
 
 Promote if:
 
@@ -224,13 +228,13 @@ SAME summaries, descriptor deltas, and listening tags.
 
 Evidence already available: memory clustering and descriptor reports exist.
 
-Notebook touchpoints: Modes 0, 2, 8, 20, 24, 26.
+Program touchpoints: `LATENT.neighborhood_renoise`, `CONDITION.hard_prompt_search`, `RESIDUAL.prompt_steering`, `MEMORY.ot_style_transfer`, `GUIDANCE.gradient_edit`, `BASELINE.cross_model`.
 
 Promote if:
 
 - seed families reveal repeatable behavior,
 - clusters help select robust recipes,
-- failure modes become visible.
+- failure cases become visible.
 
 Drop or revise if:
 
@@ -244,7 +248,7 @@ annotations into a static report.
 
 Evidence already available: manifest/player/descriptors already exist.
 
-Notebook touchpoints: manifest cell, player, descriptor tables, experiment ledger.
+Program touchpoints: manifest cell, player, descriptor tables, experiment ledger.
 
 Promote if:
 
@@ -272,7 +276,7 @@ Evidence already available: SAME is the local native latent object; latent blur,
 latent DSP, geometry, direct decode, SA3 polish, descriptors, and flow scoring
 already exist.
 
-Notebook touchpoints: Modes 0d, 0h, 15, 16, 17.
+Program touchpoints: `LATENT.blur_bottleneck`, `LATENT.neural_dsp`, `MEMORY.geometry_audit`, `CONDITION.flow_attribution`, `CONDITION.flow_timestep_panel`.
 
 Promote if:
 
@@ -294,7 +298,7 @@ Evidence already available: flow attribution, null-condition inversion scaffold,
 soft prompts, source-preservation guidance scaffold, descriptors, and memory
 nearest-neighbor checks exist.
 
-Notebook touchpoints: Modes 1, 2, 16, 17, 23, 25.
+Program touchpoints: `CONDITION.soft_prompt_inversion`, `CONDITION.hard_prompt_search`, `CONDITION.flow_attribution`, `CONDITION.flow_timestep_panel`, `CONDITION.null_inversion`, `GUIDANCE.audio_posterior`.
 
 Promote if:
 
@@ -315,7 +319,7 @@ controls per segment, then assembling with continuation and bridge search.
 Evidence already available: chunk windows, prompt family search, memory
 curriculum, control lanes, continuation, bridge ranking, and manifests exist.
 
-Notebook touchpoints: Modes 5, 11, 14, 18, 19, 21.
+Program touchpoints: `MEMORY.prompt_family`, `GUIDANCE.continuation_composition`, `MEMORY.index_instrument`, `MEMORY.control_lanes`, `MEMORY.curriculum`, `MEMORY.bridge_search`.
 
 Promote if:
 
@@ -336,7 +340,7 @@ semantic or temporal embedding distances.
 Evidence already available: memory index, descriptors, control lanes, and
 cross-model baseline harness exist.
 
-Notebook touchpoints: Modes 14, 18, 19, 26, player/ledger cells.
+Program touchpoints: `MEMORY.index_instrument`, `MEMORY.control_lanes`, `MEMORY.curriculum`, `BASELINE.cross_model`, player/ledger cells.
 
 Promote if:
 
@@ -355,16 +359,17 @@ Drop or revise if:
 Goal: map runtime, step count, init noise, and SA3 polish settings against
 flow loss, descriptors, source preservation, and listening quality.
 
-Evidence already available: SA3 supports fast generation/editing; local modes
-already sweep renoise, latent edits, cyclic sampler probes, and guidance.
+Evidence already available: SA3 supports fast generation/editing; local
+experiments already sweep renoise, latent edits, cyclic sampler probes, and
+guidance.
 
-Notebook touchpoints: Modes 0, 0d, 0h, 0g, 24, 25.
+Program touchpoints: `LATENT.neighborhood_renoise`, `LATENT.blur_bottleneck`, `LATENT.neural_dsp`, `GUIDANCE.cyclic_trajectory`, `GUIDANCE.gradient_edit`, `GUIDANCE.audio_posterior`.
 
 Promote if:
 
 - a small settings grid gives stable quality/runtime guidance,
 - low-step outputs remain useful for notebook audition,
-- failure modes are visible before long runs.
+- failure cases are visible before long runs.
 
 Drop or revise if:
 
@@ -379,8 +384,9 @@ without pretending to train a preference model.
 Evidence already available: custom player, annotation search, descriptor rows,
 manifests, and experiment ledger exist.
 
-Notebook touchpoints: player, manifest, experiment ledger, Modes 0, 2, 20, 24,
-26.
+Program touchpoints: player, manifest, experiment ledger,
+`LATENT.neighborhood_renoise`, `CONDITION.hard_prompt_search`,
+`MEMORY.ot_style_transfer`, `GUIDANCE.gradient_edit`, `BASELINE.cross_model`.
 
 Promote if:
 
@@ -397,7 +403,7 @@ Drop or revise if:
 
 - Better visual styling for notebook panels.
 - Compact printable manifest summaries.
-- Cross-model fixed task packs beyond Mode 26.
+- Cross-model fixed task packs beyond `BASELINE.cross_model`.
 - Prompt-token replacement suggestions beyond leave-one-out attribution.
 - Control-lane editor for hand-drawn or imported lanes.
 - Layer/time residual patch heatmaps.

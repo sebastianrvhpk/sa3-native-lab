@@ -32,13 +32,14 @@ Decision:
 
 ## Run Spine
 
-Use the same spine for ordinary mode runs and frontier-informed probes:
+Use the same spine for ordinary notebook experiments and frontier-informed
+probes:
 
 ```text
 choose source audio / dataset / prompt family
 -> encode or load SAME latents
 -> record baseline output or baseline measurements
--> choose one mode family and one intervention
+-> choose one research program and one intervention
 -> run the method with explicit seed, steps, duration, and prompt
 -> measure descriptor, flow, latent, memory, geometry, lane, or residual evidence
 -> audition with the custom player
@@ -51,16 +52,17 @@ Do not skip the baseline. For prompt and flow methods, reuse the same probe bank
 when comparing prompts. For audio edit methods, include the source audio and a
 plain SA3/audio-to-audio baseline.
 
-## Mode Families
+## Research Programs
 
-| Family | Modes | Primary Question |
+| Program | Experiments | Primary Question |
 |---|---|---|
-| Source/audio variation | 0, 0c, 0d, 0e, 0f, 0g, 0h | What happens when SAME latents or sampler states are locally edited? |
-| Prompt inversion | 1, 1b, 2, 3, 4, 16, 17, 23 | Which prompt or condition best explains the target through frozen SA3 dynamics? |
-| Residual/activation steering | 8, 9, 22 | Which internal SA3 representations carry usable audio controls? |
-| Memory/geometry/control | 5, 6, 7, 12, 14, 15, 18, 19, 20, 21 | Which dataset structures, lanes, and geometric summaries help select or edit audio? |
-| Guidance/frontier scaffolds | 10, 24, 25, 26 | Which sampler/guidance/cross-model ideas are ready for notebook evidence? |
-| Review/decision | combined chain, manifest, player, ledger | Which outputs deserve to be kept, revised, or dropped? |
+| `LATENT` | neighborhood renoise, selective renoise, graft, blur bottleneck, neural DSP, loop repair | Which SAME latent edits produce predictable audio changes after direct decode or SA3 polish? |
+| `CONDITION` | soft prompt inversion, hard/readable prompt search, dataset prompt, flow attribution, timestep panel, null inversion | Which prompt or conditioning object best explains target audio through frozen SA3 dynamics? |
+| `MEMORY` | prompt family, style profile/direction, control head, latent memory, geometry audit, lanes, curriculum, OT transfer, bridge search | Which dataset structures, lanes, and geometry summaries help select, transfer, or audit audio behavior? |
+| `RESIDUAL` | prompt steering, audio steering, feature atlas | Which internal SA3 representations carry usable or diagnostic audio controls? |
+| `GUIDANCE` | cyclic trajectory, flow-state optimization, continuation, gradient edit, audio posterior guidance | Which sampler-state or objective-guided edits are worth promoting beyond microscope status? |
+| `BASELINE` | Underfit handoff, cross-model harness | What should frozen SA3/SAME be compared against without importing local app/training scaffolding? |
+| `REVIEW` | player, combined chain, manifest, ledger | Which outputs deserve to be kept, revised, or dropped? |
 
 ## Evidence Panels
 
@@ -83,7 +85,7 @@ For a method to be reviewable, collect:
 
 ```text
 commit hash
-mode name
+program and experiment slug
 model ID / SA3 checkpoint
 runtime and GPU
 source/donor audio paths

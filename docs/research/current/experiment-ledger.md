@@ -18,7 +18,7 @@ run packet, and promote/revise/drop rules.
 - Record only actual runs or deliberately planned run slots.
 - Link or name output artifacts where possible.
 - Include source audio, baseline output, method output, descriptor deltas, and listening notes.
-- Use exact mode names, seeds, prompts, model IDs, durations, and key params.
+- Use exact program/experiment slugs, seeds, prompts, model IDs, durations, and key params.
 - Mark decisions explicitly: `keep`, `revise`, `drop`, or `unknown`.
 - Do not promote a method based only on latent metrics.
 
@@ -27,7 +27,7 @@ run packet, and promote/revise/drop rules.
 ```text
 Date:
 Notebook commit:
-Notebook mode:
+Program / experiment:
 Model:
 Runtime:
 
@@ -151,7 +151,7 @@ Each promoted experiment should fill as many of these as relevant:
 
 No completed runs have been recorded in this reorganized ledger yet.
 
-| Date | Mode | Question | Outputs | Decision | Notes |
+| Date | Program / Experiment | Question | Outputs | Decision | Notes |
 |---|---|---|---|---|---|
 | TBD | TBD | TBD | TBD | unknown | Add first real Colab/listening run here. |
 

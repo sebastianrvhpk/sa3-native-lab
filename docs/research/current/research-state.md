@@ -3,8 +3,8 @@
 Status: current project snapshot for the notebook-first SA3 Native Lab direction
 as of 2026-06-05.
 
-This document answers: what exists now, what the repo is for, which notebook
-modes and helper primitives are active, and which parts are confirmed versus
+This document answers: what exists now, what the repo is for, which research
+programs and helper primitives are active, and which parts are confirmed versus
 scaffolded.
 
 ## Direction
@@ -13,7 +13,7 @@ SA3 Native Lab is a Colab and Python research workspace for frozen SA3/SAME
 latent experiments. The source of truth is:
 
 ```text
-colab/sa3_same_native_experimental_modes.ipynb
+colab/sa3_native_research_programs.ipynb
 ```
 
 The repo keeps:
@@ -52,7 +52,7 @@ against frozen SA3/SAME methods.
 
 | Surface | Entry Point | Inputs | Outputs | Notes |
 |---|---|---|---|---|
-| Colab notebook | `colab/sa3_same_native_experimental_modes.ipynb` | Audio files, prompts, datasets, SA3/SAME checkpoints | Audio, tables, plots, manifests, player rows, annotations | Main research instrument |
+| Colab notebook | `colab/sa3_native_research_programs.ipynb` | Audio files, prompts, datasets, SA3/SAME checkpoints | Audio, tables, plots, manifests, player rows, annotations | Main research instrument |
 | Upstream SA3 runtime | External `Stability-AI/stable-audio-3` checkout | Prompts, audio, checkpoints | Generated audio, SAME latents, sampler state | Installed separately by notebook setup |
 | Underfit comparison path | External Underfit repo/artifacts | Training runs, checkpoints, demos | Audio/checkpoint artifacts for notebook comparison | LoRA path lives outside this repo |
 
@@ -79,47 +79,21 @@ measure with native flow losses, latent geometry, audio descriptors, listening n
 and experiment manifests
 ```
 
-## Notebook Mode Inventory
+## Notebook Research Program Inventory
 
-| Mode | Capability | Main Object | Main Artifact | Status |
+The active notebook no longer uses numbered implementation cells as its public
+structure. Experiments are grouped by the native SA3/SAME object they probe or
+edit.
+
+| Program | Experiments | Main Object | Main Artifact | Status |
 |---|---|---|---|---|
-| 0 | Renoise variations from existing loop/audio | SA3 init/audio latent | generated audio, manifest rows | implemented |
-| 0c | Latent-selective renoise playground | SAME channel/time masks | variants, annotation search | implemented |
-| 0e | Cross-audio latent channel graft | source/donor SAME channels | grafted variants | implemented |
-| 0d | Latent blur playground | SAME latent trajectories | direct or polished audio | implemented |
-| 0h | Neural latent DSP playground | latent gain, dynamics, FFT, PCA | audio, descriptor reports | implemented |
-| 0f | Cyclic time-roll loop lab | waveform/latent boundary repair | loop previews | implemented |
-| 0g | Cyclic roll inside each denoising step | sampler trajectory | loop variants | implemented |
-| sign diagnostic | Flow sign diagnostic | SA3 velocity convention | diagnostic metrics | implemented |
-| 1 | Audio to soft prompt | continuous conditioning | saved soft prompt | implemented |
-| 1b | Generate audio from saved soft prompt | saved conditioning state | generated audio | implemented |
-| 2 | Audio to babble/hard prompt | hard prompt tokens scored by SA3 flow | prompt candidates | implemented |
-| 3 | Audio to readable prompt | constrained descriptor prompt axes | readable prompt | implemented |
-| 4 | Dataset to soft prompt | shared conditioning vector | dataset soft prompt | implemented |
-| 5 | Dataset to prompt family by SAME clustering | clusters plus text search | prompt families | implemented |
-| 6 | SAME latent style profile | mean/std latent profile | profile JSON | implemented |
-| 7 | SAME latent direction from positive/reference folders | dataset-level latent direction | direction JSON | implemented |
-| 8 | SA3 residual steering from prompt pairs | residual activations | steering vectors, alpha sweep | implemented |
-| 9 | SA3 residual steering from audio files | audio-derived residual directions | vector file, probe report | implemented |
-| 10 | Flow-state optimization scaffold | intermediate flow state | optimized state | scaffold |
-| 11 | Continuation/inpainting composition | mask and continuation region | extension/edit audio | implemented |
-| 12 | Minimal LatCH-style control head | sidecar predictor over SAME summaries | sidecar `.pt` | implemented as probe |
-| 13 | External LoRA handoff | Underfit workflow | external checkpoints/audio | external |
-| 14 | Latent memory instrument | indexed `LatentItem`s | memory index | implemented |
-| 15 | SAME geometry and intervention audit | latent collection | geometry report | implemented |
-| 16 | Flow attribution prompt microscope | prompt tokens over shared flow probes | attribution rows | implemented |
-| 17 | Loss-by-timestep flow panel | logSNR/timestep score rows | per-timestep diagnostics | implemented |
-| 18 | SAME control lanes | time-varying control rows | lane JSON/SVG/table | implemented |
-| 19 | Dataset memory as prompt/control curriculum | memory clusters and heldout rows | curriculum table | implemented |
-| 20 | Latent OT style transfer bench | geometry/style profiles | transport comparison | implemented |
-| 21 | Continuation as bridge search | transition/bridge candidates | ranked bridge table | implemented |
-| 22 | Residual feature atlas | residual feature basis | layer/feature report | implemented |
-| 23 | SA3 null-condition inversion probe | CFG/null conditioning path | inversion probe rows | scaffold |
-| 24 | Guidance-gradient latent edit probe | differentiable latent losses | edited/polished variants | scaffold |
-| 25 | Audio-to-audio posterior guidance scaffold | source/reference preservation losses | guided variants | scaffold |
-| 26 | Cross-model baseline harness | fixed prompts plus external commands | comparison report | scaffold |
-| combined | Combined chain scaffold | multi-method recipe | chain outputs | scaffold |
-| manifest | Experiment manifest/log template | run metadata | manifest JSON | implemented |
+| `LATENT` | neighborhood renoise; channel-selective renoise; annotation retrieval; cross-audio graft; blur bottleneck; neural latent DSP; cyclic loop repair | SAME latent `z0`, latent channels, latent-time trajectories, source/donor latents | generated variants, direct decodes, SA3-polished audio, descriptor reports, annotation rows | implemented |
+| `CONDITION` | soft prompt inversion; soft prompt audition; hard prompt search; readable prompt search; dataset soft prompt; flow sign diagnostic; flow attribution; loss-by-timestep panel; null-condition inversion | SA3 conditioning `C(p)`, optimized conditioning tensors, frozen flow probes | `.pt` conditioning states, prompt candidates, flow-loss rows, attribution tables, timestep panels | implemented plus null-inversion scaffold |
+| `MEMORY` | dataset prompt family; style profile; style direction; control head; latent memory instrument; geometry audit; control lanes; memory curriculum; latent OT style transfer; bridge search | `LatentItem` memory rows, SAME summary statistics, covariance/profile geometry, control lanes | memory indices, profile/direction files, geometry reports, lane JSON/SVG, curriculum rows, bridge rankings | implemented |
+| `RESIDUAL` | prompt-derived steering; audio-derived steering; residual feature atlas | SA3 residual activations and feature bases | steering vectors, alpha sweeps, probe reports, feature atlas JSON | implemented |
+| `GUIDANCE` | cyclic denoising trajectory; flow-state optimization; continuation/inpainting composition; guidance-gradient edit; audio posterior guidance | sampler state, intermediate flow state, masked continuation region, differentiable objectives | loop variants, continuation audio, edited/polished variants, guidance reports | implemented plus sampler-guidance scaffolds |
+| `BASELINE` | Underfit LoRA handoff; cross-model baseline harness | external fine-tuning artifacts and fixed comparison task packs | external audio/checkpoints/run notes, comparison reports | external/scaffold |
+| `REVIEW` | custom audio player; combined chain; experiment manifest/log template; experiment ledger handoff | evidence packet and decision loop | embedded player rows, manifests, listening notes, promote/revise/drop decisions | implemented |
 
 ## Reusable Local Modules
 

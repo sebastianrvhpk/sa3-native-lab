@@ -20,10 +20,10 @@ are organized as a lab record:
 ## Current
 
 - [Research state](current/research-state.md): current project direction, repo
-  surfaces, notebook mode inventory, active helper modules, artifact graph,
-  runtime assumptions, and current unknowns.
+  surfaces, notebook research program inventory, active helper modules,
+  artifact graph, runtime assumptions, and current unknowns.
 - [Methods and math](current/methods-and-math.md): SA3/SAME objects, frozen-model
-  principle, flow scoring, mode equations, latent DSP, geometry, control
+  principle, flow scoring, program equations, latent DSP, geometry, control
   observability, guidance, residual steering, and implementation safety notes.
 - [Primitive map](current/primitive-map.md): module clusters, artifact flow,
   placement rules, structure debt, and promotion criteria for
@@ -31,8 +31,8 @@ are organized as a lab record:
 - [Frontier architecture transfer](current/frontier-architecture-transfer.md):
   source-checked multimodal/audio SOTA scout, architecture deltas, transfer
   matrix, and candidate SA3/SAME notebook experiments.
-- [Run protocol](current/run-protocol.md): research frame, run spine, mode
-  families, evidence panels, minimum run packet, and decision rules.
+- [Run protocol](current/run-protocol.md): research frame, run spine,
+  research programs, evidence panels, minimum run packet, and decision rules.
 - [Source context](current/source-context.md): external papers/repos summarized
   as source, relevant idea, notebook impact, and status.
 - [Experiment ledger](current/experiment-ledger.md): template and initial empty
@@ -45,7 +45,7 @@ are organized as a lab record:
 ## Related Docs
 
 - [Colab L4 runbook](../../colab/sa3_medium_l4_runbook.md): runtime setup,
-  access, Flash Attention, smoke-test, and failure-mode notes for SA3 Medium on L4.
+  access, Flash Attention, smoke-test, and failure-case notes for SA3 Medium on L4.
 
 ## Repo-Local Research Skills
 
