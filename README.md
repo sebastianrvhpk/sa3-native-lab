@@ -21,7 +21,7 @@ repo's notebook/primitives layer.
 
 Push this repo to GitHub, then use the Colab notebook:
 
-`colab/sa3_native_research_programs.ipynb`
+`colab/sa3_native_science_lab.ipynb`
 
 The notebook is already configured to clone:
 

@@ -13,7 +13,7 @@ SA3 Native Lab is a Colab and Python research workspace for frozen SA3/SAME
 latent experiments. The source of truth is:
 
 ```text
-colab/sa3_native_research_programs.ipynb
+colab/sa3_native_science_lab.ipynb
 ```
 
 The repo keeps:
@@ -52,7 +52,7 @@ against frozen SA3/SAME methods.
 
 | Surface | Entry Point | Inputs | Outputs | Notes |
 |---|---|---|---|---|
-| Colab notebook | `colab/sa3_native_research_programs.ipynb` | Audio files, prompts, datasets, SA3/SAME checkpoints | Audio, tables, plots, manifests, player rows, annotations | Main research instrument |
+| Colab notebook | `colab/sa3_native_science_lab.ipynb` | Audio files, prompts, datasets, SA3/SAME checkpoints | Audio, tables, plots, manifests, player rows, annotations | Main research instrument |
 | Upstream SA3 runtime | External `Stability-AI/stable-audio-3` checkout | Prompts, audio, checkpoints | Generated audio, SAME latents, sampler state | Installed separately by notebook setup |
 | Underfit comparison path | External Underfit repo/artifacts | Training runs, checkpoints, demos | Audio/checkpoint artifacts for notebook comparison | LoRA path lives outside this repo |
 
