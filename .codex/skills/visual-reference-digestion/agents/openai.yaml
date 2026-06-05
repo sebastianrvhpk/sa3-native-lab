@@ -1,4 +1,0 @@
-interface:
-  display_name: "Visual Reference Digestion"
-  short_description: "Translate references into functional UI rules"
-  default_prompt: "Use -reference-digestion to convert these visual references into functional interface grammar, not decoration."

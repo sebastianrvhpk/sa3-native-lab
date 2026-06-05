@@ -1,0 +1,4 @@
+interface:
+  display_name: "SA3 Notebook Steward"
+  short_description: "Edit and validate the expanded SA3/SAME Colab notebook"
+  default_prompt: "Use sa3-notebook-steward to update the expanded notebook and validate the result."

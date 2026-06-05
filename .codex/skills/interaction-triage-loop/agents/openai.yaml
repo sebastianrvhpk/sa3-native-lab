@@ -1,4 +1,0 @@
-interface:
-  display_name: "Interaction Triage Loop"
-  short_description: "Evolve prototypes through measured triage"
-  default_prompt: "Use -triage-loop to evaluate and iterate an experimental AI interface without getting stuck on surface styling."

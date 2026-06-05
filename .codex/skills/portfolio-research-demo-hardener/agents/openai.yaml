@@ -1,4 +1,0 @@
-interface:
-  display_name: "Portfolio Research Demo Hardener"
-  short_description: "Shape research prototypes into role-ready demos"
-  default_prompt: "Use -research-demo-hardener to turn this research prototype into a clear portfolio-quality demo without misrepresenting the research."

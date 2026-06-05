@@ -1,4 +1,0 @@
-interface:
-  display_name: "Codebase Capability Cartographer"
-  short_description: "Map code into interface-ready capabilities"
-  default_prompt: "Use -capability-cartographer to inspect this repo and map its real capabilities before designing an interface."

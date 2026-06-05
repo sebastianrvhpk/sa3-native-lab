@@ -32,7 +32,7 @@ alongside native SA3/SAME methods.
 | `docs/workflows/` | Stable Audio 3 upstream/reference workflow docs. | Reference |
 | `stable_audio_3/` | Vendored Stable Audio 3 source package. | Upstream base |
 | `optimized/mlx/` | Experimental MLX implementation/reference path. | Separate reference |
-| `.codex/skills/` | Repo-local Codex skill instructions for research/interface work. | Agent workflow |
+| `.codex/skills/` | Repo-local Codex skill instructions for notebook research work. | Agent workflow |
 | `README.stable-audio-3.md` | Preserved upstream Stable Audio 3 README. | Upstream reference |
 | `LICENSE.stability-ai-stable-audio-3` | Preserved upstream license. | Required reference |
 
@@ -116,8 +116,9 @@ dataset folders
 
 | File | Role |
 |---|---|
-| `.codex/skills/*/SKILL.md` | Project-local Codex skill definitions. |
-| `.codex/skills/*/references/*.md` | Skill templates and rubrics. |
+| `.codex/skills/sa3-notebook-steward/SKILL.md` | Notebook editing and validation workflow. |
+| `.codex/skills/sa3-same-primitive-researcher/SKILL.md` | Tested SA3/SAME primitive implementation workflow. |
+| `.codex/skills/sa3-research-map-curator/SKILL.md` | Current research documentation workflow. |
 
 ### Separate Reference
 

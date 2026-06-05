@@ -1,4 +1,0 @@
-interface:
-  display_name: "Research Instrument Interface Director"
-  short_description: "Design AI research instruments before coding UI"
-  default_prompt: "Use -instrument-interface-director to define the interaction grammar and screen-state model before implementing this AI research interface."

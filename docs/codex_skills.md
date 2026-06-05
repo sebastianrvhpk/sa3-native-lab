@@ -6,7 +6,8 @@ This repo vendors the project-specific Codex skills under:
 .codex/skills/
 ```
 
-They are included so another machine can restore the same research/design workflow.
+They are included so another machine can restore the same notebook research
+workflow.
 
 ## Install On Another Machine
 
@@ -20,28 +21,21 @@ cp -R .codex/skills/* ~/.codex/skills/
 Then start a new Codex session. The skills should be available by name, for example:
 
 ```text
-Use $research-instrument-interface-director
-Use $visual-reference-digestion
-Use $creative-ai-stack-prototyper
+Use $sa3-notebook-steward
+Use $sa3-same-primitive-researcher
+Use $sa3-research-map-curator
 ```
 
 ## Included Skills
 
-- `codebase-capability-cartographer`
-- `latent-audio-interface-architect`
-- `creative-ai-stack-prototyper`
-- `interaction-triage-loop`
-- `portfolio-research-demo-hardener`
-- `research-instrument-interface-director`
-- `visual-reference-digestion`
+- `sa3-notebook-steward`: edit and validate the expanded Colab notebook.
+- `sa3-same-primitive-researcher`: implement tested SA3/SAME latent-audio helpers.
+- `sa3-research-map-curator`: keep current research docs and maps aligned.
 
-The recommended restart flow is:
+The usual workflow is:
 
 ```text
-$codebase-capability-cartographer
-$visual-reference-digestion
-$research-instrument-interface-director
-$interaction-triage-loop
-$creative-ai-stack-prototyper
-$portfolio-research-demo-hardener
+$sa3-research-map-curator
+$sa3-same-primitive-researcher
+$sa3-notebook-steward
 ```

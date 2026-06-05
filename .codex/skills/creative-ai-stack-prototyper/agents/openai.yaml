@@ -1,4 +1,0 @@
-interface:
-  display_name: "Creative AI Stack Prototyper"
-  short_description: "Prototype AI tools with modern TS stack"
-  default_prompt: "Use -ai-stack-prototyper to implement a research interface with the modern creative AI web stack."

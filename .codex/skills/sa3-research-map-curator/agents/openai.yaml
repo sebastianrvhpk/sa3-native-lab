@@ -1,0 +1,4 @@
+interface:
+  display_name: "SA3 Research Map Curator"
+  short_description: "Keep SA3 Native Lab research docs current"
+  default_prompt: "Use sa3-research-map-curator to update the current research map and docs."
