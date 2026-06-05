@@ -129,6 +129,6 @@ Older broad research notes were distilled into the current roadmap and removed
 from the active tree. Git history preserves the originals.
 
 Stable Audio 3 upstream docs are preserved in `docs/guides/` and
-`docs/workflows/`. Local LoRA material there is legacy/upstream reference only;
-the active LoRA path for this project is an external handoff to
+`docs/workflows/`. Local LoRA training and UI material has been removed from the
+active repo; the LoRA path for this project is an external handoff to
 `dada-bots/underfit`.

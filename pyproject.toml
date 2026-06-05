@@ -19,15 +19,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-ui = [
-  "gradio==6.3.0",
-  "matplotlib>=3.10.8",
-  "accelerate>=1.13.0",
-]
-lora = [
-  "pytorch_lightning==2.5.5",
-  "dill>=0.4.1",
-]
 dev = [
   "pytest>=9.0.3",
 ]

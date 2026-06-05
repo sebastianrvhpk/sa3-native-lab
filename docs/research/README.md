@@ -42,7 +42,7 @@ are organized around that boundary:
 
 Local LoRA work is not an active SA3 Native Lab backlog. The active LoRA path is
 externalized to [dada-bots/underfit](https://github.com/dada-bots/underfit);
-local LoRA docs and scripts are preserved only as upstream/reference context.
+local LoRA training docs, scripts, and notebook cells have been removed.
 
 Earlier broad research notes were distilled into the current roadmap and then
 removed from the active tree. Git history preserves the originals.

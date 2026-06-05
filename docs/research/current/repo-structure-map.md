@@ -69,7 +69,7 @@ Empty app-era directories are not part of the active repo.
 | Control lanes and curricula | `control_lanes.py`, `curriculum.py` | Confirmed |
 | Audio descriptors and audits | `audio_descriptors.py`, tests, notebook tables | Confirmed |
 | Cross-model comparison harness | notebook Mode 26 | Confirmed scaffold |
-| LoRA fine-tuning | external Underfit; local `scripts/train_lora.py` and `docs/workflows/lora.md` are reference only | Externalized |
+| LoRA fine-tuning | external Underfit only; no local training/notebook surface | Externalized |
 
 ## Artifact Graph
 
@@ -118,7 +118,6 @@ dataset folders
 | `docs/guides/prompting.md` | Upstream/reference prompt guide. |
 | `docs/workflows/autoencoder.md` | Upstream/reference SAME autoencoder workflow. |
 | `docs/workflows/inference.md` | Upstream/reference inference workflow. |
-| `docs/workflows/lora.md` | Legacy/upstream LoRA reference; active LoRA work is Underfit. |
 
 ### Local Agent Workflow Docs
 

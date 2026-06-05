@@ -201,8 +201,8 @@ Carried forward from the earlier broad research notes:
 Research scripts, `confirmed`:
 
 - `encode_dataset_same.py`: encode audio folders into SAME memory.
-- `pre_encode_dataset.py`, `train_lora.py`: legacy/local LoRA support, not part
-  of the active notebook-method backlog now that Underfit is the chosen path.
+- `pre_encode_dataset.py`: encode captioned/audio folders into reusable latent
+  datasets when useful for notebook experiments.
 - `optimize_sa3_soft_prompt.py`: soft prompt optimization from target audio.
 - `extract_sa3_vectors.py`: prompt-derived SA3 residual vectors.
 - `extract_audio_residual_vectors.py`: audio-derived residual vectors.
@@ -893,7 +893,8 @@ Implementation boundary:
   exact SA3 conditioner/sampler behavior with loaded weights.
 - Mode 26 does not vendor other model repos; it accepts external commands and
   compares returned audio through this notebook's descriptor/player path.
-- LoRA remains external to Underfit.
+- LoRA remains external to Underfit; local LoRA training cells and scripts have
+  been removed from the active repo.
 
 ## Post-Implementation Re-Review Ideas
 

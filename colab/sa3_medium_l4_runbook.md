@@ -638,29 +638,6 @@ with steerer.steer(alpha=8.0):
 
 Important: ordinary forward hooks are fine for collecting activations, but audioscope reports hook-side mutation can be unreliable with `torch.compile`. The adapter uses monkey-patching for steering, matching audioscope's approach.
 
-## Colab Gradio Interface
-
-After installation and Hugging Face login:
-
-```bash
-python /content/sa3-native-lab/colab/sa3_latent_interface.py
-```
-
-The interface exposes:
-
-- load SA3 Medium,
-- generate audio and store SAME latents,
-- load/search latent memory,
-- extract prompt-pair steering vectors,
-- load existing vector files,
-- run alpha sweeps.
-
-It writes artifacts under:
-
-```text
-/content/sa3_latent_lab/
-```
-
 ## Practical Defaults
 
 Start with:
@@ -709,4 +686,3 @@ Latents shape surprise:
 SA3 adapts/pads duration internally. Use metadata and actual latent shape,
 not only requested duration.
 ```
-

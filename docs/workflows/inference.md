@@ -1,5 +1,5 @@
 # Stable Audio 3 Inference Methods
-An overview of the different inference modes. The python interface is shown, but these controls are the same as for the gradio interface
+An overview of the different inference modes through the Python interface.
 
 > New to diffusion/Flow Matching models? See [Model Overview](../guides/model-overview.md)
 > for a conceptual overview before diving in.

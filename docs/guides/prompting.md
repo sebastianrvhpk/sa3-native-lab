@@ -29,15 +29,14 @@ For additional tips, visit the [Stable Audio User Guide](https://stability.ai/st
 
 - **Think about the training datasets.** Prompt adherence and audio quality are closely linked with the dataset the model was trained on. Stable Audio 3 uses audio from Freesound and AudioSparx along with their metadata. Prompts that align with that kind of text and audio tend to produce the best results, though out-of-distribution prompts can be interesting to explore.
 - **Set a realistic duration.** While our models can generate up to 6m 20s (`medium`) or 2m (`small`), results tend to be better when you choose a duration that fits what you're describing.
-- **Embrace the randomness.** The model won't output the same thing twice. If you want a reproducible result, set a seed (in Gradio, this is under `Sampler Params`).
+- **Embrace the randomness.** The model won't output the same thing twice. If you want a reproducible result, set a seed.
 
 ### Not Sure Where to Start?
 
 - Try one of the example prompts below as a jumping-off point
 - Run an unconditional (no prompt) generation — the results might surprise or inspire you
-- Use the **Gradio Prompt Assistant** (even with an empty text box) — it will generate or refine a prompt for you. Short prompts especially benefit from this, since more detail generally means better results
-
-![alt text](gradio.png)
+- Use the examples below as seeds, then make one controlled change at a time so
+  listening comparisons stay meaningful.
 
 ---
 
@@ -155,7 +154,9 @@ Use `init_noise_level` to control how much the original audio is modified. Think
 
 Like audio-to-audio, inpainting uses a seed audio, but instead of generating a completely new sound, it only generates audio within a specified region, preserving everything outside it. The prompt and surrounding context guide generation while maintaining continuity at the transitions.
 
-Set your region using `inpaint_mask_start_seconds` and `inpaint_mask_end_seconds` (or **mask start/end** in Gradio). For continuations, set the mask start to the current end of your audio and mask end to where you want the extension to finish.
+Set your region using `inpaint_mask_start_seconds` and
+`inpaint_mask_end_seconds`. For continuations, set the mask start to the current
+end of your audio and mask end to where you want the extension to finish.
 
 #### Examples
 

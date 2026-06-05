@@ -57,14 +57,8 @@ Stable Audio 3 uses [uv](https://github.com/astral-sh/uv) for fast, lightweight 
 # Base install (Python API only)
 uv sync
 
-# With Gradio UI
-uv sync --extra ui
-
-# With LoRA training support
-uv sync --extra lora
-
-# Everything
-uv sync --extra ui --extra lora
+# SA3 Native Lab keeps the Python/CLI path only.
+uv sync
 ```
 
 ### CUDA Version
@@ -114,16 +108,10 @@ uv sync --inexact
 
 ## Quick Start
 
-Launch the Gradio UI:
+Generate from the CLI:
 
 ```bash
-uv run python run_gradio.py --model medium
-```
-
-This starts a local web interface with a shareable link. To load a LoRA checkpoint:
-
-```bash
-uv run python run_gradio.py --model medium --lora-ckpt-path path/to/lora.ckpt
+uv run stable-audio --model medium -p "a sparse glassy ambient loop" --duration 12 -o output.wav
 ```
 
 ## Usage
@@ -247,7 +235,6 @@ Stable Audio 3 scales from a laptop to a GPU server.
 | Guide | Description |
 |-------|-------------|
 | [Inference Methods](docs/workflows/inference.md) | Overview of inference modes (text-to-audio, inpainting, etc.) |
-| [LoRA Training](docs/workflows/lora.md) | Fine-tune with LoRA: setup, training loop, and checkpointing |
 | [Autoencoder Workflows](docs/workflows/autoencoder.md) | Encode and decode audio with the VAE directly |
 | [Prompting Guide](docs/guides/prompting.md) | Prompt and control signal reference |
 | [Model Overview](docs/guides/model-overview.md) | Architecture and design overview |

@@ -228,9 +228,3 @@ for result in results:
 #         return_latents=True,
 #     )
 # print(tuple(steered_latents.shape))
-
-# %% [markdown]
-# # 11. Optional: launch Gradio interface
-
-# %%
-# !python /content/sa3-native-lab/colab/sa3_latent_interface.py
