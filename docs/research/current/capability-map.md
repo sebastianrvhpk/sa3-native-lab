@@ -22,8 +22,9 @@ This repo is a notebook research instrument. It keeps:
 - a notebook-facing primitive library,
 - research docs and run protocol.
 
-Upstream runtimes, training tools, service APIs, and product interfaces stay
-outside this repository boundary.
+Upstream runtimes and training tools remain external dependencies that the
+notebook consumes through checked-out repos, audio artifacts, checkpoints, and
+run notes.
 
 ## Native Objects
 

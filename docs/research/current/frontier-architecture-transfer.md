@@ -33,8 +33,8 @@ compressed semantic latents
 + representation probes and preference/listening loops
 ```
 
-For SA3 Native Lab, the useful translation is not "copy the newest model." The
-useful translation is:
+For SA3 Native Lab, frontier methods translate best through native-object
+mapping:
 
 ```text
 identify the native object each frontier method manipulates
@@ -111,8 +111,7 @@ Notebook impact:
 
 ACE-Step 1.5, DiffRhythm 2, YuE, and SongGen all separate structure, lyrics,
 segments, tracks, or high-level plans from final acoustic synthesis in some
-form. SA3 Native Lab should not become a song-model trainer. It should borrow
-the experimental discipline:
+form. SA3 Native Lab can borrow the experimental discipline:
 
 ```text
 plan/segment/control lane
@@ -161,10 +160,10 @@ Notebook impact:
 - source-preservation panel,
 - flow/descriptor/listening rows after each turn.
 
-### 6. External Embeddings Are Useful Judges, Not Native Truth
+### 6. External Embeddings as Comparison Judges
 
 CLAP/T-CLAP/ImageBind can help judge semantic or temporal alignment, but they
-are not SAME. They should enter as optional measurement lanes:
+belong as optional measurement lanes beside SAME-native evidence:
 
 ```text
 SAME-native evidence first

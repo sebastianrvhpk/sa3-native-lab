@@ -53,8 +53,8 @@ Every method should fit one of these roles:
 - Microscope only: useful for understanding the model, but not yet a creative
   control.
 
-Keep service, dashboard, product, session, route, artifact-UI, and control-plane
-framing outside SA3/SAME notebook research.
+Frame work as notebook research over native objects, compact artifacts, and
+evidence-led decisions.
 
 ## Evidence Standard
 

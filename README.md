@@ -76,8 +76,9 @@ The research layer focuses on:
 
 - SAME latent memory and statistics
 - audio-to-soft-prompt inversion using SA3-native flow losses
-- hard/babble prompt search
+- hard prompt search with readable prompt constraints
 - SAME latent style profiles and directions
+- SAME geometry, control lanes, and descriptor evidence
 - audioscope-style SA3 residual steering
 - audio-derived residual vectors
 - continuation/inpainting as composition

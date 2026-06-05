@@ -109,6 +109,7 @@ Purpose: probe what SAME preserves, erases, linearizes, or makes editable.
 | `style.py` | confirmed | Style profiles, directions, profile attraction, save/load. |
 | `geometry.py` | confirmed | PCA, whitening, Mahalanobis distance, barycenters, covariance transport. |
 | `periodic.py` | confirmed | Autocorrelation, periodicity, spectral centroid, and loop boundary probes. |
+| `looping.py` | confirmed | Cyclic latent/audio roll, loop preview, seam metrics, and loop-repair support. |
 
 Narrative role: this stratum asks what the SAME bottleneck itself affords
 before claiming SA3 prompt or sampler control.
@@ -125,8 +126,7 @@ latent under its own flow field.
 | `tokenizer_vocab.py` | confirmed | Native tokenizer vocabulary extraction and preview. |
 | `experiments/soft_prompt.py` | confirmed | Soft prompt optimization and generation hooks. |
 
-Narrative role: this is not captioning. It is SA3-native prompt inversion by
-teacher-forced flow agreement.
+Narrative role: SA3-native prompt inversion by teacher-forced flow agreement.
 
 ### 6. Causal Steering
 
@@ -215,10 +215,10 @@ prompt pairs or labeled audio
   `selective_renoise.py`, `looping.py`, `style.py`, or `guidance.py`.
 - Put SA3/SAME external wrapper code in `adapters/`.
 - Put notebook-facing experiment harnesses with model hooks in `experiments/`.
-- Keep service, dashboard, route, session, artifact-UI, and product-control
-  concepts out of this package.
+- Keep primitives as compact notebook-callable functions, dataclasses, and row
+  objects with explicit inputs, outputs, and provenance.
 
-## Current Structure Debt
+## Maintenance Notes
 
 - `latent_audio_primitives/__init__.py` is intentionally broad for notebook
   convenience, but it should remain a convenience surface, not the main mental

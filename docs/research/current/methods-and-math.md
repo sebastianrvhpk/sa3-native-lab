@@ -109,7 +109,8 @@ Interpretation:
 Good prompt = SA3's frozen vector field points in the target audio direction.
 ```
 
-This is not captioning. It is prompt inversion through SA3's own latent dynamics.
+This is prompt inversion through SA3's own latent dynamics: choose text whose
+conditioning makes the frozen flow field agree with the target latent trajectory.
 
 ### LogSNR Timesteps
 
@@ -229,7 +230,7 @@ p = base_prompt + selected modifiers
 Tradeoff:
 
 ```text
-`SA3_FLOW_CONDITIONING.hard_prompt_search` = more expressive but may babble
+`SA3_FLOW_CONDITIONING.hard_prompt_search` = more expressive but may become opaque
 `SA3_FLOW_CONDITIONING.readable_prompt_search` = less expressive but usable as normal SA3 prompting
 ```
 
@@ -563,8 +564,7 @@ Cluster SAME summaries, then search prompt candidates per cluster:
 {z_i} -> summaries s_i -> clusters K_j -> prompt_j = argmax score(prompt | K_j)
 ```
 
-The result is a family of prompts that describe dataset regions, not one global
-caption.
+The result is a family of prompts assigned to dataset regions.
 
 ### `SAME_REPRESENTATION.style_profile` and `SAME_REPRESENTATION.style_direction`: SAME Statistical Controls
 
@@ -656,7 +656,7 @@ Training target:
 loss = ||h_psi(z) - y||^2
 ```
 
-This is not part of SA3. It supports:
+The sidecar head is an auxiliary notebook model over SAME latents. It supports:
 
 ```text
 observability: can the control be measured?

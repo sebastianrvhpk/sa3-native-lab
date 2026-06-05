@@ -100,22 +100,29 @@ two are evidence and comparison infrastructure.
 
 - Model boundary: `adapters/` isolates official SA3/SAME loading, encoding,
   generation, and residual-hook surfaces.
-- Latent objects and persistence: `schema.py`, `io.py`, `latent_math.py`,
+- Native records and persistence: `schema.py`, `io.py`, `latent_math.py`,
   `index.py`, and `controls.py` define what the notebook stores, searches, and
   compares.
-- Measurement and observability: `audio_descriptors.py`, `periodic.py`,
+- Evidence and observability: `audio_descriptors.py`, `periodic.py`,
   `geometry.py`, `control_lanes.py`, `observability.py`, and
   `residual_features.py` turn audio/latent behavior into rows, metrics, lanes,
   probes, and feature bases.
-- Prompt inversion and prompt search: `flow_prompt.py`,
-  `prompt_optimization.py`, `tokenizer_vocab.py`, and prompt/soft-prompt
-  experiment helpers score prompts through frozen SA3 dynamics.
-- Latent operators and interventions: `latent_blur.py`, `latent_dsp.py`,
-  `selective_renoise.py`, `looping.py`, `style.py`, `guidance.py`, and
-  `composition.py` edit, rank, steer, bridge, or polish SAME/SA3 states.
-- Dataset workflow and listening loop: `curriculum.py`,
-  `colab_audio_player.py`, and `experiments/` support dataset selection,
-  sweeps, auditioning, annotation, and promote/revise/drop decisions.
+- SAME representation: `latent_blur.py`, `latent_dsp.py`,
+  `selective_renoise.py`, `style.py`, `geometry.py`, `periodic.py`, and
+  `looping.py` probe or edit the SAME bottleneck, then measure survival.
+- SA3 flow conditioning: `flow_prompt.py`, `prompt_optimization.py`,
+  `tokenizer_vocab.py`, and `experiments/soft_prompt.py` score prompts and
+  optimized conditioning through frozen SA3 dynamics.
+- Causal steering: `experiments/prompt_pairs.py`,
+  `experiments/activation_vectors.py`, `experiments/audio_residual_vectors.py`,
+  `experiments/sa3_sweeps.py`, `guidance.py`, and `residual_features.py` test
+  whether interventions causally move generated audio.
+- Dataset memory and composition: `curriculum.py`, `composition.py`, `index.py`,
+  `control_lanes.py`, and `audio_descriptors.py` turn collections into
+  selection, continuity, and evidence tools.
+- Evidence decision loop: `colab_audio_player.py`, `audio_descriptors.py`, and
+  `control_lanes.py` turn outputs into annotations, descriptors, lane rows, and
+  promote/revise/drop decisions.
 
 The detailed module map is [Primitive map](primitive-map.md). The bottom-up
 object/capability map is [Capability map](capability-map.md).
