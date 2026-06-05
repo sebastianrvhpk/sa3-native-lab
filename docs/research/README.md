@@ -4,30 +4,30 @@ Status: current documentation index for the notebook-first SA3 Native Lab
 direction.
 
 This repo keeps the expanded Colab notebook as the research instrument. The docs
-are organized around that scope:
+are organized as a lab record:
 
-- `current/`: current notebook map, current math notes, repo structure map.
-- `methods/`: reusable method notes that support current or near-term notebook
-  cells.
+- `current/research-state.md`: what exists now.
+- `current/methods-and-math.md`: how the notebook methods work.
+- `current/source-context.md`: why the source literature/repos matter here.
+- `current/experiment-ledger.md`: what was actually run and decided.
+- `current/backlog.md`: what to try next.
 
 ## Current
 
-- [Repo structure map](current/repo-structure-map.md): top-level repo map,
-  Markdown inventory, artifact graph, and doc ownership rules.
-- [Notebook research map and next methods](current/notebook-research-map-and-next-methods.md):
-  capability map, research survey, implemented backlog status, and next
-  implementable ideas.
-- [Native experimental modes math](current/native-experimental-modes-math.md):
-  core SA3/SAME math, mode taxonomy, prompt-flow scoring, and implementation
-  notes for the expanded Colab notebook.
-
-## Method References
-
-- [Native operators and measurement](methods/native-operators-and-measurement.md): geometry,
-  covariance transport, periodic operators, guidance, prompt inversion,
-  residual discovery, and observability.
-- [Neural latent DSP](methods/neural-latent-dsp.md): SAME latent-time dynamics,
-  FFT/EQ/phase operators, PCA component gain, SA3 polish, and MIR audits.
+- [Research state](current/research-state.md): current project direction, repo
+  surfaces, notebook mode inventory, active helper modules, artifact graph,
+  runtime assumptions, and current unknowns.
+- [Methods and math](current/methods-and-math.md): SA3/SAME objects, frozen-model
+  principle, flow scoring, mode equations, latent DSP, geometry, control
+  observability, guidance, residual steering, and implementation safety notes.
+- [Source context](current/source-context.md): external papers/repos summarized
+  as source, relevant idea, notebook impact, and status.
+- [Experiment ledger](current/experiment-ledger.md): template and initial empty
+  ledger for actual Colab runs, listening notes, descriptor deltas, and
+  keep/revise/drop decisions.
+- [Backlog](current/backlog.md): implemented backlog reference, immediate
+  priorities, open questions, promote/drop criteria, and next implementation
+  order.
 
 ## Related Docs
 
@@ -46,8 +46,8 @@ notebook's descriptor, memory, player, and annotation cells.
 
 - Current implementation claims should point to `colab/`,
   `latent_audio_primitives/`, or current research docs.
-- New notebook methods should update
-  `current/notebook-research-map-and-next-methods.md` and, when math changes,
-  `current/native-experimental-modes-math.md`.
+- New notebook methods should update `current/research-state.md`,
+  `current/methods-and-math.md`, and `current/backlog.md` as appropriate.
+- Real notebook runs should update `current/experiment-ledger.md`.
 - Add external survey material only when it directly supports a current notebook
-  cell or method note.
+  cell or source-context entry.
