@@ -189,7 +189,6 @@ Carried forward from the earlier broad research notes:
 - `geometry.py`: PCA geometry, whitening, Mahalanobis distance, covariance transport, barycenters.
 - `periodic.py`: autocorrelation, best period lag, FFT energy, spectral centroid, boundary loss.
 - `style.py`: style profiles and directions.
-- `audio_vectors.py`: positive/reference SAME directions.
 - `residual_features.py`: residual activation basis and directions.
 - `observability.py`: linear control probes and intervention effect.
 - `audio_descriptors.py`: lightweight audio descriptor reports.

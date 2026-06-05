@@ -1,4 +1,0 @@
-interface:
-  display_name: "SA3/SAME Primitive Researcher"
-  short_description: "Implement tested latent-audio research helpers"
-  default_prompt: "Use sa3-same-primitive-researcher to add or revise a tested SA3/SAME primitive."

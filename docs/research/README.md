@@ -33,7 +33,7 @@ are organized around that scope:
 
 - [Colab L4 runbook](../../colab/sa3_medium_l4_runbook.md): runtime setup,
   access, Flash Attention, smoke-test, and failure-mode notes for SA3 Medium on L4.
-- [Codex skills](../codex_skills.md): repo-local agent workflow skills.
+
 Stable Audio 3 runtime docs live in the upstream
 [Stability-AI/stable-audio-3](https://github.com/Stability-AI/stable-audio-3)
 repo.

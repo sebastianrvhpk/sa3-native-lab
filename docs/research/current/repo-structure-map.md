@@ -26,7 +26,6 @@ alongside native SA3/SAME methods.
 | `latent_audio_primitives/` | Reusable SAME/SA3 latent math, prompt scoring, controls, DSP, geometry, observability, and experiment helpers. | Active |
 | `docs/research/current/` | Current notebook map, mode math, and repo structure. | Active |
 | `docs/research/methods/` | Method notes that support active or near-term notebook modes. | Active reference |
-| `.codex/skills/` | Repo-local Codex skill instructions for notebook research work. | Agent workflow |
 
 ## Execution Surfaces
 
@@ -100,15 +99,6 @@ dataset folders
 | `docs/research/methods/native-operators-and-measurement.md` | Active method reference for measurable SA3/SAME operators. |
 | `docs/research/methods/neural-latent-dsp.md` | Active method reference for SAME latent DSP. |
 | `colab/sa3_medium_l4_runbook.md` | Practical Colab L4 runtime setup and failure-mode notes. |
-| `docs/codex_skills.md` | Repo-local Codex skill usage and install notes. |
-
-### Local Agent Workflow Docs
-
-| File | Role |
-|---|---|
-| `.codex/skills/sa3-notebook-steward/SKILL.md` | Notebook editing and validation workflow. |
-| `.codex/skills/sa3-same-primitive-researcher/SKILL.md` | Tested SA3/SAME primitive implementation workflow. |
-| `.codex/skills/sa3-research-map-curator/SKILL.md` | Current research documentation workflow. |
 
 ## Documentation Ownership
 
