@@ -1,29 +1,33 @@
 ---
 name: sa3-latent-research-scientist
-description: Use when formalizing, auditing, extending, or reviewing SA3/SAME latent-audio notebook research; designing experiments over SAME latents, SA3 flow fields, prompt conditioning, residual activations, control lanes, memory, descriptors, or listening evidence; organizing primitives by research altitude into root math/operators, adapters, procedures, and evidence; deciding whether a primitive is a real control, a microscope, or noise.
+description: Use when formalizing, auditing, extending, or reviewing SA3/SAME latent-audio notebook research; designing evidence workbenches over SAME latents, SA3 flow fields, prompt conditions, residual activations, control lanes, memory, descriptors, or listening evidence; framing object transitions, operations, measurements, claim maturity, and code altitude; deciding whether a method is a microscope, selector, intervention candidate, promoted method, or noise.
 ---
 
 # SA3 Latent Research Scientist
 
 Use this skill to keep SA3 Native Lab scientifically coherent. The goal is not
-to add methods quickly; it is to make claims, interventions, measurements, and
-decisions explicit.
+to add methods quickly; it is to make native objects, transitions, operations,
+measurements, claim maturity, and decisions explicit.
 
 ## First Move
 
-Before editing code or docs, state the research frame and altitude:
+Before editing code or docs, state the research frame:
 
 ```text
 Object: what native object is under study?
-Intervention: what changes?
+Transition: what maps into what, or what state is compared?
+Operation: observe, select, intervene, render, compare, or decide?
 Measurement: what evidence is collected?
 Claim: what would success mean?
-Decision: promote, revise, drop, or keep as microscope only?
+Decision: promote, revise, drop, or keep as microscope/selector?
+Maturity: microscope / selector / intervention candidate / promoted method
+Workbench: which notebook bench owns the evidence?
 Altitude: root primitive / adapter / procedure / evidence / docs-only
 ```
 
 If the user asks to implement immediately, still write this frame first in one
-compact paragraph, then proceed.
+compact paragraph, then proceed. Keep altitude as code placement, not as the
+scientific claim itself.
 
 ## Repo Context To Inspect
 
@@ -41,23 +45,49 @@ Prefer local evidence before invention:
 
 Use `rg` for references and notebook imports before moving or deleting anything.
 
-## Scientific Grammar And Altitude
+## Workbench Grammar
 
-Every method should fit one of these roles:
+Frame methods as evidence workbenches over native-object transitions:
 
-- Native object probe: reveals structure in SAME latents, SA3 flow states,
-  residual activations, prompt conditions, or memory geometry.
-- Intervention: changes a native object and asks whether decoded/polished audio
+- Runtime and model boundary: proves what upstream SA3/SAME access exists.
+- Evidence packet setup: defines artifacts, rows, listening notes, and ledger
+  decisions.
+- Audio and SAME preparation: maps source audio into SAME `z0` and renderable
+  audio outputs.
+- SAME measurement bench: observes latent geometry, descriptors, periodicity,
+  blur, token rows, and source-preservation signals.
+- SAME intervention bench: edits `z0` or control lanes and tests whether audio
   moves predictably.
-- Measurement: turns audio/latent behavior into rows, descriptors, geometry,
-  control probes, flow losses, nearest-memory evidence, or listening notes.
-- Selection tool: helps choose prompts, donors, seeds, clusters, channels, or
-  method recipes.
-- Microscope only: useful for understanding the model, but not yet a creative
-  control.
+- SA3 flow prompt bench: scores prompt/state relations through flow velocity,
+  timestep/logSNR, and convention-explicit losses.
+- Residual and trajectory bench: captures activations, directions, and sampler
+  paths without pretending probes are controls.
+- Memory and composition bench: indexes, retrieves, grafts, or compares donors
+  while guarding against copying.
+- External comparison bench: evaluates Underfit or other external artifacts
+  without importing training scaffolding into the repo.
+- Ledger and promotion board: turns evidence packets into promote/revise/drop
+  decisions.
 
-Frame work as notebook research over native objects, compact artifacts, and
-evidence-led decisions.
+Use these operation roles:
+
+- Observe: reveal structure without changing generation.
+- Select: rank prompts, donors, seeds, clusters, channels, or recipes.
+- Intervene: change a native object and test audio/descriptor movement.
+- Render: decode, polish, or export audio for audition.
+- Compare: place local outputs against baselines, memories, or external runs.
+- Decide: promote, revise, drop, or keep as microscope/selector.
+
+Claim maturity:
+
+- Microscope: reveals structure but is not yet a control.
+- Selector: chooses among candidates but does not itself create the change.
+- Intervention candidate: produces a measurable change that needs repeatability
+  and listening evidence.
+- Promoted method: has math rationale, compact notebook use, measurements,
+  listening notes, and repeatability.
+
+## Code Altitude
 
 Place code by what it owns:
 
@@ -71,18 +101,21 @@ Place code by what it owns:
 - Docs-only belongs in `docs/research/current/` until it has a compact
   notebook-facing primitive or cell.
 
-Do not add a framework layer to make this tidier. Prefer explicit functions,
-dataclasses, rows, and notebook imports from concrete altitude modules.
+Do not add an orchestration framework to make this tidier. Prefer explicit
+functions, dataclasses, rows, and notebook imports from concrete modules.
 
 ## Evidence Standard
 
-Do not call an operator a control until it has:
+Do not call a method promoted until it has:
 
 1. a clear mathematical or architectural rationale,
 2. a compact notebook-facing API or cell,
 3. descriptor/latent evidence,
 4. listening notes or a plan for listening notes,
 5. promote/revise/drop criteria.
+
+Keep a method as a microscope if it only explains model behavior. Keep it as a
+selector if it ranks candidates without proving an independent intervention.
 
 Label claims as:
 
@@ -98,9 +131,10 @@ For audits or proposals, return:
 
 ```text
 Research frame
-Capability/object map
+Object transition map
+Workbench and maturity placement
 Experiment cards
-Measurement and artifact plan
+Evidence packet plan
 Failure modes
 Promote/revise/drop criteria
 Notebook/docs/code impact
@@ -109,9 +143,10 @@ Notebook/docs/code impact
 For implementation, use this loop:
 
 1. Inspect current imports and nearby modules.
-2. Decide the altitude before moving or adding code.
+2. Decide workbench, claim maturity, and code altitude before moving or adding
+   code.
 3. Preserve math and signatures unless the change is explicitly a redesign.
-4. Update the notebook import cell when public paths move.
+4. Update notebook workbench cells and imports when public paths move.
 5. Update the relevant docs after code changes:
 
 - Method math: `docs/research/current/methods-and-math.md`
@@ -119,6 +154,8 @@ For implementation, use this loop:
   `docs/research/current/primitive-map.md`
 - Future work or promotion criteria: `docs/research/current/backlog.md`
 - Real runs/listening decisions: `docs/research/current/experiment-ledger.md`
+- Run protocol or workbench execution order:
+  `docs/research/current/run-protocol.md`
 
 6. Validate the notebook JSON/imports and run `git diff --check`.
 

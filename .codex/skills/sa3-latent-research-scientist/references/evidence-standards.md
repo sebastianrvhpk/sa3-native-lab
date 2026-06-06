@@ -1,16 +1,17 @@
 # Evidence Standards
 
-## Promotion Ladder
+## Claim Maturity Ladder
 
 1. **Idea**: plausible relation to SA3/SAME math or architecture.
-2. **Probe**: local primitive, procedure, evidence surface, or notebook cell
-   exposes it.
-3. **Measurement**: descriptor, latent, flow, geometry, control, or memory rows
-   show nontrivial movement.
-4. **Audition**: decoded or polished audio is reviewed with notes.
+2. **Microscope**: exposes structure in a native object, but makes no control
+   claim.
+3. **Selector**: ranks prompts, seeds, donors, channels, clusters, or recipes.
+4. **Intervention candidate**: changes a native object and shows nontrivial
+   descriptor, latent, flow, memory, or audition movement.
 5. **Repeatability**: behavior survives at least two clips, seeds, prompts, or
    dataset clusters.
-6. **Decision**: promote, revise, drop, or keep as microscope only.
+6. **Promoted method**: has rationale, notebook-facing use, measurements,
+   listening notes, and a clear promote/revise/drop decision.
 
 ## Red Flags
 
@@ -24,6 +25,8 @@
   `procedures/` helper.
 - An adapter starts making research decisions instead of isolating external
   runtime access.
+- A selector is described as a control without decoded evidence.
+- A notebook cell produces impressive audio but no baseline or artifact rows.
 
 ## Keep As Microscope
 
@@ -35,12 +38,19 @@ residual feature maps, geometry reports, and diagnostic roll/periodicity tests.
 
 ```text
 Object:
+Transition:
+Operation:
+Workbench:
+Maturity before:
+Maturity after:
 Altitude:
-Intervention or measurement:
+Baseline:
+Method output:
+Measurements:
 Artifact paths:
 Descriptor/latent/flow rows:
 Listening notes:
-Baseline:
 Repeatability check:
 Decision:
+Next action:
 ```

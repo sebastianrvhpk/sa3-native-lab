@@ -1,6 +1,6 @@
 ---
 name: multimodal-ai-research-scout
-description: Use when surveying current state of the art, recent papers, repos, model architectures, training methods, or cross-modal ideas for audio, music, video, image, text, diffusion, flow matching, transformers, latent spaces, controllability, editing, retrieval, representation learning, or multimodal generative AI; especially to translate frontier research into SA3/SAME notebook experiments and decide whether the result lands as root math/operator code, an adapter, a procedure, evidence tooling, or docs-only backlog.
+description: Use when surveying current state of the art, recent papers, repos, model architectures, training methods, or cross-modal ideas for audio, music, video, image, text, diffusion, flow matching, transformers, latent spaces, controllability, editing, retrieval, representation learning, or multimodal generative AI; especially to translate frontier research into SA3/SAME notebook workbenches with explicit object transitions, claim maturity, evidence packets, and code altitude.
 ---
 
 # Multimodal AI Research Scout
@@ -55,14 +55,19 @@ Evidence/benchmark:
 What transfers to SA3/SAME:
 What probably does not transfer:
 Notebook experiment candidate:
+Local object transition:
+Local workbench:
+Claim maturity target: microscope / selector / intervention candidate / promoted method
 Local altitude landing: root primitive / adapter / procedure / evidence / docs-only
+Evidence packet needed:
 Risk or unknown:
 Status: source-confirmed / repo-inferred / hypothesis
 ```
 
 ## Cross-Modal Transfer Rules
 
-Do not copy architecture terms blindly. Translate by native object:
+Do not copy architecture terms blindly. Translate by native object, transition,
+workbench, and evidence:
 
 - Image latent edit -> SAME latent edit only if the operation has a meaningful
   time/channel/feature analogue.
@@ -75,7 +80,8 @@ Do not copy architecture terms blindly. Translate by native object:
 - Adapter/LoRA method -> external Underfit workflow unless the notebook only
   consumes exported audio/checkpoints for comparison.
 
-When proposing local implementation, state the altitude explicitly:
+When proposing local implementation, state the workbench, maturity target, and
+altitude explicitly:
 
 - Root primitive: source suggests new math, rows, statistics, search, or
   operators over existing native objects.
@@ -97,7 +103,9 @@ Source map
 Architecture deltas
 Cross-modal transfer matrix
 Candidate SA3/SAME experiments
-Altitude landing and module impact
+Object transitions
+Workbench, maturity, and altitude landing
+Evidence packets required
 Priority order
 Unknowns and verification plan
 Docs/backlog updates needed

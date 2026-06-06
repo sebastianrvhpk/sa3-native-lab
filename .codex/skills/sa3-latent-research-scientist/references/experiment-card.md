@@ -7,17 +7,36 @@ Title:
 
 Object:
 Native object under study: audio / SAME z0 / flow state z_t / prompt condition /
-residual activation / control lane / memory item / dataset cluster.
+residual activation / control lane / memory item / dataset cluster /
+descriptor row / evidence packet.
+
+Transition:
+What maps into what, or what state is compared?
+
+Operation:
+observe / select / intervene / render / compare / decide.
+
+Workbench:
+Runtime and model boundary / Evidence packet setup / Audio and SAME
+preparation / SAME measurement / SAME intervention / SA3 flow prompt /
+Residual and trajectory / Memory and composition / External comparison /
+Ledger and promotion.
+
+Current maturity:
+idea / microscope / selector / intervention candidate / promoted method.
+
+Target maturity:
+microscope / selector / intervention candidate / promoted method.
 
 Hypothesis:
 What should change, and why should SA3/SAME make that possible?
 
-Intervention:
-What is edited, optimized, selected, steered, or measured?
+Method:
+What is observed, selected, edited, optimized, steered, rendered, or compared?
 
 Notebook Touchpoints:
-Notebook section/cell:
-Existing altitude module:
+Notebook workbench/cell:
+Existing module:
 Proposed placement: root primitive / adapter / procedure / evidence / docs-only
 New cell or helper needed:
 
@@ -37,7 +56,7 @@ Control/geometry:
 Nearest-memory/source-preservation:
 Listening:
 
-Artifacts:
+Evidence Packet:
 Audio outputs:
 Rows/tables:
 Plots/SVG:
