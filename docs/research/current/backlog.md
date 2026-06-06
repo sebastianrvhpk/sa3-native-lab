@@ -384,7 +384,7 @@ architecture-level implementations that make the gaps easier to run.
 | SA3 polish/rescue audit | SA3-over-SAME coupled editing | Feed degraded or edited SAME latents into polish/init paths and classify rescue, erasure, invention, or preservation. |
 | Trajectory objective honesty packet | SA3 internal trajectory | Compare guidance-objective improvement against descriptor, source-preservation, and listening rows. |
 | Segment and continuation structure bench | SA3-over-SAME coupled editing / memory | Compare global prompt continuation against chunk/control-lane/bridge-planned continuation. |
-| Procedure honesty status audit | evidence utility | Keep `procedure_status_table()`, notebook manifests, and ledger decisions synchronized after any procedure changes maturity. |
+| Procedure honesty status audit | evidence utility | Keep the procedure honesty board, notebook manifests for specific runs, and ledger decisions synchronized after any procedure changes maturity. |
 | Primitive function smoke packet | evidence utility | Keep a tiny synthetic run that exercises the NumPy-only primitive grammar: records, summaries, geometry, lanes, descriptors, memory, composition, style, flow-probe manifests, prompt rows, and disagreement rows. |
 | Research-layer evidence field | evidence utility | Add research-layer/evidence-utility labels to manifests and ledger rows for every completed run. |
 

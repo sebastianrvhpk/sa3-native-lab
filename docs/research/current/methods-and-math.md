@@ -1096,10 +1096,9 @@ The deliberate gap is full sampler integration. The math primitives are in
 place; the notebook should promote only operators with audible promise after
 measurement and listening agree.
 
-Procedure status lives in code as review metadata, not as math. Import
-`procedure_status_table()` when a manifest needs to record whether an executable
-method is currently a microscope, selector, intervention candidate, high-risk
-candidate, or promoted method.
+Procedure maturity is review metadata, not math. Record it in notebook
+narrative cells, experiment manifests for specific runs, and ledger decisions,
+not as a package-level registry.
 
 ## Periodicity and Loop Metrics
 

@@ -126,8 +126,8 @@ when primitive APIs change.
 ## Procedure Honesty Board
 
 The `procedures/` package contains executable methods, not promoted claims.
-Its top-level `procedure_status_table()` returns these rows for the notebook
-manifest and for review cells.
+The rows below are research narrative and ledger guidance, not package-level
+metadata.
 
 | Procedure | Research layer | Maturity | Why it belongs in `procedures/` |
 |---|---|---|---|
@@ -316,7 +316,7 @@ prompt pairs or labeled audio
   `selective_renoise.py`, `looping.py`, `style.py`, or `guidance.py`.
 - Put SA3/SAME external wrapper code in `adapters/`.
 - Put executable SA3/SAME method runs in `procedures/`, and keep their current
-  maturity in `procedure_status_table()`.
+  maturity in docs, notebook review cells, and ledger decisions.
 - Put listening/display/annotation helpers in `evidence/`.
 - Keep primitives as compact notebook-callable functions, dataclasses, and row
   objects with explicit inputs, outputs, and provenance.

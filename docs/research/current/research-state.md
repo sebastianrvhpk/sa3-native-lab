@@ -143,9 +143,8 @@ should be updated from `experiment-ledger.md`, not from speculation.
   generation, tokenizer access, and residual-hook surfaces.
 - Executable procedures: `procedures/` runs SA3/SAME flow scoring, soft prompt
   optimization, SA3 polish, selective SA3, cyclic SA3, residual extraction, and
-  residual sweeps. It also exposes `procedure_status_table()` so the notebook
-  manifest records each procedure's current layer, maturity, role, promotion
-  gate, and risk without importing heavy SA3 runtime code.
+  residual sweeps. Procedure maturity is documented in research docs and ledger
+  decisions rather than encoded as package-level metadata.
 - Evidence loop: `evidence/audio_player.py`, `evidence/annotations.py`,
   `evidence/disagreement.py`, `audio_descriptors.py`, and `control_lanes.py`
   turn outputs into reviewable packets and decisions.

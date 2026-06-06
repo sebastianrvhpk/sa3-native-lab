@@ -103,8 +103,8 @@ Function-audit interpretation:
 ## Procedure Status Rows
 
 Executable procedure modules call SA3/SAME or upstream sampler internals. Their
-current status is part of the repo's evidence surface through
-`latent_audio_primitives.procedures.procedure_status_table()`.
+current status belongs in docs, notebook review cells, and ledger decisions, not
+in a package-level registry.
 
 | Procedure | Layer | Maturity | Main risk |
 |---|---|---|---|

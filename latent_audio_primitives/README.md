@@ -37,7 +37,7 @@ upstream-version-sensitive behavior behind generic abstractions.
 |---|---|---|---|
 | Root primitives | `schema.py`, `latent_math.py`, `geometry.py`, `latent_blur.py`, `selective_renoise.py`, `flow_prompt.py`, `prompt_semantics.py`, etc. | native objects, math, measurements, operators, search | define what the lab manipulates and measures |
 | Model boundary | `adapters/` | upstream SA3/SAME wrappers, residual hooks, tokenizer access | isolate external runtime coupling |
-| Procedures | `procedures/` | soft prompts, flow scoring, SA3 polish, selective SA3, cyclic SA3, residual sweeps | run executable notebook methods with explicit maturity metadata |
+| Procedures | `procedures/` | soft prompts, flow scoring, SA3 polish, selective SA3, cyclic SA3, residual sweeps | run executable notebook methods |
 | Evidence | `evidence/`, `audio_descriptors.py`, `control_lanes.py` | player panels, annotations, descriptor/lane/disagreement rows | support auditioning and decisions |
 
 Research layers are different from code altitude:
@@ -51,11 +51,6 @@ SA3-over-SAME coupled editing: SAME edits plus SA3 polish/inpaint/continue proce
 
 Evidence utilities are shared review surfaces: evidence modules, manifests, and
 ledger docs audit every research layer instead of defining a fifth layer.
-
-Procedure maturity is intentionally visible but lightweight. The notebook can
-import `procedure_status_table()` from `latent_audio_primitives.procedures` to
-write a manifest row for every executable method without importing the heavy
-SA3/SAME procedure modules themselves.
 
 The full map lives in
 [`docs/research/current/primitive-map.md`](../docs/research/current/primitive-map.md).
@@ -79,6 +74,5 @@ procedure   = run a research method with SA3/SAME
 evidence    = audition, annotate, display, or review results
 ```
 
-Procedure status is not promotion. It records whether a procedure is currently
-a microscope, selector, intervention candidate, or high-risk candidate, plus the
-evidence gate it must pass before the ledger can promote it.
+Procedure maturity belongs in the notebook narrative, docs, and experiment
+ledger. Do not add package-level registries for static research status.
