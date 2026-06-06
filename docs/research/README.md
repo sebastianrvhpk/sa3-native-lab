@@ -27,8 +27,8 @@ are organized as a lab record:
 - [Methods and math](current/methods-and-math.md): SA3/SAME objects, frozen-model
   principle, flow scoring, ontology equations, latent DSP, geometry, control
   observability, guidance, residual steering, and implementation safety notes.
-- [Primitive map](current/primitive-map.md): module clusters, artifact flow,
-  placement rules, structure debt, and promotion criteria for
+- [Primitive map](current/primitive-map.md): research-altitude layers, artifact
+  flow, placement rules, and promotion criteria for
   `latent_audio_primitives/`.
 - [Capability map](current/capability-map.md): evidence-backed capability
   cards, I/O graph, parameter inventory, and the next notebook shape derived

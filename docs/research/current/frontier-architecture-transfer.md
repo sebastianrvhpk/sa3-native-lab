@@ -193,7 +193,7 @@ Notebook impact:
 
 | Source Pattern | Native SA3/SAME Analogue | Measurement | Promote If | Caution |
 |---|---|---|---|---|
-| Flow-matching image edit | Prompt/audio edit over SA3 flow probes | `flow_prompt.py` rows, decoded audition | flow improvement predicts better edits | flow score may only measure teacher-forced agreement |
+| Flow-matching image edit | Prompt/audio edit over SA3 flow probes | `flow_prompt.py` rows, `procedures/flow_scoring.py` scores, decoded audition | flow improvement predicts better edits | flow score may only measure teacher-forced agreement |
 | Video spacetime patches | Audio segments, control lanes, loop windows | lane similarity, periodicity, boundary metrics | temporal metrics match listening | avoid visual metaphors that hide audio structure |
 | In-context image editing | Multi-turn prompt/audio edit chain | source-preservation rows, descriptor drift | edits stack without identity collapse | iterative polish may erase prior edits |
 | Long-form song planning | Segment prompts, bridge plans, curriculum rows | continuation/bridge scores, ledger notes | structure improves within notebook evidence packets | full song planning can become a separate project |

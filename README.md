@@ -106,9 +106,10 @@ The primitive library map is:
 
 `docs/research/current/primitive-map.md`
 
-It explains how `latent_audio_primitives/` is clustered into model-boundary,
-latent-object, measurement, prompt-inversion, intervention, dataset, and
-listening-loop modules.
+It explains how `latent_audio_primitives/` is organized by research altitude:
+root native objects/math/operators, `adapters/` for upstream SA3/SAME access,
+`procedures/` for executable model-calling methods, and `evidence/` for
+auditioning, annotation, and review.
 
 The bottom-up capability map is:
 

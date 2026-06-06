@@ -951,7 +951,7 @@ intervenability: can an edit reliably move h(z) and the audio?
 | Fourier/periodic latent probes | `periodic.py` | `SAME_REPRESENTATION.geometry_audit` | no for saved latents | no |
 | Neural latent DSP | `latent_dsp.py`, `audio_descriptors.py` | `SAME_REPRESENTATION.neural_dsp` | yes for decode/polish | no |
 | Direct gradient guidance | `guidance.py` | `CAUSAL_STEERING.gradient_edit`, `CAUSAL_STEERING.audio_posterior` probes | yes for sampler integration | no base training |
-| Prompt inversion | `prompt_optimization.py`, `flow_prompt.py` | `SA3_FLOW_CONDITIONING.hard_prompt_search`, `SA3_FLOW_CONDITIONING.readable_prompt_search`, flow microscopes | yes | no |
+| Prompt inversion | `prompt_optimization.py`, `flow_prompt.py`, `procedures/flow_scoring.py` | `SA3_FLOW_CONDITIONING.hard_prompt_search`, `SA3_FLOW_CONDITIONING.readable_prompt_search`, flow microscopes | yes | no |
 | Residual feature discovery | `residual_features.py` | `CAUSAL_STEERING.residual_feature_atlas` | yes for activation capture | no |
 | Control observability | `observability.py` | `CAUSAL_STEERING.control_head`, `SAME_REPRESENTATION.geometry_audit` | no for saved labeled latents | sidecar/probe only |
 | Control lanes | `control_lanes.py` | `EVIDENCE_DECISION_PROTOCOL.control_lanes` | no for saved latents/audio descriptors, yes for fresh encode/decode | no |

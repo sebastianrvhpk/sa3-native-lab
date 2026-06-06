@@ -109,7 +109,9 @@ u_t = epsilon - z0
 L_flow(prompt) = E ||v_theta(z_t, t, C(prompt)) - u_t||^2
 ```
 
-- Status: source context; implemented locally in `flow_prompt.py` and `SA3_FLOW_CONDITIONING` prompt/flow experiments.
+- Status: source context; implemented locally through `flow_prompt.py`,
+  `procedures/flow_scoring.py`, and `SA3_FLOW_CONDITIONING` prompt/flow
+  experiments.
 
 ### EDM
 

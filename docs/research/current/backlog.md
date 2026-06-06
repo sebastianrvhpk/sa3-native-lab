@@ -32,8 +32,8 @@ These items now have notebook cells or probes:
 
 | Item | Notebook Experiment | Helper Support | Status |
 |---|---|---|---|
-| Flow attribution prompt microscope | `SA3_FLOW_CONDITIONING.flow_attribution` | `flow_prompt.py` attribution rows | implemented |
-| Loss-by-timestep flow panel | `SA3_FLOW_CONDITIONING.flow_timestep_panel` | `flow_prompt.py` loss rows and summaries | implemented |
+| Flow attribution prompt microscope | `SA3_FLOW_CONDITIONING.flow_attribution` | `flow_prompt.py` attribution rows plus `procedures/flow_scoring.py` scoring | implemented |
+| Loss-by-timestep flow panel | `SA3_FLOW_CONDITIONING.flow_timestep_panel` | `flow_prompt.py` loss rows/summaries plus `procedures/flow_scoring.py` scoring | implemented |
 | SAME control lanes | `EVIDENCE_DECISION_PROTOCOL.control_lanes` | `control_lanes.py` | implemented |
 | Dataset memory curriculum | `DATASET_MEMORY_COMPOSITION.curriculum` | `curriculum.py` | implemented |
 | Latent OT style transfer bench | `SAME_REPRESENTATION.ot_style_transfer` | `geometry.py`, `style.py` | implemented |

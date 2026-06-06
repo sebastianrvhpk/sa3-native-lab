@@ -30,11 +30,11 @@ run notes.
 
 | Object | Shape / Form | Owner | Lifecycle | Evidence |
 |---|---|---|---|---|
-| Audio waveform `x` | waveform arrays and `.wav` paths | notebook, `audio_descriptors.py`, `colab_audio_player.py` | loaded, previewed, described, annotated | confirmed |
+| Audio waveform `x` | waveform arrays and `.wav` paths | notebook, `audio_descriptors.py`, `evidence/audio_player.py` | loaded, previewed, described, annotated | confirmed |
 | SAME latent `z0` | usually `B x C x T`, memory rows use `T x D` | upstream SAME through adapters; local `LatentItem` | encoded, edited, decoded, searched, saved | confirmed |
-| SA3 flow state `z_t` | noisy/intermediate latent state | `flow_prompt.py`, notebook SA3 probes | constructed from `z0`, timestep, and noise | confirmed |
-| Prompt condition `C(p)` | SA3 conditioner outputs or optimized tensors | upstream SA3 plus `flow_prompt.py`, `soft_prompt.py` | scored, optimized, attributed, auditioned | confirmed |
-| Residual activation `a_l` | layer activation tensors | `adapters/audioscope_sa3.py`, residual experiments | captured, contrasted, steered, summarized | confirmed |
+| SA3 flow state `z_t` | noisy/intermediate latent state | `flow_prompt.py`, `procedures/flow_scoring.py`, notebook SA3 probes | constructed from `z0`, timestep, and noise | confirmed |
+| Prompt condition `C(p)` | SA3 conditioner outputs or optimized tensors | upstream SA3 plus `flow_prompt.py`, `procedures/soft_prompt.py` | scored, optimized, attributed, auditioned | confirmed |
+| Residual activation `a_l` | layer activation tensors | `adapters/sa3_residual_hooks.py`, residual procedures | captured, contrasted, steered, summarized | confirmed |
 | `LatentItem` | ID, latent, rate, prompt, descriptors, labels, metadata | `schema.py`, `io.py` | saved, loaded, indexed, clustered | confirmed |
 | Control lane | time-varying values, rate, confidence, metadata | `control_lanes.py` | extracted, normalized, compared, saved, rendered | confirmed |
 | Descriptor report | JSON-friendly audio statistics | `audio_descriptors.py` | computed for source/baseline/method outputs | confirmed |
@@ -45,7 +45,8 @@ run notes.
 ### Model Boundary
 
 Evidence: `latent_audio_primitives/adapters/stable_audio3.py`,
-`latent_audio_primitives/adapters/audioscope_sa3.py`, notebook setup cells.
+`latent_audio_primitives/adapters/sa3_residual_hooks.py`,
+`latent_audio_primitives/adapters/sa3_tokenizer.py`, notebook setup cells.
 
 I/O:
 
@@ -66,8 +67,9 @@ adapters or clearly labeled notebook probes.
 ### SAME Representation
 
 Evidence: `latent_blur.py`, `latent_dsp.py`, `selective_renoise.py`,
-`style.py`, `geometry.py`, `periodic.py`, `looping.py`, notebook cells under
-`SAME_REPRESENTATION`.
+`style.py`, `geometry.py`, `periodic.py`, `looping.py`,
+`procedures/sa3_latent_sampling.py`, `procedures/selective_sa3.py`, notebook
+cells under `SAME_REPRESENTATION`.
 
 I/O:
 
@@ -92,8 +94,9 @@ Unknowns: which SAME edits are stable controls rather than microscopes.
 
 ### SA3 Flow Conditioning
 
-Evidence: `flow_prompt.py`, `prompt_optimization.py`, `tokenizer_vocab.py`,
-`experiments/soft_prompt.py`, notebook cells under `SA3_FLOW_CONDITIONING`.
+Evidence: `flow_prompt.py`, `procedures/flow_scoring.py`,
+`prompt_optimization.py`, `tokenizer_vocab.py`, `procedures/soft_prompt.py`,
+notebook cells under `SA3_FLOW_CONDITIONING`.
 
 I/O:
 
@@ -121,10 +124,11 @@ quality or only vector-field alignment.
 
 ### Causal Steering
 
-Evidence: `adapters/audioscope_sa3.py`, `experiments/activation_vectors.py`,
-`experiments/audio_residual_vectors.py`, `residual_features.py`,
-`observability.py`, `guidance.py`, `looping.py`, notebook cells under
-`CAUSAL_STEERING`.
+Evidence: `adapters/sa3_residual_hooks.py`,
+`procedures/residual_activation_vectors.py`,
+`procedures/audio_residual_vectors.py`, `procedures/residual_sweeps.py`,
+`procedures/cyclic_sa3.py`, `residual_features.py`, `observability.py`,
+`guidance.py`, notebook cells under `CAUSAL_STEERING`.
 
 I/O:
 
@@ -176,8 +180,9 @@ copying across real datasets.
 
 ### Evidence Decision Protocol
 
-Evidence: `colab_audio_player.py`, `audio_descriptors.py`,
-`control_lanes.py`, notebook manifest/log cells, `experiment-ledger.md`.
+Evidence: `evidence/audio_player.py`, `evidence/annotations.py`,
+`audio_descriptors.py`, `control_lanes.py`, notebook manifest/log cells,
+`experiment-ledger.md`.
 
 I/O:
 

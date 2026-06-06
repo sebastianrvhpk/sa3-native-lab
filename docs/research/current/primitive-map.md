@@ -46,10 +46,17 @@ Decision use: promote, revise, drop, unknown, or microscope only
 This is why the package favors small functions, dataclasses, and JSON-friendly
 rows over a new runtime framework.
 
-## Capability Clusters
+## Altitude Layers
 
-The library is organized as notebook-facing capabilities that support the
-science ontology.
+The library is organized by research altitude. The notebook ontology names the
+research question; the package layout names what kind of code a module owns.
+
+```text
+root module = define or transform a native object
+adapter     = find or talk to external machinery
+procedure   = run a research method with SA3/SAME
+evidence    = audition, annotate, display, or review results
+```
 
 ### 1. Model Boundary
 
@@ -59,10 +66,11 @@ upstream internals everywhere.
 | Module | Evidence | Role |
 |---|---|---|
 | `adapters/stable_audio3.py` | confirmed | Load/generate/encode/decode through official Stable Audio 3 and SAME wrappers; convert latents into memory items. |
-| `adapters/audioscope_sa3.py` | confirmed | Capture residual activations and apply audioscope-style steering vectors. |
+| `adapters/sa3_residual_hooks.py` | confirmed | Locate SA3 DiT layers, capture residual activations, and apply residual steering vectors. |
+| `adapters/sa3_tokenizer.py` | confirmed | Find the tokenizer owned by SA3 text conditioning. |
 
 Constraint: these modules may follow upstream SA3 internals. Keep that coupling
-isolated here or in a clearly named sampler experiment.
+isolated here or in a clearly named procedure.
 
 ### 2. Native Records and Persistence
 
@@ -103,13 +111,13 @@ Purpose: probe what SAME preserves, erases, linearizes, or makes editable.
 
 | Module | Evidence | Role |
 |---|---|---|
-| `latent_blur.py` | confirmed | Temporal/channel blur, low-rank projection, sharpening, FFT filters, SA3 polish from init latents. |
+| `latent_blur.py` | confirmed | Temporal/channel blur, low-rank projection, sharpening, FFT filters. |
 | `latent_dsp.py` | confirmed | Gain, dynamics, saturation, latent-time FFT EQ/phase, donor magnitude/phase, PCA gain. |
-| `selective_renoise.py` | confirmed | Channel selection, masks, masked noise, grafting, selective SA3 renoise/graft. |
+| `selective_renoise.py` | confirmed | Channel selection, masks, masked noise, and donor-channel graft primitives. |
 | `style.py` | confirmed | Style profiles, directions, profile attraction, save/load. |
 | `geometry.py` | confirmed | PCA, whitening, Mahalanobis distance, barycenters, covariance transport. |
 | `periodic.py` | confirmed | Autocorrelation, periodicity, spectral centroid, and loop boundary probes. |
-| `looping.py` | confirmed | Cyclic latent/audio roll, loop preview, seam metrics, and loop-repair support. |
+| `looping.py` | confirmed | Cyclic latent/audio roll, loop preview, seam metrics, and inpaint bounds. |
 
 Narrative role: this stratum asks what the SAME bottleneck itself affords
 before claiming SA3 prompt or sampler control.
@@ -121,10 +129,11 @@ latent under its own flow field.
 
 | Module | Evidence | Role |
 |---|---|---|
-| `flow_prompt.py` | confirmed | SA3 flow prompt loss, logSNR timesteps, velocity convention, normalized MSE, cosine term, conditional-delta option, attribution rows. |
+| `flow_prompt.py` | confirmed | Flow prompt rows, logSNR timesteps, velocity convention, attribution rows, and summaries. |
+| `procedures/flow_scoring.py` | confirmed | Teacher-forced frozen-SA3 flow scoring execution. |
 | `prompt_optimization.py` | confirmed | Coordinate, greedy-token, and beam prompt search. |
 | `tokenizer_vocab.py` | confirmed | Native tokenizer vocabulary extraction and preview. |
-| `experiments/soft_prompt.py` | confirmed | Soft prompt optimization and generation hooks. |
+| `procedures/soft_prompt.py` | confirmed | Soft prompt optimization and generation hooks. |
 
 Narrative role: SA3-native prompt inversion by teacher-forced flow agreement.
 
@@ -135,15 +144,15 @@ not just whether a signal is measurable.
 
 | Module | Evidence | Role |
 |---|---|---|
-| `adapters/audioscope_sa3.py` | confirmed | Residual activation capture and audioscope-style residual steering. |
-| `experiments/activation_vectors.py` | confirmed | SA3 activation-vector extraction from prompt pairs. |
-| `experiments/audio_residual_vectors.py` | confirmed | Residual vectors from audio examples. |
-| `experiments/prompt_pairs.py` | confirmed | Prompt-pair presets for residual steering probes. |
-| `experiments/sa3_sweeps.py` | confirmed | Alpha sweep generation and optional audio export. |
+| `adapters/sa3_residual_hooks.py` | confirmed | Residual activation capture and residual steering. |
+| `procedures/residual_activation_vectors.py` | confirmed | SA3 activation-vector extraction from prompt pairs. |
+| `procedures/audio_residual_vectors.py` | confirmed | Residual vectors from audio examples. |
+| `prompt_pairs.py` | confirmed | Prompt-pair presets for residual steering probes. |
+| `procedures/residual_sweeps.py` | confirmed | Alpha sweep generation and optional audio export. |
 | `residual_features.py` | confirmed | Residual activation bases and directions. |
 | `observability.py` | confirmed | Linear probes for whether candidate controls are predictable from latent summaries. |
 | `guidance.py` | confirmed | Differentiable latent guidance step and loss combination. |
-| `looping.py` | confirmed | Sampler-time cyclic roll interventions plus loop metrics. |
+| `procedures/cyclic_sa3.py` | confirmed | Sampler-time cyclic roll interventions. |
 
 Narrative role: these are the highest-risk methods. They stay microscopes or
 scaffolds until causal interventions survive audio review and baselines.
@@ -170,7 +179,8 @@ Purpose: turn many clips and many variants into decisions.
 
 | Module | Evidence | Role |
 |---|---|---|
-| `colab_audio_player.py` | confirmed | Self-contained Colab waveform player, loop audition, annotation save/search. |
+| `evidence/audio_player.py` | confirmed | Self-contained Colab waveform player and loop audition surface. |
+| `evidence/annotations.py` | confirmed | Annotation save/load/search store for listening evidence. |
 | `audio_descriptors.py` | confirmed | Lightweight audio descriptor reports and deltas. |
 | `control_lanes.py` | confirmed | Time-varying evidence lanes, SVG visualization, persistence. |
 | Notebook manifest cell | confirmed | Run metadata, experiment switches, model/runtime context. |
@@ -195,7 +205,7 @@ target audio latent
 
 edited latent
   -> direct SAME decode
-  -> optional SA3 polish or sampler intervention
+  -> optional SA3 procedure polish or sampler intervention
   -> audio output
   -> descriptor delta + player annotation + ledger decision
 
@@ -209,25 +219,27 @@ prompt pairs or labeled audio
 
 - Put pure latent/audio measurements in `audio_descriptors.py`, `latent_math.py`,
   `periodic.py`, `geometry.py`, `control_lanes.py`, or `observability.py`.
-- Put prompt scoring/search code in `flow_prompt.py`, `prompt_optimization.py`,
-  or `tokenizer_vocab.py`.
+- Put pure prompt rows, velocity conventions, logSNR/timestep conversion, and
+  attribution in `flow_prompt.py`; put hard/readable prompt search in
+  `prompt_optimization.py` and `tokenizer_vocab.py`; put teacher-forced SA3
+  scoring execution in `procedures/flow_scoring.py`.
 - Put latent edits in `latent_blur.py`, `latent_dsp.py`,
   `selective_renoise.py`, `looping.py`, `style.py`, or `guidance.py`.
 - Put SA3/SAME external wrapper code in `adapters/`.
-- Put notebook-facing experiment harnesses with model hooks in `experiments/`.
+- Put executable SA3/SAME method runs in `procedures/`.
+- Put listening/display/annotation helpers in `evidence/`.
 - Keep primitives as compact notebook-callable functions, dataclasses, and row
   objects with explicit inputs, outputs, and provenance.
 
 ## Maintenance Notes
 
-- `latent_audio_primitives/__init__.py` is intentionally broad for notebook
-  convenience, but it should remain a convenience surface, not the main mental
-  model.
-- The notebook setup cell is grouped by this map. Keep future primitive imports
+- `latent_audio_primitives/__init__.py` intentionally stays small. Import from
+  concrete altitude modules in the notebook.
+- The notebook setup cell is grouped by altitude. Keep future primitive imports
   in those groups so the notebook keeps reading as a lab workflow.
 - Sampler-level helpers depend on upstream `stable_audio_3` internals. That is
-  acceptable for research notebooks, but every such helper should stay clearly
-  labeled as SA3-version-sensitive.
+  acceptable for research notebooks, but every such helper should live in
+  `procedures/` and stay clearly labeled as SA3-version-sensitive.
 
 ## Promotion Rule
 

@@ -110,18 +110,21 @@ two are evidence and comparison infrastructure.
 - SAME representation: `latent_blur.py`, `latent_dsp.py`,
   `selective_renoise.py`, `style.py`, `geometry.py`, `periodic.py`, and
   `looping.py` probe or edit the SAME bottleneck, then measure survival.
-- SA3 flow conditioning: `flow_prompt.py`, `prompt_optimization.py`,
-  `tokenizer_vocab.py`, and `experiments/soft_prompt.py` score prompts and
-  optimized conditioning through frozen SA3 dynamics.
-- Causal steering: `experiments/prompt_pairs.py`,
-  `experiments/activation_vectors.py`, `experiments/audio_residual_vectors.py`,
-  `experiments/sa3_sweeps.py`, `guidance.py`, and `residual_features.py` test
+- SA3 flow conditioning: `flow_prompt.py`, `procedures/flow_scoring.py`,
+  `prompt_optimization.py`, `tokenizer_vocab.py`, and
+  `procedures/soft_prompt.py` score prompts and optimized conditioning through
+  frozen SA3 dynamics.
+- Causal steering: `prompt_pairs.py`,
+  `procedures/residual_activation_vectors.py`,
+  `procedures/audio_residual_vectors.py`, `procedures/residual_sweeps.py`,
+  `procedures/cyclic_sa3.py`, `guidance.py`, and `residual_features.py` test
   whether interventions causally move generated audio.
 - Dataset memory and composition: `curriculum.py`, `composition.py`, `index.py`,
   `control_lanes.py`, and `audio_descriptors.py` turn collections into
   selection, continuity, and evidence tools.
-- Evidence decision loop: `colab_audio_player.py`, `audio_descriptors.py`, and
-  `control_lanes.py` turn outputs into annotations, descriptors, lane rows, and
+- Evidence decision loop: `evidence/audio_player.py`,
+  `evidence/annotations.py`, `audio_descriptors.py`, and `control_lanes.py`
+  turn outputs into annotations, descriptors, lane rows, and
   promote/revise/drop decisions.
 
 The detailed module map is [Primitive map](primitive-map.md). The bottom-up
