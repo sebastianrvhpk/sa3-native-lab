@@ -13,7 +13,7 @@ Architecture / method:
 
 Native objects:
 Examples: tokens, latents, flow states, attention maps, residual activations,
-adapter weights, retrieval memory, control signals, rewards.
+adapter weights, retrieval memory, control signals, or listening feedback.
 
 Evidence:
 Benchmarks:

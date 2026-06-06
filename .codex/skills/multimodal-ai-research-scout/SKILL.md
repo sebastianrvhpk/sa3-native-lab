@@ -31,10 +31,10 @@ Scout across modalities, but translate back to audio/SAME/SA3:
   structure, controllability, editing, source preservation.
 - Image/video diffusion and flow: rectified flow, consistency/distillation,
   inversion, attention control, trajectory editing, conditioning adapters.
-- Language/model reasoning: retrieval, synthetic data, preference optimization,
-  tool use, eval harnesses, agentic experiment loops.
-- Representation learning: contrastive embeddings, self-supervised audio,
-  disentanglement, probing, causal/linear control directions.
+- Language/model reasoning: retrieval, synthetic data, listening-ledger
+  selection, tool use, eval harnesses, agentic experiment loops.
+- Representation learning: self-supervised audio, disentanglement, native
+  probing, causal/linear control directions, and bottleneck audits.
 - 3D/world models: temporal coherence, scene memory, object permanence, motion
   controls, long-horizon generation.
 - Scientific ML: experiment design, ablation, uncertainty, reproducibility,
@@ -73,12 +73,16 @@ workbench, and evidence:
   time/channel/feature analogue.
 - Video temporal control -> audio loop/structure/control-lane experiment only
   if temporal coherence is measurable.
-- Text embedding steering -> prompt/condition/residual experiment only if SA3
-  exposes a condition or activation path.
+- Text or semantic-language methods -> prompt/condition/residual experiment only
+  if SA3 exposes a condition or activation path, and the local evidence remains
+  SAME/SA3-native plus listening.
 - Diffusion inversion -> SA3 flow prompt/state inversion only if velocity,
   timestep, and convention are explicit.
 - Adapter/LoRA method -> external Underfit workflow unless the notebook only
   consumes exported audio/checkpoints for comparison.
+- External embedding or latent-judge method -> docs-only source context unless
+  reframed as a native SAME/SA3 measurement question; do not propose it as a
+  local guidance or scoring lane by default.
 
 When proposing local implementation, state the workbench, maturity target, and
 altitude explicitly:

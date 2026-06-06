@@ -80,11 +80,11 @@ not a claim by itself; it is where claims are tested.
 | Evidence packet setup | audio paths, descriptors, annotations, manifests | output -> evidence packet | Can each result be reviewed and compared? |
 | Audio and SAME preparation | audio waveform, `LatentItem`, SAME `z0` | audio -> `z0`; `z0` -> saved item | What object exactly enters each method? |
 | SAME measurement bench | SAME `z0`, summaries, geometry, lanes | `z0` -> rows/reports | What does SAME expose before intervention? |
-| SAME intervention bench | edited SAME latents | `z0` -> `z0'` -> decode/polish | Which latent edits survive audio review? |
 | SA3 flow prompt bench | `z_t`, prompt condition `C(p)` | target `z0` -> probe bank -> prompt/condition score | Which prompts or conditions explain audio under frozen SA3 flow? |
+| SAME intervention bench | edited SAME latents | `z0` -> `z0'` -> decode/polish | Which latent edits survive audio review? |
 | Residual and trajectory bench | residual activations, sampler states | activation/state -> intervention -> output | Which internal interventions causally move audio? |
 | Memory and composition bench | memory rows, clusters, bridges, donors | collection -> selector -> output | How do collections support selection without copying? |
-| External comparison bench | imported audio/checkpoints/run notes | external output -> evidence packet | What should frozen SA3/SAME be compared against? |
+| External comparison bench | imported audio/checkpoints/run notes | external audio output -> evidence packet | How do imported outputs compare under the same local evidence? |
 | Ledger and promotion board | evidence packets and decisions | evidence -> maturity update | What is real, repeatable, useful, or only diagnostic? |
 
 ## Evidence Panels
@@ -100,7 +100,7 @@ include enough evidence for its decision.
 | Loop/continuation | loop preview, boundary/periodicity metrics, listening notes | bridge cost, lane continuity |
 | Residual steering | layer/vector metadata, alpha sweep, descriptor/listening deltas | residual feature atlas, probe accuracy |
 | Dataset/memory method | memory rows, cluster/donor selection evidence, output audition | heldout rows, geometry/lane scores |
-| Frontier hypothesis | source link, native-object mapping, one concrete notebook run | external embedding disagreement, runtime audit |
+| Frontier hypothesis | source link, native-object mapping, one concrete notebook run | native disagreement panel, runtime audit |
 
 ## Minimum Evidence Packet
 

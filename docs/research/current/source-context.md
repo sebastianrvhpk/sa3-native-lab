@@ -283,9 +283,9 @@ L_flow(prompt) = E ||v_theta(z_t, t, C(prompt)) - u_t||^2
 ### TangoFlux
 
 - Source: [TangoFlux](https://arxiv.org/abs/2412.21037)
-- Relevant idea: Fast text-to-audio flow matching with CLAP-ranked preference optimization.
-- Notebook impact: Supports keeping CLAP-like scores as optional comparison lanes, not local truth; any preference signal must be checked against listening notes.
-- Status: source context; local transfer is evidence/ledger discipline, not training.
+- Relevant idea: Fast text-to-audio flow matching and efficient generation context.
+- Notebook impact: Background for runtime and flow-matching comparisons only; local prompt evidence remains frozen-SA3 flow loss plus listening.
+- Status: source context; local transfer is runtime/evidence discipline, not preference training.
 
 ## Audio Generation Baselines
 
@@ -388,26 +388,12 @@ L_flow(prompt) = E ||v_theta(z_t, t, C(prompt)) - u_t||^2
 - Notebook impact: Motivates SA3 step/polish/runtime audits rather than adding a new sampler abstraction.
 - Status: source context.
 
-### ImageBind
-
-- Source: [ImageBind](https://arxiv.org/abs/2305.05665)
-- Relevant idea: Joint embedding across image, text, audio, depth, thermal, and IMU modalities.
-- Notebook impact: Optional external semantic embedding lane for retrieval and novelty/source-preservation checks.
-- Status: source context; external embeddings are judges, not SAME-native truth.
-
-### T-CLAP
-
-- Source: [T-CLAP](https://arxiv.org/abs/2404.17806)
-- Relevant idea: Temporal-enhanced contrastive language-audio pretraining for better temporal audio/text alignment.
-- Notebook impact: Candidate external temporal descriptor for comparing against SAME control lanes.
-- Status: source context; local integration is a hypothesis.
-
 ### PrismAudio
 
 - Sources:
   - [PrismAudio paper](https://arxiv.org/abs/2511.18833)
   - [PrismAudio model page](https://huggingface.co/FunAudioLLM/PrismAudio)
-- Relevant idea: Video-to-audio generation decomposes evaluation into semantic consistency, temporal synchrony, aesthetic quality, and spatial accuracy, with preference-style reward signals.
+- Relevant idea: Video-to-audio generation decomposes evaluation into semantic consistency, temporal synchrony, aesthetic quality, and spatial accuracy.
 - Notebook impact: The useful transfer is the evaluation decomposition: split evidence panels rather than collapse all quality into one scalar.
 - Status: source context; local transfer is evidence packet design, not reward training.
 

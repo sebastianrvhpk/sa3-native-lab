@@ -55,17 +55,19 @@ Frame methods as evidence workbenches over native-object transitions:
 - Audio and SAME preparation: maps source audio into SAME `z0` and renderable
   audio outputs.
 - SAME measurement bench: observes latent geometry, descriptors, periodicity,
-  blur, token rows, and source-preservation signals.
+  control lanes, and source-preservation signals.
+- SA3 flow prompt bench: scores prompt/state relations through shared flow
+  probe banks, prompt semantic rows, timestep/logSNR panels, and
+  convention-explicit losses.
 - SAME intervention bench: edits `z0` or control lanes and tests whether audio
   moves predictably.
-- SA3 flow prompt bench: scores prompt/state relations through flow velocity,
-  timestep/logSNR, and convention-explicit losses.
 - Residual and trajectory bench: captures activations, directions, and sampler
   paths without pretending probes are controls.
 - Memory and composition bench: indexes, retrieves, grafts, or compares donors
   while guarding against copying.
-- External comparison bench: evaluates Underfit or other external artifacts
-  without importing training scaffolding into the repo.
+- External comparison bench: evaluates Underfit or other exported audio
+  artifacts through the local evidence packet, without importing training
+  scaffolding or another semantic judge into the repo.
 - Ledger and promotion board: turns evidence packets into promote/revise/drop
   decisions.
 
@@ -92,12 +94,14 @@ Claim maturity:
 Place code by what it owns:
 
 - Root modules define or transform native objects: latent math, geometry,
-  control lanes, prompt rows, token search, descriptors, memory, looping, DSP.
+  control lanes, flow probe banks, prompt semantic rows, token search,
+  descriptors, memory, looping, DSP.
 - `adapters/` talks to external machinery: upstream SA3/SAME, tokenizer access,
   residual hook locations, model loading, encode/decode wrappers.
 - `procedures/` runs executable research methods that call SA3/SAME, optimize
   conditions, capture hooks, generate sweeps, or polish edited latents.
-- `evidence/` supports auditioning, annotation, display, and review.
+- `evidence/` supports auditioning, annotation, display, disagreement rows, and
+  review.
 - Docs-only belongs in `docs/research/current/` until it has a compact
   notebook-facing primitive or cell.
 

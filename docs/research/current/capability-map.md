@@ -33,12 +33,15 @@ run notes.
 | Audio waveform `x` | waveform arrays and `.wav` paths | notebook, `audio_descriptors.py`, `evidence/audio_player.py` | loaded, previewed, described, annotated | confirmed |
 | SAME latent `z0` | usually `B x C x T`, memory rows use `T x D` | upstream SAME through adapters; local `LatentItem` | encoded, edited, decoded, searched, saved | confirmed |
 | SA3 flow state `z_t` | noisy/intermediate latent state | `flow_prompt.py`, `procedures/flow_scoring.py` | constructed from `z0`, timestep, and noise | confirmed |
+| Flow probe bank | timestep/logSNR, noise seed/sign, velocity convention | `flow_prompt.py`, notebook cells | reused across prompt variants and flow panels | confirmed |
 | Prompt condition `C(p)` | SA3 conditioner outputs or optimized tensors | upstream SA3 plus `flow_prompt.py`, `procedures/soft_prompt.py` | scored, optimized, attributed, auditioned | confirmed |
+| Prompt semantic row | prompt variant, tags, flow/listening evidence | `prompt_semantics.py`, notebook cells | compares raw, readable, and flow-found language | confirmed |
 | Residual activation `a_l` | layer activation tensors | `adapters/sa3_residual_hooks.py`, residual procedures | captured, contrasted, steered, summarized | confirmed |
 | `LatentItem` | ID, latent, rate, prompt, descriptors, labels, metadata | `schema.py`, `io.py` | saved, loaded, indexed, clustered | confirmed |
 | Control lane | time-varying values, rate, confidence, metadata | `control_lanes.py` | extracted, normalized, compared, saved, rendered | confirmed |
 | Descriptor report | JSON-friendly audio statistics | `audio_descriptors.py` | computed for source/baseline/method outputs | confirmed |
 | Evidence packet | source/baseline/method outputs plus rows and notes | notebook, `evidence/`, ledger | records reviewable claims | template ready |
+| Disagreement row | native evidence lanes for one artifact or prompt | `evidence/disagreement.py` | surfaces conflicts before decisions | confirmed |
 
 ## Operation Matrix
 
@@ -54,7 +57,9 @@ run notes.
 | Curriculum clustering | memory collection -> clusters/heldout rows | select | root memory | selector | show clusters improve prompt or donor choices |
 | Bridge/continuation ranking | memory rows -> ranked paths | select | root composition | selector | bridge scores must predict audible continuity |
 | Flow prompt scoring | target `z0` -> flow losses for prompts | observe/select | root rows plus procedure | microscope/selector | test whether scores predict generated audio |
+| Shared flow probe banks | logSNR/timestep controls -> reusable probe manifest | observe/compare | root rows plus procedure | confirmed | use across prompt panels and ledger packets |
 | Flow attribution | prompt -> token contribution rows | observe/select | root rows plus procedure | microscope | repeat over shared probe banks |
+| Prompt semantic transparency | prompt variants -> tagged flow/listening rows | observe/select | root rows plus procedure | microscope/selector | show tags explain useful prompt changes |
 | Soft prompt inversion | target `z0` -> optimized condition | intervene/render | procedure | intervention candidate | audition against prompt/audio-to-audio baselines |
 | Hard/readable prompt search | candidate text -> ranked prompts | select | root search plus procedure scorer | selector | compare readable rankings against listening |
 | SAME latent DSP | `z0` -> DSP-edited `z0'` -> audio | intervene/render | root operator plus procedure polish | intervention candidate | direct decode vs polish evidence packets |
@@ -68,6 +73,7 @@ run notes.
 | Gradient/posterior guidance | objective -> latent/sampler update | intervene/render | root operator/scaffold | high-risk candidate | objective movement must beat baselines audibly |
 | External comparison | imported outputs -> evidence packet | compare | evidence/procedure | comparison | fixed task packets with descriptors and notes |
 | Audio player and annotations | output paths -> audition notes | decide | evidence | confirmed | routine ledger use |
+| Semantic disagreement panel | artifact/prompt rows -> evidence conflicts | decide | evidence | microscope/decision support | show conflicts change promote/revise/drop choices |
 
 ## Artifact Flow
 
@@ -157,8 +163,8 @@ The stable section order is:
 2. Evidence packet setup.
 3. Audio and SAME object preparation.
 4. SAME measurement bench.
-5. SAME intervention bench.
-6. SA3 flow prompt bench.
+5. SA3 flow prompt bench.
+6. SAME intervention bench.
 7. Residual and trajectory bench.
 8. Memory and composition bench.
 9. External comparison bench.

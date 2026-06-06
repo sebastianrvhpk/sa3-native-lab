@@ -86,8 +86,8 @@ with each workbench moving from object to evidence to decision.
 | Evidence packet setup | output audio -> reviewable packet | player rows, descriptors, annotations, manifests | implemented |
 | Audio and SAME preparation | audio -> SAME `z0` -> `LatentItem` | saved items, summaries, chunk windows | implemented |
 | SAME measurement bench | `z0` -> summaries/geometry/lanes | descriptor, geometry, periodicity, control-lane rows | implemented |
+| SA3 flow prompt bench | target `z0` -> flow probes -> prompt/condition score | shared probe banks, flow-loss rows, attribution, semantic prompt variants, soft prompts, prompt candidates | implemented plus null-inversion scaffold |
 | SAME intervention bench | `z0` -> edited `z0'` -> decode/polish | direct decodes, SA3-polished audio, deltas | implemented |
-| SA3 flow prompt bench | target `z0` -> flow probes -> prompt/condition score | flow-loss rows, attribution, soft prompts, prompt candidates | implemented plus null-inversion scaffold |
 | Residual and trajectory bench | activation/state -> intervention -> output | residual vectors, alpha sweeps, guided variants | implemented plus high-risk scaffolds |
 | Memory and composition bench | collection -> selector -> continuation/bridge/donor | memory indices, curriculum rows, ranked bridges | implemented |
 | External comparison bench | external artifacts -> evidence packet | Underfit/cross-model audio, descriptor/player rows | external/scaffold |
@@ -105,7 +105,7 @@ should be updated from `experiment-ledger.md`, not from speculation.
 | Intervention candidate | neighborhood renoise, selective renoise, graft, blur/filter, neural latent DSP, style profile/direction, cyclic repair, soft prompt audition | source/baseline/method packets across clips and seeds |
 | High-risk intervention candidate | residual steering, cyclic denoising projection, gradient guidance, posterior guidance, null-condition inversion | proof of causal movement without artifacts or fragile internals |
 | Promoted method | none yet | at least repeated evidence packets and ledger decisions |
-| External comparison | Underfit handoff, cross-model command harness, optional external embeddings | imported artifacts and fixed comparison packets |
+| External comparison | Underfit handoff and audio-output baseline harness | imported audio artifacts and fixed comparison packets |
 
 ## Reusable Local Modules
 
@@ -115,8 +115,9 @@ should be updated from `experiment-ledger.md`, not from speculation.
   `schema.py`, `io.py`, `latent_math.py`, `audio_descriptors.py`,
   `geometry.py`, `periodic.py`, `control_lanes.py`, `observability.py`,
   `latent_blur.py`, `latent_dsp.py`, `selective_renoise.py`, `looping.py`,
-  `style.py`, `flow_prompt.py`, `prompt_optimization.py`, `tokenizer_vocab.py`,
-  `index.py`, `curriculum.py`, `composition.py`, `guidance.py`, and
+  `style.py`, `flow_prompt.py`, `prompt_semantics.py`,
+  `prompt_optimization.py`, `tokenizer_vocab.py`, `index.py`,
+  `curriculum.py`, `composition.py`, `guidance.py`, and
   `residual_features.py`.
 - Model boundary: `adapters/` isolates official SA3/SAME loading, encoding,
   generation, tokenizer access, and residual-hook surfaces.
@@ -124,8 +125,8 @@ should be updated from `experiment-ledger.md`, not from speculation.
   optimization, SA3 polish, selective SA3, cyclic SA3, residual extraction, and
   residual sweeps.
 - Evidence loop: `evidence/audio_player.py`, `evidence/annotations.py`,
-  `audio_descriptors.py`, and `control_lanes.py` turn outputs into reviewable
-  packets and decisions.
+  `evidence/disagreement.py`, `audio_descriptors.py`, and `control_lanes.py`
+  turn outputs into reviewable packets and decisions.
 
 The detailed module map is [Primitive map](primitive-map.md). The object and
 capability map is [Capability map](capability-map.md).

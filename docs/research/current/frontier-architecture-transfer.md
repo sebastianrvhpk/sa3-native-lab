@@ -58,16 +58,14 @@ identify the native object each frontier method manipulates
 | [DiffRhythm 2](https://arxiv.org/abs/2510.22950) | 2025-10 | Semi-autoregressive block flow matching for long songs, low-frame-rate music VAE, preference optimization. | Transfer block/segment ideas into SA3 continuation, bridge search, and control-lane experiments. | source-confirmed |
 | [YuE](https://arxiv.org/abs/2503.08638) | 2025-03 | Long-form lyrics-to-song foundation model using LLaMA-style autoregression, track decoupling, structural conditioning. | Treat structure, lyrics/prompt plan, and audio rendering as separable evidence streams; do not fold full-song LM code into this repo. | source-confirmed |
 | [SongGen](https://arxiv.org/abs/2502.13128) | 2025-02 | Single-stage autoregressive transformer for controllable song generation with mixed/dual-track modes. | Add external song baselines to the external comparison bench; borrow dual-track evaluation ideas for source/donor comparisons. | source-confirmed |
-| [MMAudio](https://github.com/hkchengrex/MMAudio) | CVPR 2025 | Multimodal joint training for video-to-audio synthesis, CLIP/synchrony features, audio VAE. | Use video-to-audio as a reminder that temporal synchrony is measurable; transfer only the measurement idea unless video inputs become a notebook source. | source-confirmed |
+| [MMAudio](https://github.com/hkchengrex/MMAudio) | CVPR 2025 | Multimodal joint training for video-to-audio synthesis with synchrony features and an audio VAE. | Use video-to-audio as a reminder that temporal synchrony is measurable; transfer only the measurement idea unless video inputs become a notebook source. | source-confirmed |
 | [Sora technical report](https://openai.com/research/video-generation-models-as-world-simulators) | 2024-02 | Spacetime latent patches with diffusion transformer over variable durations/resolutions. | Map "patch persistence" to audio segments/control lanes/loop regions, not to visual UI metaphors. | source-confirmed |
 | [Movie Gen](https://huggingface.co/papers/2410.13720) | 2024-10 | Media foundation models with synchronized audio, video editing, personalization, and video-to-audio tasks. | Use synchronized-audio evaluation as source context for temporal alignment and source-preservation panels. | source-confirmed |
 | [AudioX](https://arxiv.org/abs/2503.10522) | 2025-03 | Unified diffusion-transformer anything-to-audio generation with multimodal controls. | External comparison and multimodal-condition context only; local work remains SA3/SAME-native. | source-confirmed |
-| [PrismAudio](https://arxiv.org/abs/2511.18833) | 2025-11 | Video-to-audio generation with decomposed reasoning and multi-dimensional rewards. | Transfer evaluation decomposition, not reward training: semantic, temporal, aesthetic, spatial/source panels. | source-confirmed |
+| [PrismAudio](https://arxiv.org/abs/2511.18833) | 2025-11 | Video-to-audio generation with decomposed reasoning and multi-dimensional evaluation. | Transfer evaluation decomposition: semantic, temporal, aesthetic, spatial/source panels. | source-confirmed |
 | [DiT](https://arxiv.org/abs/2212.09748) | 2022-12 | Diffusion transformers scale with depth/width/token count. | Supports treating SA3's transformer/flow internals as scalable representation objects for residual probes. | source-confirmed |
 | [FLUX.1 Kontext](https://arxiv.org/abs/2506.15742) | 2025-06 | Flow-matching image generation/editing unified by in-context text/image sequence concatenation and multi-turn consistency benchmarks. | Transfer the benchmark shape: test multi-turn prompt/audio edits for preservation, drift, and consistency. | source-confirmed |
 | [Consistency Models](https://arxiv.org/abs/2303.01469) | 2023-03 | One/few-step generative models and distillation-style acceleration. | Measure step-count, adversarial/post-training, and polish tradeoffs in SA3 rather than implementing a new sampler family. | source-confirmed |
-| [ImageBind](https://arxiv.org/abs/2305.05665) | 2023-05 | Joint embedding across image, text, audio, depth, thermal, and IMU using paired data. | Optional external embedding lane for cross-modal retrieval/novelty checks; do not treat it as SAME-native truth. | source-confirmed |
-| [T-CLAP](https://arxiv.org/abs/2404.17806) | 2024-04 | Temporal-enhanced language-audio contrastive learning for retrieval/generation tasks. | Strong candidate for external temporal descriptor/lane comparison against SAME control lanes. | source-confirmed |
 | [MusicSem](https://arxiv.org/abs/2602.17769) | 2026-02 | Natural music-description dataset with broader semantic categories than ordinary captions. | Source-backed vocabulary for prompt semantic audits and listening tags. | source-confirmed |
 | [Music Arena](https://arxiv.org/abs/2507.20900) | 2025-07 | Live pairwise text-to-music evaluation with detailed preferences and transparent data policy. | Validates the notebook ledger/player route before any reward model. | source-confirmed |
 | [EnCodec](https://arxiv.org/abs/2210.13438) | 2022-10 | High-fidelity neural audio compression with quantized latent space and perceptual/adversarial training. | Historical codec baseline for why SAME is not merely compression; compare bottleneck behavior, not architecture code. | source-confirmed |
@@ -170,22 +168,25 @@ Notebook impact:
 - source-preservation panel,
 - flow/descriptor/listening rows after each turn.
 
-### 6. External Embeddings as Comparison Judges
+### 6. Native Disagreement Panels Before New Judges
 
-CLAP/T-CLAP/ImageBind can help judge semantic or temporal alignment, but they
-belong as optional measurement lanes beside SAME-native evidence:
+The current notebook should not add another text/audio embedding space as a
+local judge. The stronger move is to expose where its own native evidence
+disagrees:
 
 ```text
-SAME-native evidence first
-external embedding evidence second
-listening decision last
+SAME distance / memory row
+flow prompt loss
+descriptor delta
+control-lane or periodicity evidence
+listening decision
 ```
 
 Notebook impact:
 
-- optional external descriptor table,
-- retrieval comparison against SAME memory,
-- disagreement report when external embeddings and listening diverge.
+- semantic bottleneck disagreement table,
+- temporal evidence lanes before intervention claims,
+- promote/drop decisions that name which native evidence failed.
 
 ### 7. Preference Loops Should Start As Ledger Loops
 
@@ -222,7 +223,6 @@ Notebook impact:
 | In-context image editing | Multi-turn prompt/audio edit chain | source-preservation rows, descriptor drift | edits stack without identity collapse | iterative polish may erase prior edits |
 | Long-form song planning | Segment prompts, bridge plans, curriculum rows | continuation/bridge scores, ledger notes | structure improves within notebook evidence packets | full song planning can become a separate project |
 | Neural codec/generative compression | SAME bottleneck stress tests | direct decode, SA3 polish, descriptors | separates semantic from acoustic preservation | not all codec lessons transfer to continuous SAME latents |
-| Contrastive multimodal embeddings | Optional external semantic/lane descriptors | CLAP/T-CLAP/ImageBind versus SAME memory | improves retrieval or novelty checks | external embeddings can reward wrong semantics |
 | Preference optimization | Annotation-weighted recipe selection | player notes, ledger decisions | repeated decisions identify robust recipes | tiny preference sets are easy to overfit |
 | Semantic planner/acoustic renderer | Prompt plan, SA3 flow score, SAME edit, acoustic polish as separate rows | flow loss, descriptor deltas, listening notes per stage | stage-specific failure is visible | do not invent a planner framework before evidence |
 | Prompt language datasets | Raw/retrieved/rewritten/readable prompt variants | MusicSem-style semantic tags, flow ranks, audition notes | prompt rewrites improve both flow score and listening | prompt polish can hide model failure |
@@ -289,24 +289,26 @@ Promote if: segment plans improve continuity versus one global prompt.
 
 Drop or revise if: segment boundaries dominate artifacts.
 
-### D. External Temporal Embedding Lane
+### D. Native Temporal Evidence Lane
 
 Object: decoded audio plus SAME memory/control lanes.
 
-Intervention: compute optional CLAP/T-CLAP/ImageBind-style embedding distances
-for generated and source clips, then compare against SAME-native memory scores.
+Intervention: compute control lanes, periodicity, nearest-memory rows,
+descriptor deltas, and shared flow-probe scores for generated and source clips.
 
-Measurement: disagreement table: SAME distance, external embedding distance,
-descriptor deltas, listening tags.
+Measurement: disagreement table: SAME distance, lane continuity, periodicity,
+descriptor deltas, flow loss, and listening tags.
 
-Claim: external embeddings help judge semantic or temporal alignment without
-becoming native truth.
+Claim: native evidence can catch temporal/source failures before adding a new
+model or representation family.
 
-Touchpoints: memory and composition bench, control-lane evidence, external comparison bench, player, and ledger cells.
+Touchpoints: memory and composition bench, control-lane evidence, player, and
+ledger cells.
 
-Promote if: external scores catch failures that SAME summaries miss.
+Promote if: native rows catch failures that one metric alone misses.
 
-Drop or revise if: scores reward semantically wrong but embedding-near outputs.
+Drop or revise if: the rows duplicate descriptor reports without changing
+decisions.
 
 ### E. Step/Polish Tradeoff Audit
 
@@ -370,20 +372,20 @@ generic.
 
 ### H. Semantic Bottleneck Disagreement Panel
 
-Object: SAME latent, semantic prompt tags, descriptor rows, external embedding
-scores, and decoded/polished audio.
+Object: SAME latent, semantic prompt tags, descriptor rows, memory rows, flow
+losses, and decoded/polished audio.
 
 Intervention: run the same edited latent through direct decode, SA3 polish, and
-optional external semantic judges.
+shared prompt/flow probes.
 
 Measurement: disagreement between SAME summary distance, descriptor deltas,
-flow prompt loss, external semantic distance, and listening notes.
+flow prompt loss, memory rows, and listening notes.
 
 Claim: separates semantic preservation, acoustic preservation, and prior-filled
 reconstruction.
 
 Touchpoints: SAME measurement bench, SAME intervention bench, SA3 flow prompt
-bench, external comparison bench, and ledger.
+bench, evidence setup, and ledger.
 
 Promote if: disagreement panels expose actionable failure families for latent
 edits and prompt scoring.
@@ -401,7 +403,7 @@ probe-bank cache
 -> SAME bottleneck stress test
 -> multi-turn audio edit consistency
 -> segment/block prompt plan
--> external temporal embedding lane
+-> native temporal evidence lane
 -> step/polish tradeoff audit
 -> annotation-weighted recipe selection
 -> prompt semantic transparency packet
@@ -414,9 +416,8 @@ final two make prompt semantics and semantic/acoustic disagreement transparent.
 
 ## Unknowns
 
-- Which external embeddings are practical in Colab after SA3 dependencies load?
-- Does SAME geometry correlate with semantic embeddings or only with acoustic
-  reconstruction features?
+- Does SAME geometry correlate with listening tags, flow loss, or only with
+  acoustic reconstruction features?
 - Do SA3 flow scores predict multi-turn edit success?
 - Which prompt/segment plans survive SA3 polish without becoming generic?
 - Does direct SAME decode reveal useful bottleneck failures that SA3 polish

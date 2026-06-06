@@ -149,6 +149,21 @@ v_theta(z_t,k, t_k, C(p_i))
 This makes prompt A/B scoring fair. Without shared probes, the score mixes
 prompt quality with random noise difficulty.
 
+Code object:
+
+```text
+FlowProbeBank = {
+  velocity_convention,
+  shared_noise,
+  antithetic_noise,
+  seed,
+  probes: [{probe_index, timestep, logSNR, noise_seed, noise_sign}]
+}
+```
+
+The bank stores coordinates and seeds, not tensors, so notebook cells can
+display and serialize the evidence plan before running SA3.
+
 ### Antithetic Noise
 
 For each noise sample, score both:
@@ -233,6 +248,39 @@ Tradeoff:
 hard prompt search = more expressive but may become opaque
 readable prompt search = less expressive but usable as normal SA3 prompting
 ```
+
+## Prompt Semantic Transparency
+
+Prompt variants are evidence objects, not just strings:
+
+```text
+PromptVariant = {
+  variant_id,
+  prompt,
+  semantic_tags,
+  source,
+  notes
+}
+```
+
+Semantic tags name which aspect of the wording changed:
+
+```text
+material, gesture, time, energy, space, affect, production, metadata, instruction
+```
+
+Native prompt rows attach flow and listening evidence:
+
+```text
+PromptSemanticRow = PromptVariant
+  + flow_loss
+  + descriptor_delta_norm
+  + listening_rating
+  + decision
+```
+
+The claim is modest: tags help explain prompt changes and failures. They do not
+replace frozen-SA3 flow loss, decoded-audio descriptors, or listening notes.
 
 ## Object Transition Math
 
@@ -781,6 +829,28 @@ loss_row = {
 ```
 
 These panels turn prompt inversion into diagnostics rather than a single scalar.
+
+### Native Evidence Disagreement Rows
+
+When SAME distance, nearest-memory evidence, flow loss, descriptors, and
+listening notes disagree, keep the conflict visible:
+
+```text
+DisagreementRow = {
+  item_id,
+  same_distance,
+  same_neighbor_score,
+  flow_loss,
+  descriptor_delta_norm,
+  listening_rating,
+  conflict_score,
+  decision,
+  notes
+}
+```
+
+The conflict score is only a triage sort. The decision remains a listening and
+ledger decision.
 
 ### Audio Or SAME Latents To Control Lanes
 

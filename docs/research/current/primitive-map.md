@@ -105,6 +105,7 @@ an operator is useful.
 | `control_lanes.py` | confirmed | Time-varying envelope/motion/channel lanes, normalization, similarity, SVG, persistence. |
 | `observability.py` | confirmed | Linear probes for whether controls are visible in latent summaries. |
 | `residual_features.py` | confirmed | Residual activation bases and directions. |
+| `prompt_semantics.py` | confirmed | Prompt variant records, semantic tags, prompt evidence rows, and manifests. |
 
 Narrative role: these modules keep the project honest. A control is not real
 until it is measurable, audible, and repeatable.
@@ -133,11 +134,12 @@ latent under its own flow field.
 
 | Module | Evidence | Role |
 |---|---|---|
-| `flow_prompt.py` | confirmed | Flow prompt rows, logSNR timesteps, velocity convention, attribution rows, and summaries. |
+| `flow_prompt.py` | confirmed | Flow prompt rows, reusable probe banks, logSNR timesteps, velocity convention, attribution rows, and summaries. |
 | `procedures/flow_scoring.py` | confirmed | Teacher-forced frozen-SA3 flow scoring execution. |
 | `prompt_optimization.py` | confirmed | Coordinate, greedy-token, and beam prompt search. |
 | `tokenizer_vocab.py` | confirmed | Native tokenizer vocabulary extraction and preview. |
 | `procedures/soft_prompt.py` | confirmed | Soft prompt optimization and generation hooks. |
+| `prompt_semantics.py` | confirmed | Semantic prompt variants and rows for comparing raw, readable, and flow-found prompt language. |
 
 Narrative role: SA3-native prompt inversion by teacher-forced flow agreement.
 
@@ -185,6 +187,7 @@ Purpose: turn many clips and many variants into decisions.
 |---|---|---|
 | `evidence/audio_player.py` | confirmed | Self-contained Colab waveform player and loop audition surface. |
 | `evidence/annotations.py` | confirmed | Annotation save/load/search store for listening evidence. |
+| `evidence/disagreement.py` | confirmed | Native evidence disagreement rows for SAME, flow, descriptors, memory, and listening. |
 | `audio_descriptors.py` | confirmed | Lightweight audio descriptor reports and deltas. |
 | `control_lanes.py` | confirmed | Time-varying evidence lanes, SVG visualization, persistence. |
 | Notebook manifest cell | confirmed | Run metadata, experiment switches, model/runtime context. |

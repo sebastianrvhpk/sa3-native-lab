@@ -33,7 +33,7 @@ method.
 | Intervention candidate | neighborhood renoise, selective renoise, graft, blur/filter, neural latent DSP, style profile/direction, cyclic repair, soft prompt audition | implemented, needs source/baseline/method packets |
 | High-risk intervention candidate | residual steering, cyclic trajectory, gradient guidance, posterior guidance, null-condition inversion | implemented/scaffolded, needs causal proof and artifact checks |
 | Promoted method | none yet | no repeated ledger evidence yet |
-| External comparison | Underfit handoff, cross-model harness, optional external embeddings | scaffolded/import-only |
+| External comparison | Underfit handoff and audio-output baseline harness | scaffolded/import-only |
 
 ## Gap 1. Reproducible Flow Probe Evidence
 
@@ -43,11 +43,12 @@ cached.
 Native transition: `target z0 -> flow probe bank -> prompt/condition loss rows`.
 
 Current support: `flow_prompt.py`, `procedures/flow_scoring.py`, prompt search,
-flow attribution, and loss-by-timestep cells.
+flow attribution, loss-by-timestep cells, and reusable `FlowProbeBank`
+manifests.
 
-Next run: implement or use a probe-bank cache that records target latent,
-timesteps/logSNRs, noise seeds, velocity convention, model ID, and per-prompt
-rows.
+Next run: use the shared probe-bank manifest in one target-audio prompt run,
+recording timesteps/logSNRs, noise seeds/signs, velocity convention, model ID,
+and per-prompt rows.
 
 Promote if:
 
@@ -332,18 +333,18 @@ Drop or revise if:
 
 ## Gap 13. Semantic Bottleneck Disagreement Panel
 
-Evidence gap: SAME summaries, flow losses, descriptors, external semantic
-embeddings, and listening notes may rank the same output differently.
+Evidence gap: SAME summaries, flow losses, descriptors, memory rows, and
+listening notes may rank the same output differently.
 
-Native transition: `edited z0 / prompt condition -> direct decode / SA3 polish / optional external judge -> disagreement rows`.
+Native transition: `edited z0 / prompt condition -> direct decode / SA3 polish -> native disagreement rows`.
 
 Current support: SAME latent edits, direct decode versus polish cells,
-flow_prompt rows, descriptors, memory index, optional external embedding source
-context, player annotations.
+flow_prompt rows, descriptors, memory index, `evidence/disagreement.py`, and
+player annotations.
 
 Next run: add one compact disagreement table to a direct-decode versus SA3
 polish packet: SAME distance, nearest-memory row, flow loss, descriptor delta,
-optional external semantic distance, and listening decision.
+and listening decision.
 
 Promote if:
 
@@ -354,7 +355,6 @@ Promote if:
 Drop or revise if:
 
 - metrics disagree randomly,
-- external judges dominate SAME-native evidence,
 - the panel slows the notebook without improving decisions.
 
 ## Priority Order
