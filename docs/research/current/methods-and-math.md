@@ -1081,20 +1081,25 @@ intervenability: can an edit reliably move h(z) and the audio?
 
 | Operator | Local Code | Notebook Workbench | Needs SA3 Weights? | Training? |
 |---|---|---:|---:|---:|
-| Latent geometry | `geometry.py` | SAME measurement bench | no for saved latents, yes for fresh encoding | no |
-| Covariance transport | `geometry.py` | SAME measurement/intervention benches | no for saved latents, yes for fresh encode/decode | no |
-| Fourier/periodic latent probes | `periodic.py` | SAME measurement bench | no for saved latents | no |
-| Neural latent DSP | `latent_dsp.py`, `audio_descriptors.py` | SAME intervention bench | yes for decode/polish | no |
+| Latent geometry | `geometry.py` | SAME representation bench | no for saved latents, yes for fresh encoding | no |
+| Covariance transport | `geometry.py` | SAME representation / coupled editing benches | no for saved latents, yes for fresh encode/decode | no |
+| Fourier/periodic latent probes | `periodic.py` | SAME representation bench | no for saved latents | no |
+| Neural latent DSP | `latent_dsp.py`, `audio_descriptors.py` | SAME representation / coupled editing benches | yes for decode/polish | no |
 | Direct gradient guidance | `guidance.py` | Residual and trajectory bench | yes for sampler integration | no base training |
 | Prompt inversion | `prompt_optimization.py`, `flow_prompt.py`, `procedures/flow_scoring.py` | SA3 flow prompt bench | yes | no |
 | Residual feature discovery | `residual_features.py` | Residual and trajectory bench | yes for activation capture | no |
-| Control observability | `observability.py` | SAME measurement / residual and trajectory benches | no for saved labeled latents | sidecar/probe only |
-| Control lanes | `control_lanes.py` | Evidence packet setup / memory and composition bench | no for saved latents/audio descriptors, yes for fresh encode/decode | no |
-| Memory curriculum | `curriculum.py`, `index.py` | Memory and composition bench | no for saved memory | no |
+| Control observability | `observability.py` | SAME representation / SA3 internal trajectory benches | no for saved labeled latents | sidecar/probe only |
+| Control lanes | `control_lanes.py` | Evidence packet setup / SAME memory and composition bench | no for saved latents/audio descriptors, yes for fresh encode/decode | no |
+| Memory curriculum | `curriculum.py`, `index.py` | SAME memory and composition bench | no for saved memory | no |
 
 The deliberate gap is full sampler integration. The math primitives are in
 place; the notebook should promote only operators with audible promise after
 measurement and listening agree.
+
+Procedure status lives in code as review metadata, not as math. Import
+`procedure_status_table()` when a manifest needs to record whether an executable
+method is currently a microscope, selector, intervention candidate, high-risk
+candidate, or promoted method.
 
 ## Periodicity and Loop Metrics
 

@@ -256,7 +256,7 @@ memory rows, listening notes.
 
 Claim: identifies what SAME represents semantically versus acoustically.
 
-Touchpoints: SAME intervention bench, SAME measurement bench, and SA3 flow prompt bench.
+Touchpoints: SAME representation science, SA3-over-SAME coupled editing, and SA3 flow/conditioning science.
 
 Promote if: perturbation families reveal stable preservation/failure patterns
 across clips.
@@ -336,7 +336,7 @@ listening notes.
 
 Claim: finds the lowest useful compute for reliable notebook audition.
 
-Touchpoints: SAME intervention bench, SA3 polish procedures, and residual/trajectory guidance scaffolds.
+Touchpoints: SA3-over-SAME coupled editing, SA3 polish procedures, and SA3 internal trajectory guidance scaffolds.
 
 Promote if: a small settings grid gives stable quality/runtime guidance.
 
@@ -355,7 +355,7 @@ nearest-memory rows.
 Claim: turns preference-learning ideas into a notebook-scale scientific ledger
 without pretending to train an RLHF system.
 
-Touchpoints: player, manifest, experiment ledger, SAME intervention bench, SA3 flow prompt bench, residual/trajectory guidance, and external comparison bench.
+Touchpoints: player, manifest, experiment ledger, SA3-over-SAME coupled editing, SA3 flow/conditioning science, SA3 internal trajectory guidance, and external comparison.
 
 Promote if: repeated annotations identify robust recipes and failure families.
 
@@ -398,8 +398,8 @@ flow prompt loss, memory rows, and listening notes.
 Claim: separates semantic preservation, acoustic preservation, and prior-filled
 reconstruction.
 
-Touchpoints: SAME measurement bench, SAME intervention bench, SA3 flow prompt
-bench, evidence setup, and ledger.
+Touchpoints: SAME representation science, SA3-over-SAME coupled editing, SA3
+flow/conditioning science, evidence setup, and ledger.
 
 Promote if: disagreement panels expose actionable failure families for latent
 edits and prompt scoring.

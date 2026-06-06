@@ -96,20 +96,22 @@ The canonical layer map is [Architecture ontology](architecture-ontology.md).
 ## Object Transition Workbenches
 
 The notebook should read as a lab instrument over native-object transitions,
-with each workbench moving from object to evidence to decision.
+with each workbench moving from object to evidence to decision. The current
+order is bottom-up: runtime and evidence surfaces first, SAME representation
+next, then SA3 flow, SA3 internals, and finally coupled SA3-over-SAME editing.
 
 | Workbench | Main transition | Main artifacts | Current status |
 |---|---|---|---|
 | Runtime and model boundary | upstream checkpoint -> model handle | model handles, latent rates, smoke audio | implemented |
 | Evidence packet setup | output audio -> reviewable packet | player rows, descriptors, annotations, manifests | implemented |
 | Audio and SAME preparation | audio -> SAME `z0` -> `LatentItem` | saved items, summaries, chunk windows | implemented |
-| SAME measurement bench | `z0` -> summaries/geometry/lanes | descriptor, geometry, periodicity, control-lane rows | implemented |
+| SAME representation bench | `z0` -> summaries/geometry/lanes/direct decodes | descriptor, geometry, periodicity, control-lane, bottleneck rows | implemented |
+| SAME memory and composition bench | collection -> selector -> continuation/bridge/donor | memory indices, curriculum rows, ranked bridges | implemented |
 | SA3 flow prompt bench | target `z0` -> flow probes -> prompt/condition score | shared probe banks, flow-loss rows, attribution, semantic prompt variants, soft prompts, prompt candidates | implemented plus null-inversion scaffold |
-| SAME intervention bench | `z0` -> edited `z0'` -> decode/polish | direct decodes, SA3-polished audio, deltas | implemented |
 | Residual and trajectory bench | activation/state -> intervention -> output | residual vectors, alpha sweeps, guided variants | implemented plus high-risk scaffolds |
-| Memory and composition bench | collection -> selector -> continuation/bridge/donor | memory indices, curriculum rows, ranked bridges | implemented |
+| SA3-over-SAME coupled editing bench | `z0` -> edited `z0'` -> direct decode / SA3 polish | direct decodes, SA3-polished audio, deltas, source-preservation rows | implemented |
 | External comparison bench | external artifacts -> evidence packet | Underfit/cross-model audio, descriptor/player rows | external/scaffold |
-| Ledger and promotion board | evidence packet -> maturity decision | ledger rows, promote/revise/drop decisions | template ready; no completed runs recorded |
+| Ledger and decision board | evidence packet -> maturity decision | ledger rows, promote/revise/drop decisions | template ready; no completed runs recorded |
 
 ## Claim Maturity Board
 
@@ -141,7 +143,9 @@ should be updated from `experiment-ledger.md`, not from speculation.
   generation, tokenizer access, and residual-hook surfaces.
 - Executable procedures: `procedures/` runs SA3/SAME flow scoring, soft prompt
   optimization, SA3 polish, selective SA3, cyclic SA3, residual extraction, and
-  residual sweeps.
+  residual sweeps. It also exposes `procedure_status_table()` so the notebook
+  manifest records each procedure's current layer, maturity, role, promotion
+  gate, and risk without importing heavy SA3 runtime code.
 - Evidence loop: `evidence/audio_player.py`, `evidence/annotations.py`,
   `evidence/disagreement.py`, `audio_descriptors.py`, and `control_lanes.py`
   turn outputs into reviewable packets and decisions.
@@ -167,6 +171,22 @@ Status as of 2026-06-06:
 Conclusion: the current library shape is coherent. The remaining issue is not
 whether these files are needed; it is whether each notebook method earns
 promotion through repeated evidence packets.
+
+## Procedure Honesty Board
+
+Executable procedure modules are not all equally mature. They should be read as
+methods under review, not as a list of promoted controls.
+
+| Procedure | Layer | Current maturity | Promotion gate |
+|---|---|---|---|
+| `procedures/flow_scoring.py` | SA3 flow/conditioning | microscope / selector | Flow rankings predict generated-audio or listening outcomes across shared probe banks. |
+| `procedures/soft_prompt.py` | SA3 flow/conditioning | intervention candidate | Optimized conditions beat readable prompt and audio-to-audio baselines without losing reviewability. |
+| `procedures/sa3_latent_sampling.py` | SA3-over-SAME coupled editing | intervention candidate | Method packets show which SAME edits survive direct decode and SA3 polish. |
+| `procedures/selective_sa3.py` | SA3-over-SAME coupled editing | intervention candidate | Source/baseline/method packets show predictable channel, donor, and prompt effects. |
+| `procedures/cyclic_sa3.py` | SA3 internal trajectory | high-risk sampler microscope / intervention candidate | Loop metrics and auditions improve versus baselines without collapse or sampler artifacts. |
+| `procedures/residual_activation_vectors.py` | SA3 internal trajectory | microscope | Layer maps repeat before any steering claim is made. |
+| `procedures/audio_residual_vectors.py` | SA3 internal trajectory | high-risk microscope | Audio-derived directions repeat across examples and survive alpha-sweep audition. |
+| `procedures/residual_sweeps.py` | SA3 internal trajectory | high-risk intervention candidate | Alpha changes are audible, monotonic or interpretable, and not just artifact injection. |
 
 ## Artifact Graph
 

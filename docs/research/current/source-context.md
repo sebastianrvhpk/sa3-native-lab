@@ -441,7 +441,7 @@ L_flow(prompt) = E ||v_theta(z_t, t, C(prompt)) - u_t||^2
 - Source: [SemanticVocoder](https://arxiv.org/abs/2602.23333)
 - Relevant idea: Replace acoustic VAE latents with semantic latents for generation, trying to bridge audio understanding and generation.
 - Notebook impact: Adds pressure to measure whether SAME summaries behave semantically, acoustically, or as a mixed bottleneck under edits.
-- Status: source context; local transfer is SAME measurement and prompt semantic audit.
+- Status: source context; local transfer is SAME representation measurement and prompt semantic audit.
 
 ### Generative Audio Compression
 

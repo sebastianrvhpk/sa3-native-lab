@@ -100,6 +100,23 @@ Function-audit interpretation:
 - `intervention candidate` means the function can alter a native object; the
   next proof is source/baseline/method audio packets across clips and seeds.
 
+## Procedure Status Rows
+
+Executable procedure modules call SA3/SAME or upstream sampler internals. Their
+current status is part of the repo's evidence surface through
+`latent_audio_primitives.procedures.procedure_status_table()`.
+
+| Procedure | Layer | Maturity | Main risk |
+|---|---|---|---|
+| `flow_scoring.py` | SA3 flow/conditioning | microscope / selector | ranking may only measure teacher-forced agreement |
+| `soft_prompt.py` | SA3 flow/conditioning | intervention candidate | optimized conditions may overfit flow loss |
+| `sa3_latent_sampling.py` | SA3-over-SAME coupled editing | intervention candidate | upstream sampler details are version-sensitive |
+| `selective_sa3.py` | SA3-over-SAME coupled editing | intervention candidate | donor/source effects need copying checks |
+| `cyclic_sa3.py` | SA3 internal trajectory | high-risk sampler microscope / intervention candidate | sampler intervention can create artifacts or collapse |
+| `residual_activation_vectors.py` | SA3 internal trajectory | microscope | repeated layer maps are not yet established |
+| `audio_residual_vectors.py` | SA3 internal trajectory | high-risk microscope | audio-derived directions can entangle source identity and artifacts |
+| `residual_sweeps.py` | SA3 internal trajectory | high-risk intervention candidate | steering can move artifacts instead of musical qualities |
+
 ## Artifact Flow
 
 ```text
@@ -187,13 +204,13 @@ The stable section order is:
 1. Runtime and model boundary.
 2. Evidence packet setup.
 3. Audio and SAME object preparation.
-4. SAME measurement bench.
-5. SA3 flow prompt bench.
-6. SAME intervention bench.
+4. SAME representation bench.
+5. SAME memory and composition bench.
+6. SA3 flow prompt bench.
 7. Residual and trajectory bench.
-8. Memory and composition bench.
+8. SA3-over-SAME coupled editing bench.
 9. External comparison bench.
-10. Ledger and promotion board.
+10. Ledger and decision board.
 
 ## Unknowns And Verification Plan
 

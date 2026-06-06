@@ -123,6 +123,26 @@ when primitive APIs change.
 | Guidance probes | `gradient_guidance_step(...)`, `combine_guidance_losses(...)` | differentiable objective -> latent/state update | scaffold until objective movement matches listening |
 | Evidence utilities | `display_audio_player(...)`, `save_audio_annotation(...)`, `make_disagreement_row(...)` | outputs + rows + notes -> evidence packet | review, disagreement, and ledger decisions |
 
+## Procedure Honesty Board
+
+The `procedures/` package contains executable methods, not promoted claims.
+Its top-level `procedure_status_table()` returns these rows for the notebook
+manifest and for review cells.
+
+| Procedure | Research layer | Maturity | Why it belongs in `procedures/` |
+|---|---|---|---|
+| `flow_scoring.py` | SA3 flow/conditioning | microscope / selector | Calls the frozen SA3 model to evaluate prompt-conditioned velocity agreement. |
+| `soft_prompt.py` | SA3 flow/conditioning | intervention candidate | Optimizes SA3 conditioning tensors and then renders through SA3. |
+| `sa3_latent_sampling.py` | SA3-over-SAME coupled editing | intervention candidate | Passes edited SAME latents through upstream SA3 init-latent sampling. |
+| `selective_sa3.py` | SA3-over-SAME coupled editing | intervention candidate | Combines SAME channel masks with upstream SA3 variation sampling. |
+| `cyclic_sa3.py` | SA3 internal trajectory | high-risk sampler microscope / intervention candidate | Inserts cyclic projections inside a sampler trajectory. |
+| `residual_activation_vectors.py` | SA3 internal trajectory | microscope | Captures prompt-pair residual activations through hooks. |
+| `audio_residual_vectors.py` | SA3 internal trajectory | high-risk microscope | Captures audio-to-audio residual differences through hooks. |
+| `residual_sweeps.py` | SA3 internal trajectory | high-risk intervention candidate | Renders residual steering sweeps for audition and descriptors. |
+
+No row above is promoted by being present. Promotion requires repeated evidence
+packets and ledger decisions.
+
 ### 1. Runtime and Model Boundary
 
 Purpose: touch external SA3/SAME objects without making the notebook depend on
@@ -169,9 +189,10 @@ an operator is useful.
 Narrative role: these modules keep the project honest. A control is not real
 until it is measurable, audible, and repeatable.
 
-### 4. SAME Measurement and Intervention Bench
+### 4. SAME Representation Science
 
-Purpose: probe what SAME preserves, erases, linearizes, or makes editable.
+Purpose: probe what SAME preserves, erases, linearizes, makes retrievable, or
+makes editable before claiming SA3 prompt or sampler control.
 
 | Module | Evidence | Role |
 |---|---|---|
@@ -183,10 +204,11 @@ Purpose: probe what SAME preserves, erases, linearizes, or makes editable.
 | `periodic.py` | confirmed | Autocorrelation, periodicity, spectral centroid, and loop boundary probes. |
 | `looping.py` | confirmed | Cyclic latent/audio roll, loop preview, seam metrics, and inpaint bounds. |
 
-Narrative role: this workbench asks what the SAME bottleneck itself affords before
-claiming SA3 prompt or sampler control.
+Narrative role: this layer owns direct SAME evidence: summaries, geometry,
+memory, bottleneck stress, latent DSP, style directions, loop metrics, and
+control lanes.
 
-### 5. SA3 Flow Prompt Bench
+### 5. SA3 Flow And Conditioning Science
 
 Purpose: ask frozen SA3 what prompt or conditioning object explains a target
 latent under its own flow field.
@@ -202,7 +224,7 @@ latent under its own flow field.
 
 Narrative role: SA3-native prompt inversion by teacher-forced flow agreement.
 
-### 6. Residual and Trajectory Bench
+### 6. SA3 Internal Trajectory Science
 
 Purpose: observe residual/trajectory structure and test whether inference-time
 interventions change generated audio, not just whether a signal is measurable.
@@ -222,7 +244,7 @@ interventions change generated audio, not just whether a signal is measurable.
 Narrative role: these are the highest-risk methods. They stay microscopes or
 scaffolds until causal interventions survive audio review and baselines.
 
-### 7. Memory and Composition Bench
+### 7. SAME Memory and Composition Bench
 
 Purpose: turn collections into memory, donor selection, curriculum, bridges, or
 composition plans without confusing source preservation with copying.
@@ -235,10 +257,11 @@ composition plans without confusing source preservation with copying.
 | `control_lanes.py` | confirmed | Lane similarity can support retrieval and bridge selection after evidence validation. |
 | `audio_descriptors.py` | confirmed | Descriptor summaries support donor/source comparison and novelty checks. |
 
-Narrative role: memory is a selection and evidence system, not a generic bucket
-for every dataset-level method.
+Narrative role: memory is the collection-facing side of SAME representation
+science. It is a selection and evidence system, not a generic bucket for every
+dataset-level method.
 
-### 8. Ledger and Promotion Board
+### 8. Ledger and Decision Board
 
 Purpose: turn many clips and many variants into decisions.
 
@@ -292,7 +315,8 @@ prompt pairs or labeled audio
 - Put latent edits in `latent_blur.py`, `latent_dsp.py`,
   `selective_renoise.py`, `looping.py`, `style.py`, or `guidance.py`.
 - Put SA3/SAME external wrapper code in `adapters/`.
-- Put executable SA3/SAME method runs in `procedures/`.
+- Put executable SA3/SAME method runs in `procedures/`, and keep their current
+  maturity in `procedure_status_table()`.
 - Put listening/display/annotation helpers in `evidence/`.
 - Keep primitives as compact notebook-callable functions, dataclasses, and row
   objects with explicit inputs, outputs, and provenance.
