@@ -25,6 +25,9 @@ Relevant idea for SA3 Native Lab:
 
 Notebook impact:
 
+Local altitude landing:
+root primitive / adapter / procedure / evidence / docs-only
+
 Limitations / non-transferable parts:
 
 Status:

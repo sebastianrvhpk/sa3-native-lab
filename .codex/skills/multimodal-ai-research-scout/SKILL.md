@@ -1,12 +1,14 @@
 ---
 name: multimodal-ai-research-scout
-description: Use when surveying current state of the art, recent papers, repos, model architectures, training methods, or cross-modal ideas for audio, music, video, image, text, diffusion, flow matching, transformers, latent spaces, controllability, editing, retrieval, representation learning, or multimodal generative AI; especially to translate frontier research into SA3/SAME notebook experiments.
+description: Use when surveying current state of the art, recent papers, repos, model architectures, training methods, or cross-modal ideas for audio, music, video, image, text, diffusion, flow matching, transformers, latent spaces, controllability, editing, retrieval, representation learning, or multimodal generative AI; especially to translate frontier research into SA3/SAME notebook experiments and decide whether the result lands as root math/operator code, an adapter, a procedure, evidence tooling, or docs-only backlog.
 ---
 
 # Multimodal AI Research Scout
 
 Use this skill for frontier research scouting. The job is to connect current
 papers, repos, and architecture changes to concrete SA3 Native Lab experiments.
+The local lab is notebook-first: upstream SA3 and Underfit stay external unless
+the notebook consumes exported artifacts.
 
 ## Currentness Rule
 
@@ -53,6 +55,7 @@ Evidence/benchmark:
 What transfers to SA3/SAME:
 What probably does not transfer:
 Notebook experiment candidate:
+Local altitude landing: root primitive / adapter / procedure / evidence / docs-only
 Risk or unknown:
 Status: source-confirmed / repo-inferred / hypothesis
 ```
@@ -72,6 +75,18 @@ Do not copy architecture terms blindly. Translate by native object:
 - Adapter/LoRA method -> external Underfit workflow unless the notebook only
   consumes exported audio/checkpoints for comparison.
 
+When proposing local implementation, state the altitude explicitly:
+
+- Root primitive: source suggests new math, rows, statistics, search, or
+  operators over existing native objects.
+- Adapter: source requires touching upstream SA3/SAME, tokenizer, checkpoints,
+  hooks, or external artifact formats.
+- Procedure: source requires running SA3/SAME, optimizing, sweeping, capturing
+  activations, or generating comparison audio.
+- Evidence: source improves auditioning, annotation, comparison, reports, or
+  promote/revise/drop decisions.
+- Docs-only: source is promising but not yet concrete enough for a notebook cell.
+
 ## Output Shape
 
 Return:
@@ -82,6 +97,7 @@ Source map
 Architecture deltas
 Cross-modal transfer matrix
 Candidate SA3/SAME experiments
+Altitude landing and module impact
 Priority order
 Unknowns and verification plan
 Docs/backlog updates needed

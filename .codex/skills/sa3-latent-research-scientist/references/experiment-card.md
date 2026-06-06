@@ -16,8 +16,9 @@ Intervention:
 What is edited, optimized, selected, steered, or measured?
 
 Notebook Touchpoints:
-Existing ontology stratum/cell:
-Existing primitive module:
+Notebook section/cell:
+Existing altitude module:
+Proposed placement: root primitive / adapter / procedure / evidence / docs-only
 New cell or helper needed:
 
 Inputs:

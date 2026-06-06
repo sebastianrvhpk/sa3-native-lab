@@ -1,6 +1,6 @@
 ---
 name: sa3-latent-research-scientist
-description: Use when formalizing, auditing, extending, or reviewing SA3/SAME latent-audio notebook research; designing experiments over SAME latents, SA3 flow fields, prompt conditioning, residual activations, control lanes, memory, descriptors, or listening evidence; deciding whether a primitive is a real control, a microscope, or noise.
+description: Use when formalizing, auditing, extending, or reviewing SA3/SAME latent-audio notebook research; designing experiments over SAME latents, SA3 flow fields, prompt conditioning, residual activations, control lanes, memory, descriptors, or listening evidence; organizing primitives by research altitude into root math/operators, adapters, procedures, and evidence; deciding whether a primitive is a real control, a microscope, or noise.
 ---
 
 # SA3 Latent Research Scientist
@@ -11,7 +11,7 @@ decisions explicit.
 
 ## First Move
 
-Before editing code or docs, state the research frame:
+Before editing code or docs, state the research frame and altitude:
 
 ```text
 Object: what native object is under study?
@@ -19,6 +19,7 @@ Intervention: what changes?
 Measurement: what evidence is collected?
 Claim: what would success mean?
 Decision: promote, revise, drop, or keep as microscope only?
+Altitude: root primitive / adapter / procedure / evidence / docs-only
 ```
 
 If the user asks to implement immediately, still write this frame first in one
@@ -31,14 +32,16 @@ Prefer local evidence before invention:
 - `colab/sa3_native_science_lab.ipynb`
 - `latent_audio_primitives/README.md`
 - `docs/research/current/primitive-map.md`
+- `docs/research/current/capability-map.md`
 - `docs/research/current/research-state.md`
 - `docs/research/current/methods-and-math.md`
+- `docs/research/current/run-protocol.md`
 - `docs/research/current/experiment-ledger.md`
 - `docs/research/current/backlog.md`
 
 Use `rg` for references and notebook imports before moving or deleting anything.
 
-## Scientific Grammar
+## Scientific Grammar And Altitude
 
 Every method should fit one of these roles:
 
@@ -55,6 +58,21 @@ Every method should fit one of these roles:
 
 Frame work as notebook research over native objects, compact artifacts, and
 evidence-led decisions.
+
+Place code by what it owns:
+
+- Root modules define or transform native objects: latent math, geometry,
+  control lanes, prompt rows, token search, descriptors, memory, looping, DSP.
+- `adapters/` talks to external machinery: upstream SA3/SAME, tokenizer access,
+  residual hook locations, model loading, encode/decode wrappers.
+- `procedures/` runs executable research methods that call SA3/SAME, optimize
+  conditions, capture hooks, generate sweeps, or polish edited latents.
+- `evidence/` supports auditioning, annotation, display, and review.
+- Docs-only belongs in `docs/research/current/` until it has a compact
+  notebook-facing primitive or cell.
+
+Do not add a framework layer to make this tidier. Prefer explicit functions,
+dataclasses, rows, and notebook imports from concrete altitude modules.
 
 ## Evidence Standard
 
@@ -88,13 +106,21 @@ Promote/revise/drop criteria
 Notebook/docs/code impact
 ```
 
-For implementation, update the relevant docs after code changes:
+For implementation, use this loop:
+
+1. Inspect current imports and nearby modules.
+2. Decide the altitude before moving or adding code.
+3. Preserve math and signatures unless the change is explicitly a redesign.
+4. Update the notebook import cell when public paths move.
+5. Update the relevant docs after code changes:
 
 - Method math: `docs/research/current/methods-and-math.md`
 - Current state/module role: `docs/research/current/research-state.md` or
   `docs/research/current/primitive-map.md`
 - Future work or promotion criteria: `docs/research/current/backlog.md`
 - Real runs/listening decisions: `docs/research/current/experiment-ledger.md`
+
+6. Validate the notebook JSON/imports and run `git diff --check`.
 
 ## References
 
