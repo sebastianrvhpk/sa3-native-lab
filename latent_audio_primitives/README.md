@@ -35,10 +35,10 @@ upstream-version-sensitive behavior behind generic abstractions.
 
 | Layer | Modules | Object | Research Role |
 |---|---|---|---|
-| Root primitives | `schema.py`, `latent_math.py`, `geometry.py`, `latent_blur.py`, `selective_renoise.py`, `flow_prompt.py`, etc. | native objects, math, measurements, operators, search | define what the lab manipulates and measures |
+| Root primitives | `schema.py`, `latent_math.py`, `geometry.py`, `latent_blur.py`, `selective_renoise.py`, `flow_prompt.py`, `prompt_semantics.py`, etc. | native objects, math, measurements, operators, search | define what the lab manipulates and measures |
 | Model boundary | `adapters/` | upstream SA3/SAME wrappers, residual hooks, tokenizer access | isolate external runtime coupling |
 | Procedures | `procedures/` | soft prompts, flow scoring, SA3 polish, selective SA3, cyclic SA3, residual sweeps | run executable notebook methods |
-| Evidence | `evidence/`, `audio_descriptors.py`, `control_lanes.py` | player panels, annotations, descriptor/lane rows | support auditioning and decisions |
+| Evidence | `evidence/`, `audio_descriptors.py`, `control_lanes.py` | player panels, annotations, descriptor/lane/disagreement rows | support auditioning and decisions |
 
 The full map lives in
 [`docs/research/current/primitive-map.md`](../docs/research/current/primitive-map.md).

@@ -5,11 +5,10 @@ from __future__ import annotations
 from typing import Any, Sequence
 
 from latent_audio_primitives.flow_prompt import (
+    FlowProbeBank,
     FlowPromptLossRow,
+    flow_probe_bank_from_values,
     flow_velocity_target,
-    logsnr_from_timestep,
-    parse_float_sequence,
-    timesteps_from_logsnr_values,
 )
 
 
@@ -30,6 +29,7 @@ def sa3_flow_losses_for_prompts(
     normalize_mse: bool = True,
     conditional_delta_weight: float = 0.0,
     velocity_convention: str = "noise_minus_data",
+    probe_bank: FlowProbeBank | None = None,
 ) -> list[float]:
     """Score prompts against target SAME/SA3 latents with a frozen flow model.
 
@@ -50,7 +50,14 @@ def sa3_flow_losses_for_prompts(
     if target.shape[0] != len(prompts):
         raise ValueError("target batch must be 1 or match number of prompts")
 
-    if timestep_values is not None:
+    probe_specs = None
+    if probe_bank is not None:
+        probe_specs = list(probe_bank.probes)
+        shared_noise = bool(probe_bank.shared_noise)
+        velocity_convention = probe_bank.velocity_convention
+        score_samples = len(probe_specs)
+        resolved_timesteps = None
+    elif timestep_values is not None:
         resolved_timesteps = [float(value) for value in timestep_values]
         score_samples = len(resolved_timesteps)
     else:
@@ -69,10 +76,14 @@ def sa3_flow_losses_for_prompts(
         losses = torch.zeros((batch,), device=device, dtype=torch.float32)
         loss_terms = 0
         for sample_index in range(score_samples):
+            probe = None if probe_specs is None else probe_specs[sample_index]
             generator = torch.Generator(device=device)
-            generator.manual_seed(int(seed) + sample_index * 1009)
+            sample_seed = int(seed) + sample_index * 1009 if probe is None else int(probe.noise_seed)
+            generator.manual_seed(sample_seed)
             if shared_noise:
-                if resolved_timesteps is not None:
+                if probe is not None:
+                    t_scalar = torch.tensor(float(probe.timestep), device=device)
+                elif resolved_timesteps is not None:
                     t_scalar = torch.tensor(resolved_timesteps[sample_index], device=device)
                 else:
                     t_scalar = min_t + (max_t - min_t) * torch.rand((), device=device, generator=generator)
@@ -80,13 +91,20 @@ def sa3_flow_losses_for_prompts(
                 noise_base = torch.randn((1, channels, frames), device=device, dtype=dtype, generator=generator)
                 noise = noise_base.expand(batch, -1, -1).contiguous()
             else:
-                if resolved_timesteps is not None:
+                if probe is not None:
+                    t = torch.full((batch,), float(probe.timestep), device=device)
+                elif resolved_timesteps is not None:
                     t = torch.full((batch,), resolved_timesteps[sample_index], device=device)
                 else:
                     t = min_t + (max_t - min_t) * torch.rand(batch, device=device, generator=generator)
                 noise = torch.randn(target.shape, device=device, dtype=dtype, generator=generator)
 
-            for noise_sign in ([1.0, -1.0] if antithetic_noise else [1.0]):
+            noise_signs = (
+                [float(probe.noise_sign)]
+                if probe is not None
+                else ([1.0, -1.0] if antithetic_noise else [1.0])
+            )
+            for noise_sign in noise_signs:
                 signed_noise = noise * noise_sign
                 t_view = t[:, None, None].to(dtype)
                 z_t = (1 - t_view) * target + t_view * signed_noise
@@ -120,39 +138,53 @@ def sa3_flow_loss_rows_for_prompts(
     normalize_mse: bool = True,
     conditional_delta_weight: float = 0.0,
     velocity_convention: str = "noise_minus_data",
+    probe_bank: FlowProbeBank | None = None,
 ) -> list[FlowPromptLossRow]:
     """Return per-prompt/per-probe losses instead of only aggregate losses."""
 
     prompts = list(prompts)
-    if timestep_values is None:
-        logsnr_list = parse_float_sequence(logsnr_values if logsnr_values is not None else [2.0, 0.0, -2.0])
-        timesteps = timesteps_from_logsnr_values(logsnr_list)
-    else:
-        timesteps = [float(value) for value in timestep_values]
-        logsnr_list = [logsnr_from_timestep(value) for value in timesteps]
+    if probe_bank is None:
+        resolved_logsnr_values = logsnr_values if logsnr_values is not None else [2.0, 0.0, -2.0]
+        probe_bank = flow_probe_bank_from_values(
+            logsnr_values=resolved_logsnr_values if timestep_values is None else None,
+            timestep_values=timestep_values,
+            seed=seed,
+            velocity_convention=velocity_convention,
+            antithetic_noise=antithetic_noise,
+            shared_noise=shared_noise,
+        )
     rows: list[FlowPromptLossRow] = []
-    for probe_index, (timestep, logsnr) in enumerate(zip(timesteps, logsnr_list)):
+    for probe in probe_bank.probes:
+        single_probe_bank = FlowProbeBank(
+            probes=[probe],
+            velocity_convention=probe_bank.velocity_convention,
+            shared_noise=probe_bank.shared_noise,
+            antithetic_noise=False,
+            seed=probe_bank.seed,
+            metadata=probe_bank.metadata,
+        )
         losses = sa3_flow_losses_for_prompts(
             stable_model,
             target_latents,
             prompts,
             duration=duration,
-            seed=int(seed) + probe_index * 1009,
-            timestep_values=[float(timestep)],
+            seed=seed,
             shared_noise=shared_noise,
             cosine_weight=cosine_weight,
-            antithetic_noise=antithetic_noise,
             normalize_mse=normalize_mse,
             conditional_delta_weight=conditional_delta_weight,
-            velocity_convention=velocity_convention,
+            velocity_convention=probe_bank.velocity_convention,
+            probe_bank=single_probe_bank,
         )
         rows.extend(
             FlowPromptLossRow(
                 prompt=prompt,
-                timestep=float(timestep),
-                logsnr=float(logsnr) if logsnr is not None else None,
+                timestep=float(probe.timestep),
+                logsnr=float(probe.logsnr) if probe.logsnr is not None else None,
                 loss=float(loss),
-                probe_index=probe_index,
+                probe_index=int(probe.probe_index),
+                noise_seed=int(probe.noise_seed),
+                noise_sign=float(probe.noise_sign),
             )
             for prompt, loss in zip(prompts, losses)
         )

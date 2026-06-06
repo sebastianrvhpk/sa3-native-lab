@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Callable, Sequence
 
 
@@ -20,6 +20,44 @@ class FlowPromptLossRow:
     logsnr: float | None
     loss: float
     probe_index: int
+    noise_seed: int | None = None
+    noise_sign: float = 1.0
+
+
+@dataclass(frozen=True, slots=True)
+class FlowProbeSpec:
+    """One reusable SA3 flow probe.
+
+    The probe stores the scalar flow time, the equivalent logSNR when known,
+    and the deterministic noise seed/sign used to form ``z_t``. It deliberately
+    stores coordinates, not tensors, so a notebook can display and serialize the
+    probe bank before running any model code.
+    """
+
+    probe_index: int
+    timestep: float
+    logsnr: float | None
+    noise_seed: int
+    noise_sign: float = 1.0
+
+
+@dataclass(frozen=True, slots=True)
+class FlowProbeBank:
+    """Reusable flow probes for fair prompt and intervention comparisons."""
+
+    probes: Sequence[FlowProbeSpec]
+    velocity_convention: str = "noise_minus_data"
+    shared_noise: bool = True
+    antithetic_noise: bool = False
+    seed: int = 0
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if self.velocity_convention not in {"noise_minus_data", "data_minus_noise"}:
+            raise ValueError("velocity_convention must be 'noise_minus_data' or 'data_minus_noise'")
+        if not self.probes:
+            raise ValueError("FlowProbeBank requires at least one probe")
+        object.__setattr__(self, "probes", tuple(self.probes))
 
 
 @dataclass(frozen=True, slots=True)
@@ -62,6 +100,100 @@ def summarize_flow_loss_rows(rows: Sequence[FlowPromptLossRow]) -> list[dict[str
         )
     summary.sort(key=lambda row: float(row["loss_mean"]))
     return summary
+
+
+def flow_probe_bank_from_values(
+    *,
+    logsnr_values: Sequence[float] | str | None = None,
+    timestep_values: Sequence[float] | str | None = None,
+    seed: int = 0,
+    velocity_convention: str = "noise_minus_data",
+    antithetic_noise: bool = False,
+    shared_noise: bool = True,
+    metadata: dict[str, Any] | None = None,
+) -> FlowProbeBank:
+    """Create deterministic flow probes from logSNR or timestep values."""
+
+    if logsnr_values is not None and timestep_values is not None:
+        raise ValueError("Provide either logsnr_values or timestep_values, not both")
+    if timestep_values is not None:
+        timesteps = parse_float_sequence(timestep_values)
+        logsnrs: list[float | None] = [logsnr_from_timestep(value) for value in timesteps]
+    else:
+        logsnrs = parse_float_sequence(logsnr_values)
+        timesteps = timesteps_from_logsnr_values(logsnrs)
+    if not timesteps:
+        raise ValueError("At least one logSNR or timestep value is required")
+
+    signs = (1.0, -1.0) if antithetic_noise else (1.0,)
+    probes: list[FlowProbeSpec] = []
+    probe_index = 0
+    base_seed = int(seed)
+    for value_index, (timestep, logsnr) in enumerate(zip(timesteps, logsnrs)):
+        for sign in signs:
+            probes.append(
+                FlowProbeSpec(
+                    probe_index=probe_index,
+                    timestep=float(timestep),
+                    logsnr=None if logsnr is None else float(logsnr),
+                    noise_seed=base_seed + value_index * 1009,
+                    noise_sign=float(sign),
+                )
+            )
+            probe_index += 1
+    return FlowProbeBank(
+        probes=probes,
+        velocity_convention=velocity_convention,
+        shared_noise=shared_noise,
+        antithetic_noise=antithetic_noise,
+        seed=base_seed,
+        metadata=dict(metadata or {}),
+    )
+
+
+def flow_probe_bank_to_manifest(probe_bank: FlowProbeBank) -> dict[str, Any]:
+    """Return a JSON-friendly manifest for a flow probe bank."""
+
+    return {
+        "velocity_convention": probe_bank.velocity_convention,
+        "shared_noise": bool(probe_bank.shared_noise),
+        "antithetic_noise": bool(probe_bank.antithetic_noise),
+        "seed": int(probe_bank.seed),
+        "metadata": dict(probe_bank.metadata),
+        "probes": [
+            {
+                "probe_index": int(probe.probe_index),
+                "timestep": float(probe.timestep),
+                "logsnr": None if probe.logsnr is None else float(probe.logsnr),
+                "noise_seed": int(probe.noise_seed),
+                "noise_sign": float(probe.noise_sign),
+            }
+            for probe in probe_bank.probes
+        ],
+    }
+
+
+def flow_probe_bank_from_manifest(manifest: dict[str, Any]) -> FlowProbeBank:
+    """Reconstruct a flow probe bank from ``flow_probe_bank_to_manifest``."""
+
+    probes = [
+        FlowProbeSpec(
+            probe_index=int(item["probe_index"]),
+            timestep=float(item["timestep"]),
+            logsnr=None if item.get("logsnr") is None else float(item["logsnr"]),
+            noise_seed=int(item["noise_seed"]),
+            noise_sign=float(item.get("noise_sign", 1.0)),
+        )
+        for item in manifest.get("probes", [])
+    ]
+    return FlowProbeBank(
+        probes=probes,
+        velocity_convention=str(manifest.get("velocity_convention", "noise_minus_data")),
+        shared_noise=bool(manifest.get("shared_noise", True)),
+        antithetic_noise=bool(manifest.get("antithetic_noise", False)),
+        seed=int(manifest.get("seed", 0)),
+        metadata=dict(manifest.get("metadata", {})),
+    )
 
 
 def prompt_leave_one_out_attribution(
