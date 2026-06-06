@@ -156,9 +156,9 @@ Status as of 2026-06-06:
 - All `latent_audio_primitives/` modules compile and import under the repo
   environment.
 - Public functions/classes have docstrings.
-- The notebook directly imports every research primitive module except two
-  indirect support modules: `controls.py` through `index.py`, and
-  `adapters/sa3_tokenizer.py` through `tokenizer_vocab.py`.
+- Descriptor-target memory scoring is owned by `index.py`; native tokenizer
+  extraction is owned by `tokenizer_vocab.py`. The former tiny support files
+  were folded because they did not own separate research concepts.
 - A synthetic smoke run covers the NumPy-only research grammar: `LatentItem`,
   summaries, geometry, periodicity, control lanes, audio descriptors, memory,
   curriculum, composition, style profiles/directions, flow-probe manifests,

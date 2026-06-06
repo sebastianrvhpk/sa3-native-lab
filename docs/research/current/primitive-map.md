@@ -89,13 +89,14 @@ The current library passed:
   periodicity, memory, composition, style, flow-probe manifests, prompt
   semantic rows, and disagreement rows.
 
-The audit found no dead research modules. Two modules are intentionally
-indirect in the notebook:
+The audit found two tiny support modules whose capabilities were real but whose
+separate files did not own independent research concepts. They were folded into
+their owning modules:
 
-- `controls.py` is called by `LatentMemoryIndex.query_controls()` and
-  `query_hybrid()`.
-- `adapters/sa3_tokenizer.py` is called by `tokenizer_vocab.py`, which the
-  notebook imports directly.
+- descriptor-target scoring now lives in `index.py` with memory search,
+  `query_controls()`, and `query_hybrid()`.
+- SA3 prompt-tokenizer extraction now lives in `tokenizer_vocab.py` with native
+  tokenizer vocabulary filtering.
 
 The main improvement need is discoverability: module tables alone do not show
 the exact notebook call grammar. Keep the following function-level map current
@@ -111,11 +112,12 @@ when primitive APIs change.
 | Periodicity | `periodicity_report(z)`, `loop_boundary_loss(z)`, `latent_autocorrelation(z)` | latent/audio segment -> loop and periodic rows | loopability microscope and bridge evidence |
 | Control lanes | `audio_envelope_lane(...)`, `latent_motion_lane(...)`, `normalize_control_lane(...)`, `control_lane_similarity(...)` | audio/latent trajectory -> time-varying lane | selector evidence for retrieval, bridge, and review |
 | Descriptors | `audio_descriptor_report(audio, sample_rate)`, `descriptor_delta(a,b)` | decoded audio -> descriptor rows | evidence utility; never promotion alone |
-| Memory | `LatentMemoryIndex(items).query(...)`, `.query_controls(...)`, `.query_hybrid(...)` | collection + query -> nearest rows | selector; requires copying/source-preservation review |
+| Memory | `LatentMemoryIndex(items).query(...)`, `.query_controls(...)`, `.query_hybrid(...)`, `control_score(...)` | collection + query/control target -> nearest rows | selector; requires copying/source-preservation review |
 | Curriculum | `build_memory_curriculum(items, cluster_count=...)`, `nearest_memory_rows(query, items)` | collection -> clusters / nearest rows | dataset design and heldout/listening planning |
 | Composition | `ranked_continuations(source, candidates)`, `ranked_bridges(start,end,candidates)`, `best_path(items,start_id,end_id)` | memory items -> continuation/bridge/path candidates | selector before audio generation |
 | SAME edits | `apply_latent_blur(...)`, `apply_latent_dsp(...)`, `graft_latent_channels(...)`, `apply_style_direction(...)` | `z0 -> z0'` | intervention candidate after direct decode and polish comparison |
 | Flow probes | `flow_probe_bank_from_values(...)`, `flow_probe_bank_to_manifest(...)`, `sa3_flow_losses_for_prompts(...)` | target `z0` + probe bank + prompts -> flow rows | SA3-native microscope/selector |
+| Native tokenizer vocabulary | `native_tokenizer_vocabulary(...)`, `extract_prompt_tokenizer(...)` | SA3 conditioner/tokenizer -> hard prompt candidates | prompt-search support, not a separate adapter layer |
 | Prompt semantics | `make_prompt_variants(...)`, `prompt_semantic_rows(...)`, `rank_prompt_semantic_rows(...)` | prompt variants + native evidence -> prompt rows | transparency before treating text as discovered description |
 | Residual probes | `SA3ActivationVectorExtractor`, `SA3AudioResidualVectorExtractor`, `fit_residual_feature_basis(...)`, `alpha_sweep(...)` | prompts/audio -> residual direction -> sweep outputs | high-risk microscope/candidate only |
 | Guidance probes | `gradient_guidance_step(...)`, `combine_guidance_losses(...)` | differentiable objective -> latent/state update | scaffold until objective movement matches listening |
@@ -130,7 +132,6 @@ upstream internals everywhere.
 |---|---|---|
 | `adapters/stable_audio3.py` | confirmed | Load/generate/encode/decode through official Stable Audio 3 and SAME wrappers; convert latents into memory items. |
 | `adapters/sa3_residual_hooks.py` | confirmed | Locate SA3 DiT layers, capture residual activations, and apply residual steering vectors. |
-| `adapters/sa3_tokenizer.py` | confirmed | Find the tokenizer owned by SA3 text conditioning. |
 
 Constraint: these modules may follow upstream SA3 internals. Keep that coupling
 isolated here or in a clearly named procedure.
@@ -145,8 +146,7 @@ inspectable across cells.
 | `schema.py` | confirmed | `LatentItem` record: ID, latent array, rate, prompt, descriptors, metadata. |
 | `io.py` | confirmed | Save/load latent items as notebook artifacts. |
 | `latent_math.py` | confirmed | Shape normalization, summaries, distances, boundary summaries. |
-| `index.py` | confirmed | Latent memory search over summaries, controls, and hybrid scores. |
-| `controls.py` | confirmed | Small scoring helpers used by the memory index. |
+| `index.py` | confirmed | Latent memory search over summaries, descriptor targets, and hybrid scores. |
 
 Narrative role: this is the lab notebook's vocabulary for "what did we make and
 how do we compare it?"
