@@ -7,8 +7,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from latent_audio_primitives.adapters.audioscope_sa3 import ActivationCollector, SteeringVectors
-from latent_audio_primitives.experiments.activation_vectors import (
+from latent_audio_primitives.adapters.sa3_residual_hooks import ActivationCollector, SteeringVectors
+from latent_audio_primitives.procedures.residual_activation_vectors import (
     ActivationExample,
     probe_layer_accuracy,
     vectors_from_examples,

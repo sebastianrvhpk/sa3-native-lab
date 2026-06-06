@@ -7,12 +7,12 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
-from latent_audio_primitives.adapters.audioscope_sa3 import (
+from latent_audio_primitives.adapters.sa3_residual_hooks import (
     ActivationCollector,
     SteeringVectors,
     mean_difference_vectors,
 )
-from latent_audio_primitives.experiments.prompt_pairs import DEFAULT_PROMPT_PAIRS, PromptPair
+from latent_audio_primitives.prompt_pairs import DEFAULT_PROMPT_PAIRS, PromptPair
 
 
 @dataclass(slots=True)

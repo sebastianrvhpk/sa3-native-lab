@@ -7,7 +7,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-from latent_audio_primitives.adapters.audioscope_sa3 import ResidualSteerer, SteeringVectors
+from latent_audio_primitives.adapters.sa3_residual_hooks import ResidualSteerer, SteeringVectors
 from latent_audio_primitives.adapters.stable_audio3 import StableAudio3Adapter, latents_to_items
 from latent_audio_primitives.io import save_items
 
