@@ -1,7 +1,7 @@
 # SA3 Native Lab Source Context
 
 Status: source context for notebook-first SA3 Native Lab research as of
-2026-06-05.
+2026-06-06.
 
 This document answers: which external papers/repos shaped the notebook, what
 idea each source contributes, how that idea affects the local research, and
@@ -13,6 +13,25 @@ and repositories are the sources.
 For a source-checked current architecture scout and translation into concrete
 SA3/SAME notebook experiments, see
 [Frontier architecture transfer](frontier-architecture-transfer.md).
+
+## 2026-06-06 Source Re-Audit Lens
+
+This pass re-checked primary arXiv pages, official repos, official project
+pages, and model/dataset pages where available. The cleaner local repo makes the
+source-to-notebook mapping more direct:
+
+| Source pressure | What it means locally | Notebook landing |
+|---|---|---|
+| SA3/SAME release | frozen SA3 flow and SAME latents are the native objects | runtime boundary, SAME benches, SA3 flow prompt bench |
+| Semantic latent planning | several sources separate semantic/event layout from acoustic rendering | SAME bottleneck stress tests, prompt semantic audits, flow prompt panels |
+| Time-varying controls | audio control papers emphasize loudness, pitch, event rolls, structure, and local edits | control lanes, residual/trajectory probes, source-preservation packets |
+| Long-form music | newer systems split lyrics, structure, segments, tracks, or blocks from synthesis | memory/composition, bridge search, segment prompt plans |
+| Evaluation and preference data | music evaluation is moving toward detailed listening preference records | player annotations, evidence ledger, promote/revise/drop discipline |
+| Semantic codecs/tokenizers | audio-tokenizer work is converging on semantic/acoustic disentanglement | compare against SAME, but do not replace SAME as the local object |
+
+The practical rule is unchanged: external sources motivate experiments; local
+claims require notebook artifacts, descriptor rows, memory/source checks, and
+listening notes.
 
 ## Primary SA3/SAME Sources
 
@@ -154,6 +173,27 @@ L_flow(prompt) = E ||v_theta(z_t, t, C(prompt)) - u_t||^2
 - Notebook impact: motivates null-condition inversion: optimize SA3 null/unconditional conditioning against a target audio flow while keeping the human prompt editable.
 - Status: source context; local method is scaffold/probe.
 
+### In-Context Prompt Editing For Conditional Audio Generation
+
+- Source: [In-Context Prompt Editing](https://arxiv.org/abs/2311.00895)
+- Relevant idea: Retrieval-edited prompts can reduce distribution shift between free-form user language and model training captions.
+- Notebook impact: Supports a prompt semantic transparency packet: raw prompt, retrieved/rewrite variants, flow-ranked prompts, generated audio, and listening notes.
+- Status: source context; local transfer is a concrete backlog candidate.
+
+### MusicFlow
+
+- Source: [MusicFlow](https://arxiv.org/abs/2410.20478)
+- Relevant idea: Cascaded flow matching over semantic and acoustic features, with masked prediction for infilling and continuation.
+- Notebook impact: Reinforces the local split between prompt/semantic planning, SA3 flow scoring, SAME latent edits, and acoustic polish.
+- Status: source context; local transfer belongs in segment prompt plans and direct-decode versus polish audits.
+
+### SemanticAudio
+
+- Source: [SemanticAudio](https://arxiv.org/abs/2601.21402)
+- Relevant idea: A two-stage flow-matching system first generates compact semantic/event features, then synthesizes acoustic latents; it also edits by steering semantic trajectories from source/target text velocity fields.
+- Notebook impact: Strongly supports treating SA3 flow loss, SAME summaries, and prompt variants as separate evidence lanes: semantic agreement is not the same as acoustic preservation.
+- Status: source context; local transfer is prompt semantic audit plus flow-score predictive validity.
+
 ## Guidance, Inverse Problems, and Control
 
 ### Diffusion Posterior Sampling
@@ -240,6 +280,13 @@ L_flow(prompt) = E ||v_theta(z_t, t, C(prompt)) - u_t||^2
 - Notebook impact: Baseline context for cross-model comparisons.
 - Status: source context.
 
+### TangoFlux
+
+- Source: [TangoFlux](https://arxiv.org/abs/2412.21037)
+- Relevant idea: Fast text-to-audio flow matching with CLAP-ranked preference optimization.
+- Notebook impact: Supports keeping CLAP-like scores as optional comparison lanes, not local truth; any preference signal must be checked against listening notes.
+- Status: source context; local transfer is evidence/ledger discipline, not training.
+
 ## Audio Generation Baselines
 
 ### AudioLDM
@@ -295,6 +342,15 @@ L_flow(prompt) = E ||v_theta(z_t, t, C(prompt)) - u_t||^2
 - Notebook impact: external baseline context for the external comparison bench and dual-track/source-donor evaluation ideas.
 - Status: source context.
 
+### AudioX
+
+- Sources:
+  - [AudioX paper](https://arxiv.org/abs/2503.10522)
+  - [AudioX project](https://zeyuet.github.io/AudioX/)
+- Relevant idea: Unified diffusion-transformer audio/music generation conditioned by text, video, image, music, and audio signals.
+- Notebook impact: Source context for external comparison packets and multimodal-control thinking; local work should only import artifacts or metrics, not another runtime stack.
+- Status: source context; external comparison only.
+
 ## Multimodal Architecture Transfer Sources
 
 ### DiT
@@ -346,6 +402,15 @@ L_flow(prompt) = E ||v_theta(z_t, t, C(prompt)) - u_t||^2
 - Notebook impact: Candidate external temporal descriptor for comparing against SAME control lanes.
 - Status: source context; local integration is a hypothesis.
 
+### PrismAudio
+
+- Sources:
+  - [PrismAudio paper](https://arxiv.org/abs/2511.18833)
+  - [PrismAudio model page](https://huggingface.co/FunAudioLLM/PrismAudio)
+- Relevant idea: Video-to-audio generation decomposes evaluation into semantic consistency, temporal synchrony, aesthetic quality, and spatial accuracy, with preference-style reward signals.
+- Notebook impact: The useful transfer is the evaluation decomposition: split evidence panels rather than collapse all quality into one scalar.
+- Status: source context; local transfer is evidence packet design, not reward training.
+
 ## Neural Audio Representation Anchors
 
 ### SoundStream
@@ -369,12 +434,37 @@ L_flow(prompt) = E ||v_theta(z_t, t, C(prompt)) - u_t||^2
 - Notebook impact: Background for codec-latent baselines and external comparisons; SAME remains the local native object.
 - Status: source context.
 
+### MOSS-Audio-Tokenizer
+
+- Sources:
+  - [MOSS-Audio-Tokenizer paper](https://arxiv.org/abs/2602.10934)
+  - [OpenMOSS/MOSS-Audio-Tokenizer](https://github.com/OpenMOSS/MOSS-Audio-Tokenizer)
+- Relevant idea: Scalable transformer-based discrete audio tokenization trained end-to-end across speech, sound, and music.
+- Notebook impact: Context for why SAME should be stress-tested as a semantic/acoustic bottleneck; local work does not need another tokenizer unless used for external comparison.
+- Status: source context; docs-only unless a comparison artifact is imported.
+
+### SemanticVocoder
+
+- Source: [SemanticVocoder](https://arxiv.org/abs/2602.23333)
+- Relevant idea: Replace acoustic VAE latents with semantic latents for generation, trying to bridge audio understanding and generation.
+- Notebook impact: Adds pressure to measure whether SAME summaries behave semantically, acoustically, or as a mixed bottleneck under edits.
+- Status: source context; local transfer is SAME measurement and prompt semantic audit.
+
 ### Generative Audio Compression
 
 - Source: [High-Fidelity Generative Audio Compression at 0.275kbps](https://arxiv.org/abs/2602.00648)
 - Relevant idea: Task-oriented ultra-low-bitrate compression that relies on a powerful generative receiver prior.
 - Notebook impact: Motivates SAME bottleneck stress tests and direct-decode versus SA3-polish comparisons.
 - Status: source context; local transfer is a hypothesis.
+
+### S-PRESSO
+
+- Sources:
+  - [S-PRESSO paper](https://arxiv.org/abs/2602.15082)
+  - [S-PRESSO project](https://zineblahrichi.github.io/s-presso/)
+- Relevant idea: Ultra-low-bitrate sound-effect compression with diffusion autoencoders and offline quantization, where a generative decoder reconstructs plausible audio from sparse embeddings.
+- Notebook impact: Sharpens the SAME question: what is preserved in the latent, and what does SA3/SAME reconstruct or hallucinate during direct decode and polish?
+- Status: source context; local transfer is the bottleneck and polish audit.
 
 ### RAVE
 
@@ -389,6 +479,26 @@ L_flow(prompt) = E ||v_theta(z_t, t, C(prompt)) - u_t||^2
 - Relevant idea: Interpretable signal-processing structure can be integrated with neural systems.
 - Notebook impact: Use classic DSP descriptors as measurement hooks and differentiable side losses, not as fake labels for what SAME channels mean.
 - Status: source context.
+
+## Evaluation, Semantics, and Listening Sources
+
+### MusicSem
+
+- Sources:
+  - [MusicSem paper](https://arxiv.org/abs/2602.17769)
+  - [MusicSem project](https://music-sem-web.vercel.app/)
+- Relevant idea: Natural music descriptions contain descriptive, atmospheric, situational, metadata-related, and contextual semantics, which are broader than ordinary caption datasets.
+- Notebook impact: Provides a source-backed vocabulary for prompt semantic audits and listening tags without pretending those tags are model-ground-truth.
+- Status: source context; local transfer is evidence vocabulary and prompt audit design.
+
+### Music Arena
+
+- Sources:
+  - [Music Arena paper](https://arxiv.org/abs/2507.20900)
+  - [Music Arena dataset page](https://huggingface.co/datasets/music-arena/music-arena-dataset)
+- Relevant idea: Text-to-music evaluation benefits from live pairwise listening preferences, natural-language feedback, and transparent data release policy.
+- Notebook impact: Strong support for the current ledger/player approach: repeated pairwise listening notes are more honest than premature scalar reward training.
+- Status: source context; local transfer is annotation and report discipline.
 
 ## Activation and Representation Steering
 

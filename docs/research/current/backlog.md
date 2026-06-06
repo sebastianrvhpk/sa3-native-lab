@@ -302,20 +302,79 @@ Drop or revise if:
 - report generation becomes more important than evidence review,
 - it distracts from notebook-first research.
 
+## Gap 12. Prompt Semantic Transparency
+
+Evidence gap: prompt wording, source/listener semantics, flow score, and audible
+prompt adherence can disagree, but the notebook does not yet preserve those
+disagreements as evidence.
+
+Native transition: `raw prompt -> prompt variants -> shared flow scores -> generated audio -> semantic/listening evidence`.
+
+Current support: flow prompt scoring, hard/readable prompt search, prompt
+attribution, tokenizer vocabulary, player annotations, source context from
+MusicSem and in-context prompt editing.
+
+Next run: for one target/source clip, compare raw user prompt, rewritten prompt,
+flow-ranked readable prompt, and a deliberately bad prompt under the same flow
+probe bank and evidence packet.
+
+Promote if:
+
+- prompt variants remain inspectable,
+- better prompts improve both flow rows and listening notes,
+- semantic tags explain what changed or was lost.
+
+Drop or revise if:
+
+- rewrites only optimize flow score,
+- prompt variants become generic,
+- semantic tags add noise instead of review value.
+
+## Gap 13. Semantic Bottleneck Disagreement Panel
+
+Evidence gap: SAME summaries, flow losses, descriptors, external semantic
+embeddings, and listening notes may rank the same output differently.
+
+Native transition: `edited z0 / prompt condition -> direct decode / SA3 polish / optional external judge -> disagreement rows`.
+
+Current support: SAME latent edits, direct decode versus polish cells,
+flow_prompt rows, descriptors, memory index, optional external embedding source
+context, player annotations.
+
+Next run: add one compact disagreement table to a direct-decode versus SA3
+polish packet: SAME distance, nearest-memory row, flow loss, descriptor delta,
+optional external semantic distance, and listening decision.
+
+Promote if:
+
+- disagreement identifies failure modes that single metrics hide,
+- the table changes promote/revise/drop decisions,
+- the panel stays cheap enough for routine Colab use.
+
+Drop or revise if:
+
+- metrics disagree randomly,
+- external judges dominate SAME-native evidence,
+- the panel slows the notebook without improving decisions.
+
 ## Priority Order
 
 1. Reproducible flow probe evidence.
 2. Source preservation versus copying panel.
 3. Direct decode versus SA3 polish audit.
-4. Flow score predictive validity.
-5. Control-lane and geometry selection value.
-6. Residual causality.
-7. Guidance objective honesty.
-8. Null-condition editing.
-9. Seed and recipe repeatability.
-10. External comparison packets.
-11. Reportable evidence packets.
+4. Prompt semantic transparency.
+5. Flow score predictive validity.
+6. Semantic bottleneck disagreement panel.
+7. Control-lane and geometry selection value.
+8. Residual causality.
+9. Guidance objective honesty.
+10. Null-condition editing.
+11. Seed and recipe repeatability.
+12. External comparison packets.
+13. Reportable evidence packets.
 
-The first three stabilize evidence. The next five test whether the strongest
-methods deserve promotion. The last three make the lab easier to review and
-compare without adding extra infrastructure.
+The first three stabilize evidence. The next three test the clearest source
+research insight from the re-audit: semantic agreement, acoustic preservation,
+and flow agreement can disagree. The middle four test whether interventions
+deserve promotion. The last three make the lab easier to repeat, compare, and
+review without adding extra infrastructure.

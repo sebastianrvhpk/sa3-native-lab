@@ -1,7 +1,7 @@
 # Frontier Architecture Transfer
 
 Status: source-checked multimodal research scout for SA3 Native Lab as of
-2026-06-05.
+2026-06-06.
 
 This document answers: what recent audio and multimodal architecture changes
 matter for this notebook, what transfers into SA3/SAME-native experiments, and
@@ -16,7 +16,7 @@ the notebook measures it.
 Evidence labels:
 
 - `source-confirmed`: directly supported by a linked source checked on
-  2026-06-05.
+  2026-06-06.
 - `repo-inferred`: plausible from local notebook/primitives, but not run here.
 - `hypothesis`: useful research direction, not yet validated locally.
 - `unknown`: needs Colab execution, source inspection, or listening evidence.
@@ -49,6 +49,10 @@ identify the native object each frontier method manipulates
 |---|---:|---|---|---|
 | [Stable Audio 3](https://arxiv.org/abs/2605.17991) | 2026-05-18 | Fast latent audio generation/editing over SAME, variable length, inpainting/continuation, adversarial post-training. | Treat SA3 flow fields, SAME latents, and sampler states as primary native objects. | source-confirmed |
 | [SAME](https://arxiv.org/abs/2605.18613) | 2026-05-18 | 4096x temporal compression, transformer autoencoder, semantic regularization, phase-aware losses. | Make the notebook a science of what the SAME bottleneck preserves, exposes, and hides. | source-confirmed |
+| [SemanticAudio](https://arxiv.org/abs/2601.21402) | 2026-01 | Two-stage semantic-planner/acoustic-synthesizer flow matching plus training-free text-guided semantic trajectory editing. | Separate prompt semantics, flow agreement, SAME edit movement, and acoustic polish in evidence packets. | source-confirmed |
+| [SemanticVocoder](https://arxiv.org/abs/2602.23333) | 2026-02 | Semantic latents as the generation/understanding bridge instead of ordinary acoustic VAE latents. | Test whether SAME behaves as semantic bottleneck, acoustic bottleneck, or mixed object. | source-confirmed |
+| [MOSS-Audio-Tokenizer](https://arxiv.org/abs/2602.10934) | 2026-02 | Scalable end-to-end transformer audio tokenizer across speech, sound, and music. | Codec/tokenizer context only; use as pressure for SAME bottleneck audits, not replacement code. | source-confirmed |
+| [S-PRESSO](https://arxiv.org/abs/2602.15082) | 2026-02 | Ultra-low-bitrate continuous/discrete embeddings decoded through a diffusion prior. | Motivates direct-decode versus polish tests that separate preserved information from prior-filled reconstruction. | source-confirmed |
 | [ACE-Step](https://arxiv.org/abs/2506.00045) | 2025-05-28 | Music foundation model combining diffusion generation, DCAE, lightweight linear transformer, semantic alignment. | Compare SA3's SAME bottleneck against other semantic/music bottleneck claims; use external outputs as external comparison packets. | source-confirmed |
 | [ACE-Step 1.5](https://arxiv.org/abs/2602.00744) | 2026-02 | LM planner plus DiT-style rendering, long compositions, editing/personalization claims. | Use "planner vs renderer" as a notebook lens: separate prompt plans, flow scoring, acoustic polish, and listening decisions. | source-confirmed |
 | [DiffRhythm 2](https://arxiv.org/abs/2510.22950) | 2025-10 | Semi-autoregressive block flow matching for long songs, low-frame-rate music VAE, preference optimization. | Transfer block/segment ideas into SA3 continuation, bridge search, and control-lane experiments. | source-confirmed |
@@ -57,11 +61,15 @@ identify the native object each frontier method manipulates
 | [MMAudio](https://github.com/hkchengrex/MMAudio) | CVPR 2025 | Multimodal joint training for video-to-audio synthesis, CLIP/synchrony features, audio VAE. | Use video-to-audio as a reminder that temporal synchrony is measurable; transfer only the measurement idea unless video inputs become a notebook source. | source-confirmed |
 | [Sora technical report](https://openai.com/research/video-generation-models-as-world-simulators) | 2024-02 | Spacetime latent patches with diffusion transformer over variable durations/resolutions. | Map "patch persistence" to audio segments/control lanes/loop regions, not to visual UI metaphors. | source-confirmed |
 | [Movie Gen](https://huggingface.co/papers/2410.13720) | 2024-10 | Media foundation models with synchronized audio, video editing, personalization, and video-to-audio tasks. | Use synchronized-audio evaluation as source context for temporal alignment and source-preservation panels. | source-confirmed |
+| [AudioX](https://arxiv.org/abs/2503.10522) | 2025-03 | Unified diffusion-transformer anything-to-audio generation with multimodal controls. | External comparison and multimodal-condition context only; local work remains SA3/SAME-native. | source-confirmed |
+| [PrismAudio](https://arxiv.org/abs/2511.18833) | 2025-11 | Video-to-audio generation with decomposed reasoning and multi-dimensional rewards. | Transfer evaluation decomposition, not reward training: semantic, temporal, aesthetic, spatial/source panels. | source-confirmed |
 | [DiT](https://arxiv.org/abs/2212.09748) | 2022-12 | Diffusion transformers scale with depth/width/token count. | Supports treating SA3's transformer/flow internals as scalable representation objects for residual probes. | source-confirmed |
 | [FLUX.1 Kontext](https://arxiv.org/abs/2506.15742) | 2025-06 | Flow-matching image generation/editing unified by in-context text/image sequence concatenation and multi-turn consistency benchmarks. | Transfer the benchmark shape: test multi-turn prompt/audio edits for preservation, drift, and consistency. | source-confirmed |
 | [Consistency Models](https://arxiv.org/abs/2303.01469) | 2023-03 | One/few-step generative models and distillation-style acceleration. | Measure step-count, adversarial/post-training, and polish tradeoffs in SA3 rather than implementing a new sampler family. | source-confirmed |
 | [ImageBind](https://arxiv.org/abs/2305.05665) | 2023-05 | Joint embedding across image, text, audio, depth, thermal, and IMU using paired data. | Optional external embedding lane for cross-modal retrieval/novelty checks; do not treat it as SAME-native truth. | source-confirmed |
 | [T-CLAP](https://arxiv.org/abs/2404.17806) | 2024-04 | Temporal-enhanced language-audio contrastive learning for retrieval/generation tasks. | Strong candidate for external temporal descriptor/lane comparison against SAME control lanes. | source-confirmed |
+| [MusicSem](https://arxiv.org/abs/2602.17769) | 2026-02 | Natural music-description dataset with broader semantic categories than ordinary captions. | Source-backed vocabulary for prompt semantic audits and listening tags. | source-confirmed |
+| [Music Arena](https://arxiv.org/abs/2507.20900) | 2025-07 | Live pairwise text-to-music evaluation with detailed preferences and transparent data policy. | Validates the notebook ledger/player route before any reward model. | source-confirmed |
 | [EnCodec](https://arxiv.org/abs/2210.13438) | 2022-10 | High-fidelity neural audio compression with quantized latent space and perceptual/adversarial training. | Historical codec baseline for why SAME is not merely compression; compare bottleneck behavior, not architecture code. | source-confirmed |
 | [Descript Audio Codec](https://github.com/descriptinc/descript-audio-codec) | 2023 | High-fidelity RVQGAN codec, 44.1 kHz support, drop-in codec for audio language modeling. | Baseline for codec-latent thinking; external only unless used in external comparison packets. | source-confirmed |
 | [Generative Audio Compression](https://arxiv.org/abs/2602.00648) | 2026-02 | Task-oriented ultra-low-bitrate semantic compression with powerful decoder prior. | Directly motivates SAME bottleneck stress tests: which information is waveform, semantic, structural, or prior-filled? | source-confirmed |
@@ -89,9 +97,10 @@ Notebook impact:
 
 ### 2. Semantic Compression Is A Research Object
 
-SAME, ACE-Step's DCAE path, neural codecs, and generative compression sources
-all converge on bottlenecks that are not transparent waveforms. The notebook
-should ask:
+SAME, SemanticAudio, SemanticVocoder, MOSS-Audio-Tokenizer, S-PRESSO,
+ACE-Step's DCAE path, neural codecs, and generative compression sources all
+converge on bottlenecks that are not transparent waveforms. The notebook should
+ask:
 
 ```text
 what does the bottleneck preserve?
@@ -105,6 +114,7 @@ Notebook impact:
 - SAME bottleneck stress tests,
 - direct decode versus SA3 polish comparisons,
 - descriptor deltas plus nearest-memory checks,
+- semantic prompt category rows,
 - latent DSP promoted only after listening evidence.
 
 ### 3. Long-Form Music Needs Structure Before Sound
@@ -179,15 +189,29 @@ Notebook impact:
 
 ### 7. Preference Loops Should Start As Ledger Loops
 
-Long-form music sources increasingly mention preference optimization or human
-alignment. This notebook does not have enough data for RLHF. It does have
-listening annotations.
+Long-form music, TangoFlux, Music Arena, and PrismAudio increasingly mention
+preference optimization, human feedback, or reward decomposition. This notebook
+does not have enough data for reward training. It does have listening
+annotations.
 
 Notebook impact:
 
 - use annotations to select/promote recipes,
 - keep scalar rewards provisional,
 - avoid optimizing to a tiny subjective dataset.
+
+### 8. Prompt Language Is An Experimental Variable
+
+MusicSem and in-context prompt editing make the prompt distribution problem
+explicit: user language, model-training captions, generated prompt variants, and
+listener tags are different objects.
+
+Notebook impact:
+
+- keep raw prompt, rewritten prompt, and flow-found prompt side by side,
+- score all variants against the same flow probe bank,
+- annotate listening notes with semantic categories,
+- do not treat text similarity as audio similarity.
 
 ## Cross-Modal Transfer Matrix
 
@@ -200,6 +224,9 @@ Notebook impact:
 | Neural codec/generative compression | SAME bottleneck stress tests | direct decode, SA3 polish, descriptors | separates semantic from acoustic preservation | not all codec lessons transfer to continuous SAME latents |
 | Contrastive multimodal embeddings | Optional external semantic/lane descriptors | CLAP/T-CLAP/ImageBind versus SAME memory | improves retrieval or novelty checks | external embeddings can reward wrong semantics |
 | Preference optimization | Annotation-weighted recipe selection | player notes, ledger decisions | repeated decisions identify robust recipes | tiny preference sets are easy to overfit |
+| Semantic planner/acoustic renderer | Prompt plan, SA3 flow score, SAME edit, acoustic polish as separate rows | flow loss, descriptor deltas, listening notes per stage | stage-specific failure is visible | do not invent a planner framework before evidence |
+| Prompt language datasets | Raw/retrieved/rewritten/readable prompt variants | MusicSem-style semantic tags, flow ranks, audition notes | prompt rewrites improve both flow score and listening | prompt polish can hide model failure |
+| Video-to-audio reward decomposition | Split evaluation panels instead of one quality score | semantic, temporal, aesthetic, source/spatial-style rows | disagreement helps diagnose failures | reward training is out of scope |
 
 ## Candidate Notebook Experiments
 
@@ -318,6 +345,52 @@ Promote if: repeated annotations identify robust recipes and failure families.
 
 Drop or revise if: notes are too sparse or inconsistent to guide decisions.
 
+### G. Prompt Semantic Transparency Packet
+
+Object: raw prompt, retrieved/rewrite prompt variants, readable prompt-search
+candidates, target/source audio, and generated outputs.
+
+Intervention: compare raw user language against prompt variants informed by
+MusicSem-style semantic categories and in-context prompt editing.
+
+Measurement: shared flow-probe scores, prompt attribution rows, semantic tag
+rows, descriptor deltas, nearest-memory rows, and listening notes.
+
+Claim: makes prompt language an auditable variable instead of hidden prompt
+engineering.
+
+Touchpoints: SA3 flow prompt bench, memory and composition bench, player,
+annotations, and ledger.
+
+Promote if: rewritten/readable variants improve both flow evidence and listening
+without erasing user intent.
+
+Drop or revise if: prompt rewrites only optimize the flow score or make outputs
+generic.
+
+### H. Semantic Bottleneck Disagreement Panel
+
+Object: SAME latent, semantic prompt tags, descriptor rows, external embedding
+scores, and decoded/polished audio.
+
+Intervention: run the same edited latent through direct decode, SA3 polish, and
+optional external semantic judges.
+
+Measurement: disagreement between SAME summary distance, descriptor deltas,
+flow prompt loss, external semantic distance, and listening notes.
+
+Claim: separates semantic preservation, acoustic preservation, and prior-filled
+reconstruction.
+
+Touchpoints: SAME measurement bench, SAME intervention bench, SA3 flow prompt
+bench, external comparison bench, and ledger.
+
+Promote if: disagreement panels expose actionable failure families for latent
+edits and prompt scoring.
+
+Drop or revise if: the panel is too expensive or too noisy for routine Colab
+review.
+
 ## Priority Order
 
 Use the measurement-first backlog sequence:
@@ -331,10 +404,13 @@ probe-bank cache
 -> external temporal embedding lane
 -> step/polish tradeoff audit
 -> annotation-weighted recipe selection
+-> prompt semantic transparency packet
+-> semantic bottleneck disagreement panel
 ```
 
-The first two stabilize evidence. The next four import the best architecture
-lessons. The last item waits until enough listening notes exist.
+The first two stabilize evidence. The next four import architecture lessons.
+Annotation-weighted selection waits until enough listening notes exist. The
+final two make prompt semantics and semantic/acoustic disagreement transparent.
 
 ## Unknowns
 
