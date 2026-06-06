@@ -7,9 +7,9 @@ This repo keeps the expanded Colab notebook as the research instrument. The docs
 are organized as a lab record:
 
 - `current/research-state.md`: what exists now.
-- `current/architecture-ontology.md`: architecture-layer map for SAME-only,
-  SA3-only, SA3 internal trajectory, coupled SA3-over-SAME editing, and
-  evidence/listening science.
+- `current/architecture-ontology.md`: four-layer research map for SAME-only,
+  SA3 flow/conditioning, SA3 internal trajectory, coupled SA3-over-SAME
+  editing, plus the evidence utilities that review all layers.
 - `current/methods-and-math.md`: how the notebook methods work.
 - `current/primitive-map.md`: how the helper modules cluster into a coherent
   notebook primitive library.
@@ -27,9 +27,9 @@ are organized as a lab record:
 - [Research state](current/research-state.md): current project direction, repo
   surfaces, native object graph, workbenches, maturity board, active helper
   modules, artifact graph, runtime assumptions, and current unknowns.
-- [Architecture ontology](current/architecture-ontology.md): canonical research
-  layers, object transitions, placement rules, existing coverage, new research
-  programs, and priority order.
+- [Architecture ontology](current/architecture-ontology.md): canonical four
+  research layers, evidence utilities, object transitions, placement rules,
+  existing coverage, new research programs, and priority order.
 - [Methods and math](current/methods-and-math.md): SA3/SAME objects, frozen-model
   principle, flow scoring, object-transition equations, latent DSP, geometry,
   control observability, guidance, residual steering, and implementation safety

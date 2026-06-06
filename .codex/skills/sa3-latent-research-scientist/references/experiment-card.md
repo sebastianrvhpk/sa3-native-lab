@@ -5,9 +5,9 @@ Use this template for proposed notebook experiments.
 ```text
 Title:
 
-Architecture layer:
+Research layer / evidence utility:
 SAME representation / SA3 flow-conditioning / SA3 internal trajectory /
-SA3-over-SAME coupled editing / evidence-listening.
+SA3-over-SAME coupled editing / evidence utility.
 
 Object:
 Native object under study: audio / SAME z0 / flow state z_t / prompt condition /

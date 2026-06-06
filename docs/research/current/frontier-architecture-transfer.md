@@ -43,14 +43,15 @@ identify the native object each frontier method manipulates
 -> test with descriptor, latent, flow, source-preservation, and listening evidence
 ```
 
-The architecture-layer landing must be explicit:
+The research-layer landing must be explicit. Evidence is a utility surface that
+reviews all layers, not a fifth generative layer:
 
 ```text
 SAME Representation Science
 SA3 Flow and Conditioning Science
 SA3 Internal Trajectory Science
 SA3-over-SAME Coupled Editing
-Evidence and Listening Science
+Evidence utilities: player, annotations, disagreement, manifests, ledger
 ```
 
 See [Architecture ontology](architecture-ontology.md) for the canonical local

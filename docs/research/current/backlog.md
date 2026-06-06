@@ -32,7 +32,7 @@ SAME representation
 SA3 flow/conditioning
 SA3 internal trajectory
 SA3-over-SAME coupled editing
-evidence/listening
+evidence utility
 ```
 
 ## Current Maturity Reference
@@ -384,7 +384,7 @@ architecture-level implementations that make the gaps easier to run.
 | SA3 polish/rescue audit | SA3-over-SAME coupled editing | Feed degraded or edited SAME latents into polish/init paths and classify rescue, erasure, invention, or preservation. |
 | Trajectory objective honesty packet | SA3 internal trajectory | Compare guidance-objective improvement against descriptor, source-preservation, and listening rows. |
 | Segment and continuation structure bench | SA3-over-SAME coupled editing / memory | Compare global prompt continuation against chunk/control-lane/bridge-planned continuation. |
-| Architecture-layer evidence field | evidence/listening | Add architecture-layer labels to manifests and ledger rows for every completed run. |
+| Research-layer evidence field | evidence utility | Add research-layer/evidence-utility labels to manifests and ledger rows for every completed run. |
 
 ## Priority Order
 

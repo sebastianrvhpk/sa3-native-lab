@@ -35,6 +35,11 @@ The practical rule is unchanged: external sources motivate experiments; local
 claims require notebook artifacts, descriptor rows, memory/source checks, and
 listening notes.
 
+The source map now lands into four research layers: SAME representation, SA3
+flow/conditioning, SA3 internal trajectory, and SA3-over-SAME coupled editing.
+Evidence utilities then review results across those layers; they should not be
+mistaken for another model-object layer.
+
 ## Primary SA3/SAME Sources
 
 ### Stable Audio 3 Paper

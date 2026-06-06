@@ -14,8 +14,8 @@ measurements, claim maturity, and decisions explicit.
 Before editing code or docs, state the research frame:
 
 ```text
-Architecture layer: SAME representation / SA3 flow-conditioning /
-  SA3 internal trajectory / SA3-over-SAME coupled editing / evidence-listening
+Research layer / evidence utility: SAME representation / SA3 flow-conditioning /
+  SA3 internal trajectory / SA3-over-SAME coupled editing / evidence utility
 Object: what native object is under study?
 Transition: what maps into what, or what state is compared?
 Operation: observe, select, intervene, render, compare, or decide?
@@ -31,7 +31,9 @@ If the user asks to implement immediately, still write this frame first in one
 compact paragraph, then proceed. Keep altitude as code placement, not as the
 scientific claim itself.
 
-Architecture layer is not the same as notebook workbench:
+Research layer is not the same as notebook workbench. There are four
+model-native research layers; evidence utilities are cross-cutting review and
+promotion infrastructure:
 
 - SAME representation: SAME on its own, direct decode, geometry, memory,
   bottleneck stress, latent DSP, control lanes.
@@ -41,8 +43,8 @@ Architecture layer is not the same as notebook workbench:
   objectives, layer/time causality.
 - SA3-over-SAME coupled editing: SAME edits entering SA3 polish, inpainting,
   continuation, audio-to-audio, rescue/erasure tests.
-- Evidence-listening: descriptors, player notes, disagreement rows, manifests,
-  and ledger decisions.
+- Evidence utility: descriptors, player notes, disagreement rows, manifests,
+  and ledger decisions that audit all four research layers.
 
 ## Repo Context To Inspect
 
@@ -176,7 +178,7 @@ For implementation, use this loop:
 - Real runs/listening decisions: `docs/research/current/experiment-ledger.md`
 - Run protocol or workbench execution order:
   `docs/research/current/run-protocol.md`
-- Architecture-layer framing:
+- Research-layer/evidence-utility framing:
   `docs/research/current/architecture-ontology.md`
 
 6. Validate the notebook JSON/imports and run `git diff --check`.

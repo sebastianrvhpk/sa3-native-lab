@@ -11,7 +11,7 @@ is required, and when a method moves from microscope to kept method.
 Every run starts with seven fields:
 
 ```text
-Architecture layer:
+Research layer / evidence utility:
 Object:
 Transition:
 Operation:
@@ -20,9 +20,10 @@ Claim:
 Decision:
 ```
 
-- `Architecture layer`: `SAME representation`, `SA3 flow/conditioning`,
-  `SA3 internal trajectory`, `SA3-over-SAME coupled editing`, or
-  `evidence/listening`.
+- `Research layer / evidence utility`: one of the four research layers
+  (`SAME representation`, `SA3 flow/conditioning`, `SA3 internal trajectory`,
+  `SA3-over-SAME coupled editing`) or `evidence utility` when the run only
+  improves review, annotation, disagreement, manifests, or ledger decisions.
 - `Object`: native object under study: audio waveform, SAME `z0`, SA3 flow
   state `z_t`, prompt condition `C(p)`, residual activation, memory item,
   dataset cluster, control lane, or evidence packet.
@@ -78,14 +79,15 @@ plain SA3/audio-to-audio or direct-decode baseline.
 The notebook is organized as workbenches over object transitions. A workbench is
 not a claim by itself; it is where claims are tested.
 
-Architecture layer explains why the workbench exists:
+Research layer explains why the workbench exists. Evidence utility workbenches
+review claims across layers:
 
 ```text
 SAME representation -> SAME measurement, SAME intervention, memory
 SA3 flow/conditioning -> SA3 flow prompt bench
 SA3 internal trajectory -> residual and trajectory bench
 SA3-over-SAME coupled editing -> SAME intervention, continuation, polish, inpainting
-evidence/listening -> evidence packet setup, ledger and promotion board
+evidence utility -> evidence packet setup, ledger and promotion board
 ```
 
 | Workbench | Native objects | Typical transitions | Main question |
@@ -122,7 +124,7 @@ For a method to be reviewable, collect:
 
 ```text
 commit hash
-architecture layer
+research layer / evidence utility
 object transition and method name
 claim maturity before the run
 model ID / SA3 checkpoint

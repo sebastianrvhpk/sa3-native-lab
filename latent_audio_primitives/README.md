@@ -40,19 +40,21 @@ upstream-version-sensitive behavior behind generic abstractions.
 | Procedures | `procedures/` | soft prompts, flow scoring, SA3 polish, selective SA3, cyclic SA3, residual sweeps | run executable notebook methods |
 | Evidence | `evidence/`, `audio_descriptors.py`, `control_lanes.py` | player panels, annotations, descriptor/lane/disagreement rows | support auditioning and decisions |
 
-Architecture layers are different from code altitude:
+Research layers are different from code altitude:
 
 ```text
 SAME representation: root SAME math/operators plus evidence.
 SA3 flow-conditioning: flow rows plus SA3 procedures.
 SA3 internal trajectory: residual adapters/procedures plus residual measurements.
 SA3-over-SAME coupled editing: SAME edits plus SA3 polish/inpaint/continue procedures.
-Evidence-listening: evidence modules, manifests, and ledger docs.
 ```
+
+Evidence utilities are shared review surfaces: evidence modules, manifests, and
+ledger docs audit every research layer instead of defining a fifth layer.
 
 The full map lives in
 [`docs/research/current/primitive-map.md`](../docs/research/current/primitive-map.md).
-The architecture layer map lives in
+The research-layer ontology lives in
 [`docs/research/current/architecture-ontology.md`](../docs/research/current/architecture-ontology.md).
 The bottom-up object/capability map lives in
 [`docs/research/current/capability-map.md`](../docs/research/current/capability-map.md).

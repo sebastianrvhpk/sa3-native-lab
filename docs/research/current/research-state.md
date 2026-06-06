@@ -77,8 +77,8 @@ control lanes, residual probes, listening notes, and experiment manifests
 
 ## Architecture Ontology
 
-The project is not only a list of notebook workbenches. It has five
-architecture layers:
+The project is not only a list of notebook workbenches. It has four
+model-native research layers plus cross-cutting evidence utilities:
 
 | Layer | Main question | Notebook implication |
 |---|---|---|
@@ -86,7 +86,10 @@ architecture layers:
 | SA3 Flow and Conditioning Science | What does frozen SA3 know through prompt conditions, flow timesteps, and velocity fields? | Use shared flow probe banks, prompt variants, attribution, and condition inversion as SA3-native evidence. |
 | SA3 Internal Trajectory Science | What do residual activations and sampler states reveal or causally control? | Keep residual/guidance work as microscope or high-risk candidate until layer/time sweeps survive audio review. |
 | SA3-over-SAME Coupled Editing | How does SA3 read, repair, erase, or amplify SAME latents? | Compare every coupled edit against direct SAME decode and plain SA3 polish. |
-| Evidence and Listening Science | How are claims reviewed and promoted? | Descriptors, memory rows, disagreement rows, player annotations, manifests, and ledger decisions are first-class methods. |
+
+Evidence utilities are not a fifth model-object layer. They are the review
+system shared by all four layers: descriptors, memory rows, disagreement rows,
+player annotations, manifests, and ledger decisions.
 
 The canonical layer map is [Architecture ontology](architecture-ontology.md).
 

@@ -62,17 +62,19 @@ procedure   = run a research method with SA3/SAME
 evidence    = audition, annotate, display, or review results
 ```
 
-Architecture layer is separate from code altitude:
+Research layer is separate from code altitude:
 
 ```text
 SAME Representation Science can use root modules and evidence modules.
 SA3 Flow and Conditioning Science usually uses root flow rows plus procedures.
 SA3 Internal Trajectory Science usually uses adapters, procedures, and residual root measurements.
 SA3-over-SAME Coupled Editing uses root SAME edits plus SA3 procedures.
-Evidence and Listening Science lives in evidence modules and ledger docs.
 ```
 
-The architecture-layer map lives in
+Evidence utilities live in evidence modules and ledger docs. They support all
+four research layers instead of forming a fifth research layer.
+
+The research-layer ontology lives in
 [Architecture ontology](architecture-ontology.md).
 
 ### 1. Runtime and Model Boundary

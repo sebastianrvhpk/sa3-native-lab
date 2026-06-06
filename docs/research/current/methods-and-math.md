@@ -49,11 +49,13 @@ z_memory = transpose z_sa3 from C x T to T x C
 z_sa3 = transpose z_memory from T x C to C x T
 ```
 
-## Architecture-Layer Math
+## Research-Layer Math
 
 The same notebook can study SAME on its own, SA3 on its own over SAME-shaped
 latents, SA3's internal trajectory, or the coupled SA3-over-SAME editing path.
-Keep these objects separate:
+These are the four research layers. Evidence utilities review the measurements
+from all four without becoming a separate model-object layer. Keep the native
+objects separate:
 
 ```text
 SAME Representation:
