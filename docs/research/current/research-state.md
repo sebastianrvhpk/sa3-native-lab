@@ -77,8 +77,8 @@ control lanes, residual probes, listening notes, and experiment manifests
 
 ## Object Transition Workbenches
 
-The notebook should read as a lab instrument over native-object transitions, not
-as a catalog of product features or historical modes.
+The notebook should read as a lab instrument over native-object transitions,
+with each workbench moving from object to evidence to decision.
 
 | Workbench | Main transition | Main artifacts | Current status |
 |---|---|---|---|

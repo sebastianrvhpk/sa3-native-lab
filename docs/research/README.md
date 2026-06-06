@@ -56,7 +56,8 @@ are organized as a lab record:
 ## Repo-Local Research Skills
 
 - `.codex/skills/sa3-latent-research-scientist`: frames notebook work as
-  object, intervention, measurement, claim, and decision.
+  object transition, operation, measurement, claim maturity, evidence packet,
+  and decision.
 - `.codex/skills/multimodal-ai-research-scout`: surveys current multimodal AI
   sources and translates architecture changes into SA3/SAME notebook
   experiments.

@@ -18,9 +18,12 @@ Every primitive should make these fields legible from a notebook cell:
 
 ```text
 Object: native object under study
-Intervention or measurement: what the primitive changes or reports
+Transition: what maps into what, or what state is compared
+Operation: observe, select, intervene, render, compare, or decide
+Measurement: what evidence is collected
 Evidence artifact: row, dataclass, audio path, latent item, descriptor, or note
-Decision use: how the result supports promote / revise / drop / microscope only
+Maturity/decision use: how the result supports microscope / selector /
+  intervention candidate / promoted method / revise / drop
 ```
 
 Prefer compact functions, dataclasses, and JSON-friendly rows. Keep upstream
@@ -28,7 +31,7 @@ runtime access in `adapters/`, executable method runs in `procedures/`, and
 audition/annotation support in `evidence/`. Do not hide
 upstream-version-sensitive behavior behind generic abstractions.
 
-## Altitude Layers
+## Code Altitude Layers
 
 | Layer | Modules | Object | Research Role |
 |---|---|---|---|

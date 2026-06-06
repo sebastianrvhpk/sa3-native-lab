@@ -38,17 +38,20 @@ Each primitive should expose the lab frame, not hide it:
 
 ```text
 Object: native object under study
-Intervention or measurement: what changes or what is reported
+Transition: what maps into what, or what state is compared
+Operation: observe, select, intervene, render, compare, or decide
+Measurement: what evidence is collected
 Evidence artifact: dataclass, row, latent item, descriptor dict, audio output, or note
-Decision use: promote, revise, drop, unknown, or microscope only
+Maturity/decision use: microscope, selector, intervention candidate, promoted
+  method, revise, drop, or unknown
 ```
 
 This is why the package favors small functions, dataclasses, and JSON-friendly
 rows over a new runtime framework.
 
-## Altitude Layers
+## Code Altitude Layers
 
-The library is organized by research altitude. The notebook workbenches name
+The library is organized by code altitude. The notebook workbenches name
 native-object transitions; the package layout names what kind of code a module
 owns.
 
@@ -59,7 +62,7 @@ procedure   = run a research method with SA3/SAME
 evidence    = audition, annotate, display, or review results
 ```
 
-### 1. Model Boundary
+### 1. Runtime and Model Boundary
 
 Purpose: touch external SA3/SAME objects without making the notebook depend on
 upstream internals everywhere.
@@ -73,7 +76,7 @@ upstream internals everywhere.
 Constraint: these modules may follow upstream SA3 internals. Keep that coupling
 isolated here or in a clearly named procedure.
 
-### 2. Native Records and Persistence
+### 2. Audio/SAME Records and Persistence
 
 Purpose: make latents, summaries, memory entries, and saved artifacts
 inspectable across cells.
@@ -89,7 +92,7 @@ inspectable across cells.
 Narrative role: this is the lab notebook's vocabulary for "what did we make and
 how do we compare it?"
 
-### 3. Evidence and Observability
+### 3. Measurement and Evidence Surfaces
 
 Purpose: turn latent/audio behavior into rows, scores, and plots before claiming
 an operator is useful.
@@ -106,7 +109,7 @@ an operator is useful.
 Narrative role: these modules keep the project honest. A control is not real
 until it is measurable, audible, and repeatable.
 
-### 4. SAME Representation
+### 4. SAME Measurement and Intervention Bench
 
 Purpose: probe what SAME preserves, erases, linearizes, or makes editable.
 
@@ -120,10 +123,10 @@ Purpose: probe what SAME preserves, erases, linearizes, or makes editable.
 | `periodic.py` | confirmed | Autocorrelation, periodicity, spectral centroid, and loop boundary probes. |
 | `looping.py` | confirmed | Cyclic latent/audio roll, loop preview, seam metrics, and inpaint bounds. |
 
-Narrative role: this bench asks what the SAME bottleneck itself affords before
+Narrative role: this workbench asks what the SAME bottleneck itself affords before
 claiming SA3 prompt or sampler control.
 
-### 5. SA3 Flow and Conditioning
+### 5. SA3 Flow Prompt Bench
 
 Purpose: ask frozen SA3 what prompt or conditioning object explains a target
 latent under its own flow field.
@@ -138,10 +141,10 @@ latent under its own flow field.
 
 Narrative role: SA3-native prompt inversion by teacher-forced flow agreement.
 
-### 6. Causal Steering
+### 6. Residual and Trajectory Bench
 
-Purpose: test whether an inference-time intervention changes generated audio,
-not just whether a signal is measurable.
+Purpose: observe residual/trajectory structure and test whether inference-time
+interventions change generated audio, not just whether a signal is measurable.
 
 | Module | Evidence | Role |
 |---|---|---|
@@ -158,7 +161,7 @@ not just whether a signal is measurable.
 Narrative role: these are the highest-risk methods. They stay microscopes or
 scaffolds until causal interventions survive audio review and baselines.
 
-### 7. Dataset Memory and Composition
+### 7. Memory and Composition Bench
 
 Purpose: turn collections into memory, donor selection, curriculum, bridges, or
 composition plans without confusing source preservation with copying.
@@ -174,7 +177,7 @@ composition plans without confusing source preservation with copying.
 Narrative role: memory is a selection and evidence system, not a generic bucket
 for every dataset-level method.
 
-### 8. Evidence Decision Protocol
+### 8. Ledger and Promotion Board
 
 Purpose: turn many clips and many variants into decisions.
 
@@ -236,8 +239,8 @@ prompt pairs or labeled audio
 
 - `latent_audio_primitives/__init__.py` intentionally stays small. Import from
   concrete altitude modules in the notebook.
-- The notebook setup cell is grouped by altitude. Keep future primitive imports
-  in those groups so the notebook keeps reading as a lab workflow.
+- The notebook setup cell is grouped by code altitude. Keep future primitive
+  imports in those groups so the notebook keeps reading as a lab workflow.
 - Sampler-level helpers depend on upstream `stable_audio_3` internals. That is
   acceptable for research notebooks, but every such helper should live in
   `procedures/` and stay clearly labeled as SA3-version-sensitive.

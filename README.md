@@ -63,7 +63,7 @@ Transformers' optional scientific/vision import paths from reaching stale binary
 packages after Torch/NumPy are repinned. Restart the Colab runtime once after
 the install phase so loaded binary modules are cleared from memory.
 
-## Native Spaces
+## Native Objects And Workbenches
 
 ```text
 audio x -> SAME encoder E -> latent z
@@ -74,15 +74,17 @@ SAME decoder D(z) -> audio
 
 The research layer focuses on:
 
-- SAME latent memory and statistics
-- audio-to-soft-prompt inversion using SA3-native flow losses
-- hard prompt search with readable prompt constraints
-- SAME latent style profiles and directions
-- SAME geometry, control lanes, and descriptor evidence
-- SA3 residual activation steering
-- audio-derived residual vectors
-- continuation/inpainting as composition
-- LatCH-style control heads
+- audio/SAME preparation and `LatentItem` records,
+- SAME measurement and intervention over geometry, control lanes, latent DSP,
+  style profiles, blur, renoise, grafts, and loop repair,
+- SA3-native flow prompt scoring, soft prompt inversion, and readable prompt
+  search,
+- residual and trajectory probes, steering candidates, and guidance candidates,
+- memory, composition, curriculum, donor selection, and source-preservation
+  checks,
+- external comparison packets for Underfit or other generated artifacts,
+- evidence packets with descriptors, player annotations, ledgers, and
+  promote/revise/drop decisions.
 
 ## Research Docs
 
@@ -105,7 +107,7 @@ The primitive library map is:
 
 `docs/research/current/primitive-map.md`
 
-It explains how `latent_audio_primitives/` is organized by research altitude:
+It explains how `latent_audio_primitives/` is organized by code altitude:
 root native objects/math/operators, `adapters/` for upstream SA3/SAME access,
 `procedures/` for executable model-calling methods, and `evidence/` for
 auditioning, annotation, and review.

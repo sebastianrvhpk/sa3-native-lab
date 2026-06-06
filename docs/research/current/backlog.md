@@ -269,7 +269,8 @@ fixed SA3 prompts through the same descriptor/player/ledger path.
 
 Promote if:
 
-- comparisons are repeatable without local app/training infrastructure,
+- comparisons are repeatable without local training or model-management
+  infrastructure,
 - fixed task packets expose what frozen SA3/SAME cannot do,
 - results remain honest about external dependencies.
 
@@ -288,7 +289,7 @@ Native transition: `manifest rows + audio + descriptors + annotations -> static 
 Current support: manifests, player, descriptors, annotations, ledger template.
 
 Next run: export one completed evidence packet into a static Markdown/JSON
-report without adding product UI.
+report without adding another tool surface.
 
 Promote if:
 
@@ -298,7 +299,7 @@ Promote if:
 
 Drop or revise if:
 
-- report generation becomes a product surface,
+- report generation becomes more important than evidence review,
 - it distracts from notebook-first research.
 
 ## Priority Order
@@ -317,4 +318,4 @@ Drop or revise if:
 
 The first three stabilize evidence. The next five test whether the strongest
 methods deserve promotion. The last three make the lab easier to review and
-compare without drifting into app infrastructure.
+compare without adding extra infrastructure.
