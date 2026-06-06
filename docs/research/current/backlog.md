@@ -384,6 +384,7 @@ architecture-level implementations that make the gaps easier to run.
 | SA3 polish/rescue audit | SA3-over-SAME coupled editing | Feed degraded or edited SAME latents into polish/init paths and classify rescue, erasure, invention, or preservation. |
 | Trajectory objective honesty packet | SA3 internal trajectory | Compare guidance-objective improvement against descriptor, source-preservation, and listening rows. |
 | Segment and continuation structure bench | SA3-over-SAME coupled editing / memory | Compare global prompt continuation against chunk/control-lane/bridge-planned continuation. |
+| Primitive function smoke packet | evidence utility | Keep a tiny synthetic run that exercises the NumPy-only primitive grammar: records, summaries, geometry, lanes, descriptors, memory, composition, style, flow-probe manifests, prompt rows, and disagreement rows. |
 | Research-layer evidence field | evidence utility | Add research-layer/evidence-utility labels to manifests and ledger rows for every completed run. |
 
 ## Priority Order
@@ -406,7 +407,8 @@ architecture-level implementations that make the gaps easier to run.
 16. Null-condition editing.
 17. Seed and recipe repeatability.
 18. External comparison packets.
-19. Reportable evidence packets.
+19. Primitive function smoke packet.
+20. Reportable evidence packets.
 
 The first two establish SAME on its own and SA3-over-SAME survival behavior.
 The next six stabilize SA3 flow/conditioning evidence and disagreement panels.

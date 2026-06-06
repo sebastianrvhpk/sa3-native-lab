@@ -149,6 +149,25 @@ should be updated from `experiment-ledger.md`, not from speculation.
 The detailed module map is [Primitive map](primitive-map.md). The object and
 capability map is [Capability map](capability-map.md).
 
+## Primitive Function Audit
+
+Status as of 2026-06-06:
+
+- All `latent_audio_primitives/` modules compile and import under the repo
+  environment.
+- Public functions/classes have docstrings.
+- The notebook directly imports every research primitive module except two
+  indirect support modules: `controls.py` through `index.py`, and
+  `adapters/sa3_tokenizer.py` through `tokenizer_vocab.py`.
+- A synthetic smoke run covers the NumPy-only research grammar: `LatentItem`,
+  summaries, geometry, periodicity, control lanes, audio descriptors, memory,
+  curriculum, composition, style profiles/directions, flow-probe manifests,
+  prompt semantic rows, and disagreement rows.
+
+Conclusion: the current library shape is coherent. The remaining issue is not
+whether these files are needed; it is whether each notebook method earns
+promotion through repeated evidence packets.
+
 ## Artifact Graph
 
 ```text

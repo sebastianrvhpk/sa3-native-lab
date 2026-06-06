@@ -77,6 +77,50 @@ four research layers instead of forming a fifth research layer.
 The research-layer ontology lives in
 [Architecture ontology](architecture-ontology.md).
 
+## 2026-06-06 Function Audit
+
+The current library passed:
+
+- Python compile check for all `latent_audio_primitives/` modules.
+- Import smoke for every root, adapter, procedure, and evidence module under
+  the repo environment.
+- Public-symbol docstring audit.
+- A synthetic primitive smoke over NumPy-only records, descriptors, geometry,
+  periodicity, memory, composition, style, flow-probe manifests, prompt
+  semantic rows, and disagreement rows.
+
+The audit found no dead research modules. Two modules are intentionally
+indirect in the notebook:
+
+- `controls.py` is called by `LatentMemoryIndex.query_controls()` and
+  `query_hybrid()`.
+- `adapters/sa3_tokenizer.py` is called by `tokenizer_vocab.py`, which the
+  notebook imports directly.
+
+The main improvement need is discoverability: module tables alone do not show
+the exact notebook call grammar. Keep the following function-level map current
+when primitive APIs change.
+
+## Function-Level Call Grammar
+
+| Research role | Primary calls | Object transition | Evidence / decision use |
+|---|---|---|---|
+| SAME record | `LatentItem(...)`, `LatentItem.from_channel_first(...)`, `save_item(...)`, `load_item(...)` | SAME latent tensor -> notebook memory item | artifact identity, latent rate, descriptors, metadata |
+| SAME summary | `latent_summary(z)`, `boundary_summary(z, side, k)` | `z0` -> mean/std/velocity summary or boundary state | nearest-memory, bridge, source-preservation rows |
+| SAME geometry | `fit_latent_geometry(items)`, `geometry_report(items)`, `mahalanobis_summary_distance(a,b,geometry)`, `covariance_transport(z, reference)` | latent collection -> PCA geometry or transported latent | microscope first; intervention only after decode/listening |
+| Periodicity | `periodicity_report(z)`, `loop_boundary_loss(z)`, `latent_autocorrelation(z)` | latent/audio segment -> loop and periodic rows | loopability microscope and bridge evidence |
+| Control lanes | `audio_envelope_lane(...)`, `latent_motion_lane(...)`, `normalize_control_lane(...)`, `control_lane_similarity(...)` | audio/latent trajectory -> time-varying lane | selector evidence for retrieval, bridge, and review |
+| Descriptors | `audio_descriptor_report(audio, sample_rate)`, `descriptor_delta(a,b)` | decoded audio -> descriptor rows | evidence utility; never promotion alone |
+| Memory | `LatentMemoryIndex(items).query(...)`, `.query_controls(...)`, `.query_hybrid(...)` | collection + query -> nearest rows | selector; requires copying/source-preservation review |
+| Curriculum | `build_memory_curriculum(items, cluster_count=...)`, `nearest_memory_rows(query, items)` | collection -> clusters / nearest rows | dataset design and heldout/listening planning |
+| Composition | `ranked_continuations(source, candidates)`, `ranked_bridges(start,end,candidates)`, `best_path(items,start_id,end_id)` | memory items -> continuation/bridge/path candidates | selector before audio generation |
+| SAME edits | `apply_latent_blur(...)`, `apply_latent_dsp(...)`, `graft_latent_channels(...)`, `apply_style_direction(...)` | `z0 -> z0'` | intervention candidate after direct decode and polish comparison |
+| Flow probes | `flow_probe_bank_from_values(...)`, `flow_probe_bank_to_manifest(...)`, `sa3_flow_losses_for_prompts(...)` | target `z0` + probe bank + prompts -> flow rows | SA3-native microscope/selector |
+| Prompt semantics | `make_prompt_variants(...)`, `prompt_semantic_rows(...)`, `rank_prompt_semantic_rows(...)` | prompt variants + native evidence -> prompt rows | transparency before treating text as discovered description |
+| Residual probes | `SA3ActivationVectorExtractor`, `SA3AudioResidualVectorExtractor`, `fit_residual_feature_basis(...)`, `alpha_sweep(...)` | prompts/audio -> residual direction -> sweep outputs | high-risk microscope/candidate only |
+| Guidance probes | `gradient_guidance_step(...)`, `combine_guidance_losses(...)` | differentiable objective -> latent/state update | scaffold until objective movement matches listening |
+| Evidence utilities | `display_audio_player(...)`, `save_audio_annotation(...)`, `make_disagreement_row(...)` | outputs + rows + notes -> evidence packet | review, disagreement, and ledger decisions |
+
 ### 1. Runtime and Model Boundary
 
 Purpose: touch external SA3/SAME objects without making the notebook depend on

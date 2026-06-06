@@ -59,6 +59,12 @@ class FlowProbeBank:
             raise ValueError("FlowProbeBank requires at least one probe")
         object.__setattr__(self, "probes", tuple(self.probes))
 
+    @property
+    def probe_count(self) -> int:
+        """Number of concrete timestep/noise probes in the bank."""
+
+        return len(self.probes)
+
 
 @dataclass(frozen=True, slots=True)
 class PromptAttributionRow:
@@ -159,6 +165,7 @@ def flow_probe_bank_to_manifest(probe_bank: FlowProbeBank) -> dict[str, Any]:
         "shared_noise": bool(probe_bank.shared_noise),
         "antithetic_noise": bool(probe_bank.antithetic_noise),
         "seed": int(probe_bank.seed),
+        "probe_count": int(probe_bank.probe_count),
         "metadata": dict(probe_bank.metadata),
         "probes": [
             {

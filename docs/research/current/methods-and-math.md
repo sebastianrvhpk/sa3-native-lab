@@ -49,6 +49,28 @@ z_memory = transpose z_sa3 from C x T to T x C
 z_sa3 = transpose z_memory from T x C to C x T
 ```
 
+Local SAME summary convention:
+
+```text
+summary(z) = concat(
+  mean_t z_t,
+  std_t z_t,
+  mean_t |z_t - z_{t-1}|
+)
+```
+
+For ordinary SAME `D=256`, the default summary has dimension `3D = 768`.
+This is not a learned semantic embedding. It is a deliberately plain baseline
+for memory search, geometry rows, source-preservation checks, curriculum
+clustering, and guidance scaffolds.
+
+Boundary summaries use explicit start/end windows:
+
+```text
+boundary_summary(z, side="start"|"end", k)
+  -> (mean boundary state, mean boundary velocity)
+```
+
 ## Research-Layer Math
 
 The same notebook can study SAME on its own, SA3 on its own over SAME-shaped
@@ -195,6 +217,7 @@ FlowProbeBank = {
   shared_noise,
   antithetic_noise,
   seed,
+  probe_count,
   probes: [{probe_index, timestep, logSNR, noise_seed, noise_sign}]
 }
 ```

@@ -89,6 +89,17 @@ utilities:
 | Audio player and annotations | output paths -> audition notes | decide | evidence | confirmed | routine ledger use |
 | Semantic disagreement panel | artifact/prompt rows -> evidence conflicts | decide | evidence | microscope/decision support | show conflicts change promote/revise/drop choices |
 
+Function-audit interpretation:
+
+- `confirmed` means the code imports, has a notebook-facing API, and appears in
+  the current notebook or a direct dependency path.
+- `microscope` means the function can expose structure but must not be called a
+  control until decoded audio and listening support it.
+- `selector` means the function can rank candidates; the next proof is whether
+  the ranking improves listening or source-preservation decisions.
+- `intervention candidate` means the function can alter a native object; the
+  next proof is source/baseline/method audio packets across clips and seeds.
+
 ## Artifact Flow
 
 ```text
