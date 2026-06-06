@@ -206,8 +206,8 @@ The stable section order is:
 3. Audio and SAME object preparation.
 4. SAME representation bench.
 5. SAME memory and composition bench.
-6. SA3 flow prompt bench.
-7. Residual and trajectory bench.
+6. SA3 flow and conditioning science.
+7. SA3 internal trajectory science.
 8. SA3-over-SAME coupled editing bench.
 9. External comparison bench.
 10. Ledger and decision board.

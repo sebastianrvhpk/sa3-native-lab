@@ -1085,9 +1085,9 @@ intervenability: can an edit reliably move h(z) and the audio?
 | Covariance transport | `geometry.py` | SAME representation / coupled editing benches | no for saved latents, yes for fresh encode/decode | no |
 | Fourier/periodic latent probes | `periodic.py` | SAME representation bench | no for saved latents | no |
 | Neural latent DSP | `latent_dsp.py`, `audio_descriptors.py` | SAME representation / coupled editing benches | yes for decode/polish | no |
-| Direct gradient guidance | `guidance.py` | Residual and trajectory bench | yes for sampler integration | no base training |
-| Prompt inversion | `prompt_optimization.py`, `flow_prompt.py`, `procedures/flow_scoring.py` | SA3 flow prompt bench | yes | no |
-| Residual feature discovery | `residual_features.py` | Residual and trajectory bench | yes for activation capture | no |
+| Direct gradient guidance | `guidance.py` | SA3 internal trajectory science | yes for sampler integration | no base training |
+| Prompt inversion | `prompt_optimization.py`, `flow_prompt.py`, `procedures/flow_scoring.py` | SA3 flow/conditioning science | yes | no |
+| Residual feature discovery | `residual_features.py` | SA3 internal trajectory science | yes for activation capture | no |
 | Control observability | `observability.py` | SAME representation / SA3 internal trajectory benches | no for saved labeled latents | sidecar/probe only |
 | Control lanes | `control_lanes.py` | Evidence packet setup / SAME memory and composition bench | no for saved latents/audio descriptors, yes for fresh encode/decode | no |
 | Memory curriculum | `curriculum.py`, `index.py` | SAME memory and composition bench | no for saved memory | no |

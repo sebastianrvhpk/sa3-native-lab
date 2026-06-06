@@ -84,8 +84,8 @@ review claims across layers:
 
 ```text
 SAME representation -> SAME representation, direct decode, memory, control lanes
-SA3 flow/conditioning -> SA3 flow prompt bench
-SA3 internal trajectory -> residual and trajectory bench
+SA3 flow/conditioning -> SA3 flow and conditioning science
+SA3 internal trajectory -> SA3 internal trajectory science
 SA3-over-SAME coupled editing -> edited SAME latents entering SA3 polish, continuation, inpainting
 evidence utility -> evidence packet setup, ledger and decision board
 ```
@@ -97,8 +97,8 @@ evidence utility -> evidence packet setup, ledger and decision board
 | Audio and SAME preparation | audio waveform, `LatentItem`, SAME `z0` | audio -> `z0`; `z0` -> saved item | What object exactly enters each method? |
 | SAME representation bench | SAME `z0`, summaries, geometry, lanes, direct decodes | `z0` -> rows/reports/audio | What does SAME expose before SA3 intervenes? |
 | SAME memory and composition bench | memory rows, clusters, bridges, donors | collection -> selector -> output | How do collections support selection without copying? |
-| SA3 flow prompt bench | `z_t`, prompt condition `C(p)` | target `z0` -> probe bank -> prompt/condition score | Which prompts or conditions explain audio under frozen SA3 flow? |
-| Residual and trajectory bench | residual activations, sampler states | activation/state -> intervention -> output | Which internal interventions causally move audio? |
+| SA3 flow and conditioning science | `z_t`, prompt condition `C(p)` | target `z0` -> probe bank -> prompt/condition score | Which prompts or conditions explain audio under frozen SA3 flow? |
+| SA3 internal trajectory science | residual activations, sampler states | activation/state -> intervention -> output | Which internal interventions causally move audio? |
 | SA3-over-SAME coupled editing bench | edited SAME latents | `z0` -> `z0'` -> direct decode / SA3 polish | Which latent edits survive, get erased, or get amplified by SA3? |
 | External comparison bench | imported audio/checkpoints/run notes | external audio output -> evidence packet | How do imported outputs compare under the same local evidence? |
 | Ledger and decision board | evidence packets and decisions | evidence -> maturity update | What is real, repeatable, useful, or only diagnostic? |

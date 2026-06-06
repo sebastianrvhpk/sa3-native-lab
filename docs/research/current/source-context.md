@@ -24,7 +24,7 @@ source-to-notebook mapping more direct:
 
 | Source pressure | What it means locally | Notebook landing |
 |---|---|---|
-| SA3/SAME release | frozen SA3 flow and SAME latents are the native objects | runtime boundary, SAME benches, SA3 flow prompt bench |
+| SA3/SAME release | frozen SA3 flow and SAME latents are the native objects | runtime boundary, SAME representation, SA3 flow/conditioning |
 | Semantic latent planning | several sources separate semantic/event layout from acoustic rendering | SAME bottleneck stress tests, prompt semantic audits, flow prompt panels |
 | Time-varying controls | audio control papers emphasize loudness, pitch, event rolls, structure, and local edits | control lanes, residual/trajectory probes, source-preservation packets |
 | Long-form music | newer systems split lyrics, structure, segments, tracks, or blocks from synthesis | memory/composition, bridge search, segment prompt plans |
@@ -136,7 +136,7 @@ L_flow(prompt) = E ||v_theta(z_t, t, C(prompt)) - u_t||^2
 ```
 
 - Status: source context; implemented locally through `flow_prompt.py`,
-  `procedures/flow_scoring.py`, and the SA3 flow prompt bench.
+  `procedures/flow_scoring.py`, and SA3 flow/conditioning science.
 
 ### EDM
 
@@ -149,7 +149,7 @@ L_flow(prompt) = E ||v_theta(z_t, t, C(prompt)) - u_t||^2
 
 - Source: [Classifier-Free Diffusion Guidance](https://arxiv.org/abs/2207.12598)
 - Relevant idea: Conditional/unconditional branch combination for prompt guidance.
-- Notebook impact: Motivates explicit null/blank conditioning probes in the SA3 flow prompt bench.
+- Notebook impact: Motivates explicit null/blank conditioning probes in SA3 flow/conditioning science.
 - Status: source context; local null-condition work is a probe.
 
 ### Textual Inversion
@@ -171,7 +171,7 @@ L_flow(prompt) = E ||v_theta(z_t, t, C(prompt)) - u_t||^2
 - Source: [Prompt-to-Prompt](https://arxiv.org/abs/2208.01626)
 - Relevant idea: Prompt edits can control generated content through model internals/attention.
 - Notebook impact: Supports prompt microscope, token attribution, and prompt replacement panels.
-- Status: source context; the SA3 flow prompt bench implements flow-based prompt attribution.
+- Status: source context; SA3 flow/conditioning science implements flow-based prompt attribution.
 
 ### Null-Text Inversion
 

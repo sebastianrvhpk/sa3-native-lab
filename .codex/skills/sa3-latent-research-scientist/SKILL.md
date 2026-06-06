@@ -72,21 +72,22 @@ Frame methods as evidence workbenches over native-object transitions:
   decisions.
 - Audio and SAME preparation: maps source audio into SAME `z0` and renderable
   audio outputs.
-- SAME measurement bench: observes latent geometry, descriptors, periodicity,
-  control lanes, and source-preservation signals.
-- SA3 flow prompt bench: scores prompt/state relations through shared flow
+- SAME representation science: observes latent geometry, descriptors,
+  periodicity, control lanes, direct decode, memory, and source-preservation
+  signals.
+- SA3 flow and conditioning science: scores prompt/state relations through shared flow
   probe banks, prompt semantic rows, timestep/logSNR panels, and
   convention-explicit losses.
-- SAME intervention bench: edits `z0` or control lanes and tests whether audio
-  moves predictably.
-- Residual and trajectory bench: captures activations, directions, and sampler
-  paths without pretending probes are controls.
-- Memory and composition bench: indexes, retrieves, grafts, or compares donors
+- SA3 internal trajectory science: captures activations, directions, and
+  sampler paths without pretending probes are controls.
+- SA3-over-SAME coupled editing: edits SAME latents and tests direct decode
+  against SA3 polish, continuation, inpainting, and audio-to-audio paths.
+- SAME memory and composition: indexes, retrieves, bridges, or compares donors
   while guarding against copying.
-- External comparison bench: evaluates Underfit or other exported audio
+- External comparison: evaluates Underfit or other exported audio
   artifacts through the local evidence packet, without importing training
   scaffolding or another semantic judge into the repo.
-- Ledger and promotion board: turns evidence packets into promote/revise/drop
+- Ledger and decision board: turns evidence packets into promote/revise/drop
   decisions.
 
 Use these operation roles:

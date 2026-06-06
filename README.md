@@ -90,11 +90,11 @@ manifests, and ledger decisions review claims from all four layers.
 The current notebook workbenches implement those layers through:
 
 - audio/SAME preparation and `LatentItem` records,
-- SAME measurement and intervention over geometry, control lanes, latent DSP,
-  style profiles, blur, renoise, grafts, and loop repair,
+- SAME representation science over geometry, control lanes, direct decode,
+  memory, latent DSP, style profiles, blur, renoise, grafts, and loop repair,
 - SA3-native flow prompt scoring, soft prompt inversion, and readable prompt
   search,
-- residual and trajectory probes, steering candidates, and guidance candidates,
+- SA3 internal trajectory probes, steering candidates, and guidance candidates,
 - memory, composition, curriculum, donor selection, and source-preservation
   checks,
 - external comparison packets for Underfit or other generated artifacts,

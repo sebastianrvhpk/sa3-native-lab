@@ -107,8 +107,8 @@ next, then SA3 flow, SA3 internals, and finally coupled SA3-over-SAME editing.
 | Audio and SAME preparation | audio -> SAME `z0` -> `LatentItem` | saved items, summaries, chunk windows | implemented |
 | SAME representation bench | `z0` -> summaries/geometry/lanes/direct decodes | descriptor, geometry, periodicity, control-lane, bottleneck rows | implemented |
 | SAME memory and composition bench | collection -> selector -> continuation/bridge/donor | memory indices, curriculum rows, ranked bridges | implemented |
-| SA3 flow prompt bench | target `z0` -> flow probes -> prompt/condition score | shared probe banks, flow-loss rows, attribution, semantic prompt variants, soft prompts, prompt candidates | implemented plus null-inversion scaffold |
-| Residual and trajectory bench | activation/state -> intervention -> output | residual vectors, alpha sweeps, guided variants | implemented plus high-risk scaffolds |
+| SA3 flow and conditioning science | target `z0` -> flow probes -> prompt/condition score | shared probe banks, flow-loss rows, attribution, semantic prompt variants, soft prompts, prompt candidates | implemented plus null-inversion scaffold |
+| SA3 internal trajectory science | activation/state -> intervention -> output | residual vectors, alpha sweeps, guided variants | implemented plus high-risk scaffolds |
 | SA3-over-SAME coupled editing bench | `z0` -> edited `z0'` -> direct decode / SA3 polish | direct decodes, SA3-polished audio, deltas, source-preservation rows | implemented |
 | External comparison bench | external artifacts -> evidence packet | Underfit/cross-model audio, descriptor/player rows | external/scaffold |
 | Ledger and decision board | evidence packet -> maturity decision | ledger rows, promote/revise/drop decisions | template ready; no completed runs recorded |
@@ -154,14 +154,13 @@ capability map is [Capability map](capability-map.md).
 
 ## Primitive Function Audit
 
-Status as of 2026-06-06:
-
 - All `latent_audio_primitives/` modules compile and import under the repo
   environment.
 - Public functions/classes have docstrings.
-- Descriptor-target memory scoring is owned by `index.py`; native tokenizer
-  extraction is owned by `tokenizer_vocab.py`. The former tiny support files
-  were folded because they did not own separate research concepts.
+- Descriptor-target memory scoring is owned by `index.py` with memory search,
+  `query_controls()`, and `query_hybrid()`.
+- Native tokenizer extraction is owned by `tokenizer_vocab.py` with native
+  vocabulary filtering and preview helpers.
 - A synthetic smoke run covers the NumPy-only research grammar: `LatentItem`,
   summaries, geometry, periodicity, control lanes, audio descriptors, memory,
   curriculum, composition, style profiles/directions, flow-probe manifests,

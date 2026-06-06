@@ -277,7 +277,7 @@ turn, listener notes.
 Claim: tests whether SA3/SAME can support in-context-like iterative audio
 editing.
 
-Touchpoints: SA3 flow prompt bench and residual/trajectory guidance scaffolds.
+Touchpoints: SA3 flow/conditioning science and SA3 internal trajectory guidance scaffolds.
 
 Promote if: edits accumulate predictably without destroying declared source
 identity.
@@ -375,7 +375,7 @@ rows, descriptor deltas, nearest-memory rows, and listening notes.
 Claim: makes prompt language an auditable variable instead of hidden prompt
 engineering.
 
-Touchpoints: SA3 flow prompt bench, memory and composition bench, player,
+Touchpoints: SA3 flow/conditioning science, SAME memory and composition, player,
 annotations, and ledger.
 
 Promote if: rewritten/readable variants improve both flow evidence and listening

@@ -77,7 +77,7 @@ four research layers instead of forming a fifth research layer.
 The research-layer ontology lives in
 [Architecture ontology](architecture-ontology.md).
 
-## 2026-06-06 Function Audit
+## Function Audit
 
 The current library passed:
 
@@ -89,13 +89,9 @@ The current library passed:
   periodicity, memory, composition, style, flow-probe manifests, prompt
   semantic rows, and disagreement rows.
 
-The audit found two tiny support modules whose capabilities were real but whose
-separate files did not own independent research concepts. They were folded into
-their owning modules:
-
-- descriptor-target scoring now lives in `index.py` with memory search,
+- Descriptor-target scoring lives in `index.py` with memory search,
   `query_controls()`, and `query_hybrid()`.
-- SA3 prompt-tokenizer extraction now lives in `tokenizer_vocab.py` with native
+- SA3 prompt-tokenizer extraction lives in `tokenizer_vocab.py` with native
   tokenizer vocabulary filtering.
 
 The main improvement need is discoverability: module tables alone do not show
