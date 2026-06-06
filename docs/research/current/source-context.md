@@ -110,8 +110,7 @@ L_flow(prompt) = E ||v_theta(z_t, t, C(prompt)) - u_t||^2
 ```
 
 - Status: source context; implemented locally through `flow_prompt.py`,
-  `procedures/flow_scoring.py`, and `SA3_FLOW_CONDITIONING` prompt/flow
-  experiments.
+  `procedures/flow_scoring.py`, and the SA3 flow prompt bench.
 
 ### EDM
 
@@ -124,14 +123,14 @@ L_flow(prompt) = E ||v_theta(z_t, t, C(prompt)) - u_t||^2
 
 - Source: [Classifier-Free Diffusion Guidance](https://arxiv.org/abs/2207.12598)
 - Relevant idea: Conditional/unconditional branch combination for prompt guidance.
-- Notebook impact: Motivates explicit null/blank conditioning probes and `SA3_FLOW_CONDITIONING.null_inversion`.
+- Notebook impact: Motivates explicit null/blank conditioning probes in the SA3 flow prompt bench.
 - Status: source context; local null-condition work is a probe.
 
 ### Textual Inversion
 
 - Source: [Textual Inversion](https://arxiv.org/abs/2208.01618)
 - Relevant idea: Learn pseudo-token embeddings in a frozen model's conditioning space.
-- Notebook impact: `SA3_FLOW_CONDITIONING.soft_prompt_inversion` is the audio-native analogue over SA3 conditioning.
+- Notebook impact: soft prompt inversion is the audio-native analogue over SA3 conditioning.
 - Status: source context; local soft prompt optimization is implemented.
 
 ### DreamBooth
@@ -146,13 +145,13 @@ L_flow(prompt) = E ||v_theta(z_t, t, C(prompt)) - u_t||^2
 - Source: [Prompt-to-Prompt](https://arxiv.org/abs/2208.01626)
 - Relevant idea: Prompt edits can control generated content through model internals/attention.
 - Notebook impact: Supports prompt microscope, token attribution, and prompt replacement panels.
-- Status: source context; `SA3_FLOW_CONDITIONING.flow_attribution` implements flow-based prompt attribution.
+- Status: source context; the SA3 flow prompt bench implements flow-based prompt attribution.
 
 ### Null-Text Inversion
 
 - Source: [Null-text Inversion](https://arxiv.org/abs/2211.09794)
 - Relevant idea: Optimize unconditional/null conditioning while preserving a conditional prompt for editing.
-- Notebook impact: Motivates `SA3_FLOW_CONDITIONING.null_inversion`: optimize SA3 null/unconditional conditioning against a target audio flow while keeping the human prompt editable.
+- Notebook impact: motivates null-condition inversion: optimize SA3 null/unconditional conditioning against a target audio flow while keeping the human prompt editable.
 - Status: source context; local method is scaffold/probe.
 
 ## Guidance, Inverse Problems, and Control
@@ -162,7 +161,7 @@ L_flow(prompt) = E ||v_theta(z_t, t, C(prompt)) - u_t||^2
 - Source: [Diffusion Posterior Sampling](https://arxiv.org/abs/2209.14687)
 - Relevant idea: Inject measurement consistency into diffusion sampling.
 - Notebook impact: Supports audio-to-audio posterior guidance and source-preservation losses.
-- Status: source context; local `CAUSAL_STEERING.audio_posterior` is scaffold.
+- Status: source context; local audio posterior guidance is a residual/trajectory scaffold.
 
 ### FreeDoM
 
@@ -189,7 +188,7 @@ L_flow(prompt) = E ||v_theta(z_t, t, C(prompt)) - u_t||^2
 
 - Source: [Controllable Music Production with Diffusion Models and Guidance Gradients](https://arxiv.org/abs/2311.00613)
 - Relevant idea: Use differentiable music/audio controls during generation.
-- Notebook impact: Supports `CAUSAL_STEERING.gradient_edit` probes and objective mixers.
+- Notebook impact: supports gradient-edit probes and objective mixers in the residual and trajectory bench.
 - Status: source context; local guidance is scaffold.
 
 ### Music ControlNet
@@ -247,7 +246,7 @@ L_flow(prompt) = E ||v_theta(z_t, t, C(prompt)) - u_t||^2
 
 - Source: [AudioLDM](https://arxiv.org/abs/2301.12503)
 - Relevant idea: Text-to-audio latent diffusion baseline.
-- Notebook impact: Cross-model baseline context for `EXTERNAL_COMPARISON.cross_model`.
+- Notebook impact: cross-model baseline context for the external comparison bench.
 - Status: source context.
 
 ### TANGO
@@ -263,7 +262,7 @@ L_flow(prompt) = E ||v_theta(z_t, t, C(prompt)) - u_t||^2
   - [MusicGen](https://arxiv.org/abs/2306.05284)
   - [facebookresearch/audiocraft](https://github.com/facebookresearch/audiocraft)
 - Relevant idea: Strong autoregressive/audio-token baseline family for music generation.
-- Notebook impact: `EXTERNAL_COMPARISON.cross_model` can compare SA3 outputs against external model commands when available.
+- Notebook impact: the external comparison bench can compare SA3 outputs against external model commands when available.
 - Status: source context; no local model management.
 
 ### ACE-Step and ACE-Step 1.5
@@ -272,7 +271,7 @@ L_flow(prompt) = E ||v_theta(z_t, t, C(prompt)) - u_t||^2
   - [ACE-Step](https://arxiv.org/abs/2506.00045)
   - [ACE-Step 1.5](https://arxiv.org/abs/2602.00744)
 - Relevant idea: Open music foundation model work combining planning, diffusion-transformer rendering, semantic alignment, long compositions, and editing/personalization claims.
-- Notebook impact: Source context for separating prompt/structure planning from acoustic rendering and `EXTERNAL_COMPARISON.cross_model` external comparison.
+- Notebook impact: source context for separating prompt/structure planning from acoustic rendering and external comparison packets.
 - Status: source context; no local model management.
 
 ### DiffRhythm 2
@@ -293,7 +292,7 @@ L_flow(prompt) = E ||v_theta(z_t, t, C(prompt)) - u_t||^2
 
 - Source: [SongGen](https://arxiv.org/abs/2502.13128)
 - Relevant idea: Single-stage autoregressive text-to-song model with controllable attributes and mixed/dual-track generation modes.
-- Notebook impact: External baseline context for `EXTERNAL_COMPARISON.cross_model` and dual-track/source-donor evaluation ideas.
+- Notebook impact: external baseline context for the external comparison bench and dual-track/source-donor evaluation ideas.
 - Status: source context.
 
 ## Multimodal Architecture Transfer Sources
@@ -397,7 +396,7 @@ L_flow(prompt) = E ||v_theta(z_t, t, C(prompt)) - u_t||^2
 
 - Source: [Activation Engineering / ActAdd](https://arxiv.org/abs/2308.10248)
 - Relevant idea: Add contrastive activation directions at inference time.
-- Notebook impact: Supports `CAUSAL_STEERING.prompt_residual`, `CAUSAL_STEERING.audio_residual`, and `CAUSAL_STEERING.residual_feature_atlas` work.
+- Notebook impact: supports prompt residual, audio residual, and residual feature atlas work in the residual and trajectory bench.
 - Status: source context; local residual steering primitives are implemented.
 
 ### Representation Engineering

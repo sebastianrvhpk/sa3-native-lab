@@ -79,7 +79,7 @@ The research layer focuses on:
 - hard prompt search with readable prompt constraints
 - SAME latent style profiles and directions
 - SAME geometry, control lanes, and descriptor evidence
-- audioscope-style SA3 residual steering
+- SA3 residual activation steering
 - audio-derived residual vectors
 - continuation/inpainting as composition
 - LatCH-style control heads
@@ -87,7 +87,6 @@ The research layer focuses on:
 ## Research Docs
 
 Start with the research documentation index:
-
 `docs/research/README.md`
 
 The current project state is:
@@ -99,8 +98,8 @@ The current methods and math notes are:
 `docs/research/current/methods-and-math.md`
 
 That document covers SA3/SAME objects, frozen-model principles, native flow
-prompt scoring, ontology equations, latent DSP, geometry, control observability,
-guidance, residual steering, and implementation safety notes.
+prompt scoring, object-transition equations, latent DSP, geometry, control
+observability, guidance, residual steering, and implementation safety notes.
 
 The primitive library map is:
 
@@ -115,8 +114,8 @@ The bottom-up capability map is:
 
 `docs/research/current/capability-map.md`
 
-It maps native objects, real I/O, artifacts, parameters, and the next notebook
-shape directly from current code and cells.
+It maps native objects, operations, evidence maturity, artifacts, parameters,
+and the workbench shape directly from current code and cells.
 
 The current multimodal/audio architecture transfer note is:
 
@@ -129,8 +128,8 @@ The run protocol is:
 
 `docs/research/current/run-protocol.md`
 
-It defines the object/intervention/measurement/claim/decision frame and the
-minimum evidence packet for notebook runs.
+It defines the object/transition/operation/measurement/claim/decision frame,
+claim ladder, and minimum evidence packet for notebook runs.
 
 The external source context is:
 

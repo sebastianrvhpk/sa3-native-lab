@@ -10,8 +10,8 @@ are organized as a lab record:
 - `current/methods-and-math.md`: how the notebook methods work.
 - `current/primitive-map.md`: how the helper modules cluster into a coherent
   notebook primitive library.
-- `current/capability-map.md`: bottom-up map of native objects, real
-  capabilities, artifacts, controls, and justified notebook interfaces.
+- `current/capability-map.md`: bottom-up map of native objects, operations,
+  evidence maturity, artifacts, and justified notebook workbenches.
 - `current/frontier-architecture-transfer.md`: current multimodal/audio
   architecture scout and transfer map into notebook experiments.
 - `current/run-protocol.md`: how notebook runs become evidence.
@@ -22,30 +22,31 @@ are organized as a lab record:
 ## Current
 
 - [Research state](current/research-state.md): current project direction, repo
-  surfaces, notebook science ontology inventory, active helper modules,
-  artifact graph, runtime assumptions, and current unknowns.
+  surfaces, native object graph, workbenches, maturity board, active helper
+  modules, artifact graph, runtime assumptions, and current unknowns.
 - [Methods and math](current/methods-and-math.md): SA3/SAME objects, frozen-model
-  principle, flow scoring, ontology equations, latent DSP, geometry, control
-  observability, guidance, residual steering, and implementation safety notes.
+  principle, flow scoring, object-transition equations, latent DSP, geometry,
+  control observability, guidance, residual steering, and implementation safety
+  notes.
 - [Primitive map](current/primitive-map.md): research-altitude layers, artifact
   flow, placement rules, and promotion criteria for
   `latent_audio_primitives/`.
-- [Capability map](current/capability-map.md): evidence-backed capability
-  cards, I/O graph, parameter inventory, and the next notebook shape derived
-  from actual code and notebook cells.
+- [Capability map](current/capability-map.md): evidence-backed capability and
+  maturity matrix, artifact flow, parameter inventory, and the workbench shape
+  derived from actual code and notebook cells.
 - [Frontier architecture transfer](current/frontier-architecture-transfer.md):
   source-checked multimodal/audio SOTA scout, architecture deltas, transfer
   matrix, and candidate SA3/SAME notebook experiments.
-- [Run protocol](current/run-protocol.md): research frame, run spine,
-  science strata, evidence panels, minimum run packet, and decision rules.
+- [Run protocol](current/run-protocol.md): research frame, claim ladder, run
+  spine, workbenches, evidence panels, minimum evidence packet, and decision
+  rules.
 - [Source context](current/source-context.md): external papers/repos summarized
   as source, relevant idea, notebook impact, and status.
 - [Experiment ledger](current/experiment-ledger.md): template and initial empty
   ledger for actual Colab runs, listening notes, descriptor deltas, and
   keep/revise/drop decisions.
-- [Backlog](current/backlog.md): implemented backlog reference, immediate
-  priorities, open questions, promote/drop criteria, and next implementation
-  order.
+- [Backlog](current/backlog.md): missing-evidence gaps, next notebook runs,
+  promote/drop criteria, and priority order.
 
 ## Related Docs
 

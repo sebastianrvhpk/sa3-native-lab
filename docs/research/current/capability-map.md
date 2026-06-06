@@ -1,11 +1,11 @@
 # SA3 Native Lab Capability Map
 
-Status: bottom-up capability map for the current notebook and
+Status: bottom-up capability and maturity map for the current notebook and
 `latent_audio_primitives/` package as of 2026-06-05.
 
-This document answers: what the repo can actually do, which native objects it
-moves, which artifacts it produces, and which next notebook interfaces are
-justified by local code and notebook evidence.
+This document answers: what the repo can actually do, which native-object
+transitions it supports, what evidence exists, and what proof is needed before a
+method can be promoted.
 
 Evidence labels:
 
@@ -28,203 +28,48 @@ run notes.
 
 ## Native Objects
 
-| Object | Shape / Form | Owner | Lifecycle | Evidence |
+| Object | Shape / form | Owner | Lifecycle | Evidence |
 |---|---|---|---|---|
 | Audio waveform `x` | waveform arrays and `.wav` paths | notebook, `audio_descriptors.py`, `evidence/audio_player.py` | loaded, previewed, described, annotated | confirmed |
 | SAME latent `z0` | usually `B x C x T`, memory rows use `T x D` | upstream SAME through adapters; local `LatentItem` | encoded, edited, decoded, searched, saved | confirmed |
-| SA3 flow state `z_t` | noisy/intermediate latent state | `flow_prompt.py`, `procedures/flow_scoring.py`, notebook SA3 probes | constructed from `z0`, timestep, and noise | confirmed |
+| SA3 flow state `z_t` | noisy/intermediate latent state | `flow_prompt.py`, `procedures/flow_scoring.py` | constructed from `z0`, timestep, and noise | confirmed |
 | Prompt condition `C(p)` | SA3 conditioner outputs or optimized tensors | upstream SA3 plus `flow_prompt.py`, `procedures/soft_prompt.py` | scored, optimized, attributed, auditioned | confirmed |
 | Residual activation `a_l` | layer activation tensors | `adapters/sa3_residual_hooks.py`, residual procedures | captured, contrasted, steered, summarized | confirmed |
 | `LatentItem` | ID, latent, rate, prompt, descriptors, labels, metadata | `schema.py`, `io.py` | saved, loaded, indexed, clustered | confirmed |
 | Control lane | time-varying values, rate, confidence, metadata | `control_lanes.py` | extracted, normalized, compared, saved, rendered | confirmed |
 | Descriptor report | JSON-friendly audio statistics | `audio_descriptors.py` | computed for source/baseline/method outputs | confirmed |
-| Manifest / ledger row | run metadata and decision fields | notebook, `experiment-ledger.md` | records evidence packets and decisions | confirmed |
+| Evidence packet | source/baseline/method outputs plus rows and notes | notebook, `evidence/`, ledger | records reviewable claims | template ready |
 
-## Capability Cards
+## Operation Matrix
 
-### Model Boundary
+| Capability | Native transition | Operation | Code altitude | Maturity | Next proof |
+|---|---|---|---|---|---|
+| SA3/SAME runtime access | checkpoint/audio/prompt -> model handle or latent | observe/render | adapter | confirmed | Colab smoke packet per checkpoint |
+| Audio descriptors | audio -> descriptor rows | observe/compare | root measurement | confirmed | listening agreement across first runs |
+| SAME summaries | `z0` -> summary vectors | observe/compare | root measurement | confirmed | nearest-memory/source-preservation checks |
+| Geometry reports | `z0` collection -> PCA/covariance/transport rows | observe/select | root measurement | microscope | connect geometry movement to audition |
+| Periodicity and loop metrics | audio or `z0` -> loop rows | observe/compare | root measurement | microscope | compare against loop listening notes |
+| Control lanes | audio/latent -> time-varying lanes | observe/select | root measurement plus evidence | microscope/selector | lane similarity must improve retrieval or review |
+| Latent memory | `LatentItem` collection -> nearest rows | select | root memory | selector | show better donor/source/novelty decisions |
+| Curriculum clustering | memory collection -> clusters/heldout rows | select | root memory | selector | show clusters improve prompt or donor choices |
+| Bridge/continuation ranking | memory rows -> ranked paths | select | root composition | selector | bridge scores must predict audible continuity |
+| Flow prompt scoring | target `z0` -> flow losses for prompts | observe/select | root rows plus procedure | microscope/selector | test whether scores predict generated audio |
+| Flow attribution | prompt -> token contribution rows | observe/select | root rows plus procedure | microscope | repeat over shared probe banks |
+| Soft prompt inversion | target `z0` -> optimized condition | intervene/render | procedure | intervention candidate | audition against prompt/audio-to-audio baselines |
+| Hard/readable prompt search | candidate text -> ranked prompts | select | root search plus procedure scorer | selector | compare readable rankings against listening |
+| SAME latent DSP | `z0` -> DSP-edited `z0'` -> audio | intervene/render | root operator plus procedure polish | intervention candidate | direct decode vs polish evidence packets |
+| Blur/filter/low-rank | `z0` -> projected `z0'` -> audio | observe/intervene | root operator plus procedure polish | microscope/intervention candidate | identify which perturbations survive audio review |
+| Channel renoise/graft | source/donor `z0` -> selected-channel edit | intervene/render | root operator plus procedure | intervention candidate | source/donor/baseline packets across clips |
+| Style profile/direction | collection stats -> latent edit | intervene/render | root operator | intervention candidate | nearest-memory and listening checks for copying |
+| Cyclic loop repair | audio/`z0` -> rolled/repair output | intervene/render | root operator plus procedure | intervention candidate | loop metrics must match loop audition |
+| Residual activation capture | prompt/audio -> residual activations | observe | adapter plus procedure | microscope | layer maps must repeat |
+| Residual steering | residual vector -> patched generation | intervene/render | adapter plus procedure | high-risk candidate | alpha sweeps must move audio without artifacts |
+| Residual feature atlas | activations -> feature basis/report | observe/select | root measurement plus procedure | microscope | atlas rankings must predict interventions |
+| Gradient/posterior guidance | objective -> latent/sampler update | intervene/render | root operator/scaffold | high-risk candidate | objective movement must beat baselines audibly |
+| External comparison | imported outputs -> evidence packet | compare | evidence/procedure | comparison | fixed task packets with descriptors and notes |
+| Audio player and annotations | output paths -> audition notes | decide | evidence | confirmed | routine ledger use |
 
-Evidence: `latent_audio_primitives/adapters/stable_audio3.py`,
-`latent_audio_primitives/adapters/sa3_residual_hooks.py`,
-`latent_audio_primitives/adapters/sa3_tokenizer.py`, notebook setup cells.
-
-I/O:
-
-```text
-prompts/audio/checkpoints
--> upstream SA3/SAME model handles
--> generation, encode/decode, residual hook access
-```
-
-Parameters: model name, device, dtype, duration, seed, steps, CFG, init noise,
-hook layers.
-
-Artifacts: audio paths, SAME latents, residual activations, sampler outputs.
-
-Constraint: upstream internals are version-sensitive. Keep coupling isolated in
-adapters or clearly labeled notebook probes.
-
-### SAME Representation
-
-Evidence: `latent_blur.py`, `latent_dsp.py`, `selective_renoise.py`,
-`style.py`, `geometry.py`, `periodic.py`, `looping.py`,
-`procedures/sa3_latent_sampling.py`, `procedures/selective_sa3.py`, notebook
-cells under `SAME_REPRESENTATION`.
-
-I/O:
-
-```text
-audio or latent item
--> SAME latent edit / probe / statistical transform
--> direct decode or SA3 polish
--> descriptors, memory distance, listening note
-```
-
-Parameters: sigma, channel mask, latent mask, blur radius, filter band,
-low-rank size, DSP gain/drive/phase, profile alpha, covariance transport alpha,
-loop shift, polish noise.
-
-Artifacts: edited latents, direct decodes, polished audio, descriptor deltas,
-geometry reports, style profiles/directions, loop previews.
-
-Affordances justified in notebook: source/donor chooser, latent edit recipe
-table, direct-decode versus polish A/B player, geometry report, loop preview.
-
-Unknowns: which SAME edits are stable controls rather than microscopes.
-
-### SA3 Flow Conditioning
-
-Evidence: `flow_prompt.py`, `procedures/flow_scoring.py`,
-`prompt_optimization.py`, `tokenizer_vocab.py`, `procedures/soft_prompt.py`,
-notebook cells under `SA3_FLOW_CONDITIONING`.
-
-I/O:
-
-```text
-target audio
--> SAME z0
--> shared flow probe bank
--> prompt / soft condition scores
--> prompt candidates, attribution rows, timestep panels
-```
-
-Parameters: velocity convention, timesteps or logSNRs, noise seeds,
-antithetic noise, normalized MSE, cosine weight, conditional-delta weight,
-candidate prompts, token vocabulary, soft-prompt learning rate/steps.
-
-Artifacts: `FlowPromptLossRow`, attribution tables, prompt rankings, soft
-conditioning `.pt` files, audition outputs.
-
-Affordances justified in notebook: prompt score table, leave-one-out token
-attribution, loss-by-timestep panel, readable modifier search, soft prompt
-audition controls.
-
-Unknowns: whether teacher-forced flow agreement predicts generated audio
-quality or only vector-field alignment.
-
-### Causal Steering
-
-Evidence: `adapters/sa3_residual_hooks.py`,
-`procedures/residual_activation_vectors.py`,
-`procedures/audio_residual_vectors.py`, `procedures/residual_sweeps.py`,
-`procedures/cyclic_sa3.py`, `residual_features.py`, `observability.py`,
-`guidance.py`, notebook cells under `CAUSAL_STEERING`.
-
-I/O:
-
-```text
-prompt pairs / labeled audio / sampler state
--> residual vectors, feature bases, guidance gradients, cyclic projections
--> alpha sweeps or guided variants
--> descriptors, probe rows, listening decisions
-```
-
-Parameters: layer indices, prompt/audio contrast sets, alpha, top-k vectors,
-guidance scale, loss weights, cyclic roll mix, denoising step window.
-
-Artifacts: steering vectors, feature atlas JSON, alpha sweep audio, guided
-variants, observability probe reports.
-
-Affordances justified in notebook: alpha sweep player, layer/feature table,
-guidance recipe JSON, cyclic projection comparison.
-
-Unknowns: which interventions causally move audible attributes without
-off-manifold artifacts.
-
-### Dataset Memory and Composition
-
-Evidence: `schema.py`, `io.py`, `index.py`, `curriculum.py`, `composition.py`,
-`control_lanes.py`, notebook cells under `DATASET_MEMORY_COMPOSITION`.
-
-I/O:
-
-```text
-dataset folder or saved latent memory
--> LatentItem rows, clusters, nearest neighbors, bridge candidates
--> source/donor/continuation decisions
--> audio outputs and evidence packets
-```
-
-Parameters: dataset limit, duration, cluster count, heldout fraction, hybrid
-weights, bridge weights, lane similarity, donor/source constraints.
-
-Artifacts: memory folders, curriculum JSON, nearest-memory rows, bridge
-rankings, continuation outputs, source/donor comparison reports.
-
-Affordances justified in notebook: memory search table, representative/heldout
-rows, bridge candidate ranking, donor selector, novelty/source-preservation
-panel.
-
-Unknowns: whether memory distance separates useful source preservation from
-copying across real datasets.
-
-### Evidence Decision Protocol
-
-Evidence: `evidence/audio_player.py`, `evidence/annotations.py`,
-`audio_descriptors.py`, `control_lanes.py`, notebook manifest/log cells,
-`experiment-ledger.md`.
-
-I/O:
-
-```text
-source/baseline/method outputs
--> player rows, descriptor tables, lane panels, manifests, notes
--> promote / revise / drop / unknown / microscope-only decisions
-```
-
-Parameters: annotation labels, descriptor config, lane extraction settings,
-manifest fields, run packet fields.
-
-Artifacts: player HTML, annotation JSONL, descriptor dicts, lane JSON/SVG,
-manifest rows, ledger entries.
-
-Affordances justified in notebook: A/B/C player, annotation search, run packet
-cell, descriptor/lane summary, decision template.
-
-Unknowns: which evidence panels become too heavy for routine Colab use.
-
-### External Comparison
-
-Evidence: Underfit handoff cells, cross-model command harness, source context.
-
-I/O:
-
-```text
-external audio/checkpoints/commands
--> notebook comparison rows
--> descriptor/player/ledger evidence
-```
-
-Parameters: external command templates, fixed prompts, output folder, imported
-Underfit artifacts.
-
-Artifacts: external audio outputs, comparison descriptor rows, player panels,
-checkpoint/run-note references.
-
-Constraint: this is comparison only. Training and external model management stay
-outside this repo.
-
-## Artifact Graph
+## Artifact Flow
 
 ```text
 audio file
@@ -242,7 +87,7 @@ edited latent or sampler state
   -> direct SAME decode
   -> optional SA3 polish or intervention
   -> output audio
-  -> descriptor delta + player annotation + ledger decision
+  -> descriptor delta + nearest-memory rows + player annotation + ledger decision
 
 prompt pairs or labeled audio
   -> residual activation capture
@@ -272,7 +117,7 @@ sigma, masks, channel ranges, temporal ranges, blur radius, rank, FFT band,
 phase blend, profile/direction alpha, covariance transport alpha
 ```
 
-Causal steering:
+Residual and trajectory interventions:
 
 ```text
 layer indices, residual axis, vector top-k, alpha, denoising step window,
@@ -293,36 +138,35 @@ descriptor config, lane frame seconds, annotation tags, manifest fields,
 ledger decision
 ```
 
-## Next Notebook Shape
+## Workbench Shape
 
-The notebook should read as a lab bench organized by native objects,
-interventions, and evidence:
-
-1. Runtime and model boundary.
-2. Shared evidence/player/manifest helpers.
-3. Native object preparation: audio, SAME latent items, prompts, memory.
-4. SAME representation experiments.
-5. SA3 flow conditioning experiments.
-6. Causal steering experiments.
-7. Dataset memory and composition experiments.
-8. External comparison imports.
-9. Evidence ledger and next-action cells.
-
-Within each stratum, cells should keep the same local shape:
+The notebook should keep the same local shape inside every workbench:
 
 ```text
 object
-intervention
+baseline
+method
 measurement
-claim
+audition
 decision
 ```
 
-That shape is the stable grammar for future notebook cells.
+The stable section order is:
+
+1. Runtime and model boundary.
+2. Evidence packet setup.
+3. Audio and SAME object preparation.
+4. SAME measurement bench.
+5. SAME intervention bench.
+6. SA3 flow prompt bench.
+7. Residual and trajectory bench.
+8. Memory and composition bench.
+9. External comparison bench.
+10. Ledger and promotion board.
 
 ## Unknowns And Verification Plan
 
-- Run one small Colab packet per stratum and record it in the ledger.
+- Run one small Colab packet per workbench and record it in the ledger.
 - Compare direct SAME decode against SA3 polish for every representation edit.
 - Cache shared flow probes before expanding prompt-search variants.
 - Add nearest-memory rows to every source-preservation claim.

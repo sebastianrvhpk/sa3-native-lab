@@ -48,8 +48,9 @@ rows over a new runtime framework.
 
 ## Altitude Layers
 
-The library is organized by research altitude. The notebook ontology names the
-research question; the package layout names what kind of code a module owns.
+The library is organized by research altitude. The notebook workbenches name
+native-object transitions; the package layout names what kind of code a module
+owns.
 
 ```text
 root module = define or transform a native object
@@ -119,8 +120,8 @@ Purpose: probe what SAME preserves, erases, linearizes, or makes editable.
 | `periodic.py` | confirmed | Autocorrelation, periodicity, spectral centroid, and loop boundary probes. |
 | `looping.py` | confirmed | Cyclic latent/audio roll, loop preview, seam metrics, and inpaint bounds. |
 
-Narrative role: this stratum asks what the SAME bottleneck itself affords
-before claiming SA3 prompt or sampler control.
+Narrative role: this bench asks what the SAME bottleneck itself affords before
+claiming SA3 prompt or sampler control.
 
 ### 5. SA3 Flow and Conditioning
 

@@ -17,7 +17,7 @@ run packet, and promote/revise/drop rules.
 - Record only actual runs or deliberately planned run slots.
 - Link or name output artifacts where possible.
 - Include source audio, baseline output, method output, descriptor deltas, and listening notes.
-- Use exact ontology/experiment slugs, seeds, prompts, model IDs, durations, and key params.
+- Use exact object transition, method name, seeds, prompts, model IDs, durations, and key params.
 - Mark decisions explicitly: `keep`, `revise`, `drop`, or `unknown`.
 - Do not promote a method based only on latent metrics.
 
@@ -26,7 +26,7 @@ run packet, and promote/revise/drop rules.
 ```text
 Date:
 Notebook commit:
-Ontology / experiment:
+Object transition / method:
 Model:
 Runtime:
 
@@ -77,6 +77,9 @@ Listening notes:
 
 Decision:
   keep | revise | drop | unknown
+
+Maturity update:
+  microscope | selector | intervention candidate | promoted | dropped
 
 Next action:
 ```

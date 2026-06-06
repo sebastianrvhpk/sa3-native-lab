@@ -49,11 +49,11 @@ identify the native object each frontier method manipulates
 |---|---:|---|---|---|
 | [Stable Audio 3](https://arxiv.org/abs/2605.17991) | 2026-05-18 | Fast latent audio generation/editing over SAME, variable length, inpainting/continuation, adversarial post-training. | Treat SA3 flow fields, SAME latents, and sampler states as primary native objects. | source-confirmed |
 | [SAME](https://arxiv.org/abs/2605.18613) | 2026-05-18 | 4096x temporal compression, transformer autoencoder, semantic regularization, phase-aware losses. | Make the notebook a science of what the SAME bottleneck preserves, exposes, and hides. | source-confirmed |
-| [ACE-Step](https://arxiv.org/abs/2506.00045) | 2025-05-28 | Music foundation model combining diffusion generation, DCAE, lightweight linear transformer, semantic alignment. | Compare SA3's SAME bottleneck against other semantic/music bottleneck claims; use external outputs as `EXTERNAL_COMPARISON.cross_model` baselines. | source-confirmed |
+| [ACE-Step](https://arxiv.org/abs/2506.00045) | 2025-05-28 | Music foundation model combining diffusion generation, DCAE, lightweight linear transformer, semantic alignment. | Compare SA3's SAME bottleneck against other semantic/music bottleneck claims; use external outputs as external comparison packets. | source-confirmed |
 | [ACE-Step 1.5](https://arxiv.org/abs/2602.00744) | 2026-02 | LM planner plus DiT-style rendering, long compositions, editing/personalization claims. | Use "planner vs renderer" as a notebook lens: separate prompt plans, flow scoring, acoustic polish, and listening decisions. | source-confirmed |
 | [DiffRhythm 2](https://arxiv.org/abs/2510.22950) | 2025-10 | Semi-autoregressive block flow matching for long songs, low-frame-rate music VAE, preference optimization. | Transfer block/segment ideas into SA3 continuation, bridge search, and control-lane experiments. | source-confirmed |
 | [YuE](https://arxiv.org/abs/2503.08638) | 2025-03 | Long-form lyrics-to-song foundation model using LLaMA-style autoregression, track decoupling, structural conditioning. | Treat structure, lyrics/prompt plan, and audio rendering as separable evidence streams; do not fold full-song LM code into this repo. | source-confirmed |
-| [SongGen](https://arxiv.org/abs/2502.13128) | 2025-02 | Single-stage autoregressive transformer for controllable song generation with mixed/dual-track modes. | Add external song baselines to `EXTERNAL_COMPARISON.cross_model`; borrow dual-track evaluation ideas for source/donor comparisons. | source-confirmed |
+| [SongGen](https://arxiv.org/abs/2502.13128) | 2025-02 | Single-stage autoregressive transformer for controllable song generation with mixed/dual-track modes. | Add external song baselines to the external comparison bench; borrow dual-track evaluation ideas for source/donor comparisons. | source-confirmed |
 | [MMAudio](https://github.com/hkchengrex/MMAudio) | CVPR 2025 | Multimodal joint training for video-to-audio synthesis, CLIP/synchrony features, audio VAE. | Use video-to-audio as a reminder that temporal synchrony is measurable; transfer only the measurement idea unless video inputs become a notebook source. | source-confirmed |
 | [Sora technical report](https://openai.com/research/video-generation-models-as-world-simulators) | 2024-02 | Spacetime latent patches with diffusion transformer over variable durations/resolutions. | Map "patch persistence" to audio segments/control lanes/loop regions, not to visual UI metaphors. | source-confirmed |
 | [Movie Gen](https://huggingface.co/papers/2410.13720) | 2024-10 | Media foundation models with synchronized audio, video editing, personalization, and video-to-audio tasks. | Use synchronized-audio evaluation as source context for temporal alignment and source-preservation panels. | source-confirmed |
@@ -63,7 +63,7 @@ identify the native object each frontier method manipulates
 | [ImageBind](https://arxiv.org/abs/2305.05665) | 2023-05 | Joint embedding across image, text, audio, depth, thermal, and IMU using paired data. | Optional external embedding lane for cross-modal retrieval/novelty checks; do not treat it as SAME-native truth. | source-confirmed |
 | [T-CLAP](https://arxiv.org/abs/2404.17806) | 2024-04 | Temporal-enhanced language-audio contrastive learning for retrieval/generation tasks. | Strong candidate for external temporal descriptor/lane comparison against SAME control lanes. | source-confirmed |
 | [EnCodec](https://arxiv.org/abs/2210.13438) | 2022-10 | High-fidelity neural audio compression with quantized latent space and perceptual/adversarial training. | Historical codec baseline for why SAME is not merely compression; compare bottleneck behavior, not architecture code. | source-confirmed |
-| [Descript Audio Codec](https://github.com/descriptinc/descript-audio-codec) | 2023 | High-fidelity RVQGAN codec, 44.1 kHz support, drop-in codec for audio language modeling. | Baseline for codec-latent thinking; external only unless used as `EXTERNAL_COMPARISON.cross_model` comparison. | source-confirmed |
+| [Descript Audio Codec](https://github.com/descriptinc/descript-audio-codec) | 2023 | High-fidelity RVQGAN codec, 44.1 kHz support, drop-in codec for audio language modeling. | Baseline for codec-latent thinking; external only unless used in external comparison packets. | source-confirmed |
 | [Generative Audio Compression](https://arxiv.org/abs/2602.00648) | 2026-02 | Task-oriented ultra-low-bitrate semantic compression with powerful decoder prior. | Directly motivates SAME bottleneck stress tests: which information is waveform, semantic, structural, or prior-filled? | source-confirmed |
 
 ## Architecture Deltas
@@ -215,7 +215,7 @@ memory rows, listening notes.
 
 Claim: identifies what SAME represents semantically versus acoustically.
 
-Touchpoints: `SAME_REPRESENTATION.blur_bottleneck`, `SAME_REPRESENTATION.neural_dsp`, `SAME_REPRESENTATION.geometry_audit`, `SA3_FLOW_CONDITIONING.flow_attribution`, `SA3_FLOW_CONDITIONING.flow_timestep_panel`.
+Touchpoints: SAME intervention bench, SAME measurement bench, and SA3 flow prompt bench.
 
 Promote if: perturbation families reveal stable preservation/failure patterns
 across clips.
@@ -236,7 +236,7 @@ turn, listener notes.
 Claim: tests whether SA3/SAME can support in-context-like iterative audio
 editing.
 
-Touchpoints: `SA3_FLOW_CONDITIONING.soft_prompt_inversion`, `SA3_FLOW_CONDITIONING.hard_prompt_search`, `SA3_FLOW_CONDITIONING.flow_attribution`, `SA3_FLOW_CONDITIONING.flow_timestep_panel`, `SA3_FLOW_CONDITIONING.null_inversion`, `CAUSAL_STEERING.audio_posterior`.
+Touchpoints: SA3 flow prompt bench and residual/trajectory guidance scaffolds.
 
 Promote if: edits accumulate predictably without destroying declared source
 identity.
@@ -256,7 +256,7 @@ listening notes.
 Claim: imports long-form music "structure before sound" discipline without
 training a song model.
 
-Touchpoints: `DATASET_MEMORY_COMPOSITION.prompt_family`, `DATASET_MEMORY_COMPOSITION.continuation`, `DATASET_MEMORY_COMPOSITION.memory_index`, `EVIDENCE_DECISION_PROTOCOL.control_lanes`, `DATASET_MEMORY_COMPOSITION.curriculum`, `DATASET_MEMORY_COMPOSITION.bridge_search`.
+Touchpoints: memory and composition bench, control-lane evidence, and evidence packet setup.
 
 Promote if: segment plans improve continuity versus one global prompt.
 
@@ -275,7 +275,7 @@ descriptor deltas, listening tags.
 Claim: external embeddings help judge semantic or temporal alignment without
 becoming native truth.
 
-Touchpoints: `DATASET_MEMORY_COMPOSITION.memory_index`, `EVIDENCE_DECISION_PROTOCOL.control_lanes`, `DATASET_MEMORY_COMPOSITION.curriculum`, `EXTERNAL_COMPARISON.cross_model`, player/ledger cells.
+Touchpoints: memory and composition bench, control-lane evidence, external comparison bench, player, and ledger cells.
 
 Promote if: external scores catch failures that SAME summaries miss.
 
@@ -293,7 +293,7 @@ listening notes.
 
 Claim: finds the lowest useful compute for reliable notebook audition.
 
-Touchpoints: `SAME_REPRESENTATION.neighborhood_renoise`, `SAME_REPRESENTATION.blur_bottleneck`, `SAME_REPRESENTATION.neural_dsp`, `CAUSAL_STEERING.cyclic_trajectory`, `CAUSAL_STEERING.gradient_edit`, `CAUSAL_STEERING.audio_posterior`.
+Touchpoints: SAME intervention bench, SA3 polish procedures, and residual/trajectory guidance scaffolds.
 
 Promote if: a small settings grid gives stable quality/runtime guidance.
 
@@ -312,7 +312,7 @@ nearest-memory rows.
 Claim: turns preference-learning ideas into a notebook-scale scientific ledger
 without pretending to train an RLHF system.
 
-Touchpoints: player, manifest, experiment ledger, `SAME_REPRESENTATION.neighborhood_renoise`, `SA3_FLOW_CONDITIONING.hard_prompt_search`, `SAME_REPRESENTATION.ot_style_transfer`, `CAUSAL_STEERING.gradient_edit`, `EXTERNAL_COMPARISON.cross_model`.
+Touchpoints: player, manifest, experiment ledger, SAME intervention bench, SA3 flow prompt bench, residual/trajectory guidance, and external comparison bench.
 
 Promote if: repeated annotations identify robust recipes and failure families.
 

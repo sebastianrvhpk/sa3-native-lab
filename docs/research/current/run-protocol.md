@@ -1,74 +1,98 @@
 # SA3 Native Lab Run Protocol
 
-Status: operational protocol for turning notebook runs into research evidence.
+Status: operational protocol for turning notebook runs into evidence and
+decisions.
 
-This document answers: how to run the expanded Colab notebook as a lab
-instrument, how to decide which evidence panels are required, and when a method
-can move from idea to kept primitive.
+This document answers: how a Colab cell becomes a research claim, what evidence
+is required, and when a method moves from microscope to kept method.
 
 ## Research Frame
 
-Every run starts with five fields:
+Every run starts with six fields:
 
 ```text
 Object:
-Intervention:
+Transition:
+Operation:
 Measurement:
 Claim:
 Decision:
 ```
 
 - `Object`: native object under study: audio waveform, SAME `z0`, SA3 flow
-  state `z_t`, prompt condition `C(p)`, residual activation, control lane,
-  memory row, dataset cluster, or listening annotation.
-- `Intervention`: what changes: prompt, latent, channel subset, residual vector,
-  sampler path, bridge, style profile, guidance loss, or source/donor choice.
-- `Measurement`: evidence collected: descriptors, flow loss, latent geometry,
-  control lanes, periodicity, nearest-memory rows, residual probes, runtime, or
-  listening notes.
+  state `z_t`, prompt condition `C(p)`, residual activation, memory item,
+  dataset cluster, control lane, or evidence packet.
+- `Transition`: what object path is tested, such as `audio -> z0`,
+  `z0 -> z0'`, `z0 -> flow probes`, `prompt -> condition`,
+  `activation -> steering vector`, `memory -> donor`, or
+  `output -> evidence packet`.
+- `Operation`: `observe`, `select`, `intervene`, `render`, `compare`, or
+  `decide`.
+- `Measurement`: descriptors, flow loss, latent geometry, control lanes,
+  periodicity, nearest-memory rows, residual probes, runtime, or listening
+  notes.
 - `Claim`: what success would mean: controllability, source preservation,
-  prompt inversion, loopability, novelty, style transfer, or microscope value.
+  prompt inversion, loopability, novelty, style transfer, selection value, or
+  microscope value.
 - `Decision`: `promote`, `revise`, `drop`, `unknown`, or `microscope only`.
+
+## Claim Ladder
+
+Do not call a method a control merely because a tensor changed. Promote it only
+as far as evidence allows.
+
+| Maturity | Meaning | Required evidence |
+|---|---|---|
+| Microscope | Reveals structure but is not a reliable control. | Native-object rationale plus measurement rows. |
+| Selector | Helps choose prompts, donors, seeds, chunks, channels, recipes, or baselines. | Ranking rows plus at least one audition or review packet. |
+| Intervention candidate | Changes decoded or polished audio in the intended direction. | Baseline, method output, descriptor/latent evidence, and listening note. |
+| Promoted method | Repeats across sources, prompts, or seeds and survives baselines. | Evidence packets across repeated runs plus ledger decisions. |
 
 ## Run Spine
 
-Use the same spine for ordinary notebook experiments and frontier-informed
-probes:
+Use this spine for ordinary notebook runs and frontier-informed probes:
 
 ```text
 choose source audio / dataset / prompt family
--> encode or load SAME latents
+-> encode or load native objects
 -> record baseline output or baseline measurements
--> choose one ontology stratum and one intervention
--> run the method with explicit seed, steps, duration, and prompt
--> measure descriptor, flow, latent, memory, geometry, lane, or residual evidence
--> audition with the custom player
+-> choose one object transition and operation
+-> run with explicit seed, steps, duration, prompt, and convention
+-> collect descriptor / flow / latent / memory / geometry / lane / residual evidence
+-> audition with the notebook player
 -> annotate listening result
 -> write or update the experiment ledger
--> decide promote / revise / drop / unknown / microscope only
+-> decide maturity: microscope / selector / intervention candidate / promoted / dropped
 ```
 
 Do not skip the baseline. For prompt and flow methods, reuse the same probe bank
 when comparing prompts. For audio edit methods, include the source audio and a
-plain SA3/audio-to-audio baseline.
+plain SA3/audio-to-audio or direct-decode baseline.
 
-## Science Ontology
+## Native Object Workbenches
 
-| Stratum | Kind | Experiments | Primary Question |
+The notebook is organized as workbenches over object transitions. A workbench is
+not a claim by itself; it is where claims are tested.
+
+| Workbench | Native objects | Typical transitions | Main question |
 |---|---|---|---|
-| `SAME_REPRESENTATION` | native representation stratum | neighborhood renoise, selective renoise, graft, blur bottleneck, neural DSP, style statistics, geometry, OT, loop repair | What does SAME preserve, erase, linearize, or make editable in audio latents? |
-| `SA3_FLOW_CONDITIONING` | flow-conditioning stratum | flow sign diagnostic, soft prompt inversion/audition, hard/readable prompt search, dataset soft prompt, attribution, timestep panel, null inversion | What prompt or conditioning object best explains target audio through frozen SA3 flow dynamics? |
-| `CAUSAL_STEERING` | intervention stratum | prompt/audio residual steering, feature atlas, control head, cyclic trajectory, flow-state optimization, gradient edit, audio posterior guidance | Which inference-time interventions causally move generated audio rather than only measuring it? |
-| `DATASET_MEMORY_COMPOSITION` | collection/composition stratum | prompt family, memory index, curriculum, continuation, bridge search | How do collections become memory, donor context, structure, or continuity without simply copying? |
-| `EVIDENCE_DECISION_PROTOCOL` | lab infrastructure | player, annotations, descriptors, control lanes, manifest, ledger, combined chain | What evidence decides whether an effect is real, audible, useful, repeatable, or only a microscope? |
-| `EXTERNAL_COMPARISON` | lab infrastructure | Underfit handoff, cross-model harness, optional external embedding lanes | What should frozen SA3/SAME be compared against while training and product infrastructure remain external? |
+| Runtime and model boundary | upstream SA3/SAME handles | checkpoint -> model handle; audio -> encoded latent | Are external model assumptions explicit and stable? |
+| Evidence packet setup | audio paths, descriptors, annotations, manifests | output -> evidence packet | Can each result be reviewed and compared? |
+| Audio and SAME preparation | audio waveform, `LatentItem`, SAME `z0` | audio -> `z0`; `z0` -> saved item | What object exactly enters each method? |
+| SAME measurement bench | SAME `z0`, summaries, geometry, lanes | `z0` -> rows/reports | What does SAME expose before intervention? |
+| SAME intervention bench | edited SAME latents | `z0` -> `z0'` -> decode/polish | Which latent edits survive audio review? |
+| SA3 flow prompt bench | `z_t`, prompt condition `C(p)` | target `z0` -> probe bank -> prompt/condition score | Which prompts or conditions explain audio under frozen SA3 flow? |
+| Residual and trajectory bench | residual activations, sampler states | activation/state -> intervention -> output | Which internal interventions causally move audio? |
+| Memory and composition bench | memory rows, clusters, bridges, donors | collection -> selector -> output | How do collections support selection without copying? |
+| External comparison bench | imported audio/checkpoints/run notes | external output -> evidence packet | What should frozen SA3/SAME be compared against? |
+| Ledger and promotion board | evidence packets and decisions | evidence -> maturity update | What is real, repeatable, useful, or only diagnostic? |
 
 ## Evidence Panels
 
-Choose the panels that match the claim. A run does not need every panel, but it
-must include enough evidence for its decision.
+Choose panels that match the claim. A run does not need every panel, but it must
+include enough evidence for its decision.
 
-| Claim Type | Required Evidence | Useful Optional Evidence |
+| Claim type | Required evidence | Useful optional evidence |
 |---|---|---|
 | Prompt inversion | flow loss rows, prompt candidates, baseline prompt | loss-by-timestep, attribution, decoded audition |
 | Source-preserving edit | source audio, baseline, method output, descriptor delta, nearest-memory rows | flow score, control lanes, geometry report |
@@ -78,13 +102,14 @@ must include enough evidence for its decision.
 | Dataset/memory method | memory rows, cluster/donor selection evidence, output audition | heldout rows, geometry/lane scores |
 | Frontier hypothesis | source link, native-object mapping, one concrete notebook run | external embedding disagreement, runtime audit |
 
-## Minimum Run Packet
+## Minimum Evidence Packet
 
 For a method to be reviewable, collect:
 
 ```text
 commit hash
-ontology stratum and experiment slug
+object transition and method name
+claim maturity before the run
 model ID / SA3 checkpoint
 runtime and GPU
 source/donor audio paths
@@ -94,6 +119,7 @@ flow convention and logSNR/timestep probes when relevant
 baseline output
 method output
 descriptor report
+nearest-memory rows when relevant
 listening note
 decision
 ```
@@ -129,7 +155,7 @@ Drop when:
 - the method only creates artifacts,
 - the effect is not measurable,
 - it copies a memory item when novelty/source preservation is claimed,
-- the sampler internals are too fragile for the payoff.
+- sampler internals are too fragile for the payoff.
 
 Keep as microscope only when:
 
@@ -144,14 +170,16 @@ After a run, update `experiment-ledger.md` with:
 ```text
 run question
 hypothesis
+object transition
 inputs
 recipe
 outputs
 measurements
 listening notes
+maturity update
 decision
 next action
 ```
 
-Backlog items should not move forward until at least one ledger entry exists for
-the relevant run family.
+Backlog items should not move forward until at least one evidence packet exists
+for the relevant run family.
