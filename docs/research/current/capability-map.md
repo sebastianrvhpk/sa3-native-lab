@@ -1,7 +1,7 @@
 # SA3 Native Lab Capability Map
 
 Status: bottom-up capability and maturity map for the current notebook and
-`latent_audio_primitives/` package as of 2026-06-05.
+`latent_audio_primitives/` package as of 2026-06-06.
 
 This document answers: what the repo can actually do, which native-object
 transitions it supports, what evidence exists, and what proof is needed before a
@@ -25,6 +25,19 @@ This repo is a notebook research instrument. It keeps:
 Upstream runtimes and training tools remain external dependencies that the
 notebook consumes through checked-out repos, audio artifacts, checkpoints, and
 run notes.
+
+## Architecture Layers
+
+Use [Architecture ontology](architecture-ontology.md) as the canonical layer
+map. The short form:
+
+| Architecture layer | Primary native objects | Main local capabilities |
+|---|---|---|
+| SAME Representation Science | `x`, `E`, `D`, `z0`, `LatentItem` | encode/decode, direct decode, geometry, bottleneck stress, latent DSP, memory, control lanes |
+| SA3 Flow and Conditioning Science | `z_t`, `t`, `C(p)`, `v_theta` | shared probe banks, prompt flow scoring, attribution, soft/hard/readable inversion, null/condition probes |
+| SA3 Internal Trajectory Science | residual activations, sampler states, step windows | residual capture, residual feature atlas, steering sweeps, cyclic projection, guidance scaffolds |
+| SA3-over-SAME Coupled Editing | edited `z0'`, init/polish/inpaint/continue paths | neighborhood renoise, selective SA3, direct decode vs polish, source-preservation checks |
+| Evidence and Listening Science | descriptors, memory rows, annotations, manifests | player, annotation store, disagreement rows, ledger, static report candidates |
 
 ## Native Objects
 

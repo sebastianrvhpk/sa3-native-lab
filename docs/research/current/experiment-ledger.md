@@ -26,6 +26,7 @@ run packet, and promote/revise/drop rules.
 ```text
 Date:
 Notebook commit:
+Architecture layer:
 Object transition / method:
 Model:
 Runtime:

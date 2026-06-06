@@ -14,6 +14,8 @@ measurements, claim maturity, and decisions explicit.
 Before editing code or docs, state the research frame:
 
 ```text
+Architecture layer: SAME representation / SA3 flow-conditioning /
+  SA3 internal trajectory / SA3-over-SAME coupled editing / evidence-listening
 Object: what native object is under study?
 Transition: what maps into what, or what state is compared?
 Operation: observe, select, intervene, render, compare, or decide?
@@ -29,6 +31,19 @@ If the user asks to implement immediately, still write this frame first in one
 compact paragraph, then proceed. Keep altitude as code placement, not as the
 scientific claim itself.
 
+Architecture layer is not the same as notebook workbench:
+
+- SAME representation: SAME on its own, direct decode, geometry, memory,
+  bottleneck stress, latent DSP, control lanes.
+- SA3 flow-conditioning: prompt conditions, flow states, logSNR/timestep probes,
+  prompt inversion, condition counterfactuals.
+- SA3 internal trajectory: residual activations, sampler states, guidance
+  objectives, layer/time causality.
+- SA3-over-SAME coupled editing: SAME edits entering SA3 polish, inpainting,
+  continuation, audio-to-audio, rescue/erasure tests.
+- Evidence-listening: descriptors, player notes, disagreement rows, manifests,
+  and ledger decisions.
+
 ## Repo Context To Inspect
 
 Prefer local evidence before invention:
@@ -38,6 +53,7 @@ Prefer local evidence before invention:
 - `docs/research/current/primitive-map.md`
 - `docs/research/current/capability-map.md`
 - `docs/research/current/research-state.md`
+- `docs/research/current/architecture-ontology.md`
 - `docs/research/current/methods-and-math.md`
 - `docs/research/current/run-protocol.md`
 - `docs/research/current/experiment-ledger.md`
@@ -160,6 +176,8 @@ For implementation, use this loop:
 - Real runs/listening decisions: `docs/research/current/experiment-ledger.md`
 - Run protocol or workbench execution order:
   `docs/research/current/run-protocol.md`
+- Architecture-layer framing:
+  `docs/research/current/architecture-ontology.md`
 
 6. Validate the notebook JSON/imports and run `git diff --check`.
 

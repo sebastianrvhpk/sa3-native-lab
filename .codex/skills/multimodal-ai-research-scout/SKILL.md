@@ -56,6 +56,9 @@ What transfers to SA3/SAME:
 What probably does not transfer:
 Notebook experiment candidate:
 Local object transition:
+Architecture layer:
+SAME representation / SA3 flow-conditioning / SA3 internal trajectory /
+SA3-over-SAME coupled editing / evidence-listening
 Local workbench:
 Claim maturity target: microscope / selector / intervention candidate / promoted method
 Local altitude landing: root primitive / adapter / procedure / evidence / docs-only
@@ -85,7 +88,20 @@ workbench, and evidence:
   local guidance or scoring lane by default.
 
 When proposing local implementation, state the workbench, maturity target, and
-altitude explicitly:
+altitude explicitly. State architecture layer before workbench:
+
+- SAME representation: autoencoder, codec, latent geometry, memory, direct
+  decode, bottleneck, or latent-operator source.
+- SA3 flow-conditioning: prompt, condition, flow, timestep, inversion, or
+  counterfactual source.
+- SA3 internal trajectory: residual, attention, sampler-state, guidance, or
+  step-window source.
+- SA3-over-SAME coupled editing: inpainting, continuation, init-audio,
+  polish/rescue, source preservation, or edit-survival source.
+- Evidence-listening: evaluation, annotation, disagreement, ledger, or report
+  source.
+
+Then choose code altitude:
 
 - Root primitive: source suggests new math, rows, statistics, search, or
   operators over existing native objects.

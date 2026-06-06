@@ -7,6 +7,9 @@ This repo keeps the expanded Colab notebook as the research instrument. The docs
 are organized as a lab record:
 
 - `current/research-state.md`: what exists now.
+- `current/architecture-ontology.md`: architecture-layer map for SAME-only,
+  SA3-only, SA3 internal trajectory, coupled SA3-over-SAME editing, and
+  evidence/listening science.
 - `current/methods-and-math.md`: how the notebook methods work.
 - `current/primitive-map.md`: how the helper modules cluster into a coherent
   notebook primitive library.
@@ -24,6 +27,9 @@ are organized as a lab record:
 - [Research state](current/research-state.md): current project direction, repo
   surfaces, native object graph, workbenches, maturity board, active helper
   modules, artifact graph, runtime assumptions, and current unknowns.
+- [Architecture ontology](current/architecture-ontology.md): canonical research
+  layers, object transitions, placement rules, existing coverage, new research
+  programs, and priority order.
 - [Methods and math](current/methods-and-math.md): SA3/SAME objects, frozen-model
   principle, flow scoring, object-transition equations, latent DSP, geometry,
   control observability, guidance, residual steering, and implementation safety
@@ -75,8 +81,8 @@ notebook's descriptor, memory, player, and annotation cells.
 - Current implementation claims should point to `colab/`,
   `latent_audio_primitives/`, or current research docs.
 - New notebook methods should update `current/research-state.md`,
-  `current/methods-and-math.md`, `current/primitive-map.md`,
-  `current/capability-map.md`, and
+  `current/architecture-ontology.md`, `current/methods-and-math.md`,
+  `current/primitive-map.md`, `current/capability-map.md`, and
   `current/backlog.md` as appropriate.
 - Current/SOTA architecture scouting should update
   `current/frontier-architecture-transfer.md` and cite checked primary sources.

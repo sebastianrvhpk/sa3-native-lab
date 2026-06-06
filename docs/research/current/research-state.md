@@ -1,7 +1,7 @@
 # SA3 Native Lab Research State
 
 Status: current project snapshot for the notebook-first SA3 Native Lab direction
-as of 2026-06-05.
+as of 2026-06-06.
 
 This document answers: what the repo is for, which native objects are active,
 how the helper library is organized, which claims are mature, and what evidence
@@ -74,6 +74,21 @@ or train small sidecar/control heads
 measure with native flow losses, latent geometry, audio descriptors, memory rows,
 control lanes, residual probes, listening notes, and experiment manifests
 ```
+
+## Architecture Ontology
+
+The project is not only a list of notebook workbenches. It has five
+architecture layers:
+
+| Layer | Main question | Notebook implication |
+|---|---|---|
+| SAME Representation Science | What does SAME preserve, expose, erase, or make editable on its own? | Run direct-decode, bottleneck, geometry, memory, DSP, and control-lane experiments before invoking SA3 polish. |
+| SA3 Flow and Conditioning Science | What does frozen SA3 know through prompt conditions, flow timesteps, and velocity fields? | Use shared flow probe banks, prompt variants, attribution, and condition inversion as SA3-native evidence. |
+| SA3 Internal Trajectory Science | What do residual activations and sampler states reveal or causally control? | Keep residual/guidance work as microscope or high-risk candidate until layer/time sweeps survive audio review. |
+| SA3-over-SAME Coupled Editing | How does SA3 read, repair, erase, or amplify SAME latents? | Compare every coupled edit against direct SAME decode and plain SA3 polish. |
+| Evidence and Listening Science | How are claims reviewed and promoted? | Descriptors, memory rows, disagreement rows, player annotations, manifests, and ledger decisions are first-class methods. |
+
+The canonical layer map is [Architecture ontology](architecture-ontology.md).
 
 ## Object Transition Workbenches
 

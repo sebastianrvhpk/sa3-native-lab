@@ -1,7 +1,7 @@
 # SA3 Native Lab Methods and Math
 
 Status: current technical specification for SA3/SAME notebook methods as of
-2026-06-05.
+2026-06-06.
 
 This document answers: what native objects are manipulated, which transitions
 the notebook tests, how measurements are interpreted, and which conventions
@@ -47,6 +47,42 @@ Adapter conversion:
 ```text
 z_memory = transpose z_sa3 from C x T to T x C
 z_sa3 = transpose z_memory from T x C to C x T
+```
+
+## Architecture-Layer Math
+
+The same notebook can study SAME on its own, SA3 on its own over SAME-shaped
+latents, SA3's internal trajectory, or the coupled SA3-over-SAME editing path.
+Keep these objects separate:
+
+```text
+SAME Representation:
+  x -> E(x) = z0
+  z0 -> D(z0) = x_hat
+  z0 -> summaries / geometry / memory / control lanes
+
+SA3 Flow and Conditioning:
+  z_t = (1 - t) z0 + t epsilon
+  (z_t, t, C(p)) -> v_theta(z_t, t, C(p))
+
+SA3 Internal Trajectory:
+  a_l = residual activation at layer l
+  state_i -> state_i + Delta t_i v_theta(state_i, t_i, C(p))
+  patched a_l or patched state_i -> changed output trajectory
+
+SA3-over-SAME Coupled Editing:
+  z0 -> edited z0'
+  z0' -> SA3 polish / inpaint / continue -> z_out
+  z_out -> D(z_out)
+```
+
+Placement rule:
+
+```text
+SAME-only claim = prove with direct decode / SAME rows first.
+SA3-only claim = prove with flow, condition, residual, or trajectory rows first.
+Coupled claim = compare direct SAME decode against SA3 polish.
+Promoted claim = add descriptors, listening notes, and ledger decisions.
 ```
 
 ## Frozen-Model Principle

@@ -72,7 +72,20 @@ SA3 DiT/flow model v_theta(z_t, t, C(p))
 SAME decoder D(z) -> audio
 ```
 
-The research layer focuses on:
+The research layer is organized by architecture layer first:
+
+- SAME Representation Science: SAME on its own as encoder, decoder, latent
+  bottleneck, geometry, memory, and editable representation.
+- SA3 Flow and Conditioning Science: SA3 on its own over SAME-shaped flow
+  states, prompt conditions, logSNR/timestep probes, and prompt inversion.
+- SA3 Internal Trajectory Science: residual activations, sampler states,
+  guidance objectives, and layer/time causal probes.
+- SA3-over-SAME Coupled Editing: SAME edits entering SA3 polish, inpainting,
+  continuation, audio-to-audio, and source-preservation paths.
+- Evidence and Listening Science: descriptor rows, memory rows, player
+  annotations, disagreement panels, manifests, and ledger decisions.
+
+The current notebook workbenches implement those layers through:
 
 - audio/SAME preparation and `LatentItem` records,
 - SAME measurement and intervention over geometry, control lanes, latent DSP,
@@ -118,6 +131,14 @@ The bottom-up capability map is:
 
 It maps native objects, operations, evidence maturity, artifacts, parameters,
 and the workbench shape directly from current code and cells.
+
+The architecture ontology is:
+
+`docs/research/current/architecture-ontology.md`
+
+It defines the SAME-only, SA3-only, SA3-internal-trajectory,
+SA3-over-SAME-coupled, and evidence/listening layers, plus the next research
+programs and implementation candidates.
 
 The current multimodal/audio architecture transfer note is:
 

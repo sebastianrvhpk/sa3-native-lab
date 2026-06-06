@@ -5,6 +5,10 @@ Use this template for proposed notebook experiments.
 ```text
 Title:
 
+Architecture layer:
+SAME representation / SA3 flow-conditioning / SA3 internal trajectory /
+SA3-over-SAME coupled editing / evidence-listening.
+
 Object:
 Native object under study: audio / SAME z0 / flow state z_t / prompt condition /
 residual activation / control lane / memory item / dataset cluster /

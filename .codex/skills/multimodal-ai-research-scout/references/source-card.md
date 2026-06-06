@@ -27,6 +27,10 @@ Notebook impact:
 
 Local object transition:
 
+Architecture layer:
+SAME representation / SA3 flow-conditioning / SA3 internal trajectory /
+SA3-over-SAME coupled editing / evidence-listening.
+
 Local workbench:
 Runtime and model boundary / Evidence packet setup / Audio and SAME
 preparation / SAME measurement / SAME intervention / SA3 flow prompt /

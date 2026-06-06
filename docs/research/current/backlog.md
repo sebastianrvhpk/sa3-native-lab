@@ -24,6 +24,17 @@ a concrete notebook run over SA3/SAME objects and produce an evidence packet.
 Use [Run protocol](run-protocol.md) before promoting a backlog item into a kept
 method.
 
+Use [Architecture ontology](architecture-ontology.md) to place each item before
+running it:
+
+```text
+SAME representation
+SA3 flow/conditioning
+SA3 internal trajectory
+SA3-over-SAME coupled editing
+evidence/listening
+```
+
 ## Current Maturity Reference
 
 | Maturity | Items | Evidence status |
@@ -357,24 +368,48 @@ Drop or revise if:
 - metrics disagree randomly,
 - the panel slows the notebook without improving decisions.
 
+## Architecture-Layer Expansion Candidates
+
+These are not separate priorities from the gaps above; they are cleaner
+architecture-level implementations that make the gaps easier to run.
+
+| Candidate | Layer | Concrete implementation |
+|---|---|---|
+| SAME bottleneck atlas | SAME representation | Sweep low-rank, channel dropout, temporal blur, FFT bands, noise radius, direct decode, and descriptor/listening rows. |
+| SAME edit survival matrix | SA3-over-SAME coupled editing | For each SAME operator, compare source, direct decode, plain polish, and method polish; classify preserved, erased, amplified, repaired. |
+| Flow timestep semantic bands | SA3 flow/conditioning | Aggregate loss-by-logSNR across prompt categories and target clips; compare against descriptors and listening tags. |
+| Prompt condition counterfactuals | SA3 flow/conditioning | Score raw, rewritten, readable-search, hard-search, blank, and wrong prompts under one shared probe bank. |
+| Residual layer-time atlas | SA3 internal trajectory | Capture residual activations by layer and sampler window for prompt/audio pairs before steering. |
+| Residual causal sweep | SA3 internal trajectory | Sweep layer, timestep window, vector source, and alpha; require bounded descriptor/listening movement. |
+| SA3 polish/rescue audit | SA3-over-SAME coupled editing | Feed degraded or edited SAME latents into polish/init paths and classify rescue, erasure, invention, or preservation. |
+| Trajectory objective honesty packet | SA3 internal trajectory | Compare guidance-objective improvement against descriptor, source-preservation, and listening rows. |
+| Segment and continuation structure bench | SA3-over-SAME coupled editing / memory | Compare global prompt continuation against chunk/control-lane/bridge-planned continuation. |
+| Architecture-layer evidence field | evidence/listening | Add architecture-layer labels to manifests and ledger rows for every completed run. |
+
 ## Priority Order
 
-1. Reproducible flow probe evidence.
-2. Source preservation versus copying panel.
-3. Direct decode versus SA3 polish audit.
-4. Prompt semantic transparency.
-5. Flow score predictive validity.
-6. Semantic bottleneck disagreement panel.
-7. Control-lane and geometry selection value.
-8. Residual causality.
-9. Guidance objective honesty.
-10. Null-condition editing.
-11. Seed and recipe repeatability.
-12. External comparison packets.
-13. Reportable evidence packets.
+1. SAME bottleneck atlas.
+2. SAME edit survival matrix.
+3. Reproducible flow probe evidence.
+4. Flow timestep semantic bands.
+5. Prompt semantic transparency and condition counterfactuals.
+6. Source preservation versus copying panel.
+7. Direct decode versus SA3 polish audit.
+8. Semantic bottleneck disagreement panel.
+9. Flow score predictive validity.
+10. Control-lane and geometry selection value.
+11. SA3 polish/rescue audit.
+12. Residual layer-time atlas.
+13. Residual causality.
+14. Guidance objective honesty.
+15. Segment and continuation structure bench.
+16. Null-condition editing.
+17. Seed and recipe repeatability.
+18. External comparison packets.
+19. Reportable evidence packets.
 
-The first three stabilize evidence. The next three test the clearest source
-research insight from the re-audit: semantic agreement, acoustic preservation,
-and flow agreement can disagree. The middle four test whether interventions
-deserve promotion. The last three make the lab easier to repeat, compare, and
+The first two establish SAME on its own and SA3-over-SAME survival behavior.
+The next six stabilize SA3 flow/conditioning evidence and disagreement panels.
+Residual and guidance work comes after the surrounding SAME/flow evidence is
+interpretable. The final items make the lab easier to repeat, compare, and
 review without adding extra infrastructure.

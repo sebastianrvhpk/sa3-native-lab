@@ -43,6 +43,19 @@ identify the native object each frontier method manipulates
 -> test with descriptor, latent, flow, source-preservation, and listening evidence
 ```
 
+The architecture-layer landing must be explicit:
+
+```text
+SAME Representation Science
+SA3 Flow and Conditioning Science
+SA3 Internal Trajectory Science
+SA3-over-SAME Coupled Editing
+Evidence and Listening Science
+```
+
+See [Architecture ontology](architecture-ontology.md) for the canonical local
+layer map.
+
 ## Source Map
 
 | Source | Date | Architecture Delta | Notebook Transfer | Status |
@@ -398,21 +411,21 @@ review.
 Use the measurement-first backlog sequence:
 
 ```text
-probe-bank cache
--> novelty/source-preservation panel
--> SAME bottleneck stress test
--> multi-turn audio edit consistency
--> segment/block prompt plan
--> native temporal evidence lane
--> step/polish tradeoff audit
--> annotation-weighted recipe selection
--> prompt semantic transparency packet
+SAME bottleneck atlas
+-> SAME edit survival matrix
+-> reproducible flow probe evidence
+-> flow timestep semantic bands
+-> prompt semantic transparency and condition counterfactuals
+-> source preservation versus copying panel
+-> direct decode versus SA3 polish audit
 -> semantic bottleneck disagreement panel
+-> residual layer-time atlas
+-> residual causal sweep
+-> trajectory objective honesty packet
 ```
 
-The first two stabilize evidence. The next four import architecture lessons.
-Annotation-weighted selection waits until enough listening notes exist. The
-final two make prompt semantics and semantic/acoustic disagreement transparent.
+SAME-only and coupled SA3-over-SAME behavior should be understood before
+residual/guidance work is promoted beyond microscope status.
 
 ## Unknowns
 

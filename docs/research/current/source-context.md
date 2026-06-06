@@ -13,6 +13,8 @@ and repositories are the sources.
 For a source-checked current architecture scout and translation into concrete
 SA3/SAME notebook experiments, see
 [Frontier architecture transfer](frontier-architecture-transfer.md).
+For the local research layers those sources must land in, see
+[Architecture ontology](architecture-ontology.md).
 
 ## 2026-06-06 Source Re-Audit Lens
 
