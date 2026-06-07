@@ -915,7 +915,9 @@ ledger decision.
 
 ### Audio Or SAME Latents To Control Lanes
 
-Control lanes are time-varying notebook controls:
+Control lanes are time-varying notebook measurements that can become selectors
+or masks. They are not assumed to be reliable controls until decoded audio,
+flow rows, and listening agree.
 
 ```text
 control_lane = {
@@ -931,20 +933,58 @@ Examples:
 
 ```text
 rms / envelope
+audio confidence from RMS
 latent motion
 latent channel energy
+individual latent-channel traces
 brightness
 stereo width
 onset density
 periodicity
 ```
 
+Core lane measurements:
+
+```text
+latent_motion_energy(t) = RMS_c(z_t,c - z_{t-1,c})
+latent_channel_energy(t) = RMS_c(z_t,c)
+audio_confidence(t) = clamp((RMS_dB(t) - floor_dB) / (full_dB - floor_dB), 0, 1)
+```
+
+The audio-confidence lane gates features that become unstable in near silence,
+especially spectral centroid and zero-crossing rate.
+
+Lane comparison:
+
+```text
+reference lanes + candidate lanes
+-> matched names
+-> frame alignment
+-> confidence-weighted distance, similarity, delta rows
+```
+
+Lane region selection:
+
+```text
+lane -> peaks / stable / silence / above / below regions
+regions -> time mask
+time mask + latent edit -> lane-masked latent intervention
+```
+
+Channel atlas:
+
+```text
+z0 -> per-channel rms, mean_abs, std, motion_energy, peak_abs
+top channels -> individual channel lanes / heatmap
+```
+
 Lane status:
 
 ```text
 measurement first
-retrieval second
-guidance/control only after observability and listening agree
+comparison / retrieval / bridge ranking second
+mask-based latent edits third
+guidance/control only after repeated observability and listening agree
 ```
 
 ### Memory Rows To Dataset Curriculum

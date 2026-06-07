@@ -84,7 +84,7 @@ should be combined only after their failure modes are visible.
 |---|---|---|---|
 | Descriptor rows | decoded audio, baseline audio, method audio | make audible changes inspectable before listening | never alone |
 | Memory/source rows | SAME latents, source/donor collections | expose copying, novelty, and neighborhood movement | only with audition |
-| Control lanes | audio or latent trajectories | summarize time-varying structure for review and selectors | selector evidence |
+| Control lanes | audio or latent trajectories | summarize, compare, segment, and mask time-varying structure | selector evidence; intervention only after audition |
 | Notebook player and annotations | output paths, loop ranges, notes | collect listening evidence in the same run context | required for promotion |
 | Disagreement rows | SAME, flow, descriptor, memory, listening lanes | surface metric conflicts instead of hiding them in a scalar | triage only |
 | Manifest and ledger | run parameters, artifacts, decisions | make claims reproducible and comparable | final local authority |
@@ -315,8 +315,8 @@ or bridge plan`.
 
 Implementation shape:
 
-- Use SAME chunks, memory rows, bridge search, and control lanes to produce
-  segment plans.
+- Use SAME chunks, memory rows, lane-similar retrieval, lane-continuity bridge
+  search, and control-lane regions to produce segment plans.
 - Compare one global prompt against segment-level prompts and bridge-selected
   continuations.
 

@@ -151,22 +151,26 @@ their selection value is not yet proven.
 
 Native transition: `collection -> lane/geometry/memory ranking -> donor/bridge/source choice`.
 
-Current support: geometry reports, control lanes, memory index, curriculum,
-bridge ranking, composition helpers.
+Current support: geometry reports, control lanes, lane comparison, silence
+confidence, lane-selected regions, latent-channel atlas, lane-mask latent DSP,
+memory index, curriculum, bridge ranking, and composition helpers.
 
 Next run: compare manual/random donor or bridge choices against lane/geometry
-ranked choices.
+ranked choices, then audition lane-masked edits against full-region edits.
 
 Promote if:
 
 - ranked choices improve auditions,
 - metrics explain audible differences,
 - heldout rows prevent overfitting to one dataset.
+- lane-selected masks preserve intended transients, sustains, or quiet regions
+  better than whole-clip edits.
 
 Drop or revise if:
 
 - rankings are no better than random/manual choice,
 - metrics duplicate simple descriptors without added value.
+- lane masks only hide failures without improving decoded or polished audio.
 
 ## Gap 6. Residual Causality
 

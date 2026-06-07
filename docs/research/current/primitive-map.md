@@ -106,7 +106,7 @@ when primitive APIs change.
 | SAME summary | `latent_summary(z)`, `boundary_summary(z, side, k)` | `z0` -> mean/std/velocity summary or boundary state | nearest-memory, bridge, source-preservation rows |
 | SAME geometry | `fit_latent_geometry(items)`, `geometry_report(items)`, `mahalanobis_summary_distance(a,b,geometry)`, `covariance_transport(z, reference)` | latent collection -> PCA geometry or transported latent | microscope first; intervention only after decode/listening |
 | Periodicity | `periodicity_report(z)`, `loop_boundary_loss(z)`, `latent_autocorrelation(z)` | latent/audio segment -> loop and periodic rows | loopability microscope and bridge evidence |
-| Control lanes | `audio_envelope_lane(...)`, `latent_motion_lane(...)`, `normalize_control_lane(...)`, `control_lane_similarity(...)` | audio/latent trajectory -> time-varying lane | selector evidence for retrieval, bridge, and review |
+| Control lanes | `audio_same_control_lanes(...)`, `compare_control_lane_sets(...)`, `regions_from_control_lane(...)`, `control_lane_mask(...)`, `latent_channel_scores(...)`, `rank_control_lane_matches(...)`, `rank_control_lane_bridges(...)` | audio/latent trajectory -> lanes -> comparison rows / regions / masks / retrieval rows | measurement first; selector and intervention-mask evidence after review |
 | Descriptors | `audio_descriptor_report(audio, sample_rate)`, `descriptor_delta(a,b)` | decoded audio -> descriptor rows | evidence utility; never promotion alone |
 | Memory | `LatentMemoryIndex(items).query(...)`, `.query_controls(...)`, `.query_hybrid(...)`, `control_score(...)` | collection + query/control target -> nearest rows | selector; requires copying/source-preservation review |
 | Curriculum | `build_memory_curriculum(items, cluster_count=...)`, `nearest_memory_rows(query, items)` | collection -> clusters / nearest rows | dataset design and heldout/listening planning |
@@ -250,7 +250,7 @@ composition plans without confusing source preservation with copying.
 | `index.py` | confirmed | Latent memory search over summaries, controls, and hybrid scores. |
 | `curriculum.py` | confirmed | Cluster memory, pick representatives, split heldout rows, show nearest-memory evidence. |
 | `composition.py` | confirmed | Continuation, loop, bridge, and path ranking. |
-| `control_lanes.py` | confirmed | Lane similarity can support retrieval and bridge selection after evidence validation. |
+| `control_lanes.py` | confirmed | Lane comparison, silence confidence, region masks, channel atlas, retrieval ranking, and bridge ranking. |
 | `audio_descriptors.py` | confirmed | Descriptor summaries support donor/source comparison and novelty checks. |
 
 Narrative role: memory is the collection-facing side of SAME representation
@@ -267,7 +267,7 @@ Purpose: turn many clips and many variants into decisions.
 | `evidence/annotations.py` | confirmed | Annotation save/load/search store for listening evidence. |
 | `evidence/disagreement.py` | confirmed | Native evidence disagreement rows for SAME, flow, descriptors, memory, and listening. |
 | `audio_descriptors.py` | confirmed | Lightweight audio descriptor reports and deltas. |
-| `control_lanes.py` | confirmed | Time-varying evidence lanes, SVG visualization, persistence. |
+| `control_lanes.py` | confirmed | Time-varying evidence lanes, overlays, region SVGs, channel heatmaps, persistence, and comparison rows. |
 | Notebook manifest cell | confirmed | Run metadata, experiment switches, model/runtime context. |
 | `docs/research/current/experiment-ledger.md` | confirmed | Listening notes and promote/revise/drop decisions. |
 

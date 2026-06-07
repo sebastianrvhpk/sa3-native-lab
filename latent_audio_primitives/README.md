@@ -38,7 +38,7 @@ upstream-version-sensitive behavior behind generic abstractions.
 | Root primitives | `schema.py`, `latent_math.py`, `geometry.py`, `latent_blur.py`, `selective_renoise.py`, `flow_prompt.py`, `prompt_semantics.py`, etc. | native objects, math, measurements, operators, search | define what the lab manipulates and measures |
 | Model boundary | `adapters/` | upstream SA3/SAME wrappers, residual hooks, tokenizer access | isolate external runtime coupling |
 | Procedures | `procedures/` | soft prompts, flow scoring, SA3 polish, selective SA3, cyclic SA3, residual sweeps | run executable notebook methods |
-| Evidence | `evidence/`, `audio_descriptors.py`, `control_lanes.py` | player panels, annotations, descriptor/lane/disagreement rows | support auditioning and decisions |
+| Evidence | `evidence/`, `audio_descriptors.py`, `control_lanes.py` | player panels, annotations, descriptor/lane/disagreement rows, lane masks | support auditioning, selectors, and decisions |
 
 Research layers are different from code altitude:
 
@@ -51,6 +51,12 @@ SA3-over-SAME coupled editing: SAME edits plus SA3 polish/inpaint/continue proce
 
 Evidence utilities are shared review surfaces: evidence modules, manifests, and
 ledger docs audit every research layer instead of defining a fifth layer.
+
+`control_lanes.py` is measurement-first: it extracts audio/SAME temporal lanes,
+compares source/output lanes, builds silence confidence, ranks lane-similar
+memory rows, selects lane regions, and creates masks that other latent
+operators may use. A lane mask is an intervention surface only after direct
+decode, polish, and listening evidence support it.
 
 The full map lives in
 [`docs/research/current/primitive-map.md`](../docs/research/current/primitive-map.md).

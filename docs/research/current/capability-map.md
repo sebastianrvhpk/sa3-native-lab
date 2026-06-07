@@ -52,7 +52,7 @@ utilities:
 | Prompt semantic row | prompt variant, tags, flow/listening evidence | `prompt_semantics.py`, notebook cells | compares raw, readable, and flow-found language | confirmed |
 | Residual activation `a_l` | layer activation tensors | `adapters/sa3_residual_hooks.py`, residual procedures | captured, contrasted, steered, summarized | confirmed |
 | `LatentItem` | ID, latent, rate, prompt, descriptors, labels, metadata | `schema.py`, `io.py` | saved, loaded, indexed, clustered | confirmed |
-| Control lane | time-varying values, rate, confidence, metadata | `control_lanes.py` | extracted, normalized, compared, saved, rendered | confirmed |
+| Control lane | time-varying values, rate, confidence, metadata | `control_lanes.py` | extracted, normalized, compared, segmented, masked, saved, rendered | confirmed |
 | Descriptor report | JSON-friendly audio statistics | `audio_descriptors.py` | computed for source/baseline/method outputs | confirmed |
 | Evidence packet | source/baseline/method outputs plus rows and notes | notebook, `evidence/`, ledger | records reviewable claims | template ready |
 | Disagreement row | native evidence lanes for one artifact or prompt | `evidence/disagreement.py` | surfaces conflicts before decisions | confirmed |
@@ -66,7 +66,7 @@ utilities:
 | SAME summaries | `z0` -> summary vectors | observe/compare | root measurement | confirmed | nearest-memory/source-preservation checks |
 | Geometry reports | `z0` collection -> PCA/covariance/transport rows | observe/select | root measurement | microscope | connect geometry movement to audition |
 | Periodicity and loop metrics | audio or `z0` -> loop rows | observe/compare | root measurement | microscope | compare against loop listening notes |
-| Control lanes | audio/latent -> time-varying lanes | observe/select | root measurement plus evidence | microscope/selector | lane similarity must improve retrieval or review |
+| Control lanes | audio/latent -> time-varying lanes -> comparison rows / regions / masks | observe/select/intervene candidate | root measurement plus evidence | microscope/selector | lane similarity and lane masks must improve retrieval, review, or edits |
 | Latent memory | `LatentItem` collection -> nearest rows | select | root memory | selector | show better donor/source/novelty decisions |
 | Curriculum clustering | memory collection -> clusters/heldout rows | select | root memory | selector | show clusters improve prompt or donor choices |
 | Bridge/continuation ranking | memory rows -> ranked paths | select | root composition | selector | bridge scores must predict audible continuity |
