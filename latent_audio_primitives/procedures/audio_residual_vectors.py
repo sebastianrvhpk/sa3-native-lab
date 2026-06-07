@@ -11,6 +11,8 @@ from latent_audio_primitives.adapters.sa3_residual_hooks import ActivationCollec
 from latent_audio_primitives.procedures.residual_activation_vectors import (
     ActivationExample,
     LayerProbeRow,
+    flatten_layer_windows,
+    probe_layer_window_rows,
     probe_layer_rows,
     vectors_from_examples,
 )
@@ -32,6 +34,7 @@ class AudioResidualExtractionResult:
     vectors: SteeringVectors
     examples: list[ActivationExample] = field(default_factory=list)
     layer_probe_rows: list[LayerProbeRow] = field(default_factory=list)
+    trajectory_probe_rows: list[LayerProbeRow] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def save(self, directory: str | Path) -> Path:
@@ -48,6 +51,7 @@ class AudioResidualExtractionResult:
                         "best_layer": self.vectors.best_layer,
                     },
                     "layer_probe": [row.to_dict() for row in self.layer_probe_rows],
+                    "trajectory_probe": [row.to_dict() for row in self.trajectory_probe_rows],
                     "examples": [
                         {
                             "label": example.label,
@@ -100,6 +104,8 @@ class SA3AudioResidualVectorExtractor:
         seed: int = 42,
         init_noise_level: float = 0.35,
         baseline_mode: str = "prompt",
+        trajectory_window_count: int | None = None,
+        trajectory_window_size: int | None = None,
         generate_kwargs: dict[str, Any] | None = None,
     ) -> list[ActivationExample]:
         torch = _require_torch()
@@ -140,6 +146,17 @@ class SA3AudioResidualVectorExtractor:
                     **generate_kwargs,
                 )
                 activations = collector.get_mean_activations()
+                layer_window_activations: dict[tuple[int, int], Any] = {}
+                layer_window_metadata: dict[tuple[int, int], dict[str, Any]] = {}
+                if trajectory_window_count is not None or trajectory_window_size is not None:
+                    pooled_windows, window_metadata = collector.get_windowed_mean_activations(
+                        window_count=trajectory_window_count,
+                        window_size=trajectory_window_size,
+                    )
+                    layer_window_activations, layer_window_metadata = flatten_layer_windows(
+                        pooled_windows,
+                        window_metadata,
+                    )
                 examples.append(
                     ActivationExample(
                         layer_activations=activations,
@@ -148,6 +165,8 @@ class SA3AudioResidualVectorExtractor:
                         pair_index=index,
                         axis="audio_residual",
                         family=audio_example.group,
+                        layer_window_activations=layer_window_activations,
+                        layer_window_metadata=layer_window_metadata,
                     )
                 )
                 if baseline_mode == "prompt" and audio_example.label == 1:
@@ -163,6 +182,17 @@ class SA3AudioResidualVectorExtractor:
                         **generate_kwargs,
                     )
                     baseline_activations = collector.get_mean_activations()
+                    baseline_layer_window_activations: dict[tuple[int, int], Any] = {}
+                    baseline_layer_window_metadata: dict[tuple[int, int], dict[str, Any]] = {}
+                    if trajectory_window_count is not None or trajectory_window_size is not None:
+                        pooled_windows, window_metadata = collector.get_windowed_mean_activations(
+                            window_count=trajectory_window_count,
+                            window_size=trajectory_window_size,
+                        )
+                        baseline_layer_window_activations, baseline_layer_window_metadata = flatten_layer_windows(
+                            pooled_windows,
+                            window_metadata,
+                        )
                     examples.append(
                         ActivationExample(
                             layer_activations=baseline_activations,
@@ -171,6 +201,8 @@ class SA3AudioResidualVectorExtractor:
                             pair_index=index,
                             axis="audio_residual",
                             family="prompt_baseline",
+                            layer_window_activations=baseline_layer_window_activations,
+                            layer_window_metadata=baseline_layer_window_metadata,
                         )
                     )
         return examples
@@ -193,6 +225,9 @@ class SA3AudioResidualVectorExtractor:
         probe_cv_folds: int = 5,
         probe_require_sklearn: bool = False,
         probe_random_state: int = 0,
+        trajectory_probe: bool = False,
+        trajectory_window_count: int | None = 5,
+        trajectory_window_size: int | None = None,
         generate_kwargs: dict[str, Any] | None = None,
     ) -> AudioResidualExtractionResult:
         examples = self.collect_examples(
@@ -205,10 +240,13 @@ class SA3AudioResidualVectorExtractor:
             seed=seed,
             init_noise_level=init_noise_level,
             baseline_mode=baseline_mode,
+            trajectory_window_count=trajectory_window_count if trajectory_probe else None,
+            trajectory_window_size=trajectory_window_size if trajectory_probe else None,
             generate_kwargs=generate_kwargs,
         )
         vectors = vectors_from_examples(examples, normalize=normalize)
         layer_probe_rows: list[LayerProbeRow] = []
+        trajectory_probe_rows: list[LayerProbeRow] = []
         if probe:
             layer_probe_rows = probe_layer_rows(
                 examples,
@@ -225,10 +263,19 @@ class SA3AudioResidualVectorExtractor:
             ranked_ok = [row for row in layer_probe_rows if row.fold_count > 0]
             if ranked_ok:
                 vectors.best_layer = ranked_ok[0].layer_index
+        if trajectory_probe:
+            trajectory_probe_rows = probe_layer_window_rows(
+                examples,
+                method=probe_method,
+                cv_folds=probe_cv_folds,
+                require_sklearn=probe_require_sklearn,
+                random_state=probe_random_state,
+            )
         return AudioResidualExtractionResult(
             vectors=vectors,
             examples=examples,
             layer_probe_rows=layer_probe_rows,
+            trajectory_probe_rows=trajectory_probe_rows,
             metadata={
                 "prompt": prompt,
                 "duration": duration,
@@ -242,6 +289,9 @@ class SA3AudioResidualVectorExtractor:
                 "probe_cv_folds": probe_cv_folds if probe else None,
                 "probe_require_sklearn": probe_require_sklearn if probe else None,
                 "probe_random_state": probe_random_state if probe else None,
+                "trajectory_probe": trajectory_probe,
+                "trajectory_window_count": trajectory_window_count if trajectory_probe else None,
+                "trajectory_window_size": trajectory_window_size if trajectory_probe else None,
                 "positive_paths": [str(path) for path in positive_paths],
                 "negative_paths": [str(path) for path in (negative_paths or [])],
             },

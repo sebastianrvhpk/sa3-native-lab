@@ -1,4 +1,4 @@
-"""Prompt-pair residual activation vector extraction for SA3 steering probes."""
+"""Prompt-pair residual activation vector extraction for SA3 trajectory probes."""
 
 from __future__ import annotations
 
@@ -25,11 +25,13 @@ class ActivationExample:
     pair_index: int
     axis: str
     family: str
+    layer_window_activations: dict[tuple[int, int], Any] = field(default_factory=dict)
+    layer_window_metadata: dict[tuple[int, int], dict[str, Any]] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True)
 class LayerProbeRow:
-    """One layer-ranking row for residual activation probes."""
+    """One layer or layer-window ranking row for residual activation probes."""
 
     layer_index: int
     method: str
@@ -42,10 +44,28 @@ class LayerProbeRow:
     rank: int = 0
     status: str = "ok"
     error: str = ""
+    window_index: int | None = None
+    window_label: str = ""
+    window_start_fraction: float | None = None
+    window_end_fraction: float | None = None
+    call_start: int | None = None
+    call_end: int | None = None
+    call_count: int | None = None
+    window_count: int | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "layer_index": int(self.layer_index),
+            "window_index": None if self.window_index is None else int(self.window_index),
+            "window_label": self.window_label,
+            "window_start_fraction": (
+                None if self.window_start_fraction is None else float(self.window_start_fraction)
+            ),
+            "window_end_fraction": None if self.window_end_fraction is None else float(self.window_end_fraction),
+            "call_start": None if self.call_start is None else int(self.call_start),
+            "call_end": None if self.call_end is None else int(self.call_end),
+            "call_count": None if self.call_count is None else int(self.call_count),
+            "window_count": None if self.window_count is None else int(self.window_count),
             "method": self.method,
             "accuracy_mean": float(self.accuracy_mean),
             "accuracy_std": float(self.accuracy_std),
@@ -66,6 +86,7 @@ class VectorExtractionResult:
     vectors: SteeringVectors
     examples: list[ActivationExample] = field(default_factory=list)
     layer_probe_rows: list[LayerProbeRow] = field(default_factory=list)
+    trajectory_probe_rows: list[LayerProbeRow] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def save(self, directory: str | Path) -> Path:
@@ -93,6 +114,7 @@ class VectorExtractionResult:
                         "best_layer": self.vectors.best_layer,
                     },
                     "layer_probe": [row.to_dict() for row in self.layer_probe_rows],
+                    "trajectory_probe": [row.to_dict() for row in self.trajectory_probe_rows],
                 },
                 f,
                 indent=2,
@@ -124,6 +146,8 @@ class SA3ActivationVectorExtractor:
         steps: int = 8,
         cfg_scale: float = 1.0,
         seed: int = 42,
+        trajectory_window_count: int | None = None,
+        trajectory_window_size: int | None = None,
         return_latents: bool = True,
         generate_kwargs: dict[str, Any] | None = None,
     ) -> list[ActivationExample]:
@@ -153,6 +177,17 @@ class SA3ActivationVectorExtractor:
                         **generate_kwargs,
                     )
                     activations = collector.get_mean_activations()
+                    layer_window_activations: dict[tuple[int, int], Any] = {}
+                    layer_window_metadata: dict[tuple[int, int], dict[str, Any]] = {}
+                    if trajectory_window_count is not None or trajectory_window_size is not None:
+                        pooled_windows, window_metadata = collector.get_windowed_mean_activations(
+                            window_count=trajectory_window_count,
+                            window_size=trajectory_window_size,
+                        )
+                        layer_window_activations, layer_window_metadata = flatten_layer_windows(
+                            pooled_windows,
+                            window_metadata,
+                        )
                     examples.append(
                         ActivationExample(
                             layer_activations=activations,
@@ -161,6 +196,8 @@ class SA3ActivationVectorExtractor:
                             pair_index=pair_index,
                             axis=pair.axis,
                             family=pair.family,
+                            layer_window_activations=layer_window_activations,
+                            layer_window_metadata=layer_window_metadata,
                         )
                     )
         return examples
@@ -180,6 +217,9 @@ class SA3ActivationVectorExtractor:
         probe_cv_folds: int = 5,
         probe_require_sklearn: bool = False,
         probe_random_state: int = 0,
+        trajectory_probe: bool = False,
+        trajectory_window_count: int | None = 5,
+        trajectory_window_size: int | None = None,
         generate_kwargs: dict[str, Any] | None = None,
     ) -> VectorExtractionResult:
         examples = self.collect_examples(
@@ -189,10 +229,13 @@ class SA3ActivationVectorExtractor:
             steps=steps,
             cfg_scale=cfg_scale,
             seed=seed,
+            trajectory_window_count=trajectory_window_count if trajectory_probe else None,
+            trajectory_window_size=trajectory_window_size if trajectory_probe else None,
             generate_kwargs=generate_kwargs,
         )
         vectors = vectors_from_examples(examples, normalize=normalize)
         layer_probe_rows: list[LayerProbeRow] = []
+        trajectory_probe_rows: list[LayerProbeRow] = []
         if probe:
             layer_probe_rows = probe_layer_rows(
                 examples,
@@ -209,6 +252,14 @@ class SA3ActivationVectorExtractor:
             ranked_ok = [row for row in layer_probe_rows if row.fold_count > 0]
             if ranked_ok:
                 vectors.best_layer = ranked_ok[0].layer_index
+        if trajectory_probe:
+            trajectory_probe_rows = probe_layer_window_rows(
+                examples,
+                method=probe_method,
+                cv_folds=probe_cv_folds,
+                require_sklearn=probe_require_sklearn,
+                random_state=probe_random_state,
+            )
         metadata = {
             "pairs": [asdict(pair) for pair in (pairs if pairs is not None else DEFAULT_PROMPT_PAIRS)[: num_pairs or None]],
             "duration": duration,
@@ -221,11 +272,15 @@ class SA3ActivationVectorExtractor:
             "probe_cv_folds": probe_cv_folds if probe else None,
             "probe_require_sklearn": probe_require_sklearn if probe else None,
             "probe_random_state": probe_random_state if probe else None,
+            "trajectory_probe": trajectory_probe,
+            "trajectory_window_count": trajectory_window_count if trajectory_probe else None,
+            "trajectory_window_size": trajectory_window_size if trajectory_probe else None,
         }
         return VectorExtractionResult(
             vectors=vectors,
             examples=examples,
             layer_probe_rows=layer_probe_rows,
+            trajectory_probe_rows=trajectory_probe_rows,
             metadata=metadata,
         )
 
@@ -326,22 +381,92 @@ def probe_layer_rows(
     rows.sort(key=lambda row: (-row.accuracy_mean, row.accuracy_std, row.layer_index))
     ranked = []
     for rank, row in enumerate(rows, start=1):
-        ranked.append(
-            LayerProbeRow(
-                layer_index=row.layer_index,
-                method=row.method,
-                accuracy_mean=row.accuracy_mean,
-                accuracy_std=row.accuracy_std,
-                fold_count=row.fold_count,
-                sample_count=row.sample_count,
-                positive_count=row.positive_count,
-                negative_count=row.negative_count,
-                rank=rank,
-                status=row.status,
-                error=row.error,
-            )
-        )
+        ranked.append(_copy_probe_row(row, rank=rank))
     return ranked
+
+
+def probe_layer_window_rows(
+    examples: list[ActivationExample],
+    *,
+    method: str = "logistic_cv",
+    cv_folds: int = 5,
+    require_sklearn: bool = False,
+    random_state: int = 0,
+) -> list[LayerProbeRow]:
+    """Rank residual layer-window cells with the same probes as whole layers.
+
+    Window indices are observed forward-call windows from the SA3 block hooks.
+    They are a trajectory microscope over the released runtime, not a guarantee
+    of exact sampler timestep semantics.
+    """
+
+    method_key = method.lower()
+    if method_key in {"audioscope", "logistic", "linear_probe"}:
+        method_key = "logistic_cv"
+    if method_key in {"centroid", "centroid_loo", "loo"}:
+        method_key = "centroid_loo"
+    if method_key not in {"logistic_cv", "centroid_loo"}:
+        raise ValueError("method must be 'logistic_cv' or 'centroid_loo'")
+
+    by_window, metadata_by_window = _activation_examples_by_layer_window(examples)
+    rows: list[LayerProbeRow] = []
+    for (layer_idx, window_idx), values in by_window.items():
+        x, y = _probe_matrix(values)
+        positive_count = int((y == 1).sum())
+        negative_count = int((y == 0).sum())
+        metadata = metadata_by_window.get((layer_idx, window_idx), {})
+        if positive_count < 1 or negative_count < 1:
+            rows.append(
+                _with_window_metadata(
+                    LayerProbeRow(
+                        layer_index=layer_idx,
+                        method=method_key,
+                        accuracy_mean=0.0,
+                        accuracy_std=0.0,
+                        fold_count=0,
+                        sample_count=int(y.shape[0]),
+                        positive_count=positive_count,
+                        negative_count=negative_count,
+                        status="insufficient",
+                        error="both positive and negative examples are required",
+                    ),
+                    window_idx,
+                    metadata,
+                )
+            )
+            continue
+
+        if method_key == "centroid_loo":
+            row = LayerProbeRow(
+                layer_index=layer_idx,
+                method="centroid_loo",
+                accuracy_mean=_centroid_leave_one_out_accuracy(values),
+                accuracy_std=0.0,
+                fold_count=int(y.shape[0]),
+                sample_count=int(y.shape[0]),
+                positive_count=positive_count,
+                negative_count=negative_count,
+            )
+        else:
+            row = _logistic_cv_probe_row(
+                layer_idx,
+                x,
+                y,
+                cv_folds=cv_folds,
+                require_sklearn=require_sklearn,
+                random_state=random_state,
+            )
+        rows.append(_with_window_metadata(row, window_idx, metadata))
+
+    rows.sort(
+        key=lambda row: (
+            -row.accuracy_mean,
+            row.accuracy_std,
+            row.layer_index,
+            -1 if row.window_index is None else row.window_index,
+        )
+    )
+    return [_copy_probe_row(row, rank=rank) for rank, row in enumerate(rows, start=1)]
 
 
 def probe_layer_accuracy(
@@ -370,12 +495,97 @@ def probe_layer_accuracy(
     }
 
 
+def flatten_layer_windows(
+    pooled_windows: dict[int, dict[int, Any]],
+    window_metadata: dict[int, dict[int, dict[str, Any]]],
+) -> tuple[dict[tuple[int, int], Any], dict[tuple[int, int], dict[str, Any]]]:
+    activations: dict[tuple[int, int], Any] = {}
+    metadata: dict[tuple[int, int], dict[str, Any]] = {}
+    for layer_idx, windows in pooled_windows.items():
+        for window_idx, activation in windows.items():
+            key = (int(layer_idx), int(window_idx))
+            activations[key] = activation
+            metadata[key] = dict(window_metadata.get(layer_idx, {}).get(window_idx, {}))
+    return activations, metadata
+
+
 def _activation_examples_by_layer(examples: list[ActivationExample]) -> dict[int, list[tuple[Any, int]]]:
     by_layer: dict[int, list[tuple[Any, int]]] = {}
     for example in examples:
         for layer_idx, activation in example.layer_activations.items():
             by_layer.setdefault(layer_idx, []).append((activation.float().cpu().numpy(), int(example.label)))
     return by_layer
+
+
+def _activation_examples_by_layer_window(
+    examples: list[ActivationExample],
+) -> tuple[dict[tuple[int, int], list[tuple[Any, int]]], dict[tuple[int, int], dict[str, Any]]]:
+    by_window: dict[tuple[int, int], list[tuple[Any, int]]] = {}
+    metadata_by_window: dict[tuple[int, int], dict[str, Any]] = {}
+    for example in examples:
+        for key, activation in example.layer_window_activations.items():
+            layer_idx, window_idx = key
+            normalized_key = (int(layer_idx), int(window_idx))
+            by_window.setdefault(normalized_key, []).append((activation.float().cpu().numpy(), int(example.label)))
+            if normalized_key not in metadata_by_window:
+                metadata_by_window[normalized_key] = dict(example.layer_window_metadata.get(key, {}))
+    return by_window, metadata_by_window
+
+
+def _with_window_metadata(row: LayerProbeRow, window_idx: int, metadata: dict[str, Any]) -> LayerProbeRow:
+    return LayerProbeRow(
+        layer_index=row.layer_index,
+        method=row.method,
+        accuracy_mean=row.accuracy_mean,
+        accuracy_std=row.accuracy_std,
+        fold_count=row.fold_count,
+        sample_count=row.sample_count,
+        positive_count=row.positive_count,
+        negative_count=row.negative_count,
+        rank=row.rank,
+        status=row.status,
+        error=row.error,
+        window_index=window_idx,
+        window_label=str(metadata.get("window_label", "")),
+        window_start_fraction=_optional_float(metadata.get("window_start_fraction")),
+        window_end_fraction=_optional_float(metadata.get("window_end_fraction")),
+        call_start=_optional_int(metadata.get("call_start")),
+        call_end=_optional_int(metadata.get("call_end")),
+        call_count=_optional_int(metadata.get("call_count")),
+        window_count=_optional_int(metadata.get("window_count")),
+    )
+
+
+def _copy_probe_row(row: LayerProbeRow, *, rank: int) -> LayerProbeRow:
+    return LayerProbeRow(
+        layer_index=row.layer_index,
+        method=row.method,
+        accuracy_mean=row.accuracy_mean,
+        accuracy_std=row.accuracy_std,
+        fold_count=row.fold_count,
+        sample_count=row.sample_count,
+        positive_count=row.positive_count,
+        negative_count=row.negative_count,
+        rank=rank,
+        status=row.status,
+        error=row.error,
+        window_index=row.window_index,
+        window_label=row.window_label,
+        window_start_fraction=row.window_start_fraction,
+        window_end_fraction=row.window_end_fraction,
+        call_start=row.call_start,
+        call_end=row.call_end,
+        call_count=row.call_count,
+        window_count=row.window_count,
+    )
+
+
+def _optional_int(value: Any) -> int | None:
+    return None if value is None else int(value)
+
+
+def _optional_float(value: Any) -> float | None:
+    return None if value is None else float(value)
 
 
 def _probe_matrix(values: list[tuple[Any, int]]):

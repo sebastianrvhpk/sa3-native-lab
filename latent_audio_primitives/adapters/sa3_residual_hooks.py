@@ -69,11 +69,16 @@ class LayerActivationStore:
         self.activations.clear()
 
     def mean_over_sequence(self) -> Any:
-        torch = _require_torch()
         if not self.activations:
             raise AudioscopeIntegrationError(f"no activations collected for layer {self.layer_idx}")
-        stacked = torch.cat(self.activations, dim=0)
-        return stacked.mean(dim=(0, 1))
+        return _mean_activation_tensors(self.activations)
+
+    def mean_over_window(self, start: int, end: int) -> Any:
+        if start < 0 or end > len(self.activations) or start >= end:
+            raise AudioscopeIntegrationError(
+                f"invalid activation window {start}:{end} for layer {self.layer_idx}"
+            )
+        return _mean_activation_tensors(self.activations[start:end])
 
 
 class ActivationCollector:
@@ -127,6 +132,43 @@ class ActivationCollector:
 
     def get_raw_activations(self) -> dict[int, list[Any]]:
         return {index: list(store.activations) for index, store in self._layers.items()}
+
+    def get_windowed_mean_activations(
+        self,
+        *,
+        window_count: int | None = 5,
+        window_size: int | None = None,
+    ) -> tuple[dict[int, dict[int, Any]], dict[int, dict[int, dict[str, Any]]]]:
+        """Pool each layer's captured forward calls into trajectory windows.
+
+        These windows are indexed by observed block-forward call order. They are
+        not guaranteed to be exact sampler timesteps unless the upstream sampler
+        exposes timestep metadata.
+        """
+
+        pooled: dict[int, dict[int, Any]] = {}
+        metadata: dict[int, dict[int, dict[str, Any]]] = {}
+        for index, store in self._layers.items():
+            windows = activation_call_windows(
+                len(store.activations),
+                window_count=window_count,
+                window_size=window_size,
+            )
+            pooled[index] = {}
+            metadata[index] = {}
+            for window_index, (start, end) in enumerate(windows):
+                pooled[index][window_index] = store.mean_over_window(start, end)
+                metadata[index][window_index] = {
+                    "window_index": window_index,
+                    "call_start": start,
+                    "call_end": end,
+                    "call_count": len(store.activations),
+                    "window_start_fraction": start / len(store.activations),
+                    "window_end_fraction": end / len(store.activations),
+                    "window_label": _window_label(window_index, len(windows), start, end),
+                    "window_count": len(windows),
+                }
+        return pooled, metadata
 
     def __enter__(self) -> "ActivationCollector":
         return self
@@ -258,3 +300,49 @@ def _add_vector_to_output(output: Any, vector: Any, alpha: float) -> Any:
     if isinstance(output, list) and output and isinstance(output[0], torch.Tensor):
         return [add(output[0]), *output[1:]]
     raise AudioscopeIntegrationError(f"cannot steer unsupported block output type {type(output)!r}")
+
+
+def activation_call_windows(
+    call_count: int,
+    *,
+    window_count: int | None = 5,
+    window_size: int | None = None,
+) -> list[tuple[int, int]]:
+    """Return non-empty windows over observed activation-call indices."""
+
+    if call_count <= 0:
+        raise AudioscopeIntegrationError("cannot window an empty activation trace")
+    if window_size is not None:
+        if window_size <= 0:
+            raise ValueError("window_size must be positive")
+        return [(start, min(start + window_size, call_count)) for start in range(0, call_count, window_size)]
+    if window_count is None:
+        window_count = 1
+    if window_count <= 0:
+        raise ValueError("window_count must be positive")
+    count = min(int(window_count), call_count)
+    windows: list[tuple[int, int]] = []
+    for index in range(count):
+        start = int(index * call_count / count)
+        end = int((index + 1) * call_count / count)
+        if start < end:
+            windows.append((start, end))
+    return windows
+
+
+def _mean_activation_tensors(activations: list[Any]) -> Any:
+    torch = _require_torch()
+    stacked = torch.cat(activations, dim=0)
+    if stacked.ndim <= 1:
+        return stacked
+    return stacked.mean(dim=tuple(range(stacked.ndim - 1)))
+
+
+def _window_label(window_index: int, window_count: int, start: int, end: int) -> str:
+    if window_count == 1:
+        return "all"
+    if window_count == 2:
+        return ("early", "late")[window_index]
+    if window_count == 3:
+        return ("early", "middle", "late")[window_index]
+    return f"window_{window_index:02d}_{start}_{end}"
