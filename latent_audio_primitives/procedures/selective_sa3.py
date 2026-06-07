@@ -8,8 +8,8 @@ from latent_audio_primitives.selective_renoise import (
     LatentGraftResult,
     LatentMaskSpec,
     SelectiveRenoiseResult,
+    graft_latent_channels,
     sampler_noise_for_channels,
-    sampler_noise_from_donor_channels,
     select_latent_channels,
 )
 
@@ -152,7 +152,8 @@ def selective_graft_sa3(
     duration: float = 9.0,
     steps: int = 8,
     cfg_scale: float = 1.0,
-    init_noise_level: float = 0.4,
+    graft_amount: float = 1.0,
+    init_noise_level: float = 0.08,
     seed: int = 0,
     negative_prompt: str | None = None,
     sample_size: int = 5292032,
@@ -163,7 +164,14 @@ def selective_graft_sa3(
     return_mixed_latents: bool = True,
     **sampler_kwargs: Any,
 ) -> LatentGraftResult:
-    """Run SA3 variation with selected latent channels borrowed from donor audio."""
+    """Polish a literal selected-channel donor graft through SA3.
+
+    ``graft_amount`` controls the deterministic source-to-donor interpolation
+    on selected SAME channels. ``init_noise_level`` controls the later SA3
+    polish/variation strength. Keeping these separate is important: donor
+    latents are edited into ``init_data`` first, while sampler ``noise`` remains
+    ordinary random noise.
+    """
 
     torch = _require_torch()
     from stable_audio_3.inference.sampling import sample_diffusion
@@ -196,12 +204,23 @@ def selective_graft_sa3(
     init_latents = init_latents.to(device=device, dtype=model_dtype)
     donor_latents = donor_latents.to(device=device, dtype=model_dtype)
     selected_channels = select_latent_channels(init_latents, spec)
-    sampler_noise = sampler_noise_from_donor_channels(init_latents, donor_latents, selected_channels).to(
-        dtype=model_dtype
+    grafted_latents = graft_latent_channels(
+        init_latents,
+        donor_latents,
+        selected_channels,
+        amount=graft_amount,
+    ).to(dtype=model_dtype)
+    generator = torch.Generator(device=device)
+    generator.manual_seed(int(seed))
+    sampler_noise = torch.randn(
+        grafted_latents.shape,
+        device=device,
+        dtype=model_dtype,
+        generator=generator,
     )
-    mixed_latents = init_latents
+    mixed_latents = grafted_latents
     if return_mixed_latents:
-        mixed_latents = init_latents * (1 - init_noise_level) + sampler_noise * init_noise_level
+        mixed_latents = grafted_latents * (1 - init_noise_level) + sampler_noise * init_noise_level
 
     conditioning_tensors = core.conditioner(conditioning, device)
     negative_conditioning_tensors = {}
@@ -243,7 +262,7 @@ def selective_graft_sa3(
             batch_cfg=True,
             rescale_cfg=True,
             apg_scale=apg_scale,
-            init_data=init_latents,
+            init_data=grafted_latents,
             init_noise_level=init_noise_level,
             decode=False,
             **sampler_kwargs,
@@ -255,6 +274,7 @@ def selective_graft_sa3(
         donor_latents=donor_latents,
         mixed_latents=mixed_latents,
         selected_channels=selected_channels,
+        grafted_latents=grafted_latents,
         metadata={
             "spec": {
                 "name": spec.name,
@@ -269,11 +289,12 @@ def selective_graft_sa3(
             "duration": duration,
             "steps": steps,
             "cfg_scale": cfg_scale,
+            "graft_amount": graft_amount,
             "init_noise_level": init_noise_level,
             "seed": seed,
             "selected_channel_count": len(selected_channels),
             "selected_channels": selected_channels,
-            "intervention": "donor_channel_graft",
+            "intervention": "donor_channel_graft_polish",
         },
     )
 

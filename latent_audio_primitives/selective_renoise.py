@@ -40,6 +40,7 @@ class LatentGraftResult:
     mixed_latents: Any
     selected_channels: list[int]
     metadata: dict[str, Any]
+    grafted_latents: Any | None = None
 
 
 def select_latent_channels(latents: Any, spec: LatentMaskSpec) -> list[int]:
@@ -170,9 +171,14 @@ def sampler_noise_from_donor_channels(
     donor_latents: Any,
     channels: Sequence[int],
 ) -> Any:
-    """Build SA3 sampler noise from donor latents on selected channels.
+    """Build legacy SA3 sampler noise from donor latents on selected channels.
 
-    ``sample_diffusion`` later computes:
+    This treats donor latents as the sampler ``noise`` argument, not as a
+    deterministic edited ``init_data``. It is useful as a diagnostic of prior
+    pull, but direct donor-channel grafting should usually use
+    ``graft_latent_channels`` first and then polish the grafted init latents.
+
+    ``sample_diffusion`` later computes approximately:
 
     ``start = source * (1 - sigma) + sampler_noise * sigma``
 

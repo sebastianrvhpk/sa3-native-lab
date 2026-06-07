@@ -442,6 +442,25 @@ Masked graft:
 z_prime = z_a + alpha M (z_b - z_a)
 ```
 
+Here `alpha` is only the literal donor interpolation amount inside selected
+SAME channels. It is not the SA3 sampler noise amount.
+
+Optional SA3 polish is a second operation:
+
+```text
+z_polished = sample_theta(init_data=z_prime, prompt=p, init_noise_level=rho)
+```
+
+Self-graft control:
+
+```text
+z_b = z_a  ->  z_prime = z_a
+```
+
+If self-graft direct decode changes, the graft math or encoding path is wrong.
+If only the polished self-graft changes, the change comes from SA3 polish/noise,
+not donor transfer.
+
 Hypothesis: donor latent channels can transfer texture, density, or gesture
 families without full prompt conditioning.
 
