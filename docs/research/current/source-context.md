@@ -499,7 +499,7 @@ L_flow(prompt) = E ||v_theta(z_t, t, C(prompt)) - u_t||^2
 
 - Source: [Activation Engineering / ActAdd](https://arxiv.org/abs/2308.10248)
 - Relevant idea: Add contrastive activation directions at inference time.
-- Notebook impact: supports prompt residual probes, audio residual probes, trajectory-window probes, residual feature atlas work, and cautious steering audits in the residual and trajectory bench.
+- Notebook impact: supports prompt residual probes, audio residual probes, sampler-timestep probes, trajectory-window probes, residual feature atlas work, and cautious steering audits in the residual and trajectory bench.
 - Status: source context; local residual probing primitives are implemented, while steering remains an intervention candidate.
 
 ### Representation Engineering

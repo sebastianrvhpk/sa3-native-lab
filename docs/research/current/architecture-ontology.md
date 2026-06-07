@@ -72,7 +72,7 @@ audio output + latent rows + flow rows + descriptors + listening notes
 |---|---|---|---|
 | SAME Representation Science | waveform `x`, encoder `E`, SAME latent `z0`, decoder `D`, `LatentItem` | compression, direct decode, geometry, latent memory, source preservation, bottleneck stress, latent DSP | direct decodes, descriptor deltas, geometry rows, nearest-memory rows, control lanes, listening notes |
 | SA3 Flow and Conditioning Science | prompt `p`, condition `C(p)`, flow state `z_t`, timestep/logSNR, velocity `v_theta` | prompt scoring, condition inversion, flow timestep bands, null/conditional-delta probes | shared flow-probe rows, prompt semantic rows, attribution, generated-audio audition |
-| SA3 Internal Trajectory Science | residual activations `a_l`, sampler states, observed windows, guidance objectives | residual feature maps, layer/window causality, sampler-state edits, guidance honesty, step/polish tradeoffs | activation rows, alpha/guidance sweeps, flow/descriptor/listening disagreement |
+| SA3 Internal Trajectory Science | residual activations `a_l`, sampler states, sampler timesteps, observed windows, guidance objectives | residual feature maps, layer/timestep and layer/window causality, sampler-state edits, guidance honesty, step/polish tradeoffs | activation rows, alpha/guidance sweeps, flow/descriptor/listening disagreement |
 | SA3-over-SAME Coupled Editing | edited SAME `z0'`, SA3 polish/init-audio/inpainting path, source masks | whether SA3 preserves, repairs, erases, or rewrites SAME edits | direct decode vs SA3 polish packets, source-preservation rows, flow loss, listening |
 
 These layers are not a linear pipeline. They are separate microscopes that
@@ -101,7 +101,7 @@ SAME only:
 SA3 only over latent states:
   (z_t, t, C(p)) -> v_theta(z_t, t, C(p))
   C(p) -> prompt/condition evidence
-  residual a_l -> layer/window feature evidence
+  residual a_l -> layer/timestep and layer/window feature evidence
 
 SA3 internal trajectory:
   residual or sampler state -> patched/optimized state
@@ -133,7 +133,7 @@ Evidence:
 |---|---|---|
 | SAME Representation Science | geometry, periodicity, latent DSP, blur/filter, selective renoise/graft, style profile/direction, memory | systematic bottleneck and direct-decode evidence |
 | SA3 Flow and Conditioning Science | flow probe banks, prompt scoring, attribution, soft/hard/readable prompt search, null-condition scaffold | predictive validity against generated audio |
-| SA3 Internal Trajectory Science | residual hooks, residual vectors, residual feature atlas, cyclic projection, guidance scaffolds | layer/window causal evidence and artifact checks |
+| SA3 Internal Trajectory Science | residual hooks, residual vectors, residual feature atlas, cyclic projection, guidance scaffolds | layer/timestep and layer/window causal evidence and artifact checks |
 | SA3-over-SAME Coupled Editing | SA3 polish, selective SA3, continuation/inpainting, direct decode helpers | survival matrix: what edits SA3 preserves or erases |
 
 Evidence utilities already exist as player, descriptors, annotations,
@@ -258,25 +258,24 @@ Promote if: prompt changes are explainable by native flow evidence and audible
 
 ### 5. Residual Layer-Time Atlas
 
-Native transition: `(prompt/audio examples, observed forward-call window, layer) -> residual
+Native transition: `(prompt/audio examples, sampler timestep or observed forward-call window, layer) -> residual
 activation basis`.
 
 Implementation shape:
 
-- Capture residual activations by layer and observed forward-call window for
-  prompt-pair and audio-pair contrasts. Treat these as trajectory windows until
-  sampler timestep metadata is exposed.
+- Capture residual activations by layer and upstream sampler timestep where the
+  callback is available; keep observed forward-call windows as fallback/context.
 - Rank candidate layers with stratified linear-probe rows before any steering
   layer is chosen.
-- Summarize which layers/windows separate material, energy, space, and rhythm
+- Summarize which layers/timesteps/windows separate material, energy, space, and rhythm
   tags.
 
-Promote if: layer/window maps and probe-ranked layers repeat before any
+Promote if: layer/timestep/window maps and probe-ranked layers repeat before any
 steering claim is made.
 
 ### 6. Residual Causal Sweep
 
-Native transition: `residual direction -> layer/window/alpha patch -> output`.
+Native transition: `residual direction -> layer/timestep/window/alpha patch -> output`.
 
 Implementation shape:
 

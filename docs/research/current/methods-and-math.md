@@ -757,15 +757,24 @@ x_i^{l,w} = pooled residual activation for example i at layer l inside W_w
 score_{l,w} = stratified_cv_accuracy(q_{l,w}, {(x_i^{l,w}, y_i)})
 ```
 
+Sampler-timestep selector:
+
+```text
+s_k = upstream sampler callback row {step index k, timestep t_k, sigma_k}
+x_i^{l,k} = pooled residual activation for example i at layer l during sampler step k
+score_{l,k} = stratified_cv_accuracy(q_{l,k}, {(x_i^{l,k}, y_i)})
+```
+
 The probe is not a display accessory. It is the required selector that ranks
 which layers visibly separate the contrast before any residual direction is
 treated as a steering candidate. `logistic_cv` uses the same cross-validated
 linear-probe idea as audioscope; the notebook implementation keeps a Torch
 solver because the SA3 Colab runtime intentionally removes sklearn. The
 `centroid_loo` probe remains a dependency-light diagnostic, not the preferred
-layer selector. The trajectory rows use observed block-forward call windows,
-not exact sampler timesteps; exact timestep attribution requires sampler
-metadata that the current residual hook path does not expose.
+layer selector. Sampler-timestep rows use the upstream SA3 sampler callback and
+record `mapping_status`; `exact_one_call_per_step` is the clean attribution
+case. Forward-call window rows remain a fallback microscope when sampler
+metadata is unavailable or when extra model evaluations need grouping.
 
 Inference-time intervention:
 
@@ -1086,6 +1095,7 @@ v_l = mean(a_l^positive) - mean(a_l^reference)
 Atlas goals:
 
 - rank layers with cross-validated residual probes before steering,
+- rank exact sampler-timestep residual cells when callback metadata is available,
 - rank layer/window cells with cross-validated residual trajectory probes,
 - rank layers by predictive control accuracy,
 - measure feature projection,

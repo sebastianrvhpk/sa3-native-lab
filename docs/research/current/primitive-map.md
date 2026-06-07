@@ -115,7 +115,7 @@ when primitive APIs change.
 | Flow probes | `flow_probe_bank_from_values(...)`, `flow_probe_bank_to_manifest(...)`, `sa3_flow_losses_for_prompts(...)` | target `z0` + probe bank + prompts -> flow rows | SA3-native microscope/selector |
 | Native tokenizer vocabulary | `native_tokenizer_vocabulary(...)`, `extract_prompt_tokenizer(...)` | SA3 conditioner/tokenizer -> hard prompt candidates | prompt-search support, not a separate adapter layer |
 | Prompt semantics | `make_prompt_variants(...)`, `prompt_semantic_rows(...)`, `rank_prompt_semantic_rows(...)` | prompt variants + native evidence -> prompt rows | transparency before treating text as discovered description |
-| Residual probes | `SA3ActivationVectorExtractor`, `SA3AudioResidualVectorExtractor`, `fit_residual_feature_basis(...)`, `alpha_sweep(...)` | prompts/audio -> residual examples -> layer rows + layer/window rows -> residual direction -> sweep outputs | trajectory microscope and layer selector first; steering remains high-risk candidate |
+| Residual probes | `SA3ActivationVectorExtractor`, `SA3AudioResidualVectorExtractor`, `fit_residual_feature_basis(...)`, `alpha_sweep(...)` | prompts/audio -> residual examples -> layer rows + layer/timestep rows + layer/window rows -> residual direction -> sweep outputs | sampler-step microscope and layer selector first; steering remains high-risk candidate |
 | Guidance probes | `gradient_guidance_step(...)`, `combine_guidance_losses(...)` | differentiable objective -> latent/state update | scaffold until objective movement matches listening |
 | Evidence utilities | `display_audio_player(...)`, `save_audio_annotation(...)`, `make_disagreement_row(...)` | outputs + rows + notes -> evidence packet | review, disagreement, and ledger decisions |
 
@@ -132,8 +132,8 @@ metadata.
 | `sa3_latent_sampling.py` | SA3-over-SAME coupled editing | intervention candidate | Passes edited SAME latents through upstream SA3 init-latent sampling. |
 | `selective_sa3.py` | SA3-over-SAME coupled editing | intervention candidate | Combines SAME channel masks with upstream SA3 variation sampling. |
 | `cyclic_sa3.py` | SA3 internal trajectory | high-risk sampler microscope / intervention candidate | Inserts cyclic projections inside a sampler trajectory. |
-| `residual_activation_vectors.py` | SA3 internal trajectory | microscope / selector | Captures prompt-pair residual examples and emits layer plus layer-window probe rows. |
-| `audio_residual_vectors.py` | SA3 internal trajectory | high-risk microscope / selector | Captures audio-derived residual examples and emits layer plus layer-window probe rows. |
+| `residual_activation_vectors.py` | SA3 internal trajectory | microscope / selector | Captures prompt-pair residual examples and emits layer, sampler-timestep, and layer-window probe rows. |
+| `audio_residual_vectors.py` | SA3 internal trajectory | high-risk microscope / selector | Captures audio-derived residual examples and emits layer, sampler-timestep, and layer-window probe rows. |
 | `residual_sweeps.py` | SA3 internal trajectory | high-risk intervention candidate | Renders residual steering sweeps for audition and descriptors. |
 
 No row above is promoted by being present. Promotion requires repeated evidence
@@ -228,8 +228,8 @@ interventions change generated audio, not just whether a signal is measurable.
 | Module | Evidence | Role |
 |---|---|---|
 | `adapters/sa3_residual_hooks.py` | confirmed | Residual activation capture and residual steering. |
-| `procedures/residual_activation_vectors.py` | confirmed | SA3 activation-vector extraction plus layer and trajectory-window probing from prompt pairs. |
-| `procedures/audio_residual_vectors.py` | confirmed | Residual vectors plus layer and trajectory-window probes from audio examples. |
+| `procedures/residual_activation_vectors.py` | confirmed | SA3 activation-vector extraction plus layer, sampler-timestep, and trajectory-window probing from prompt pairs. |
+| `procedures/audio_residual_vectors.py` | confirmed | Residual vectors plus layer, sampler-timestep, and trajectory-window probes from audio examples. |
 | `prompt_pairs.py` | confirmed | Prompt-pair presets for residual steering probes. |
 | `procedures/residual_sweeps.py` | confirmed | Alpha sweep generation and optional audio export. |
 | `residual_features.py` | confirmed | Residual activation bases and directions. |

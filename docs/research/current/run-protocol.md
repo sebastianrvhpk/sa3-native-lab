@@ -114,7 +114,7 @@ include enough evidence for its decision.
 | Source-preserving edit | source audio, baseline, method output, descriptor delta, nearest-memory rows | flow score, control lanes, geometry report |
 | Latent operator control | direct decode or polish, descriptor delta, listening notes | SAME bottleneck stress rows, flow score |
 | Loop/continuation | loop preview, boundary/periodicity metrics, listening notes | bridge cost, lane continuity |
-| Residual steering | layer-probe rows, trajectory layer/window rows, selected top-k layers, vector metadata, alpha sweep, descriptor/listening deltas | residual feature atlas, repeat probe run |
+| Residual steering | layer-probe rows, sampler-timestep rows, selected top-k layers, vector metadata, alpha sweep, descriptor/listening deltas | trajectory window rows, residual feature atlas, repeat probe run |
 | Dataset/memory method | memory rows, cluster/donor selection evidence, output audition | heldout rows, geometry/lane scores |
 | Frontier hypothesis | source link, native-object mapping, one concrete notebook run | native disagreement panel, runtime audit |
 

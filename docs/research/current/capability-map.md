@@ -83,6 +83,7 @@ utilities:
 | Cyclic loop repair | audio/`z0` -> rolled/repair output | intervene/render | root operator plus procedure | intervention candidate | loop metrics must match loop audition |
 | Residual activation capture | prompt/audio -> residual activations | observe | adapter plus procedure | microscope | layer maps must repeat |
 | Residual layer probing | residual examples -> cross-validated layer rows | observe/select | procedure | selector | probe-ranked layers must repeat before steering |
+| Residual sampler-timestep probing | residual examples + sampler callback -> cross-validated layer/timestep rows | observe/select | adapter plus procedure | microscope/selector | exact mappings must report `exact_one_call_per_step` or disclose grouping |
 | Residual trajectory probing | residual examples -> cross-validated layer/window rows | observe/select | adapter plus procedure | microscope/selector | window-ranked rows must repeat before timestep claims |
 | Residual steering | residual vector -> patched generation | intervene/render | adapter plus procedure | high-risk candidate | alpha sweeps must move audio without artifacts |
 | Residual feature atlas | activations -> feature basis/report | observe/select | root measurement plus procedure | microscope | atlas rankings must predict interventions |
