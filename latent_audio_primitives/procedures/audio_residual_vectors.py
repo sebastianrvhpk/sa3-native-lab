@@ -10,7 +10,8 @@ from typing import Any
 from latent_audio_primitives.adapters.sa3_residual_hooks import ActivationCollector, SteeringVectors
 from latent_audio_primitives.procedures.residual_activation_vectors import (
     ActivationExample,
-    probe_layer_accuracy,
+    LayerProbeRow,
+    probe_layer_rows,
     vectors_from_examples,
 )
 
@@ -30,6 +31,7 @@ class AudioResidualExtractionResult:
 
     vectors: SteeringVectors
     examples: list[ActivationExample] = field(default_factory=list)
+    layer_probe_rows: list[LayerProbeRow] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def save(self, directory: str | Path) -> Path:
@@ -45,6 +47,7 @@ class AudioResidualExtractionResult:
                         "probe_accuracy": self.vectors.probe_accuracy,
                         "best_layer": self.vectors.best_layer,
                     },
+                    "layer_probe": [row.to_dict() for row in self.layer_probe_rows],
                     "examples": [
                         {
                             "label": example.label,
@@ -186,6 +189,10 @@ class SA3AudioResidualVectorExtractor:
         baseline_mode: str = "prompt",
         normalize: bool = True,
         probe: bool = True,
+        probe_method: str = "logistic_cv",
+        probe_cv_folds: int = 5,
+        probe_require_sklearn: bool = False,
+        probe_random_state: int = 0,
         generate_kwargs: dict[str, Any] | None = None,
     ) -> AudioResidualExtractionResult:
         examples = self.collect_examples(
@@ -201,13 +208,27 @@ class SA3AudioResidualVectorExtractor:
             generate_kwargs=generate_kwargs,
         )
         vectors = vectors_from_examples(examples, normalize=normalize)
+        layer_probe_rows: list[LayerProbeRow] = []
         if probe:
-            vectors.probe_accuracy = probe_layer_accuracy(examples)
-            if vectors.probe_accuracy:
-                vectors.best_layer = max(vectors.probe_accuracy, key=vectors.probe_accuracy.get)
+            layer_probe_rows = probe_layer_rows(
+                examples,
+                method=probe_method,
+                cv_folds=probe_cv_folds,
+                require_sklearn=probe_require_sklearn,
+                random_state=probe_random_state,
+            )
+            vectors.probe_accuracy = {
+                row.layer_index: row.accuracy_mean
+                for row in layer_probe_rows
+                if row.fold_count > 0
+            }
+            ranked_ok = [row for row in layer_probe_rows if row.fold_count > 0]
+            if ranked_ok:
+                vectors.best_layer = ranked_ok[0].layer_index
         return AudioResidualExtractionResult(
             vectors=vectors,
             examples=examples,
+            layer_probe_rows=layer_probe_rows,
             metadata={
                 "prompt": prompt,
                 "duration": duration,
@@ -216,6 +237,11 @@ class SA3AudioResidualVectorExtractor:
                 "seed": seed,
                 "init_noise_level": init_noise_level,
                 "baseline_mode": baseline_mode,
+                "probe": probe,
+                "probe_method": probe_method if probe else None,
+                "probe_cv_folds": probe_cv_folds if probe else None,
+                "probe_require_sklearn": probe_require_sklearn if probe else None,
+                "probe_random_state": probe_random_state if probe else None,
                 "positive_paths": [str(path) for path in positive_paths],
                 "negative_paths": [str(path) for path in (negative_paths or [])],
             },
