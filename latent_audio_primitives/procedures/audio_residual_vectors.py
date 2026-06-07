@@ -14,6 +14,8 @@ from latent_audio_primitives.procedures.residual_activation_vectors import (
     flatten_layer_windows,
     probe_layer_window_rows,
     probe_layer_rows,
+    probe_layer_timestep_rows,
+    sampler_timestep_recorder,
     vectors_from_examples,
 )
 
@@ -35,6 +37,7 @@ class AudioResidualExtractionResult:
     examples: list[ActivationExample] = field(default_factory=list)
     layer_probe_rows: list[LayerProbeRow] = field(default_factory=list)
     trajectory_probe_rows: list[LayerProbeRow] = field(default_factory=list)
+    timestep_probe_rows: list[LayerProbeRow] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def save(self, directory: str | Path) -> Path:
@@ -52,6 +55,7 @@ class AudioResidualExtractionResult:
                     },
                     "layer_probe": [row.to_dict() for row in self.layer_probe_rows],
                     "trajectory_probe": [row.to_dict() for row in self.trajectory_probe_rows],
+                    "timestep_probe": [row.to_dict() for row in self.timestep_probe_rows],
                     "examples": [
                         {
                             "label": example.label,
@@ -106,6 +110,8 @@ class SA3AudioResidualVectorExtractor:
         baseline_mode: str = "prompt",
         trajectory_window_count: int | None = None,
         trajectory_window_size: int | None = None,
+        timestep_probe: bool = False,
+        sampler_type: str | None = None,
         generate_kwargs: dict[str, Any] | None = None,
     ) -> list[ActivationExample]:
         torch = _require_torch()
@@ -133,6 +139,17 @@ class SA3AudioResidualVectorExtractor:
                 audio, sample_rate = torchaudio.load(audio_example.path)
                 audio_duration = audio.shape[-1] / sample_rate
                 run_duration = duration if duration is not None else audio_duration
+                run_kwargs = dict(generate_kwargs)
+                if sampler_type is not None:
+                    run_kwargs.setdefault("sampler_type", sampler_type)
+                step_records: list[dict[str, Any]] = []
+                if timestep_probe:
+                    user_callback = run_kwargs.get("callback")
+                    run_kwargs["callback"] = sampler_timestep_recorder(
+                        step_records,
+                        user_callback=user_callback,
+                        sampler_type=sampler_type,
+                    )
                 torch.manual_seed(seed + index)
                 self.model.generate(
                     prompt=prompt,
@@ -143,11 +160,13 @@ class SA3AudioResidualVectorExtractor:
                     init_audio=(sample_rate, audio),
                     init_noise_level=init_noise_level,
                     return_latents=True,
-                    **generate_kwargs,
+                    **run_kwargs,
                 )
                 activations = collector.get_mean_activations()
                 layer_window_activations: dict[tuple[int, int], Any] = {}
                 layer_window_metadata: dict[tuple[int, int], dict[str, Any]] = {}
+                layer_timestep_activations: dict[tuple[int, int], Any] = {}
+                layer_timestep_metadata: dict[tuple[int, int], dict[str, Any]] = {}
                 if trajectory_window_count is not None or trajectory_window_size is not None:
                     pooled_windows, window_metadata = collector.get_windowed_mean_activations(
                         window_count=trajectory_window_count,
@@ -156,6 +175,12 @@ class SA3AudioResidualVectorExtractor:
                     layer_window_activations, layer_window_metadata = flatten_layer_windows(
                         pooled_windows,
                         window_metadata,
+                    )
+                if timestep_probe:
+                    pooled_timesteps, timestep_metadata = collector.get_timestep_mean_activations(step_records)
+                    layer_timestep_activations, layer_timestep_metadata = flatten_layer_windows(
+                        pooled_timesteps,
+                        timestep_metadata,
                     )
                 examples.append(
                     ActivationExample(
@@ -167,10 +192,23 @@ class SA3AudioResidualVectorExtractor:
                         family=audio_example.group,
                         layer_window_activations=layer_window_activations,
                         layer_window_metadata=layer_window_metadata,
+                        layer_timestep_activations=layer_timestep_activations,
+                        layer_timestep_metadata=layer_timestep_metadata,
                     )
                 )
                 if baseline_mode == "prompt" and audio_example.label == 1:
                     collector.clear()
+                    baseline_kwargs = dict(generate_kwargs)
+                    if sampler_type is not None:
+                        baseline_kwargs.setdefault("sampler_type", sampler_type)
+                    baseline_step_records: list[dict[str, Any]] = []
+                    if timestep_probe:
+                        user_callback = baseline_kwargs.get("callback")
+                        baseline_kwargs["callback"] = sampler_timestep_recorder(
+                            baseline_step_records,
+                            user_callback=user_callback,
+                            sampler_type=sampler_type,
+                        )
                     torch.manual_seed(seed + index)
                     self.model.generate(
                         prompt=prompt,
@@ -179,11 +217,13 @@ class SA3AudioResidualVectorExtractor:
                         cfg_scale=cfg_scale,
                         seed=seed + index,
                         return_latents=True,
-                        **generate_kwargs,
+                        **baseline_kwargs,
                     )
                     baseline_activations = collector.get_mean_activations()
                     baseline_layer_window_activations: dict[tuple[int, int], Any] = {}
                     baseline_layer_window_metadata: dict[tuple[int, int], dict[str, Any]] = {}
+                    baseline_layer_timestep_activations: dict[tuple[int, int], Any] = {}
+                    baseline_layer_timestep_metadata: dict[tuple[int, int], dict[str, Any]] = {}
                     if trajectory_window_count is not None or trajectory_window_size is not None:
                         pooled_windows, window_metadata = collector.get_windowed_mean_activations(
                             window_count=trajectory_window_count,
@@ -192,6 +232,14 @@ class SA3AudioResidualVectorExtractor:
                         baseline_layer_window_activations, baseline_layer_window_metadata = flatten_layer_windows(
                             pooled_windows,
                             window_metadata,
+                        )
+                    if timestep_probe:
+                        pooled_timesteps, timestep_metadata = collector.get_timestep_mean_activations(
+                            baseline_step_records
+                        )
+                        baseline_layer_timestep_activations, baseline_layer_timestep_metadata = flatten_layer_windows(
+                            pooled_timesteps,
+                            timestep_metadata,
                         )
                     examples.append(
                         ActivationExample(
@@ -203,6 +251,8 @@ class SA3AudioResidualVectorExtractor:
                             family="prompt_baseline",
                             layer_window_activations=baseline_layer_window_activations,
                             layer_window_metadata=baseline_layer_window_metadata,
+                            layer_timestep_activations=baseline_layer_timestep_activations,
+                            layer_timestep_metadata=baseline_layer_timestep_metadata,
                         )
                     )
         return examples
@@ -228,6 +278,8 @@ class SA3AudioResidualVectorExtractor:
         trajectory_probe: bool = False,
         trajectory_window_count: int | None = 5,
         trajectory_window_size: int | None = None,
+        timestep_probe: bool = False,
+        sampler_type: str | None = None,
         generate_kwargs: dict[str, Any] | None = None,
     ) -> AudioResidualExtractionResult:
         examples = self.collect_examples(
@@ -242,11 +294,14 @@ class SA3AudioResidualVectorExtractor:
             baseline_mode=baseline_mode,
             trajectory_window_count=trajectory_window_count if trajectory_probe else None,
             trajectory_window_size=trajectory_window_size if trajectory_probe else None,
+            timestep_probe=timestep_probe,
+            sampler_type=sampler_type,
             generate_kwargs=generate_kwargs,
         )
         vectors = vectors_from_examples(examples, normalize=normalize)
         layer_probe_rows: list[LayerProbeRow] = []
         trajectory_probe_rows: list[LayerProbeRow] = []
+        timestep_probe_rows: list[LayerProbeRow] = []
         if probe:
             layer_probe_rows = probe_layer_rows(
                 examples,
@@ -271,11 +326,20 @@ class SA3AudioResidualVectorExtractor:
                 require_sklearn=probe_require_sklearn,
                 random_state=probe_random_state,
             )
+        if timestep_probe:
+            timestep_probe_rows = probe_layer_timestep_rows(
+                examples,
+                method=probe_method,
+                cv_folds=probe_cv_folds,
+                require_sklearn=probe_require_sklearn,
+                random_state=probe_random_state,
+            )
         return AudioResidualExtractionResult(
             vectors=vectors,
             examples=examples,
             layer_probe_rows=layer_probe_rows,
             trajectory_probe_rows=trajectory_probe_rows,
+            timestep_probe_rows=timestep_probe_rows,
             metadata={
                 "prompt": prompt,
                 "duration": duration,
@@ -292,6 +356,8 @@ class SA3AudioResidualVectorExtractor:
                 "trajectory_probe": trajectory_probe,
                 "trajectory_window_count": trajectory_window_count if trajectory_probe else None,
                 "trajectory_window_size": trajectory_window_size if trajectory_probe else None,
+                "timestep_probe": timestep_probe,
+                "sampler_type": sampler_type,
                 "positive_paths": [str(path) for path in positive_paths],
                 "negative_paths": [str(path) for path in (negative_paths or [])],
             },

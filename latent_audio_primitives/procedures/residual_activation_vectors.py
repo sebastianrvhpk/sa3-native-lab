@@ -27,6 +27,8 @@ class ActivationExample:
     family: str
     layer_window_activations: dict[tuple[int, int], Any] = field(default_factory=dict)
     layer_window_metadata: dict[tuple[int, int], dict[str, Any]] = field(default_factory=dict)
+    layer_timestep_activations: dict[tuple[int, int], Any] = field(default_factory=dict)
+    layer_timestep_metadata: dict[tuple[int, int], dict[str, Any]] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,6 +54,14 @@ class LayerProbeRow:
     call_end: int | None = None
     call_count: int | None = None
     window_count: int | None = None
+    step_index: int | None = None
+    sampler_index: int | None = None
+    timestep: float | None = None
+    sigma: float | None = None
+    logsnr: float | None = None
+    sampler_type: str = ""
+    calls_per_step: int | None = None
+    mapping_status: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -66,6 +76,14 @@ class LayerProbeRow:
             "call_end": None if self.call_end is None else int(self.call_end),
             "call_count": None if self.call_count is None else int(self.call_count),
             "window_count": None if self.window_count is None else int(self.window_count),
+            "step_index": None if self.step_index is None else int(self.step_index),
+            "sampler_index": None if self.sampler_index is None else int(self.sampler_index),
+            "timestep": None if self.timestep is None else float(self.timestep),
+            "sigma": None if self.sigma is None else float(self.sigma),
+            "logsnr": None if self.logsnr is None else float(self.logsnr),
+            "sampler_type": self.sampler_type,
+            "calls_per_step": None if self.calls_per_step is None else int(self.calls_per_step),
+            "mapping_status": self.mapping_status,
             "method": self.method,
             "accuracy_mean": float(self.accuracy_mean),
             "accuracy_std": float(self.accuracy_std),
@@ -87,6 +105,7 @@ class VectorExtractionResult:
     examples: list[ActivationExample] = field(default_factory=list)
     layer_probe_rows: list[LayerProbeRow] = field(default_factory=list)
     trajectory_probe_rows: list[LayerProbeRow] = field(default_factory=list)
+    timestep_probe_rows: list[LayerProbeRow] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def save(self, directory: str | Path) -> Path:
@@ -115,6 +134,7 @@ class VectorExtractionResult:
                     },
                     "layer_probe": [row.to_dict() for row in self.layer_probe_rows],
                     "trajectory_probe": [row.to_dict() for row in self.trajectory_probe_rows],
+                    "timestep_probe": [row.to_dict() for row in self.timestep_probe_rows],
                 },
                 f,
                 indent=2,
@@ -148,6 +168,8 @@ class SA3ActivationVectorExtractor:
         seed: int = 42,
         trajectory_window_count: int | None = None,
         trajectory_window_size: int | None = None,
+        timestep_probe: bool = False,
+        sampler_type: str | None = None,
         return_latents: bool = True,
         generate_kwargs: dict[str, Any] | None = None,
     ) -> list[ActivationExample]:
@@ -166,6 +188,17 @@ class SA3ActivationVectorExtractor:
             for pair_index, pair in enumerate(selected_pairs):
                 for label, prompt in [(1, pair.positive), (0, pair.negative)]:
                     collector.clear()
+                    run_kwargs = dict(generate_kwargs)
+                    if sampler_type is not None:
+                        run_kwargs.setdefault("sampler_type", sampler_type)
+                    step_records: list[dict[str, Any]] = []
+                    if timestep_probe:
+                        user_callback = run_kwargs.get("callback")
+                        run_kwargs["callback"] = sampler_timestep_recorder(
+                            step_records,
+                            user_callback=user_callback,
+                            sampler_type=sampler_type,
+                        )
                     torch.manual_seed(seed + pair_index)
                     self.model.generate(
                         prompt=prompt,
@@ -174,11 +207,13 @@ class SA3ActivationVectorExtractor:
                         cfg_scale=cfg_scale,
                         seed=seed + pair_index,
                         return_latents=return_latents,
-                        **generate_kwargs,
+                        **run_kwargs,
                     )
                     activations = collector.get_mean_activations()
                     layer_window_activations: dict[tuple[int, int], Any] = {}
                     layer_window_metadata: dict[tuple[int, int], dict[str, Any]] = {}
+                    layer_timestep_activations: dict[tuple[int, int], Any] = {}
+                    layer_timestep_metadata: dict[tuple[int, int], dict[str, Any]] = {}
                     if trajectory_window_count is not None or trajectory_window_size is not None:
                         pooled_windows, window_metadata = collector.get_windowed_mean_activations(
                             window_count=trajectory_window_count,
@@ -187,6 +222,12 @@ class SA3ActivationVectorExtractor:
                         layer_window_activations, layer_window_metadata = flatten_layer_windows(
                             pooled_windows,
                             window_metadata,
+                        )
+                    if timestep_probe:
+                        pooled_timesteps, timestep_metadata = collector.get_timestep_mean_activations(step_records)
+                        layer_timestep_activations, layer_timestep_metadata = flatten_layer_windows(
+                            pooled_timesteps,
+                            timestep_metadata,
                         )
                     examples.append(
                         ActivationExample(
@@ -198,6 +239,8 @@ class SA3ActivationVectorExtractor:
                             family=pair.family,
                             layer_window_activations=layer_window_activations,
                             layer_window_metadata=layer_window_metadata,
+                            layer_timestep_activations=layer_timestep_activations,
+                            layer_timestep_metadata=layer_timestep_metadata,
                         )
                     )
         return examples
@@ -220,6 +263,8 @@ class SA3ActivationVectorExtractor:
         trajectory_probe: bool = False,
         trajectory_window_count: int | None = 5,
         trajectory_window_size: int | None = None,
+        timestep_probe: bool = False,
+        sampler_type: str | None = None,
         generate_kwargs: dict[str, Any] | None = None,
     ) -> VectorExtractionResult:
         examples = self.collect_examples(
@@ -231,11 +276,14 @@ class SA3ActivationVectorExtractor:
             seed=seed,
             trajectory_window_count=trajectory_window_count if trajectory_probe else None,
             trajectory_window_size=trajectory_window_size if trajectory_probe else None,
+            timestep_probe=timestep_probe,
+            sampler_type=sampler_type,
             generate_kwargs=generate_kwargs,
         )
         vectors = vectors_from_examples(examples, normalize=normalize)
         layer_probe_rows: list[LayerProbeRow] = []
         trajectory_probe_rows: list[LayerProbeRow] = []
+        timestep_probe_rows: list[LayerProbeRow] = []
         if probe:
             layer_probe_rows = probe_layer_rows(
                 examples,
@@ -260,6 +308,14 @@ class SA3ActivationVectorExtractor:
                 require_sklearn=probe_require_sklearn,
                 random_state=probe_random_state,
             )
+        if timestep_probe:
+            timestep_probe_rows = probe_layer_timestep_rows(
+                examples,
+                method=probe_method,
+                cv_folds=probe_cv_folds,
+                require_sklearn=probe_require_sklearn,
+                random_state=probe_random_state,
+            )
         metadata = {
             "pairs": [asdict(pair) for pair in (pairs if pairs is not None else DEFAULT_PROMPT_PAIRS)[: num_pairs or None]],
             "duration": duration,
@@ -275,12 +331,15 @@ class SA3ActivationVectorExtractor:
             "trajectory_probe": trajectory_probe,
             "trajectory_window_count": trajectory_window_count if trajectory_probe else None,
             "trajectory_window_size": trajectory_window_size if trajectory_probe else None,
+            "timestep_probe": timestep_probe,
+            "sampler_type": sampler_type,
         }
         return VectorExtractionResult(
             vectors=vectors,
             examples=examples,
             layer_probe_rows=layer_probe_rows,
             trajectory_probe_rows=trajectory_probe_rows,
+            timestep_probe_rows=timestep_probe_rows,
             metadata=metadata,
         )
 
@@ -469,6 +528,85 @@ def probe_layer_window_rows(
     return [_copy_probe_row(row, rank=rank) for rank, row in enumerate(rows, start=1)]
 
 
+def probe_layer_timestep_rows(
+    examples: list[ActivationExample],
+    *,
+    method: str = "logistic_cv",
+    cv_folds: int = 5,
+    require_sklearn: bool = False,
+    random_state: int = 0,
+) -> list[LayerProbeRow]:
+    """Rank residual layer/timestep cells from sampler callback records."""
+
+    method_key = method.lower()
+    if method_key in {"audioscope", "logistic", "linear_probe"}:
+        method_key = "logistic_cv"
+    if method_key in {"centroid", "centroid_loo", "loo"}:
+        method_key = "centroid_loo"
+    if method_key not in {"logistic_cv", "centroid_loo"}:
+        raise ValueError("method must be 'logistic_cv' or 'centroid_loo'")
+
+    by_timestep, metadata_by_timestep = _activation_examples_by_layer_timestep(examples)
+    rows: list[LayerProbeRow] = []
+    for (layer_idx, step_idx), values in by_timestep.items():
+        x, y = _probe_matrix(values)
+        positive_count = int((y == 1).sum())
+        negative_count = int((y == 0).sum())
+        metadata = metadata_by_timestep.get((layer_idx, step_idx), {})
+        if positive_count < 1 or negative_count < 1:
+            rows.append(
+                _with_timestep_metadata(
+                    LayerProbeRow(
+                        layer_index=layer_idx,
+                        method=method_key,
+                        accuracy_mean=0.0,
+                        accuracy_std=0.0,
+                        fold_count=0,
+                        sample_count=int(y.shape[0]),
+                        positive_count=positive_count,
+                        negative_count=negative_count,
+                        status="insufficient",
+                        error="both positive and negative examples are required",
+                    ),
+                    step_idx,
+                    metadata,
+                )
+            )
+            continue
+
+        if method_key == "centroid_loo":
+            row = LayerProbeRow(
+                layer_index=layer_idx,
+                method="centroid_loo",
+                accuracy_mean=_centroid_leave_one_out_accuracy(values),
+                accuracy_std=0.0,
+                fold_count=int(y.shape[0]),
+                sample_count=int(y.shape[0]),
+                positive_count=positive_count,
+                negative_count=negative_count,
+            )
+        else:
+            row = _logistic_cv_probe_row(
+                layer_idx,
+                x,
+                y,
+                cv_folds=cv_folds,
+                require_sklearn=require_sklearn,
+                random_state=random_state,
+            )
+        rows.append(_with_timestep_metadata(row, step_idx, metadata))
+
+    rows.sort(
+        key=lambda row: (
+            -row.accuracy_mean,
+            row.accuracy_std,
+            row.layer_index,
+            -1 if row.step_index is None else row.step_index,
+        )
+    )
+    return [_copy_probe_row(row, rank=rank) for rank, row in enumerate(rows, start=1)]
+
+
 def probe_layer_accuracy(
     examples: list[ActivationExample],
     *,
@@ -532,6 +670,21 @@ def _activation_examples_by_layer_window(
     return by_window, metadata_by_window
 
 
+def _activation_examples_by_layer_timestep(
+    examples: list[ActivationExample],
+) -> tuple[dict[tuple[int, int], list[tuple[Any, int]]], dict[tuple[int, int], dict[str, Any]]]:
+    by_timestep: dict[tuple[int, int], list[tuple[Any, int]]] = {}
+    metadata_by_timestep: dict[tuple[int, int], dict[str, Any]] = {}
+    for example in examples:
+        for key, activation in example.layer_timestep_activations.items():
+            layer_idx, step_idx = key
+            normalized_key = (int(layer_idx), int(step_idx))
+            by_timestep.setdefault(normalized_key, []).append((activation.float().cpu().numpy(), int(example.label)))
+            if normalized_key not in metadata_by_timestep:
+                metadata_by_timestep[normalized_key] = dict(example.layer_timestep_metadata.get(key, {}))
+    return by_timestep, metadata_by_timestep
+
+
 def _with_window_metadata(row: LayerProbeRow, window_idx: int, metadata: dict[str, Any]) -> LayerProbeRow:
     return LayerProbeRow(
         layer_index=row.layer_index,
@@ -556,6 +709,33 @@ def _with_window_metadata(row: LayerProbeRow, window_idx: int, metadata: dict[st
     )
 
 
+def _with_timestep_metadata(row: LayerProbeRow, step_idx: int, metadata: dict[str, Any]) -> LayerProbeRow:
+    return LayerProbeRow(
+        layer_index=row.layer_index,
+        method=row.method,
+        accuracy_mean=row.accuracy_mean,
+        accuracy_std=row.accuracy_std,
+        fold_count=row.fold_count,
+        sample_count=row.sample_count,
+        positive_count=row.positive_count,
+        negative_count=row.negative_count,
+        rank=row.rank,
+        status=row.status,
+        error=row.error,
+        step_index=step_idx,
+        sampler_index=_optional_int(metadata.get("sampler_index", metadata.get("i"))),
+        timestep=_optional_float(metadata.get("timestep")),
+        sigma=_optional_float(metadata.get("sigma")),
+        logsnr=_optional_float(metadata.get("logsnr")),
+        sampler_type=str(metadata.get("sampler_type", "")),
+        call_start=_optional_int(metadata.get("call_start")),
+        call_end=_optional_int(metadata.get("call_end")),
+        call_count=_optional_int(metadata.get("call_count")),
+        calls_per_step=_optional_int(metadata.get("calls_per_step")),
+        mapping_status=str(metadata.get("mapping_status", "")),
+    )
+
+
 def _copy_probe_row(row: LayerProbeRow, *, rank: int) -> LayerProbeRow:
     return LayerProbeRow(
         layer_index=row.layer_index,
@@ -577,6 +757,14 @@ def _copy_probe_row(row: LayerProbeRow, *, rank: int) -> LayerProbeRow:
         call_end=row.call_end,
         call_count=row.call_count,
         window_count=row.window_count,
+        step_index=row.step_index,
+        sampler_index=row.sampler_index,
+        timestep=row.timestep,
+        sigma=row.sigma,
+        logsnr=row.logsnr,
+        sampler_type=row.sampler_type,
+        calls_per_step=row.calls_per_step,
+        mapping_status=row.mapping_status,
     )
 
 
@@ -586,6 +774,74 @@ def _optional_int(value: Any) -> int | None:
 
 def _optional_float(value: Any) -> float | None:
     return None if value is None else float(value)
+
+
+def sampler_timestep_recorder(
+    records: list[dict[str, Any]],
+    *,
+    user_callback: Any = None,
+    sampler_type: str | None = None,
+):
+    """Return an upstream SA3 sampler callback that records step metadata."""
+
+    def callback(info: dict[str, Any]) -> None:
+        record = normalize_sampler_step_record(info, sampler_type=sampler_type)
+        records.append(record)
+        if user_callback is not None:
+            user_callback(info)
+
+    return callback
+
+
+def normalize_sampler_step_record(info: dict[str, Any], *, sampler_type: str | None = None) -> dict[str, Any]:
+    timestep = _tensor_scalar_summary(info.get("t"))
+    sigma = _tensor_scalar_summary(info.get("sigma", info.get("sigma_hat", info.get("t"))))
+    sigma_value = sigma.get("mean")
+    return {
+        "sampler_index": _optional_int(info.get("i")),
+        "timestep": timestep.get("mean"),
+        "timestep_min": timestep.get("min"),
+        "timestep_max": timestep.get("max"),
+        "sigma": sigma_value,
+        "sigma_min": sigma.get("min"),
+        "sigma_max": sigma.get("max"),
+        "logsnr": _logsnr_from_sigma(sigma_value),
+        "sampler_type": sampler_type or "",
+    }
+
+
+def _tensor_scalar_summary(value: Any) -> dict[str, float | None]:
+    if value is None:
+        return {"mean": None, "min": None, "max": None}
+    try:
+        import torch
+
+        if isinstance(value, torch.Tensor):
+            tensor = value.detach().float().cpu().reshape(-1)
+            if tensor.numel() == 0:
+                return {"mean": None, "min": None, "max": None}
+            return {
+                "mean": float(tensor.mean().item()),
+                "min": float(tensor.min().item()),
+                "max": float(tensor.max().item()),
+            }
+    except Exception:
+        pass
+    try:
+        scalar = float(value)
+    except Exception:
+        return {"mean": None, "min": None, "max": None}
+    return {"mean": scalar, "min": scalar, "max": scalar}
+
+
+def _logsnr_from_sigma(sigma: float | None) -> float | None:
+    if sigma is None:
+        return None
+    import math
+
+    eps = 1e-8
+    clipped = min(max(float(sigma), eps), 1.0 - eps)
+    return float(math.log((1.0 - clipped) / clipped))
 
 
 def _probe_matrix(values: list[tuple[Any, int]]):
