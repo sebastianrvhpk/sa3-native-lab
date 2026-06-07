@@ -262,14 +262,19 @@ def prompt_leave_one_out_attribution(
 
 
 def timesteps_from_logsnr_values(logsnr_values: Sequence[float] | str | None) -> list[float]:
-    """Convert logSNR probe values to SA3 flow timesteps."""
+    """Convert local straight-path logSNR probe values to SA3 flow timesteps.
+
+    This project uses ``log((1 - t) / t)`` for the linear path
+    ``z_t = (1 - t) z0 + t epsilon``. That is an amplitude log-ratio, not the
+    squared-power logSNR convention used in some diffusion literature.
+    """
 
     values = parse_float_sequence(logsnr_values)
     return [float(1.0 / (1.0 + math.exp(float(value)))) for value in values]
 
 
 def logsnr_from_timestep(timestep: float, *, eps: float = 1e-8) -> float:
-    """Convert a flow timestep to the matching logSNR value."""
+    """Convert a flow timestep to the matching local straight-path logSNR."""
 
     t = min(max(float(timestep), eps), 1.0 - eps)
     return float(math.log((1.0 - t) / t))

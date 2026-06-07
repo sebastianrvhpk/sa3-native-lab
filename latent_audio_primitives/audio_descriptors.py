@@ -44,8 +44,9 @@ def audio_descriptor_report(
     freqs = np.fft.rfftfreq(cfg.n_fft, d=1.0 / sample_rate).astype(np.float32)
     spectrum = stft + cfg.eps
     energy = spectrum.sum(axis=0)
-    centroid = _safe_mean((freqs[:, None] * spectrum).sum(axis=0) / energy)
-    bandwidth = _safe_mean(np.sqrt(((freqs[:, None] - centroid) ** 2 * spectrum).sum(axis=0) / energy))
+    frame_centroid = (freqs[:, None] * spectrum).sum(axis=0) / energy
+    centroid = _safe_mean(frame_centroid)
+    bandwidth = _safe_mean(np.sqrt(((freqs[:, None] - frame_centroid[None, :]) ** 2 * spectrum).sum(axis=0) / energy))
     rolloff = _rolloff_hz(spectrum, freqs, cfg.rolloff_percent)
     flatness = _safe_mean(np.exp(np.mean(np.log(spectrum), axis=0)) / np.mean(spectrum, axis=0))
     flux = _spectral_flux(spectrum)

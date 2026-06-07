@@ -181,6 +181,11 @@ logSNR = log((1 - t) / t)
 t = sigmoid(-logSNR)
 ```
 
+This is the local straight-path amplitude log-ratio for
+`z_t = (1 - t) z_0 + t epsilon`. Some diffusion papers use squared-power
+logSNR, `log((1 - t)^2 / t^2)`, which differs by a factor of two. SA3 Native
+Lab reports the local convention explicitly in probe manifests.
+
 Default probe idea:
 
 ```text
