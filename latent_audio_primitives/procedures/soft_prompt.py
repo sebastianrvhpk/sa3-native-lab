@@ -99,7 +99,15 @@ def optimize_soft_prompt_from_latents(
         z_t = (1 - t_view) * target + t_view * noise
         velocity_target = _velocity_target(target, noise, convention=velocity_convention)
 
-        cond_with_inpaint = _with_zero_inpaint(conditioning_tensors, batch_size, channels, latent_frames, device, torch)
+        cond_with_inpaint = _with_zero_inpaint(
+            conditioning_tensors,
+            batch_size,
+            channels,
+            latent_frames,
+            device,
+            model_dtype,
+            torch,
+        )
         cond_inputs = core.get_conditioning_inputs(cond_with_inpaint)
         cond_inputs = _cast_cond_inputs(cond_inputs, model_dtype)
 
@@ -151,7 +159,9 @@ def generate_with_soft_prompt(
     """Generate with optimized conditioning tensors through official SA3 generate."""
 
     device = str(stable_model.device)
-    tensors = _to_device(state.conditioning_tensors, device)
+    core = stable_model.model
+    model_dtype = next(core.model.parameters()).dtype
+    tensors = _to_device(state.conditioning_tensors, device, dtype=model_dtype)
     return stable_model.generate(
         conditioning=state.conditioning,
         conditioning_tensors=tensors,
@@ -218,10 +228,18 @@ def _make_trainable(conditioning_tensors: dict[str, Any], *, train_keys: tuple[s
     return params, originals
 
 
-def _with_zero_inpaint(conditioning_tensors: dict[str, Any], batch_size: int, channels: int, latent_frames: int, device: str, torch):
+def _with_zero_inpaint(
+    conditioning_tensors: dict[str, Any],
+    batch_size: int,
+    channels: int,
+    latent_frames: int,
+    device: str,
+    dtype,
+    torch,
+):
     out = dict(conditioning_tensors)
-    out["inpaint_mask"] = [torch.zeros((batch_size, 1, latent_frames), device=device)]
-    out["inpaint_masked_input"] = [torch.zeros((batch_size, channels, latent_frames), device=device)]
+    out["inpaint_mask"] = [torch.zeros((batch_size, 1, latent_frames), device=device, dtype=dtype)]
+    out["inpaint_masked_input"] = [torch.zeros((batch_size, channels, latent_frames), device=device, dtype=dtype)]
     return out
 
 
@@ -251,16 +269,18 @@ def _to_cpu(obj: Any):
     return obj
 
 
-def _to_device(obj: Any, device: str):
+def _to_device(obj: Any, device: str, *, dtype: Any | None = None):
     torch = _require_torch()
     if isinstance(obj, torch.Tensor):
-        return obj.to(device)
+        if dtype is not None and obj.is_floating_point():
+            return obj.to(device=device, dtype=dtype)
+        return obj.to(device=device)
     if isinstance(obj, dict):
-        return {key: _to_device(value, device) for key, value in obj.items()}
+        return {key: _to_device(value, device, dtype=dtype) for key, value in obj.items()}
     if isinstance(obj, list):
-        return [_to_device(value, device) for value in obj]
+        return [_to_device(value, device, dtype=dtype) for value in obj]
     if isinstance(obj, tuple):
-        return tuple(_to_device(value, device) for value in obj)
+        return tuple(_to_device(value, device, dtype=dtype) for value in obj)
     return obj
 
 
