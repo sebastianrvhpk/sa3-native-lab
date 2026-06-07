@@ -82,6 +82,7 @@ utilities:
 | Style profile/direction | collection stats -> latent edit | intervene/render | root operator | intervention candidate | nearest-memory and listening checks for copying |
 | Cyclic loop repair | audio/`z0` -> rolled/repair output | intervene/render | root operator plus procedure | intervention candidate | loop metrics must match loop audition |
 | Residual activation capture | prompt/audio -> residual activations | observe | adapter plus procedure | microscope | layer maps must repeat |
+| Residual layer probing | residual examples -> cross-validated layer rows | observe/select | procedure | selector | probe-ranked layers must repeat before steering |
 | Residual steering | residual vector -> patched generation | intervene/render | adapter plus procedure | high-risk candidate | alpha sweeps must move audio without artifacts |
 | Residual feature atlas | activations -> feature basis/report | observe/select | root measurement plus procedure | microscope | atlas rankings must predict interventions |
 | Gradient/posterior guidance | objective -> latent/sampler update | intervene/render | root operator/scaffold | high-risk candidate | objective movement must beat baselines audibly |
@@ -113,8 +114,8 @@ in a package-level registry.
 | `sa3_latent_sampling.py` | SA3-over-SAME coupled editing | intervention candidate | upstream sampler details are version-sensitive |
 | `selective_sa3.py` | SA3-over-SAME coupled editing | intervention candidate | donor/source effects need copying checks |
 | `cyclic_sa3.py` | SA3 internal trajectory | high-risk sampler microscope / intervention candidate | sampler intervention can create artifacts or collapse |
-| `residual_activation_vectors.py` | SA3 internal trajectory | microscope | repeated layer maps are not yet established |
-| `audio_residual_vectors.py` | SA3 internal trajectory | high-risk microscope | audio-derived directions can entangle source identity and artifacts |
+| `residual_activation_vectors.py` | SA3 internal trajectory | microscope / selector | probe-ranked layers still need repeatability checks |
+| `audio_residual_vectors.py` | SA3 internal trajectory | high-risk microscope / selector | audio-derived directions can entangle source identity and artifacts |
 | `residual_sweeps.py` | SA3 internal trajectory | high-risk intervention candidate | steering can move artifacts instead of musical qualities |
 
 ## Artifact Flow

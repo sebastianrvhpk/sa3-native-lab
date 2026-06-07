@@ -182,8 +182,8 @@ methods under review, not as a list of promoted controls.
 | `procedures/sa3_latent_sampling.py` | SA3-over-SAME coupled editing | intervention candidate | Method packets show which SAME edits survive direct decode and SA3 polish. |
 | `procedures/selective_sa3.py` | SA3-over-SAME coupled editing | intervention candidate | Source/baseline/method packets show predictable channel, donor, and prompt effects. |
 | `procedures/cyclic_sa3.py` | SA3 internal trajectory | high-risk sampler microscope / intervention candidate | Loop metrics and auditions improve versus baselines without collapse or sampler artifacts. |
-| `procedures/residual_activation_vectors.py` | SA3 internal trajectory | microscope | Layer maps repeat before any steering claim is made. |
-| `procedures/audio_residual_vectors.py` | SA3 internal trajectory | high-risk microscope | Audio-derived directions repeat across examples and survive alpha-sweep audition. |
+| `procedures/residual_activation_vectors.py` | SA3 internal trajectory | microscope / selector | Prompt-derived residual examples produce cross-validated layer-probe rows before steering. |
+| `procedures/audio_residual_vectors.py` | SA3 internal trajectory | high-risk microscope / selector | Audio-derived residual examples produce layer-probe rows; directions still need source-leakage and alpha-sweep review. |
 | `procedures/residual_sweeps.py` | SA3 internal trajectory | high-risk intervention candidate | Alpha changes are audible, monotonic or interpretable, and not just artifact injection. |
 
 ## Artifact Graph

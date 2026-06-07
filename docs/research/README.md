@@ -32,8 +32,8 @@ are organized as a lab record:
   existing coverage, new research programs, and priority order.
 - [Methods and math](current/methods-and-math.md): SA3/SAME objects, frozen-model
   principle, flow scoring, object-transition equations, latent DSP, geometry,
-  control observability, guidance, residual steering, and implementation safety
-  notes.
+  control observability, guidance, residual probing/steering, and implementation
+  safety notes.
 - [Primitive map](current/primitive-map.md): research-altitude layers, artifact
   flow, placement rules, and promotion criteria for
   `latent_audio_primitives/`.

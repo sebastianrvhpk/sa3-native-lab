@@ -116,7 +116,8 @@ The current methods and math notes are:
 
 That document covers SA3/SAME objects, frozen-model principles, native flow
 prompt scoring, object-transition equations, latent DSP, geometry, control
-observability, guidance, residual steering, and implementation safety notes.
+observability, guidance, residual probing/steering, and implementation safety
+notes.
 
 The primitive library map is:
 

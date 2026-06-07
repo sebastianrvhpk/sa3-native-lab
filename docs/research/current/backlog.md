@@ -174,20 +174,23 @@ Drop or revise if:
 
 ## Gap 6. Residual Causality
 
-Evidence gap: residual activations are measurable, but causal audio movement is
-not yet established.
+Evidence gap: residual activations are measurable, and layer separability can
+now be ranked with cross-validated probes, but causal audio movement is not yet
+established.
 
-Native transition: `prompt/audio examples -> residual direction -> alpha sweep -> evidence packet`.
+Native transition: `prompt/audio examples -> residual activations -> layer-probe rows -> residual direction -> alpha sweep -> evidence packet`.
 
 Current support: residual hooks, prompt/audio vector extraction, alpha sweeps,
-residual feature basis, player/descriptors.
+residual feature basis, cross-validated layer-probe rows, player/descriptors.
 
-Next run: run layer/alpha sweeps on one prompt-pair vector and one audio-derived
-vector with baseline, descriptor deltas, and listening notes.
+Next run: run prompt-pair and audio-derived extraction with all candidate layers,
+inspect the top layer-probe rows, then run top-k layer alpha sweeps with
+baseline, descriptor deltas, and listening notes.
 
 Promote if:
 
 - alpha changes target qualities monotonically or predictably,
+- probe-ranked layers repeat across seeds or example subsets,
 - effects repeat across seeds/prompts,
 - artifacts remain bounded.
 

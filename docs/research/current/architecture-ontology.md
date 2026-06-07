@@ -179,10 +179,10 @@ until generated outputs and listening agree.
 
 Residuals, sampler states, and step windows are internal computational objects,
 not automatically controls. This layer should borrow the discipline of
-mechanistic interpretability: map layer/time features first, then test causal
-patches with bounded sweeps. A residual direction is promoted only if it moves
-audio predictably across prompts/seeds and does not merely exploit fragile
-internals.
+mechanistic interpretability: capture activations, rank layers with explicit
+linear probes, then test causal patches with bounded sweeps. A residual
+direction is promoted only if it moves audio predictably across prompts/seeds
+and does not merely exploit fragile internals.
 
 ### SA3-over-SAME Coupled Editing
 
@@ -265,10 +265,13 @@ Implementation shape:
 
 - Capture residual activations by layer and sampler step window for prompt-pair
   and audio-pair contrasts.
+- Rank candidate layers with stratified linear-probe rows before any steering
+  layer is chosen.
 - Summarize which layers/timesteps separate material, energy, space, and rhythm
   tags.
 
-Promote if: layer/time maps repeat before any steering claim is made.
+Promote if: layer/time maps and probe-ranked layers repeat before any steering
+claim is made.
 
 ### 6. Residual Causal Sweep
 

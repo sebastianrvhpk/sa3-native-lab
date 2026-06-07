@@ -729,7 +729,7 @@ z_prime = z + alpha v
 Hypothesis: some dataset-level timbral or structural properties are linearly
 visible in simple SAME statistics.
 
-### Prompt Or Audio Examples To SA3 Residual Steering
+### Prompt Or Audio Examples To SA3 Residual Probing And Steering
 
 Prompt-derived direction:
 
@@ -739,6 +739,23 @@ v_l = mean a_l(positive prompts) - mean a_l(reference prompts)
 
 Audio-derived direction uses audio labels or audio sets rather than only prompt
 pairs.
+
+Layer probe selector:
+
+```text
+x_i^l = pooled residual activation for example i at layer l
+y_i in {positive, reference}
+q_l(y | x) = linear logistic probe
+score_l = stratified_cv_accuracy(q_l, {(x_i^l, y_i)})
+```
+
+The probe is not a display accessory. It is the required selector that ranks
+which layers visibly separate the contrast before any residual direction is
+treated as a steering candidate. `logistic_cv` uses the same cross-validated
+linear-probe idea as audioscope; the notebook implementation keeps a Torch
+solver because the SA3 Colab runtime intentionally removes sklearn. The
+`centroid_loo` probe remains a dependency-light diagnostic, not the preferred
+layer selector.
 
 Inference-time intervention:
 
@@ -1058,6 +1075,7 @@ v_l = mean(a_l^positive) - mean(a_l^reference)
 
 Atlas goals:
 
+- rank layers with cross-validated residual probes before steering,
 - rank layers by predictive control accuracy,
 - measure feature projection,
 - test causal interventions by generation-time patching.
