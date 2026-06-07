@@ -749,13 +749,23 @@ q_l(y | x) = linear logistic probe
 score_l = stratified_cv_accuracy(q_l, {(x_i^l, y_i)})
 ```
 
+Trajectory-window selector:
+
+```text
+W_w = observed forward-call window w
+x_i^{l,w} = pooled residual activation for example i at layer l inside W_w
+score_{l,w} = stratified_cv_accuracy(q_{l,w}, {(x_i^{l,w}, y_i)})
+```
+
 The probe is not a display accessory. It is the required selector that ranks
 which layers visibly separate the contrast before any residual direction is
 treated as a steering candidate. `logistic_cv` uses the same cross-validated
 linear-probe idea as audioscope; the notebook implementation keeps a Torch
 solver because the SA3 Colab runtime intentionally removes sklearn. The
 `centroid_loo` probe remains a dependency-light diagnostic, not the preferred
-layer selector.
+layer selector. The trajectory rows use observed block-forward call windows,
+not exact sampler timesteps; exact timestep attribution requires sampler
+metadata that the current residual hook path does not expose.
 
 Inference-time intervention:
 
@@ -1076,6 +1086,7 @@ v_l = mean(a_l^positive) - mean(a_l^reference)
 Atlas goals:
 
 - rank layers with cross-validated residual probes before steering,
+- rank layer/window cells with cross-validated residual trajectory probes,
 - rank layers by predictive control accuracy,
 - measure feature projection,
 - test causal interventions by generation-time patching.

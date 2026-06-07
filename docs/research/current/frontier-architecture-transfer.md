@@ -420,7 +420,7 @@ SAME bottleneck atlas
 -> source preservation versus copying panel
 -> direct decode versus SA3 polish audit
 -> semantic bottleneck disagreement panel
--> residual layer-time atlas
+-> residual layer-window atlas
 -> residual causal sweep
 -> trajectory objective honesty packet
 ```

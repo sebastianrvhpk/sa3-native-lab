@@ -84,7 +84,7 @@ model-native research layers plus cross-cutting evidence utilities:
 |---|---|---|
 | SAME Representation Science | What does SAME preserve, expose, erase, or make editable on its own? | Run direct-decode, bottleneck, geometry, memory, DSP, and control-lane experiments before invoking SA3 polish. |
 | SA3 Flow and Conditioning Science | What does frozen SA3 know through prompt conditions, flow timesteps, and velocity fields? | Use shared flow probe banks, prompt variants, attribution, and condition inversion as SA3-native evidence. |
-| SA3 Internal Trajectory Science | What do residual activations and sampler states reveal or causally control? | Keep residual/guidance work as microscope or high-risk candidate until layer/time sweeps survive audio review. |
+| SA3 Internal Trajectory Science | What do residual activations and sampler states reveal or causally control? | Keep residual/guidance work as microscope or high-risk candidate until layer/window sweeps survive audio review. |
 | SA3-over-SAME Coupled Editing | How does SA3 read, repair, erase, or amplify SAME latents? | Compare every coupled edit against direct SAME decode and plain SA3 polish. |
 
 Evidence utilities are not a fifth model-object layer. They are the review
@@ -182,8 +182,8 @@ methods under review, not as a list of promoted controls.
 | `procedures/sa3_latent_sampling.py` | SA3-over-SAME coupled editing | intervention candidate | Method packets show which SAME edits survive direct decode and SA3 polish. |
 | `procedures/selective_sa3.py` | SA3-over-SAME coupled editing | intervention candidate | Source/baseline/method packets show predictable channel, donor, and prompt effects. |
 | `procedures/cyclic_sa3.py` | SA3 internal trajectory | high-risk sampler microscope / intervention candidate | Loop metrics and auditions improve versus baselines without collapse or sampler artifacts. |
-| `procedures/residual_activation_vectors.py` | SA3 internal trajectory | microscope / selector | Prompt-derived residual examples produce cross-validated layer-probe rows before steering. |
-| `procedures/audio_residual_vectors.py` | SA3 internal trajectory | high-risk microscope / selector | Audio-derived residual examples produce layer-probe rows; directions still need source-leakage and alpha-sweep review. |
+| `procedures/residual_activation_vectors.py` | SA3 internal trajectory | microscope / selector | Prompt-derived residual examples produce cross-validated layer and trajectory-window probe rows before steering. |
+| `procedures/audio_residual_vectors.py` | SA3 internal trajectory | high-risk microscope / selector | Audio-derived residual examples produce layer and trajectory-window probe rows; directions still need source-leakage and alpha-sweep review. |
 | `procedures/residual_sweeps.py` | SA3 internal trajectory | high-risk intervention candidate | Alpha changes are audible, monotonic or interpretable, and not just artifact injection. |
 
 ## Artifact Graph

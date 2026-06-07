@@ -79,7 +79,7 @@ The research layer is organized by four model-native layers first:
 - SA3 Flow and Conditioning Science: SA3 on its own over SAME-shaped flow
   states, prompt conditions, logSNR/timestep probes, and prompt inversion.
 - SA3 Internal Trajectory Science: residual activations, sampler states,
-  guidance objectives, and layer/time causal probes.
+  guidance objectives, and layer/window causal probes.
 - SA3-over-SAME Coupled Editing: SAME edits entering SA3 polish, inpainting,
   continuation, audio-to-audio, and source-preservation paths.
 
