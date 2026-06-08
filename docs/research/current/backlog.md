@@ -236,6 +236,9 @@ latent-motion, and latent-channel lanes. Start with layer/window rows and null
 window margins; keep exact timestep probing disabled until the first pass
 identifies a small lane/layer set. Then run a narrowed exact-timestep audit with
 token-preserving timestep activations and optional timestep null controls.
+Before any long audit, run the control-lane preflight cell and require a nonzero
+active-source span plus `ok` timestep sample counts when timestep probing is
+enabled.
 Inspect layer/window/timestep heatmaps, null-control margins, prediction curves,
 active-direction previews, call-held-out scores, and repeatability rows across
 at least two seeds, prompts, or init-noise levels.

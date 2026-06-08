@@ -122,6 +122,11 @@ class SA3ControlLaneProbeExtractor:
     ) -> ControlLaneMechanisticProbeResult:
         """Run audio-to-audio SA3 once and return lane/layer probe rows."""
 
+        if timestep_activation_mode not in {"tokens", "mean"}:
+            raise ValueError("timestep_activation_mode must be 'tokens' or 'mean'")
+        if null_timestep_probe and not timestep_probe:
+            raise ValueError("null_timestep_probe=True requires timestep_probe=True")
+
         torch = _require_torch()
         torchaudio = _require_torchaudio()
         path = Path(path)
@@ -164,10 +169,8 @@ class SA3ControlLaneProbeExtractor:
             if timestep_probe and step_records:
                 if timestep_activation_mode == "tokens":
                     timestep_activations, timestep_metadata = collector.get_timestep_token_activations(step_records)
-                elif timestep_activation_mode == "mean":
-                    timestep_activations, timestep_metadata = collector.get_timestep_mean_activations(step_records)
                 else:
-                    raise ValueError("timestep_activation_mode must be 'tokens' or 'mean'")
+                    timestep_activations, timestep_metadata = collector.get_timestep_mean_activations(step_records)
         layer_rows = control_lane_layer_probe_rows(
             raw_activations,
             lanes,

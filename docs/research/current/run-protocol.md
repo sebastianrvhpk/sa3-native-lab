@@ -119,6 +119,12 @@ include enough evidence for its decision.
 | Dataset/memory method | memory rows, cluster/donor selection evidence, output audition | heldout rows, geometry/lane scores |
 | Frontier hypothesis | source link, native-object mapping, one concrete notebook run | native disagreement panel, runtime audit |
 
+For control-lane mechanistic probing, run the notebook preflight before a long
+audit. The preflight should report a non-empty active-source span and at least
+one `ok` token-preserving timestep row when timestep probing is enabled. If the
+preflight fails, fix the lane mask, hook mapping, or layer/lane selection before
+launching the expensive null/repeatability run.
+
 ## Minimum Evidence Packet
 
 For a method to be reviewable, collect:
