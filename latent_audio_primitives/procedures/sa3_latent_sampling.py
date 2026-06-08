@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from latent_audio_primitives.trajectory import sampler_timestep_recorder
+
 
 def sa3_sample_from_init_latents(
     stable_model: Any,
@@ -20,6 +22,7 @@ def sa3_sample_from_init_latents(
     apg_scale: float = 1.0,
     dist_shift: Any = None,
     sampler_type: str | None = None,
+    sampler_step_records: list[dict[str, Any]] | None = None,
     **sampler_kwargs: Any,
 ) -> Any:
     """Use edited latents as SA3 init_data and sample back toward the manifold."""
@@ -59,6 +62,13 @@ def sa3_sample_from_init_latents(
 
     conditioning_inputs = _cast_cond_inputs(conditioning_inputs, model_dtype, torch)
     negative_conditioning_tensors = _cast_cond_inputs(negative_conditioning_tensors, model_dtype, torch)
+    if sampler_step_records is not None:
+        user_callback = sampler_kwargs.get("callback")
+        sampler_kwargs["callback"] = sampler_timestep_recorder(
+            sampler_step_records,
+            user_callback=user_callback,
+            sampler_type=sampler_type,
+        )
 
     with torch.inference_mode():
         return sample_diffusion(

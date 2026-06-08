@@ -36,7 +36,7 @@ utilities:
 |---|---|---|
 | SAME Representation Science | `x`, `E`, `D`, `z0`, `LatentItem` | encode/decode, direct decode, geometry, bottleneck stress, latent DSP, memory, control lanes |
 | SA3 Flow and Conditioning Science | `z_t`, `t`, `C(p)`, `v_theta` | shared probe banks, prompt flow scoring, attribution, soft/hard/readable inversion, null/condition probes |
-| SA3 Internal Trajectory Science | residual activations, sampler states, step windows | residual capture, residual feature atlas, steering sweeps, cyclic projection, guidance scaffolds |
+| SA3 Internal Trajectory Science | residual activations, sampler states, step windows | residual capture, residual-timestep cartography, residual feature atlas, steering sweeps, cyclic projection, guidance scaffolds |
 | SA3-over-SAME Coupled Editing | edited `z0'`, init/polish/inpaint/continue paths | neighborhood renoise, selective SA3, direct decode vs polish, source-preservation checks |
 | Evidence utilities | descriptors, memory rows, annotations, manifests | player, annotation store, disagreement rows, ledger, static report candidates |
 
@@ -51,6 +51,7 @@ utilities:
 | Prompt condition `C(p)` | SA3 conditioner outputs or optimized tensors | upstream SA3 plus `flow_prompt.py`, `procedures/soft_prompt.py` | scored, optimized, attributed, auditioned | confirmed |
 | Prompt semantic row | prompt variant, tags, flow/listening evidence | `prompt_semantics.py`, notebook cells | compares raw, readable, and flow-found language | confirmed |
 | Residual activation `a_l` | layer activation tensors | `adapters/sa3_residual_hooks.py`, residual procedures | captured, contrasted, steered, summarized | confirmed |
+| Trajectory cell/map | layer, sampler step/window, sigma/logSNR, score, mapping status | `trajectory.py`, residual procedures, notebook cells | ranked, summarized, converted into probe banks or schedules | confirmed |
 | `LatentItem` | ID, latent, rate, prompt, descriptors, labels, metadata | `schema.py`, `io.py` | saved, loaded, indexed, clustered | confirmed |
 | Control lane | time-varying values, rate, confidence, metadata | `control_lanes.py` | extracted, normalized, compared, segmented, masked, saved, rendered | confirmed |
 | Descriptor report | JSON-friendly audio statistics | `audio_descriptors.py` | computed for source/baseline/method outputs | confirmed |
@@ -75,6 +76,7 @@ utilities:
 | Flow attribution | prompt -> token contribution rows | observe/select | root rows plus procedure | microscope | repeat over shared probe banks |
 | Prompt semantic transparency | prompt variants -> tagged flow/listening rows | observe/select | root rows plus procedure | microscope/selector | show tags explain useful prompt changes |
 | Soft prompt inversion | target `z0` -> optimized condition | intervene/render | procedure | intervention candidate | audition against prompt/audio-to-audio baselines |
+| Trajectory-weighted soft prompt inversion | residual-timestep map -> flow probe bank -> optimized condition | select/intervene/render | root map plus procedure | intervention candidate | show trajectory-selected timesteps improve soft-prompt audio, not just loss |
 | Hard/readable prompt search | candidate text -> ranked prompts | select | root search plus procedure scorer | selector | compare readable rankings against listening |
 | SAME latent DSP | `z0` -> DSP-edited `z0'` -> audio | intervene/render | root operator plus procedure polish | intervention candidate | direct decode vs polish evidence packets |
 | Blur/filter/low-rank | `z0` -> projected `z0'` -> audio | observe/intervene | root operator plus procedure polish | microscope/intervention candidate | identify which perturbations survive audio review |
@@ -84,8 +86,9 @@ utilities:
 | Residual activation capture | prompt/audio -> residual activations | observe | adapter plus procedure | microscope | layer maps must repeat |
 | Residual layer probing | residual examples -> cross-validated layer rows | observe/select | procedure | selector | probe-ranked layers must repeat before steering |
 | Residual sampler-timestep probing | residual examples + sampler callback -> cross-validated layer/timestep rows | observe/select | adapter plus procedure | microscope/selector | exact mappings must report `exact_one_call_per_step` or disclose grouping |
+| Residual-timestep cartography | layer/timestep rows -> trajectory cells -> band summaries, flow probes, alpha schedules, cyclic schedules | observe/select/intervene candidate | root trajectory map | microscope/selector | maps and schedules must repeat before causal claims |
 | Residual trajectory probing | residual examples -> cross-validated layer/window rows | observe/select | adapter plus procedure | microscope/selector | window-ranked rows must repeat before timestep claims |
-| Residual steering | residual vector -> patched generation | intervene/render | adapter plus procedure | high-risk candidate | alpha sweeps must move audio without artifacts |
+| Residual steering | residual vector -> patched generation | intervene/render | adapter plus procedure | high-risk candidate | alpha sweeps, preferably trajectory-gated, must move audio without artifacts |
 | Residual feature atlas | activations -> feature basis/report | observe/select | root measurement plus procedure | microscope | atlas rankings must predict interventions |
 | Gradient/posterior guidance | objective -> latent/sampler update | intervene/render | root operator/scaffold | high-risk candidate | objective movement must beat baselines audibly |
 | External comparison | imported outputs -> evidence packet | compare | evidence/procedure | comparison | fixed task packets with descriptors and notes |
@@ -171,8 +174,9 @@ phase blend, profile/direction alpha, covariance transport alpha
 Residual and trajectory interventions:
 
 ```text
-layer indices, residual axis, vector top-k, alpha, denoising step window,
-guidance scale, loss weights, cyclic projection mix
+layer indices, residual axis, vector top-k, alpha, trajectory cells,
+mapping status, denoising step window, guidance scale, loss weights,
+cyclic projection mix schedule
 ```
 
 Dataset memory:

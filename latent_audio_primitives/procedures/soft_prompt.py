@@ -6,6 +6,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from latent_audio_primitives.flow_prompt import FlowProbeBank, flow_probe_bank_to_manifest
+
 
 @dataclass(slots=True)
 class SoftPromptState:
@@ -55,6 +57,7 @@ def optimize_soft_prompt_from_latents(
     reg_weight: float = 1e-4,
     min_t: float = 0.05,
     max_t: float = 0.95,
+    probe_bank: FlowProbeBank | None = None,
     seed: int = 0,
     velocity_convention: str = "noise_minus_data",
 ) -> SoftPromptState:
@@ -86,6 +89,10 @@ def optimize_soft_prompt_from_latents(
         parameter.requires_grad_(False)
     core.eval()
 
+    probe_specs = tuple(probe_bank.probes) if probe_bank is not None else ()
+    if probe_bank is not None:
+        velocity_convention = probe_bank.velocity_convention
+
     generator = torch.Generator(device=device)
     generator.manual_seed(seed)
     optimizer = torch.optim.AdamW(params, lr=lr)
@@ -93,8 +100,16 @@ def optimize_soft_prompt_from_latents(
 
     for _step in range(optimization_steps):
         optimizer.zero_grad(set_to_none=True)
-        t = min_t + (max_t - min_t) * torch.rand(batch_size, device=device, generator=generator)
+        if probe_specs:
+            probe = probe_specs[_step % len(probe_specs)]
+            t = torch.full((batch_size,), float(probe.timestep), device=device)
+            noise_sign = float(probe.noise_sign)
+        else:
+            t = min_t + (max_t - min_t) * torch.rand(batch_size, device=device, generator=generator)
+            noise_sign = 1.0
         noise = torch.randn(target.shape, device=device, dtype=model_dtype, generator=generator)
+        if noise_sign != 1.0:
+            noise = noise * noise_sign
         t_view = t[:, None, None].to(model_dtype)
         z_t = (1 - t_view) * target + t_view * noise
         velocity_target = _velocity_target(target, noise, convention=velocity_convention)
@@ -139,6 +154,7 @@ def optimize_soft_prompt_from_latents(
             "reg_weight": reg_weight,
             "min_t": min_t,
             "max_t": max_t,
+            "probe_bank": None if probe_bank is None else flow_probe_bank_to_manifest(probe_bank),
             "seed": seed,
             "target_shape": list(target.shape),
             "velocity_convention": velocity_convention,

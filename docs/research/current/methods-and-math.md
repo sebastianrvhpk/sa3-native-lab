@@ -776,6 +776,59 @@ record `mapping_status`; `exact_one_call_per_step` is the clean attribution
 case. Forward-call window rows remain a fallback microscope when sampler
 metadata is unavailable or when extra model evaluations need grouping.
 
+Residual-timestep cartography turns those probe rows into explicit selectable
+cells:
+
+```text
+m_{l,k} = {
+  layer l,
+  sampler step k,
+  timestep t_k,
+  sigma_k,
+  logSNR_k,
+  score_{l,k},
+  mapping_status
+}
+```
+
+The trajectory map is a ranked set:
+
+```text
+M = sort_by_score({m_{l,k}})
+```
+
+It is a microscope and selector. It says where a contrast is visible in SA3's
+observed internal trajectory. It does not, by itself, prove causal control.
+
+Trajectory-selected flow probes:
+
+```text
+{m_{l,k}} -> {t_k, logSNR_k, noise_seed_k, noise_sign_k}
+```
+
+These probes can focus prompt scoring or soft-prompt optimization on sampler
+regions where SA3 internally separates the relevant contrast.
+
+Trajectory-gated residual steering:
+
+```text
+alpha_{l,k} = alpha * score_{l,k} / max score
+a_l(k) <- a_l(k) + alpha_{l,k} v_l
+```
+
+This is safer than whole-run steering only if the chosen cells repeat across
+seeds/examples and the resulting alpha sweep survives audio review.
+
+Trajectory-gated cyclic projection:
+
+```text
+beta_k = beta * score_k / max score
+z_{k+1} <- cyclic_mix(z_{k+1}, beta_k)
+```
+
+Here `k` is sampler step, not audio time. The schedule changes when the sampler
+receives cyclic pressure; it does not say which part of the waveform is cyclic.
+
 Inference-time intervention:
 
 ```text

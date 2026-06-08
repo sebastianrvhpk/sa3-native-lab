@@ -35,10 +35,16 @@ def alpha_sweep(
     seed: int = 42,
     layer: int | None = None,
     top_k: int = 1,
+    steering_schedule: Any = None,
     save_audio: bool = True,
     generate_kwargs: dict[str, Any] | None = None,
 ) -> list[SweepOutput]:
-    """Generate a residual-steering alpha sweep and save latents/audio."""
+    """Generate a residual-steering alpha sweep and save latents/audio.
+
+    ``steering_schedule`` can be a trajectory-derived schedule that gates the
+    residual vector by observed hook-call index. With ``None``, steering remains
+    the original whole-run layer patch.
+    """
 
     torch = _require_torch()
     torchaudio = _require_torchaudio() if save_audio else None
@@ -51,7 +57,7 @@ def alpha_sweep(
     all_items = []
     for alpha in alphas:
         item_prefix = f"alpha_{_alpha_token(alpha)}"
-        with steerer.steer(alpha=alpha):
+        with steerer.steer(alpha=alpha, schedule=steering_schedule):
             latents = sa3.generate_latents(
                 prompt=prompt,
                 duration=duration,
@@ -73,6 +79,7 @@ def alpha_sweep(
                 "cfg_scale": cfg_scale,
                 "duration": duration,
                 "steering_layers": steerer.layer_indices,
+                "steering_schedule": _schedule_manifest_or_none(steering_schedule),
             },
         )
         all_items.extend(items)
@@ -90,6 +97,14 @@ def alpha_sweep(
     with (output_dir / "sweep.json").open("w", encoding="utf-8") as f:
         json.dump([asdict(output) for output in outputs], f, indent=2, sort_keys=True)
     return outputs
+
+
+def _schedule_manifest_or_none(schedule: Any) -> dict[str, Any] | None:
+    if schedule is None:
+        return None
+    if hasattr(schedule, "to_manifest"):
+        return schedule.to_manifest()
+    return {"type": type(schedule).__name__}
 
 
 def _alpha_token(alpha: float) -> str:

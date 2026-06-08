@@ -98,7 +98,7 @@ evidence utility -> evidence packet setup, ledger and decision board
 | SAME representation bench | SAME `z0`, summaries, geometry, lanes, direct decodes | `z0` -> rows/reports/audio | What does SAME expose before SA3 intervenes? |
 | SAME memory and composition bench | memory rows, clusters, bridges, donors | collection -> selector -> output | How do collections support selection without copying? |
 | SA3 flow and conditioning science | `z_t`, prompt condition `C(p)` | target `z0` -> probe bank -> prompt/condition score | Which prompts or conditions explain audio under frozen SA3 flow? |
-| SA3 internal trajectory science | residual activations, sampler states | activation/state -> intervention -> output | Which internal interventions causally move audio? |
+| SA3 internal trajectory science | residual activations, sampler states, trajectory cells | activation/state -> trajectory map -> scheduled candidate -> output | Which internal signals are visible, schedulable, and eventually causal? |
 | SA3-over-SAME coupled editing bench | edited SAME latents | `z0` -> `z0'` -> direct decode / SA3 polish | Which latent edits survive, get erased, or get amplified by SA3? |
 | External comparison bench | imported audio/checkpoints/run notes | external audio output -> evidence packet | How do imported outputs compare under the same local evidence? |
 | Ledger and decision board | evidence packets and decisions | evidence -> maturity update | What is real, repeatable, useful, or only diagnostic? |
@@ -114,7 +114,7 @@ include enough evidence for its decision.
 | Source-preserving edit | source audio, baseline, method output, descriptor delta, nearest-memory rows | flow score, control lanes, geometry report |
 | Latent operator control | direct decode or polish, descriptor delta, listening notes | SAME bottleneck stress rows, flow score |
 | Loop/continuation | loop preview, boundary/periodicity metrics, listening notes | bridge cost, lane continuity |
-| Residual steering | layer-probe rows, sampler-timestep rows, selected top-k layers, vector metadata, alpha sweep, descriptor/listening deltas | trajectory window rows, residual feature atlas, repeat probe run |
+| Residual steering | layer-probe rows, sampler-timestep rows, trajectory map, selected top-k cells/layers, vector metadata, alpha schedule, alpha sweep, descriptor/listening deltas | trajectory window rows, residual feature atlas, repeat probe run, trajectory-derived flow probe bank |
 | Dataset/memory method | memory rows, cluster/donor selection evidence, output audition | heldout rows, geometry/lane scores |
 | Frontier hypothesis | source link, native-object mapping, one concrete notebook run | native disagreement panel, runtime audit |
 

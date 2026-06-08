@@ -108,7 +108,7 @@ next, then SA3 flow, SA3 internals, and finally coupled SA3-over-SAME editing.
 | SAME representation bench | `z0` -> summaries/geometry/lanes/direct decodes | descriptor, geometry, periodicity, control-lane, bottleneck rows | implemented |
 | SAME memory and composition bench | collection -> selector -> continuation/bridge/donor | memory indices, curriculum rows, ranked bridges | implemented |
 | SA3 flow and conditioning science | target `z0` -> flow probes -> prompt/condition score | shared probe banks, flow-loss rows, attribution, semantic prompt variants, soft prompts, prompt candidates | implemented plus null-inversion scaffold |
-| SA3 internal trajectory science | activation/state -> intervention -> output | residual vectors, alpha sweeps, guided variants | implemented plus high-risk scaffolds |
+| SA3 internal trajectory science | activation/state -> trajectory map -> scheduled candidate -> output | residual vectors, residual-timestep maps, alpha schedules, cyclic schedules, guided variants | implemented plus high-risk scaffolds |
 | SA3-over-SAME coupled editing bench | `z0` -> edited `z0'` -> direct decode / SA3 polish | direct decodes, SA3-polished audio, deltas, source-preservation rows | implemented |
 | External comparison bench | external artifacts -> evidence packet | Underfit/cross-model audio, descriptor/player rows | external/scaffold |
 | Ledger and decision board | evidence packet -> maturity decision | ledger rows, promote/revise/drop decisions | template ready; no completed runs recorded |
@@ -120,7 +120,7 @@ should be updated from `experiment-ledger.md`, not from speculation.
 
 | Maturity | Current methods | What is missing |
 |---|---|---|
-| Microscope | flow sign diagnostic, flow attribution, loss-by-timestep, geometry audit, periodicity, residual feature atlas | repeated listening evidence before control claims |
+| Microscope | flow sign diagnostic, flow attribution, loss-by-timestep, geometry audit, periodicity, residual feature atlas, residual-timestep cartography | repeated listening evidence before control claims |
 | Selector | memory index, curriculum, bridge search, prompt search, tokenizer vocabulary, donor/source ranking ideas | evidence that rankings improve auditions |
 | Intervention candidate | neighborhood renoise, selective renoise, graft, blur/filter, neural latent DSP, style profile/direction, cyclic repair, soft prompt audition | source/baseline/method packets across clips and seeds |
 | High-risk intervention candidate | residual steering, cyclic denoising projection, gradient guidance, posterior guidance, null-condition inversion | proof of causal movement without artifacts or fragile internals |
@@ -137,7 +137,7 @@ should be updated from `experiment-ledger.md`, not from speculation.
   `latent_blur.py`, `latent_dsp.py`, `selective_renoise.py`, `looping.py`,
   `style.py`, `flow_prompt.py`, `prompt_semantics.py`,
   `prompt_optimization.py`, `tokenizer_vocab.py`, `index.py`,
-  `curriculum.py`, `composition.py`, `guidance.py`, and
+  `curriculum.py`, `composition.py`, `guidance.py`, `trajectory.py`, and
   `residual_features.py`.
 - Model boundary: `adapters/` isolates official SA3/SAME loading, encoding,
   generation, tokenizer access, and residual-hook surfaces.
@@ -161,6 +161,9 @@ capability map is [Capability map](capability-map.md).
   `query_controls()`, and `query_hybrid()`.
 - Native tokenizer extraction is owned by `tokenizer_vocab.py` with native
   vocabulary filtering and preview helpers.
+- Residual-timestep cartography is owned by `trajectory.py` with ranked cells,
+  band summaries, trajectory-derived flow probe banks, residual alpha schedules,
+  cyclic mix schedules, and sampler-step record normalization.
 - A synthetic smoke run covers the NumPy-only research grammar: `LatentItem`,
   summaries, geometry, periodicity, control lanes, audio descriptors, memory,
   curriculum, composition, style profiles/directions, flow-probe manifests,
@@ -178,13 +181,13 @@ methods under review, not as a list of promoted controls.
 | Procedure | Layer | Current maturity | Promotion gate |
 |---|---|---|---|
 | `procedures/flow_scoring.py` | SA3 flow/conditioning | microscope / selector | Flow rankings predict generated-audio or listening outcomes across shared probe banks. |
-| `procedures/soft_prompt.py` | SA3 flow/conditioning | intervention candidate | Optimized conditions beat readable prompt and audio-to-audio baselines without losing reviewability. |
-| `procedures/sa3_latent_sampling.py` | SA3-over-SAME coupled editing | intervention candidate | Method packets show which SAME edits survive direct decode and SA3 polish. |
-| `procedures/selective_sa3.py` | SA3-over-SAME coupled editing | intervention candidate | Source/baseline/method packets show predictable channel, donor, and prompt effects. |
-| `procedures/cyclic_sa3.py` | SA3 internal trajectory | high-risk sampler microscope / intervention candidate | Loop metrics and auditions improve versus baselines without collapse or sampler artifacts. |
+| `procedures/soft_prompt.py` | SA3 flow/conditioning | intervention candidate | Optimized conditions, optionally weighted by trajectory-derived probe banks, beat readable prompt and audio-to-audio baselines without losing reviewability. |
+| `procedures/sa3_latent_sampling.py` | SA3-over-SAME coupled editing | intervention candidate | Method packets show which SAME edits survive direct decode and SA3 polish, with sampler-step records when relevant. |
+| `procedures/selective_sa3.py` | SA3-over-SAME coupled editing | intervention candidate | Source/baseline/method packets show predictable channel, donor, prompt, and sampler-step effects. |
+| `procedures/cyclic_sa3.py` | SA3 internal trajectory | high-risk sampler microscope / intervention candidate | Loop metrics and auditions improve versus baselines without collapse or sampler artifacts; trajectory-derived mix schedules must beat uniform mix. |
 | `procedures/residual_activation_vectors.py` | SA3 internal trajectory | microscope / selector | Prompt-derived residual examples produce cross-validated layer, sampler-timestep, and trajectory-window probe rows before steering. |
 | `procedures/audio_residual_vectors.py` | SA3 internal trajectory | high-risk microscope / selector | Audio-derived residual examples produce layer, sampler-timestep, and trajectory-window probe rows; directions still need source-leakage and alpha-sweep review. |
-| `procedures/residual_sweeps.py` | SA3 internal trajectory | high-risk intervention candidate | Alpha changes are audible, monotonic or interpretable, and not just artifact injection. |
+| `procedures/residual_sweeps.py` | SA3 internal trajectory | high-risk intervention candidate | Global or trajectory-gated alpha changes are audible, monotonic or interpretable, and not just artifact injection. |
 
 ## Artifact Graph
 

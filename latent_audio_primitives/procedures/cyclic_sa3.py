@@ -17,6 +17,7 @@ def sample_cyclic_roll_euler(
     roll_frames: int,
     mode: str = "alternate",
     roll_mix: float = 0.10,
+    roll_mix_schedule: Any = None,
     mix_every_n: int = 1,
     symmetric_mix: bool = True,
     unroll_output: bool = True,
@@ -45,6 +46,10 @@ def sample_cyclic_roll_euler(
 
     This mode changes the state even when the init-noise schedule has dt=0.
 
+    ``roll_mix_schedule`` may provide a per-step mix strength. This lets
+    residual-timestep cartography turn cyclic projection into a sampler-phase
+    intervention instead of applying the same mix at every denoising step.
+
     This helper is intentionally Euler-only. It is an experimental probe, not a
     replacement for SA3's full sampler zoo.
     """
@@ -67,6 +72,7 @@ def sample_cyclic_roll_euler(
     num_steps = t.shape[-1] - 1
 
     for i in tqdm(range(num_steps), disable=disable_tqdm):
+        step_roll_mix = _scheduled_roll_mix(roll_mix_schedule, step_index=i, default=roll_mix)
         if per_element_schedule:
             t_curr_tensor = t[:, i].to(dtype=state.dtype)
             t_next_tensor = t[:, i + 1].to(dtype=state.dtype)
@@ -97,7 +103,7 @@ def sample_cyclic_roll_euler(
                     "sigma": t_curr_tensor,
                     "denoised": denoised,
                     "roll_frames": roll_frames,
-                    "roll_mix": roll_mix,
+                    "roll_mix": step_roll_mix,
                     "net_shift_frames": net_shift,
                     "mode": mode,
                 }
@@ -112,7 +118,7 @@ def sample_cyclic_roll_euler(
             state = cyclic_mix_latents(
                 state,
                 roll_frames,
-                strength=roll_mix,
+                strength=step_roll_mix,
                 symmetric=symmetric_mix,
             )
 
@@ -134,6 +140,7 @@ def sa3_cyclic_roll_sample_from_init_latents(
     roll_frames: int | None = None,
     mode: str = "alternate",
     roll_mix: float = 0.10,
+    roll_mix_schedule: Any = None,
     mix_every_n: int = 1,
     symmetric_mix: bool = True,
     unroll_output: bool = True,
@@ -240,6 +247,7 @@ def sa3_cyclic_roll_sample_from_init_latents(
             roll_frames=roll_frames,
             mode=mode,
             roll_mix=roll_mix,
+            roll_mix_schedule=roll_mix_schedule,
             mix_every_n=mix_every_n,
             symmetric_mix=symmetric_mix,
             unroll_output=unroll_output,
@@ -267,6 +275,19 @@ def _cast_cond_inputs(cond_inputs: dict[str, Any], dtype, torch):
         key: value.to(dtype) if isinstance(value, torch.Tensor) and value.is_floating_point() else value
         for key, value in cond_inputs.items()
     }
+
+
+def _scheduled_roll_mix(schedule: Any, *, step_index: int, default: float) -> float:
+    if schedule is None:
+        return float(default)
+    if callable(schedule):
+        return float(schedule(step_index, default))
+    try:
+        return float(schedule[step_index])
+    except IndexError:
+        return 0.0
+    except KeyError:
+        return 0.0
 
 
 def _require_torch():

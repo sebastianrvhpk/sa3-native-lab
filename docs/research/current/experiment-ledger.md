@@ -67,6 +67,8 @@ Measurements:
   Nearest memory rows:
   Control lane movement:
   Residual/feature effect:
+  Trajectory map / top cells:
+  Trajectory schedule:
 
 Listening notes:
   Prompt adherence:
@@ -148,6 +150,7 @@ Each promoted experiment should fill as many of these as relevant:
 | Geometry report | PCA, Mahalanobis movement, covariance transport effects |
 | Control-lane panel | Whether time-varying controls moved as intended |
 | Residual atlas panel | Which layer/features moved and whether intervention was causal |
+| Trajectory cartography panel | Which layer/timestep cells were visible, selected, scheduled, and repeated |
 | Listening annotation | Human judgement with task-specific labels |
 
 ## Initial Ledger

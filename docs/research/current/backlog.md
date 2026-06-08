@@ -176,13 +176,15 @@ Drop or revise if:
 
 Evidence gap: residual activations are measurable, and layer plus sampler-step
 or observed trajectory-window separability can now be ranked with
-cross-validated probes, but causal audio movement is not yet established.
+cross-validated probes and converted into trajectory maps/schedules, but causal
+audio movement is not yet established.
 
 Native transition: `prompt/audio examples -> residual activations -> layer rows + layer/timestep rows + layer/window rows -> residual direction -> alpha sweep -> evidence packet`.
 
 Current support: residual hooks, prompt/audio vector extraction, alpha sweeps,
 residual feature basis, cross-validated layer, sampler-timestep, and
-trajectory-window probe rows, player/descriptors.
+trajectory-window probe rows, trajectory maps, trajectory-derived alpha
+schedules, trajectory-derived flow probe banks, player/descriptors.
 
 Next run: run prompt-pair and audio-derived extraction with all candidate layers,
 inspect the top layer, layer/timestep, and layer/window probe rows, then run
@@ -387,8 +389,8 @@ architecture-level implementations that make the gaps easier to run.
 | SAME edit survival matrix | SA3-over-SAME coupled editing | For each SAME operator, compare source, direct decode, plain polish, and method polish; classify preserved, erased, amplified, repaired. |
 | Flow timestep semantic bands | SA3 flow/conditioning | Aggregate loss-by-logSNR across prompt categories and target clips; compare against descriptors and listening tags. |
 | Prompt condition counterfactuals | SA3 flow/conditioning | Score raw, rewritten, readable-search, hard-search, blank, and wrong prompts under one shared probe bank. |
-| Residual layer-window atlas | SA3 internal trajectory | Capture residual activations by layer and observed forward-call window for prompt/audio pairs before steering. |
-| Residual causal sweep | SA3 internal trajectory | Sweep layer, observed window, vector source, and alpha; require bounded descriptor/listening movement. |
+| Residual-timestep cartography | SA3 internal trajectory | Capture residual activations by layer and sampler timestep, summarize trajectory bands, and convert top cells into flow probe banks, alpha schedules, and cyclic schedules before steering claims. |
+| Residual causal sweep | SA3 internal trajectory | Sweep layer, sampler step/window, vector source, and alpha; require bounded descriptor/listening movement. |
 | SA3 polish/rescue audit | SA3-over-SAME coupled editing | Feed degraded or edited SAME latents into polish/init paths and classify rescue, erasure, invention, or preservation. |
 | Trajectory objective honesty packet | SA3 internal trajectory | Compare guidance-objective improvement against descriptor, source-preservation, and listening rows. |
 | Segment and continuation structure bench | SA3-over-SAME coupled editing / memory | Compare global prompt continuation against chunk/control-lane/bridge-planned continuation. |
@@ -409,7 +411,7 @@ architecture-level implementations that make the gaps easier to run.
 9. Flow score predictive validity.
 10. Control-lane and geometry selection value.
 11. SA3 polish/rescue audit.
-12. Residual layer-window atlas.
+12. Residual-timestep cartography.
 13. Residual causality.
 14. Guidance objective honesty.
 15. Segment and continuation structure bench.

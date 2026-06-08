@@ -12,6 +12,7 @@ from latent_audio_primitives.selective_renoise import (
     sampler_noise_for_channels,
     select_latent_channels,
 )
+from latent_audio_primitives.trajectory import sampler_timestep_recorder
 
 
 def selective_renoise_sa3(
@@ -32,6 +33,7 @@ def selective_renoise_sa3(
     apg_scale: float = 1.0,
     dist_shift: Any = None,
     sampler_type: str | None = None,
+    sampler_step_records: list[dict[str, Any]] | None = None,
     return_mixed_latents: bool = True,
     **sampler_kwargs: Any,
 ) -> SelectiveRenoiseResult:
@@ -87,6 +89,13 @@ def selective_renoise_sa3(
     conditioning_inputs = _cast_cond_inputs(conditioning_inputs, model_dtype, torch)
     negative_conditioning_tensors = _cast_cond_inputs(negative_conditioning_tensors, model_dtype, torch)
     cond_inputs = {**conditioning_inputs, **negative_conditioning_tensors}
+    if sampler_step_records is not None:
+        user_callback = sampler_kwargs.get("callback")
+        sampler_kwargs["callback"] = sampler_timestep_recorder(
+            sampler_step_records,
+            user_callback=user_callback,
+            sampler_type=sampler_type,
+        )
 
     with torch.inference_mode():
         sampled_latents = sample_diffusion(
@@ -136,6 +145,7 @@ def selective_renoise_sa3(
             "seed": seed,
             "selected_channel_count": len(selected_channels),
             "selected_channels": selected_channels,
+            "sampler_step_records": list(sampler_step_records) if sampler_step_records is not None else None,
         },
     )
 
@@ -161,6 +171,7 @@ def selective_graft_sa3(
     apg_scale: float = 1.0,
     dist_shift: Any = None,
     sampler_type: str | None = None,
+    sampler_step_records: list[dict[str, Any]] | None = None,
     return_mixed_latents: bool = True,
     **sampler_kwargs: Any,
 ) -> LatentGraftResult:
@@ -242,6 +253,13 @@ def selective_graft_sa3(
     conditioning_inputs = _cast_cond_inputs(conditioning_inputs, model_dtype, torch)
     negative_conditioning_tensors = _cast_cond_inputs(negative_conditioning_tensors, model_dtype, torch)
     cond_inputs = {**conditioning_inputs, **negative_conditioning_tensors}
+    if sampler_step_records is not None:
+        user_callback = sampler_kwargs.get("callback")
+        sampler_kwargs["callback"] = sampler_timestep_recorder(
+            sampler_step_records,
+            user_callback=user_callback,
+            sampler_type=sampler_type,
+        )
 
     with torch.inference_mode():
         sampled_latents = sample_diffusion(
@@ -295,6 +313,7 @@ def selective_graft_sa3(
             "selected_channel_count": len(selected_channels),
             "selected_channels": selected_channels,
             "intervention": "donor_channel_graft_polish",
+            "sampler_step_records": list(sampler_step_records) if sampler_step_records is not None else None,
         },
     )
 

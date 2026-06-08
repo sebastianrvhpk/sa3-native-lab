@@ -308,20 +308,40 @@ class ResidualSteerer:
         self._blocks = {index: layers[index] for index in self.layer_indices}
 
     @contextmanager
-    def steer(self, alpha: float = 1.0):
+    def steer(self, alpha: float = 1.0, schedule: Any = None):
+        """Temporarily add residual vectors, optionally gated by hook-call order.
+
+        ``schedule`` may be a callable accepting
+        ``(layer_index, call_index, base_alpha)`` or an object with
+        ``alpha_for(layer_index, call_index, base_alpha=...)``. This keeps the
+        adapter independent of the trajectory-cartography module while allowing
+        probe-ranked layer/timestep cells to gate steering.
+        """
+
         originals = {}
+        call_counts = {index: 0 for index in self._blocks}
         for index, block in self._blocks.items():
             originals[index] = block.forward
             vector = self.steering_vectors.vectors[index]
 
-            def make_patched(original_forward, steering_vector):
+            def make_patched(layer_index, original_forward, steering_vector):
                 def patched(*args, **kwargs):
+                    call_index = call_counts[layer_index]
+                    call_counts[layer_index] += 1
                     output = original_forward(*args, **kwargs)
-                    return _add_vector_to_output(output, steering_vector, alpha)
+                    scheduled_alpha = _scheduled_alpha(
+                        schedule,
+                        layer_index=layer_index,
+                        call_index=call_index,
+                        base_alpha=alpha,
+                    )
+                    if scheduled_alpha == 0:
+                        return output
+                    return _add_vector_to_output(output, steering_vector, scheduled_alpha)
 
                 return patched
 
-            block.forward = make_patched(originals[index], vector)
+            block.forward = make_patched(index, originals[index], vector)
 
         try:
             yield
@@ -344,6 +364,16 @@ def _add_vector_to_output(output: Any, vector: Any, alpha: float) -> Any:
     if isinstance(output, list) and output and isinstance(output[0], torch.Tensor):
         return [add(output[0]), *output[1:]]
     raise AudioscopeIntegrationError(f"cannot steer unsupported block output type {type(output)!r}")
+
+
+def _scheduled_alpha(schedule: Any, *, layer_index: int, call_index: int, base_alpha: float) -> float:
+    if schedule is None:
+        return float(base_alpha)
+    if hasattr(schedule, "alpha_for"):
+        return float(schedule.alpha_for(layer_index, call_index, base_alpha=base_alpha))
+    if callable(schedule):
+        return float(schedule(layer_index, call_index, base_alpha))
+    raise TypeError("schedule must be callable or expose alpha_for(layer_index, call_index, base_alpha=...)")
 
 
 def activation_call_windows(

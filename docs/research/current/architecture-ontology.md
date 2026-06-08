@@ -72,7 +72,7 @@ audio output + latent rows + flow rows + descriptors + listening notes
 |---|---|---|---|
 | SAME Representation Science | waveform `x`, encoder `E`, SAME latent `z0`, decoder `D`, `LatentItem` | compression, direct decode, geometry, latent memory, source preservation, bottleneck stress, latent DSP | direct decodes, descriptor deltas, geometry rows, nearest-memory rows, control lanes, listening notes |
 | SA3 Flow and Conditioning Science | prompt `p`, condition `C(p)`, flow state `z_t`, timestep/logSNR, velocity `v_theta` | prompt scoring, condition inversion, flow timestep bands, null/conditional-delta probes | shared flow-probe rows, prompt semantic rows, attribution, generated-audio audition |
-| SA3 Internal Trajectory Science | residual activations `a_l`, sampler states, sampler timesteps, observed windows, guidance objectives | residual feature maps, layer/timestep and layer/window causality, sampler-state edits, guidance honesty, step/polish tradeoffs | activation rows, alpha/guidance sweeps, flow/descriptor/listening disagreement |
+| SA3 Internal Trajectory Science | residual activations `a_l`, sampler states, sampler timesteps, observed windows, guidance objectives | residual feature maps, residual-timestep cartography, layer/timestep and layer/window causality, sampler-state edits, guidance honesty, step/polish tradeoffs | activation rows, trajectory maps, alpha/guidance sweeps, flow/descriptor/listening disagreement |
 | SA3-over-SAME Coupled Editing | edited SAME `z0'`, SA3 polish/init-audio/inpainting path, source masks | whether SA3 preserves, repairs, erases, or rewrites SAME edits | direct decode vs SA3 polish packets, source-preservation rows, flow loss, listening |
 
 These layers are not a linear pipeline. They are separate microscopes that
@@ -133,7 +133,7 @@ Evidence:
 |---|---|---|
 | SAME Representation Science | geometry, periodicity, latent DSP, blur/filter, selective renoise/graft, style profile/direction, memory | systematic bottleneck and direct-decode evidence |
 | SA3 Flow and Conditioning Science | flow probe banks, prompt scoring, attribution, soft/hard/readable prompt search, null-condition scaffold | predictive validity against generated audio |
-| SA3 Internal Trajectory Science | residual hooks, residual vectors, residual feature atlas, cyclic projection, guidance scaffolds | layer/timestep and layer/window causal evidence and artifact checks |
+| SA3 Internal Trajectory Science | residual hooks, residual vectors, residual-timestep cartography, residual feature atlas, cyclic projection, guidance scaffolds | layer/timestep and layer/window causal evidence and artifact checks |
 | SA3-over-SAME Coupled Editing | SA3 polish, selective SA3, continuation/inpainting, direct decode helpers | survival matrix: what edits SA3 preserves or erases |
 
 Evidence utilities already exist as player, descriptors, annotations,
@@ -256,7 +256,7 @@ Implementation shape:
 Promote if: prompt changes are explainable by native flow evidence and audible
   behavior, not only by text plausibility.
 
-### 5. Residual Layer-Time Atlas
+### 5. Residual-Timestep Cartography
 
 Native transition: `(prompt/audio examples, sampler timestep or observed forward-call window, layer) -> residual
 activation basis`.
@@ -267,8 +267,11 @@ Implementation shape:
   callback is available; keep observed forward-call windows as fallback/context.
 - Rank candidate layers with stratified linear-probe rows before any steering
   layer is chosen.
-- Summarize which layers/timesteps/windows separate material, energy, space, and rhythm
-  tags.
+- Convert high-scoring cells into band summaries, flow probe banks, residual
+  alpha schedules, and cyclic mix schedules without treating those schedules as
+  promoted controls.
+- Summarize which layers/timesteps/windows separate material, energy, space,
+  and rhythm tags.
 
 Promote if: layer/timestep/window maps and probe-ranked layers repeat before any
 steering claim is made.
@@ -279,8 +282,8 @@ Native transition: `residual direction -> layer/timestep/window/alpha patch -> o
 
 Implementation shape:
 
-- Sweep one prompt-derived and one audio-derived vector over layer, time window,
-  and alpha.
+- Sweep one prompt-derived and one audio-derived vector over layer, sampler
+  step/window, and alpha.
 - Review direct outputs with descriptors, flow scores, and listening notes.
 
 Promote if: effects move monotonically or predictably and remain bounded.
@@ -346,7 +349,7 @@ Promote if: this makes run comparison clearer and prevents method categories
 3. Flow timestep semantic bands
 4. Prompt condition counterfactuals
 5. SA3 polish/rescue audit
-6. Residual layer-window atlas
+6. Residual-timestep cartography
 7. Residual causal sweep
 8. Trajectory objective honesty packet
 9. Segment and continuation structure bench
