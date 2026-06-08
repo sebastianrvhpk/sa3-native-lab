@@ -30,6 +30,26 @@ DEFAULT_CONTROL_LANE_REGION_MODES = (
 
 SOURCE_CONTROL_LANE_REGION_MODES = ("source_active", "source_quiet", "padded_tail")
 
+DEFAULT_CONTROL_LANE_MECH_TARGET_LANES = (
+    "spectral_flux",
+    "onset_density",
+    "spectral_density_high",
+    "spectral_entropy",
+    "spectral_flatness",
+    "spectral_contrast",
+    "latent_motion_energy",
+    "latent_channel_energy",
+)
+
+DEFAULT_CONTROL_LANE_MECH_TARGET_MODES = (
+    "crest",
+    "change",
+    "high",
+    "smooth",
+    "typical",
+    "volatile",
+)
+
 CONTROL_LANE_REGION_MODE_FAMILIES = {
     "state": ("high", "low", "typical"),
     "event": ("crest", "trough", "change"),
@@ -1047,6 +1067,422 @@ def latent_channel_region_overlap_table(
     return rows
 
 
+def control_lane_region_sweep_comparison_table(
+    regions: Sequence[LaneRegion],
+    *,
+    reference_lane_names: Sequence[str],
+    candidate_lane_names: Sequence[str],
+    reference_modes: Sequence[str] | None = None,
+    candidate_modes: Sequence[str] | None = None,
+    reference_label: str = "reference_region",
+    candidate_label: str = "candidate_region",
+    min_iou: float = 0.0,
+) -> list[dict[str, Any]]:
+    """Compare typed region sweeps between two lane families.
+
+    This is the compact audio-event/SAME-event counterpart to the channel
+    overlap atlas. Each reference region receives its nearest/best candidate
+    region, with the region modes carried explicitly for downstream filtering.
+    """
+
+    reference_names = {str(name) for name in reference_lane_names}
+    candidate_names = {str(name) for name in candidate_lane_names}
+    reference_mode_set = None if reference_modes is None else {_canonical_region_mode(mode) for mode in reference_modes}
+    candidate_mode_set = None if candidate_modes is None else {_canonical_region_mode(mode) for mode in candidate_modes}
+
+    def keep(region: LaneRegion, names: set[str], modes: set[str] | None) -> bool:
+        mode = _lane_region_mode(region)
+        return region.lane_name in names and (modes is None or _canonical_region_mode(mode) in modes)
+
+    references = [region for region in regions if keep(region, reference_names, reference_mode_set)]
+    candidates = [region for region in regions if keep(region, candidate_names, candidate_mode_set)]
+    comparisons = compare_lane_region_sets(
+        references,
+        candidates,
+        reference_label=reference_label,
+        candidate_label=candidate_label,
+    )
+    rows: list[dict[str, Any]] = []
+    for comparison in comparisons:
+        reference_region = references[int(comparison["reference_index"])]
+        candidate_region = candidates[int(comparison["candidate_index"])]
+        iou = float(comparison["intersection_over_union"])
+        if iou < float(min_iou):
+            continue
+        rows.append(
+            {
+                **comparison,
+                "reference_mode": _lane_region_mode(reference_region),
+                "reference_mode_family": _region_mode_family(_lane_region_mode(reference_region)),
+                "candidate_mode": _lane_region_mode(candidate_region),
+                "candidate_mode_family": _region_mode_family(_lane_region_mode(candidate_region)),
+                "reference_duration_seconds": float(reference_region.end_seconds - reference_region.start_seconds),
+                "candidate_duration_seconds": float(candidate_region.end_seconds - candidate_region.start_seconds),
+            }
+        )
+    rows.sort(
+        key=lambda row: (
+            str(row["reference_lane"]),
+            str(row["reference_mode"]),
+            -float(row["intersection_over_union"]),
+            float(row["abs_center_delta_seconds"]),
+        )
+    )
+    return rows
+
+
+def rank_channel_region_overlap_rows(
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    top_k: int | None = 512,
+    min_iou: float = 0.0,
+    max_channel_rank: int | None = None,
+    lane_names: Sequence[str] | None = None,
+    region_modes: Sequence[str] | None = None,
+) -> list[dict[str, Any]]:
+    """Rank channel-region overlap rows by temporal match and channel support."""
+
+    lane_set = None if lane_names is None else {str(name) for name in lane_names}
+    mode_set = None if region_modes is None else {_canonical_region_mode(mode) for mode in region_modes}
+    ranked: list[dict[str, Any]] = []
+    for row in rows:
+        iou = float(row.get("intersection_over_union", 0.0) or 0.0)
+        if iou < float(min_iou):
+            continue
+        if max_channel_rank is not None and int(row.get("channel_rank", 10**9) or 10**9) > int(max_channel_rank):
+            continue
+        if lane_set is not None and str(row.get("reference_lane", "")) not in lane_set:
+            continue
+        mode = _canonical_region_mode(row.get("reference_mode", row.get("reference_label", "")))
+        if mode_set is not None and mode not in mode_set:
+            continue
+        ranked_row = dict(row)
+        ranked_row["overlap_rank_score"] = _channel_region_overlap_rank_score(ranked_row)
+        ranked.append(ranked_row)
+    ranked.sort(key=_channel_region_overlap_sort_key, reverse=True)
+    if top_k is not None:
+        ranked = ranked[: max(0, int(top_k))]
+    return ranked
+
+
+def summarize_channel_region_overlap_rows(
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    iou_thresholds: Sequence[float] = (0.1, 0.25, 0.5, 0.65, 0.75, 0.9),
+) -> dict[str, Any]:
+    """Summarize a materialized channel-region overlap table."""
+
+    summary = _empty_channel_overlap_summary(iou_thresholds=iou_thresholds)
+    for row in rows:
+        _update_channel_overlap_summary(summary, row, iou_thresholds=iou_thresholds)
+    _finalize_channel_overlap_summary(summary)
+    return summary
+
+
+def latent_channel_region_overlap_audit(
+    latent: Any,
+    reference_regions: Sequence[LaneRegion],
+    *,
+    latent_rate: float,
+    channels: Sequence[int] | None = None,
+    channel_modes: Sequence[str] = DEFAULT_CONTROL_LANE_REGION_MODES,
+    channel_score: str = "motion",
+    percentiles: Mapping[str, float] | float | None = None,
+    min_duration_seconds: float = 0.0,
+    merge_gap_seconds: float = 0.0,
+    top_k_per_channel_mode: int | None = None,
+    active_mask: Sequence[float] | None = None,
+    absolute: bool = True,
+    normalize: bool = True,
+    source: str | None = None,
+    top_k: int = 1024,
+    min_iou: float = 0.5,
+    max_channel_rank: int | None = 96,
+    target_lane_names: Sequence[str] = DEFAULT_CONTROL_LANE_MECH_TARGET_LANES,
+    target_region_modes: Sequence[str] = DEFAULT_CONTROL_LANE_MECH_TARGET_MODES,
+    iou_thresholds: Sequence[float] = (0.1, 0.25, 0.5, 0.65, 0.75, 0.9),
+) -> dict[str, Any]:
+    """Audit all channel-region overlaps without retaining every raw row.
+
+    The full overlap table can be very large. This helper keeps exhaustive
+    counts and group summaries, plus ranked top rows and best-per-key selectors
+    for the next mechanistic probe.
+    """
+
+    z = as_time_major(latent)
+    score_rows = latent_channel_scores(z, top_k=None, score=channel_score)
+    score_by_channel = {int(row["channel"]): row for row in score_rows}
+    selected_channels = (
+        [int(row["channel"]) for row in score_rows]
+        if channels is None
+        else [int(channel) for channel in channels]
+    )
+    reference_regions = list(reference_regions)
+    summary = _empty_channel_overlap_summary(iou_thresholds=iou_thresholds)
+    summary.update(
+        {
+            "latent_frames": int(z.shape[0]),
+            "latent_channels": int(z.shape[1]),
+            "selected_channel_count": int(len(selected_channels)),
+            "reference_region_count": int(len(reference_regions)),
+            "channel_modes": [str(mode) for mode in channel_modes],
+            "channel_score_mode": str(channel_score),
+            "absolute_channel": bool(absolute),
+            "normalized_channel": bool(normalize),
+            "top_k": int(top_k),
+            "min_iou_for_top_rows": float(min_iou),
+            "max_channel_rank_for_top_rows": None if max_channel_rank is None else int(max_channel_rank),
+            "target_lane_names": [str(name) for name in target_lane_names],
+            "target_region_modes": [str(mode) for mode in target_region_modes],
+        }
+    )
+    target_lane_set = {str(name) for name in target_lane_names}
+    target_mode_set = {_canonical_region_mode(mode) for mode in target_region_modes}
+    top_candidates: list[dict[str, Any]] = []
+    target_candidates: list[dict[str, Any]] = []
+    best_by_reference: dict[tuple[str, str], dict[str, Any]] = {}
+    best_by_channel: dict[int, dict[str, Any]] = {}
+    best_by_channel_mode: dict[tuple[int, str], dict[str, Any]] = {}
+
+    for channel in selected_channels:
+        if channel < 0 or channel >= z.shape[1]:
+            raise IndexError(f"channel {channel} out of range for {z.shape[1]} latent channels")
+        channel_lane = latent_channel_lanes(
+            z,
+            latent_rate=latent_rate,
+            channels=[channel],
+            absolute=absolute,
+            normalize=normalize,
+            source=source,
+        )[0]
+        channel_score_row = score_by_channel.get(channel, {})
+        for mode in channel_modes:
+            mode = str(mode)
+            channel_regions = regions_from_control_lane(
+                channel_lane,
+                mode=mode,
+                percentile=_mode_value(percentiles, mode),
+                min_duration_seconds=min_duration_seconds,
+                merge_gap_seconds=merge_gap_seconds,
+                top_k=top_k_per_channel_mode,
+                active_mask=active_mask,
+                normalize=normalize,
+                label=mode,
+            )
+            comparisons = compare_lane_region_sets(
+                reference_regions,
+                channel_regions,
+                reference_label="reference_lane_region",
+                candidate_label=f"latent_channel_{mode}",
+            )
+            for comparison in comparisons:
+                reference_index = int(comparison["reference_index"])
+                reference_region = reference_regions[reference_index]
+                row = {
+                    **comparison,
+                    "reference_mode": str(reference_region.metadata.get("sweep_mode", reference_region.label)),
+                    "reference_mode_family": _region_mode_family(
+                        str(reference_region.metadata.get("sweep_mode", reference_region.label))
+                    ),
+                    "channel": int(channel),
+                    "channel_mode": mode,
+                    "channel_mode_family": _region_mode_family(mode),
+                    "channel_rank": int(channel_score_row.get("rank", 0) or 0),
+                    "channel_score_mode": channel_score,
+                    "channel_score": float(channel_score_row.get("score", 0.0) or 0.0),
+                    "absolute_channel": bool(absolute),
+                }
+                row["overlap_rank_score"] = _channel_region_overlap_rank_score(row)
+                _update_channel_overlap_summary(summary, row, iou_thresholds=iou_thresholds)
+                _replace_if_better(
+                    best_by_reference,
+                    (str(row["reference_lane"]), _canonical_region_mode(row["reference_mode"])),
+                    row,
+                )
+                _replace_if_better(best_by_channel, int(channel), row)
+                _replace_if_better(best_by_channel_mode, (int(channel), mode), row)
+                if _channel_overlap_row_is_top_candidate(
+                    row,
+                    min_iou=min_iou,
+                    max_channel_rank=max_channel_rank,
+                ):
+                    top_candidates.append(dict(row))
+                    if len(top_candidates) > max(int(top_k) * 16, 4096):
+                        top_candidates = _trim_overlap_candidates(top_candidates, top_k=max(int(top_k) * 8, 2048))
+                if (
+                    str(row["reference_lane"]) in target_lane_set
+                    and _canonical_region_mode(row["reference_mode"]) in target_mode_set
+                    and _channel_overlap_row_is_top_candidate(
+                        row,
+                        min_iou=min(0.25, float(min_iou)),
+                        max_channel_rank=max_channel_rank,
+                    )
+                ):
+                    target_candidates.append(dict(row))
+                    if len(target_candidates) > max(int(top_k) * 8, 2048):
+                        target_candidates = _trim_overlap_candidates(target_candidates, top_k=max(int(top_k) * 4, 1024))
+
+    _finalize_channel_overlap_summary(summary)
+    top_rows = _trim_overlap_candidates(top_candidates, top_k=top_k)
+    target_rows = _trim_overlap_candidates(target_candidates, top_k=top_k)
+    best_reference_rows = _trim_overlap_candidates(best_by_reference.values(), top_k=None)
+    best_channel_rows = _trim_overlap_candidates(best_by_channel.values(), top_k=None)
+    best_channel_mode_rows = _trim_overlap_candidates(best_by_channel_mode.values(), top_k=None)
+    return {
+        "summary": summary,
+        "top_rows": top_rows,
+        "target_rows": target_rows,
+        "best_per_reference_lane_mode": best_reference_rows,
+        "best_per_channel": best_channel_rows,
+        "best_per_channel_mode": best_channel_mode_rows,
+    }
+
+
+def control_lane_mech_target_manifest_rows(
+    *,
+    region_rows: Sequence[Mapping[str, Any]],
+    region_comparison_rows: Sequence[Mapping[str, Any]] = (),
+    channel_correlation_rows: Sequence[Mapping[str, Any]] = (),
+    channel_overlap_rows: Sequence[Mapping[str, Any]] = (),
+    lane_names: Sequence[str] = DEFAULT_CONTROL_LANE_MECH_TARGET_LANES,
+    region_modes: Sequence[str] = DEFAULT_CONTROL_LANE_MECH_TARGET_MODES,
+    max_candidate_times: int = 5,
+    max_supporting_channels: int = 8,
+) -> list[dict[str, Any]]:
+    """Build auditable target rows for a control-lane mechanistic probe run."""
+
+    lane_set = {str(name) for name in lane_names}
+    mode_set = {_canonical_region_mode(mode) for mode in region_modes}
+    targets: dict[tuple[str, str], dict[str, Any]] = {}
+
+    def target(lane: str, mode: str) -> dict[str, Any]:
+        canonical_mode = _canonical_region_mode(mode)
+        key = (lane, canonical_mode)
+        if key not in targets:
+            targets[key] = {
+                "lane_name": lane,
+                "region_mode": canonical_mode,
+                "region_mode_family": _region_mode_family(canonical_mode),
+                "region_count": 0,
+                "total_region_seconds": 0.0,
+                "best_region_score": 0.0,
+                "candidate_times": [],
+                "best_audio_same_iou": 0.0,
+                "best_audio_same_candidate_lane": None,
+                "best_channel_iou": 0.0,
+                "best_channel_mode": None,
+                "supporting_channels": [],
+                "best_channel_abs_correlation": 0.0,
+                "best_channel_correlation_lane": None,
+            }
+        return targets[key]
+
+    for row in region_rows:
+        lane = str(row.get("lane_name", ""))
+        mode = _row_region_mode(row)
+        if lane not in lane_set or _canonical_region_mode(mode) not in mode_set:
+            continue
+        current = target(lane, mode)
+        duration = float(row.get("duration_seconds", 0.0) or 0.0)
+        score = float(row.get("score", 0.0) or 0.0)
+        current["region_count"] += 1
+        current["total_region_seconds"] += duration
+        current["best_region_score"] = max(float(current["best_region_score"]), score)
+        current["candidate_times"].append(
+            {
+                "start_seconds": float(row.get("start_seconds", 0.0) or 0.0),
+                "end_seconds": float(row.get("end_seconds", 0.0) or 0.0),
+                "duration_seconds": duration,
+                "score": score,
+            }
+        )
+
+    for row in region_comparison_rows:
+        lane = str(row.get("reference_lane", ""))
+        mode = _canonical_region_mode(row.get("reference_mode", ""))
+        if lane not in lane_set or mode not in mode_set:
+            continue
+        current = target(lane, mode)
+        iou = float(row.get("intersection_over_union", 0.0) or 0.0)
+        if iou > float(current["best_audio_same_iou"]):
+            current["best_audio_same_iou"] = iou
+            current["best_audio_same_candidate_lane"] = str(row.get("candidate_lane", ""))
+
+    for row in channel_correlation_rows:
+        lane = str(row.get("reference_lane", ""))
+        if lane not in lane_set:
+            continue
+        abs_corr = float(row.get("abs_correlation", abs(float(row.get("correlation", 0.0) or 0.0))) or 0.0)
+        for mode in mode_set:
+            current = target(lane, mode)
+            if abs_corr > float(current["best_channel_abs_correlation"]):
+                current["best_channel_abs_correlation"] = abs_corr
+                current["best_channel_correlation_lane"] = f"channel_{int(row.get('channel', -1))}"
+
+    for row in channel_overlap_rows:
+        lane = str(row.get("reference_lane", ""))
+        mode = _canonical_region_mode(row.get("reference_mode", ""))
+        if lane not in lane_set or mode not in mode_set:
+            continue
+        current = target(lane, mode)
+        iou = float(row.get("intersection_over_union", 0.0) or 0.0)
+        if iou > float(current["best_channel_iou"]):
+            current["best_channel_iou"] = iou
+            current["best_channel_mode"] = str(row.get("channel_mode", ""))
+        channel = int(row.get("channel", -1))
+        if channel >= 0 and all(item.get("channel") != channel for item in current["supporting_channels"]):
+            current["supporting_channels"].append(
+                {
+                    "channel": channel,
+                    "channel_rank": int(row.get("channel_rank", 0) or 0),
+                    "channel_mode": str(row.get("channel_mode", "")),
+                    "iou": iou,
+                    "abs_center_delta_seconds": float(row.get("abs_center_delta_seconds", 0.0) or 0.0),
+                    "reference_start_seconds": float(row.get("reference_start_seconds", 0.0) or 0.0),
+                    "reference_end_seconds": float(row.get("reference_end_seconds", 0.0) or 0.0),
+                }
+            )
+
+    rows: list[dict[str, Any]] = []
+    for current in targets.values():
+        current["candidate_times"] = sorted(
+            current["candidate_times"],
+            key=lambda item: (-float(item["score"]), float(item["start_seconds"])),
+        )[: max(1, int(max_candidate_times))]
+        current["supporting_channels"] = sorted(
+            current["supporting_channels"],
+            key=lambda item: (-float(item["iou"]), int(item["channel_rank"]), float(item["abs_center_delta_seconds"])),
+        )[: max(1, int(max_supporting_channels))]
+        score = (
+            min(1.0, float(current["region_count"]) / 4.0) * 0.15
+            + min(1.0, float(current["best_region_score"])) * 0.15
+            + float(current["best_audio_same_iou"]) * 0.25
+            + float(current["best_channel_iou"]) * 0.30
+            + min(1.0, float(current["best_channel_abs_correlation"])) * 0.15
+        )
+        current["target_priority_score"] = float(score)
+        current["recommended_for_mech_probe"] = bool(
+            current["region_count"] > 0
+            and (
+                float(current["best_audio_same_iou"]) >= 0.35
+                or float(current["best_channel_iou"]) >= 0.5
+                or float(current["best_channel_abs_correlation"]) >= 0.35
+            )
+        )
+        current["maturity"] = "selector_candidate" if current["recommended_for_mech_probe"] else "microscope_only"
+        current["reason"] = _mech_target_reason(current)
+        rows.append(current)
+    rows.sort(
+        key=lambda row: (
+            not bool(row["recommended_for_mech_probe"]),
+            -float(row["target_priority_score"]),
+            str(row["lane_name"]),
+            str(row["region_mode"]),
+        )
+    )
+    return rows
+
+
 def latent_channel_region_table(
     latent: Any,
     *,
@@ -1888,10 +2324,227 @@ def _all_canonical_region_modes() -> tuple[str, ...]:
 
 
 def _region_mode_family(mode: str) -> str:
+    mode = _canonical_region_mode(mode)
     for family, family_modes in CONTROL_LANE_REGION_MODE_FAMILIES.items():
         if mode in family_modes:
             return family
     return "unknown"
+
+
+def _lane_region_mode(region: LaneRegion) -> str:
+    return _canonical_region_mode(str(region.metadata.get("sweep_mode", region.label)))
+
+
+def _row_region_mode(row: Mapping[str, Any]) -> str:
+    metadata = row.get("metadata", {})
+    if isinstance(metadata, Mapping) and metadata.get("sweep_mode") is not None:
+        return _canonical_region_mode(str(metadata["sweep_mode"]))
+    if row.get("reference_mode") is not None:
+        return _canonical_region_mode(str(row["reference_mode"]))
+    if row.get("channel_mode") is not None:
+        return _canonical_region_mode(str(row["channel_mode"]))
+    if row.get("label") is not None:
+        return _canonical_region_mode(str(row["label"]))
+    return ""
+
+
+def _channel_region_overlap_rank_score(row: Mapping[str, Any]) -> float:
+    iou = float(row.get("intersection_over_union", 0.0) or 0.0)
+    center_delta = float(row.get("abs_center_delta_seconds", 0.0) or 0.0)
+    reference_score = float(row.get("reference_score", 0.0) or 0.0)
+    candidate_score = float(row.get("candidate_score", 0.0) or 0.0)
+    channel_rank = max(0, int(row.get("channel_rank", 0) or 0))
+    channel_bonus = 1.0 / float(channel_rank + 1)
+    return float(
+        4.0 * iou
+        + 0.30 * min(1.0, max(0.0, reference_score))
+        + 0.20 * min(1.0, max(0.0, candidate_score))
+        + 0.15 * channel_bonus
+        - 0.10 * center_delta
+    )
+
+
+def _channel_region_overlap_sort_key(row: Mapping[str, Any]) -> tuple[float, float, float, float, float]:
+    return (
+        float(row.get("overlap_rank_score", _channel_region_overlap_rank_score(row)) or 0.0),
+        float(row.get("intersection_over_union", 0.0) or 0.0),
+        -float(row.get("abs_center_delta_seconds", 0.0) or 0.0),
+        -float(int(row.get("channel_rank", 10**9) or 10**9)),
+        float(row.get("channel_score", 0.0) or 0.0),
+    )
+
+
+def _channel_overlap_row_is_top_candidate(
+    row: Mapping[str, Any],
+    *,
+    min_iou: float,
+    max_channel_rank: int | None,
+) -> bool:
+    if float(row.get("intersection_over_union", 0.0) or 0.0) < float(min_iou):
+        return False
+    if max_channel_rank is not None and int(row.get("channel_rank", 10**9) or 10**9) > int(max_channel_rank):
+        return False
+    return True
+
+
+def _trim_overlap_candidates(
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    top_k: int | None,
+) -> list[dict[str, Any]]:
+    trimmed = [dict(row) for row in rows]
+    for row in trimmed:
+        row["overlap_rank_score"] = float(row.get("overlap_rank_score", _channel_region_overlap_rank_score(row)))
+    trimmed.sort(key=_channel_region_overlap_sort_key, reverse=True)
+    if top_k is not None:
+        return trimmed[: max(0, int(top_k))]
+    return trimmed
+
+
+def _replace_if_better(
+    mapping: dict[Any, dict[str, Any]],
+    key: Any,
+    row: Mapping[str, Any],
+) -> None:
+    current = mapping.get(key)
+    if current is None or _channel_region_overlap_sort_key(row) > _channel_region_overlap_sort_key(current):
+        mapping[key] = dict(row)
+
+
+def _empty_channel_overlap_summary(
+    *,
+    iou_thresholds: Sequence[float],
+) -> dict[str, Any]:
+    return {
+        "row_count": 0,
+        "positive_overlap_rows": 0,
+        "zero_overlap_rows": 0,
+        "sum_iou": 0.0,
+        "best_iou": 0.0,
+        "best_overlap_rank_score": 0.0,
+        "iou_threshold_counts": {f"{float(threshold):.2f}": 0 for threshold in iou_thresholds},
+        "by_reference_lane": {},
+        "by_reference_lane_mode": {},
+        "by_channel_mode": {},
+        "by_channel_rank_band": {},
+    }
+
+
+def _update_channel_overlap_summary(
+    summary: dict[str, Any],
+    row: Mapping[str, Any],
+    *,
+    iou_thresholds: Sequence[float],
+) -> None:
+    iou = float(row.get("intersection_over_union", 0.0) or 0.0)
+    rank_score = float(row.get("overlap_rank_score", _channel_region_overlap_rank_score(row)) or 0.0)
+    summary["row_count"] += 1
+    summary["sum_iou"] += iou
+    summary["best_iou"] = max(float(summary["best_iou"]), iou)
+    summary["best_overlap_rank_score"] = max(float(summary["best_overlap_rank_score"]), rank_score)
+    if iou > 0.0:
+        summary["positive_overlap_rows"] += 1
+    else:
+        summary["zero_overlap_rows"] += 1
+    for threshold in iou_thresholds:
+        if iou >= float(threshold):
+            summary["iou_threshold_counts"][f"{float(threshold):.2f}"] += 1
+    _update_overlap_group_stats(summary["by_reference_lane"], str(row.get("reference_lane", "")), row, iou_thresholds=iou_thresholds)
+    mode = _canonical_region_mode(row.get("reference_mode", ""))
+    _update_overlap_group_stats(
+        summary["by_reference_lane_mode"],
+        f"{row.get('reference_lane', '')}:{mode}",
+        row,
+        iou_thresholds=iou_thresholds,
+    )
+    _update_overlap_group_stats(
+        summary["by_channel_mode"],
+        _canonical_region_mode(row.get("channel_mode", "")),
+        row,
+        iou_thresholds=iou_thresholds,
+    )
+    _update_overlap_group_stats(
+        summary["by_channel_rank_band"],
+        _channel_rank_band(int(row.get("channel_rank", 0) or 0)),
+        row,
+        iou_thresholds=iou_thresholds,
+    )
+
+
+def _empty_overlap_group_stats(iou_thresholds: Sequence[float]) -> dict[str, Any]:
+    return {
+        "rows": 0,
+        "positive_rows": 0,
+        "sum_iou": 0.0,
+        "mean_iou": 0.0,
+        "best_iou": 0.0,
+        "best_overlap_rank_score": 0.0,
+        "best_abs_center_delta_seconds": None,
+        "iou_threshold_counts": {f"{float(threshold):.2f}": 0 for threshold in iou_thresholds},
+    }
+
+
+def _update_overlap_group_stats(
+    groups: dict[str, Any],
+    key: str,
+    row: Mapping[str, Any],
+    *,
+    iou_thresholds: Sequence[float],
+) -> None:
+    if key not in groups:
+        groups[key] = _empty_overlap_group_stats(iou_thresholds)
+    stats = groups[key]
+    iou = float(row.get("intersection_over_union", 0.0) or 0.0)
+    rank_score = float(row.get("overlap_rank_score", _channel_region_overlap_rank_score(row)) or 0.0)
+    center_delta = float(row.get("abs_center_delta_seconds", 0.0) or 0.0)
+    stats["rows"] += 1
+    stats["sum_iou"] += iou
+    if iou > 0:
+        stats["positive_rows"] += 1
+    if iou > float(stats["best_iou"]):
+        stats["best_iou"] = iou
+        stats["best_abs_center_delta_seconds"] = center_delta
+    stats["best_overlap_rank_score"] = max(float(stats["best_overlap_rank_score"]), rank_score)
+    for threshold in iou_thresholds:
+        if iou >= float(threshold):
+            stats["iou_threshold_counts"][f"{float(threshold):.2f}"] += 1
+
+
+def _finalize_channel_overlap_summary(summary: dict[str, Any]) -> None:
+    row_count = int(summary.get("row_count", 0) or 0)
+    summary["mean_iou"] = 0.0 if row_count == 0 else float(summary.get("sum_iou", 0.0) or 0.0) / row_count
+    for group_name in ("by_reference_lane", "by_reference_lane_mode", "by_channel_mode", "by_channel_rank_band"):
+        groups = summary.get(group_name, {})
+        for stats in groups.values():
+            rows = int(stats.get("rows", 0) or 0)
+            stats["mean_iou"] = 0.0 if rows == 0 else float(stats.get("sum_iou", 0.0) or 0.0) / rows
+
+
+def _channel_rank_band(rank: int) -> str:
+    if rank <= 10:
+        return "rank_001_010"
+    if rank <= 32:
+        return "rank_011_032"
+    if rank <= 64:
+        return "rank_033_064"
+    if rank <= 128:
+        return "rank_065_128"
+    return "rank_129_plus"
+
+
+def _mech_target_reason(row: Mapping[str, Any]) -> str:
+    parts: list[str] = []
+    if int(row.get("region_count", 0) or 0) > 0:
+        parts.append(f"{int(row['region_count'])} typed regions")
+    if float(row.get("best_audio_same_iou", 0.0) or 0.0) > 0:
+        parts.append(f"audio/SAME IoU {float(row['best_audio_same_iou']):.3f}")
+    if float(row.get("best_channel_iou", 0.0) or 0.0) > 0:
+        parts.append(f"channel IoU {float(row['best_channel_iou']):.3f}")
+    if float(row.get("best_channel_abs_correlation", 0.0) or 0.0) > 0:
+        parts.append(f"channel corr {float(row['best_channel_abs_correlation']):.3f}")
+    if not parts:
+        return "no strong selector evidence yet"
+    return "; ".join(parts)
 
 
 def _local_extrema_mask(values: np.ndarray, *, kind: str) -> np.ndarray:
