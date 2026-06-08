@@ -176,27 +176,30 @@ Drop or revise if:
 
 ## Gap 6. Residual Causality
 
-Evidence gap: residual activations are measurable, and layer plus sampler-step
-or observed trajectory-window separability can now be ranked with
-cross-validated probes and converted into trajectory maps/schedules, but causal
-audio movement is not yet established.
+Evidence gap: residual activations are measurable, and layer plus sampler-step,
+observed trajectory-window, and control-lane predictability can now be ranked
+with cross-validated probes, but causal audio movement is not yet established.
 
-Native transition: `prompt/audio examples -> residual activations -> layer rows + layer/timestep rows + layer/window rows -> residual direction -> alpha sweep -> evidence packet`.
+Native transition: `audio/control lanes or prompt/audio examples -> residual activations -> lane/layer rows + layer/timestep rows + layer/window rows -> residual direction -> alpha sweep -> evidence packet`.
 
 Current support: residual hooks, prompt/audio vector extraction, root
-`residual_probes.py` activation examples/vector containers/probe rows, alpha
-sweeps, residual feature basis, cross-validated layer, sampler-timestep, and
-trajectory-window probe rows, trajectory maps, trajectory-derived alpha
-schedules, trajectory-derived flow probe banks, player/descriptors.
+`residual_probes.py` activation examples/vector containers/probe rows,
+`control_lane_probes.py` continuous lane-predictability rows, alpha sweeps,
+residual feature basis, cross-validated layer, sampler-timestep,
+trajectory-window, and control-lane probe rows, trajectory maps,
+trajectory-derived alpha schedules, trajectory-derived flow probe banks,
+player/descriptors.
 
-Next run: run prompt-pair and audio-derived extraction with all candidate layers,
-inspect the top layer, layer/timestep, and layer/window probe rows, then run
-top-k layer alpha sweeps with baseline, descriptor deltas, and listening notes.
+Next run: run control-lane mechanistic probing on one source with RMS,
+spectral-flux, latent-motion, and latent-channel lanes. Repeat across at least
+two seeds or prompts, inspect top lane/layer and lane/window rows, and only
+then choose whether a bounded alpha/patch sweep is scientifically justified.
 
 Promote if:
 
 - alpha changes target qualities monotonically or predictably,
 - probe-ranked layers, timesteps, and windows repeat across seeds or example subsets,
+- lane-predictive layers/windows repeat for the same control lane,
 - effects repeat across seeds/prompts,
 - artifacts remain bounded.
 
@@ -205,6 +208,7 @@ Drop or revise if:
 - hooks are too fragile,
 - steering only creates artifacts,
 - layer rankings do not repeat.
+- lane probes overfit one clip or only predict padded/silent tails.
 
 ## Gap 7. Guidance Objective Honesty
 

@@ -1003,6 +1003,78 @@ record `mapping_status`; `exact_one_call_per_step` is the clean attribution
 case. Forward-call window rows remain a fallback microscope when sampler
 metadata is unavailable or when extra model evaluations need grouping.
 
+### Control-Lane Mechanistic Probing
+
+Control-lane probes ask whether SA3 residual activations expose measurable
+audio/SAME control lanes. The target is continuous, not a positive/reference
+class label.
+
+For a control lane:
+
+```text
+y(t) = lane value at audio or SAME latent time t
+```
+
+and a captured residual activation with feature dimension last:
+
+```text
+a_l^{c,i} = residual activation at layer l, observed forward call c, token i
+```
+
+the lane target is resampled to the token count inside each observed call:
+
+```text
+y^{c,i} = interpolate(y, i / token_count_c)
+```
+
+Layer probe:
+
+```text
+x_j = a_l^{c,i}
+y_j = y^{c,i}
+```
+
+Fit a blocked-CV ridge probe:
+
+```text
+w_l, b_l = argmin_{w,b} sum_j (w_l^T x_j + b_l - y_j)^2
+              + lambda ||w_l||_2^2
+```
+
+Score rows with held-out correlation, normalized MSE, and R2:
+
+```text
+score_l = corr(y_holdout, y_hat_holdout)
+NMSE_l = MSE(y_holdout, y_hat_holdout) / var(y_holdout)
+```
+
+Observed-call window probe:
+
+```text
+W_h = observed forward-call window h
+score_{l,h} = score using only calls c in W_h
+```
+
+This is an observed hook-call trajectory microscope. It is not exact sampler
+timestep attribution unless the sampler path also exposes trustworthy timestep
+metadata.
+
+Active/quiet contrast:
+
+```text
+d_l = mean(x_j | y_j >= q_active) - mean(x_j | y_j <= q_quiet)
+cos_l = cosine(d_l, w_l)
+```
+
+Interpretation:
+
+- high held-out correlation means a lane is linearly visible in a layer/window,
+- low normalized MSE means the probe beats a variance baseline,
+- a strong active/quiet delta means high-lane and low-lane regions occupy
+  separated residual states,
+- none of these prove causal control until a later residual patch or steering
+  sweep moves decoded audio without artifacts.
+
 Residual-timestep cartography turns those probe rows into explicit selectable
 cells:
 

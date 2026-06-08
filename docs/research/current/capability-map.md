@@ -88,6 +88,7 @@ utilities:
 | Residual sampler-timestep probing | residual examples + sampler callback -> cross-validated layer/timestep rows | observe/select | root residual probes plus adapter/procedure collection | microscope/selector | exact mappings must report `exact_one_call_per_step` or disclose grouping |
 | Residual-timestep cartography | layer/timestep rows -> trajectory cells -> band summaries, flow probes, alpha schedules, cyclic schedules | observe/select/intervene candidate | root trajectory map | microscope/selector | maps and schedules must repeat before causal claims |
 | Residual trajectory probing | residual examples -> cross-validated layer/window rows | observe/select | root residual probes plus adapter/procedure collection | microscope/selector | window-ranked rows must repeat before timestep claims |
+| Control-lane mechanistic probing | control lanes + audio-conditioned residual activations -> lane/layer and lane/window rows | observe/select | root lane probes plus procedure collection | microscope/selector | lane-visible layers/windows must repeat before any lane-steering claim |
 | Residual steering | residual vector -> patched generation | intervene/render | adapter plus procedure | high-risk candidate | alpha sweeps, preferably trajectory-gated, must move audio without artifacts |
 | Residual feature atlas | activations -> feature basis/report | observe/select | root measurement plus procedure | microscope | atlas rankings must predict interventions |
 | Gradient/posterior guidance | objective -> latent/sampler update | intervene/render | root operator/scaffold | high-risk candidate | objective movement must beat baselines audibly |
@@ -131,6 +132,7 @@ in a package-level registry.
 | `cyclic_sa3.py` | SA3 internal trajectory | high-risk sampler microscope / intervention candidate | sampler intervention can create artifacts or collapse |
 | `residual_activation_vectors.py` | SA3 internal trajectory | microscope / selector | probe-ranked layers still need repeatability checks |
 | `audio_residual_vectors.py` | SA3 internal trajectory | high-risk microscope / selector | audio-derived directions can entangle source identity and artifacts |
+| `control_lane_mechanistic_probe.py` | SA3 internal trajectory plus SAME representation evidence | microscope / selector | lane predictability can be mistaken for causal control |
 | `residual_sweeps.py` | SA3 internal trajectory | high-risk intervention candidate | steering can move artifacts instead of musical qualities |
 
 ## Artifact Flow

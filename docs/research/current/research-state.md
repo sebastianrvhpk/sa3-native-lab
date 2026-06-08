@@ -108,7 +108,7 @@ next, then SA3 flow, SA3 internals, and finally coupled SA3-over-SAME editing.
 | SAME representation bench | `z0` -> summaries/geometry/lanes/direct decodes | descriptor, geometry, periodicity, control-lane, bottleneck rows | implemented |
 | SAME memory and composition bench | collection -> selector -> continuation/bridge/donor | memory indices, curriculum rows, ranked bridges | implemented |
 | SA3 flow and conditioning science | target `z0` -> flow probes -> prompt/condition score | shared probe banks, flow-loss rows, attribution, semantic prompt variants, soft prompts, prompt candidates | implemented plus null-inversion scaffold |
-| SA3 internal trajectory science | activation/state -> trajectory map -> scheduled candidate -> output | residual vectors, residual-timestep maps, alpha schedules, cyclic schedules, guided variants | implemented plus high-risk scaffolds |
+| SA3 internal trajectory science | activation/state -> trajectory map -> scheduled candidate -> output | residual vectors, residual-timestep maps, control-lane probe rows, alpha schedules, cyclic schedules, guided variants | implemented plus high-risk scaffolds |
 | SA3-over-SAME coupled editing bench | `z0` -> edited `z0'` -> direct decode / SA3 polish | direct decodes, SA3-polished audio, deltas, source-preservation rows | implemented |
 | External comparison bench | external artifacts -> evidence packet | Underfit/cross-model audio, descriptor/player rows | external/scaffold |
 | Ledger and decision board | evidence packet -> maturity decision | ledger rows, promote/revise/drop decisions | template ready; no completed runs recorded |
@@ -120,7 +120,7 @@ should be updated from `experiment-ledger.md`, not from speculation.
 
 | Maturity | Current methods | What is missing |
 |---|---|---|
-| Microscope | flow sign diagnostic, flow attribution, loss-by-timestep, geometry audit, periodicity, residual feature atlas, residual-timestep cartography | repeated listening evidence before control claims |
+| Microscope | flow sign diagnostic, flow attribution, loss-by-timestep, geometry audit, periodicity, residual feature atlas, residual-timestep cartography, control-lane mechanistic probes | repeated listening evidence before control claims |
 | Selector | memory index, curriculum, bridge search, prompt search, tokenizer vocabulary, donor/source ranking ideas | evidence that rankings improve auditions |
 | Intervention candidate | neighborhood renoise, selective renoise, graft, blur/filter, neural latent DSP, style profile/direction, cyclic repair, soft prompt audition | source/baseline/method packets across clips and seeds |
 | High-risk intervention candidate | residual steering, cyclic denoising projection, gradient guidance, posterior guidance, null-condition inversion | proof of causal movement without artifacts or fragile internals |
@@ -197,6 +197,7 @@ methods under review, not as a list of promoted controls.
 | `procedures/cyclic_sa3.py` | SA3 internal trajectory | high-risk sampler microscope / intervention candidate | Loop metrics and auditions improve versus baselines without collapse or sampler artifacts; trajectory-derived mix schedules must beat uniform mix. |
 | `procedures/residual_activation_vectors.py` | SA3 internal trajectory | microscope / selector | Prompt-derived residual examples produce cross-validated layer, sampler-timestep, and trajectory-window probe rows before steering. |
 | `procedures/audio_residual_vectors.py` | SA3 internal trajectory | high-risk microscope / selector | Audio-derived residual examples produce layer, sampler-timestep, and trajectory-window probe rows; directions still need source-leakage and alpha-sweep review. |
+| `procedures/control_lane_mechanistic_probe.py` | SA3 internal trajectory plus SAME representation evidence | microscope / selector | Control-lane layer/window rows repeat before any lane-targeted residual patch or steering claim. |
 | `procedures/residual_sweeps.py` | SA3 internal trajectory | high-risk intervention candidate | Global or trajectory-gated alpha changes are audible, monotonic or interpretable, and not just artifact injection. |
 
 ## Artifact Graph
