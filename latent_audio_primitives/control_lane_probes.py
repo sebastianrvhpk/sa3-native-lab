@@ -7,7 +7,15 @@ from typing import Any, Mapping, Sequence
 
 import numpy as np
 
-from .control_lanes import ControlLane, normalize_array, resample_control_lane
+from .control_lanes import (
+    CONTROL_LANE_REGION_MODE_ALIASES,
+    ControlLane,
+    control_lane_mask,
+    control_lane_region_mode_families,
+    regions_from_control_lane,
+    normalize_array,
+    resample_control_lane,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -113,6 +121,127 @@ class ControlLaneProbeRow:
             "call_heldout_normalized_mse_std": float(self.call_heldout_normalized_mse_std),
             "call_heldout_r2_mean": float(self.call_heldout_r2_mean),
             "call_heldout_r2_std": float(self.call_heldout_r2_std),
+            "call_heldout_fold_count": int(self.call_heldout_fold_count),
+            "call_heldout_status": self.call_heldout_status,
+            "rank": int(self.rank),
+            "status": self.status,
+            "error": self.error,
+            "source": self.source,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class ControlLaneRegionProbeRow:
+    """One held-out linear probe row for a typed lane-region mask."""
+
+    lane_name: str
+    region_mode: str
+    region_family: str
+    layer_index: int
+    method: str
+    alignment_mode: str
+    auc_mean: float
+    auc_std: float
+    balanced_accuracy_mean: float
+    balanced_accuracy_std: float
+    correlation_mean: float
+    correlation_std: float
+    normalized_mse_mean: float
+    normalized_mse_std: float
+    fold_count: int
+    sample_count: int
+    feature_count: int
+    lane_frames: int
+    activation_call_count: int
+    region_count: int
+    positive_count: int
+    negative_count: int
+    positive_fraction: float
+    region_delta_norm: float
+    ridge_region_cosine: float
+    call_group_count: int = 0
+    call_heldout_auc_mean: float = 0.0
+    call_heldout_auc_std: float = 0.0
+    call_heldout_balanced_accuracy_mean: float = 0.0
+    call_heldout_balanced_accuracy_std: float = 0.0
+    call_heldout_correlation_mean: float = 0.0
+    call_heldout_correlation_std: float = 0.0
+    call_heldout_fold_count: int = 0
+    call_heldout_status: str = ""
+    rank: int = 0
+    status: str = "ok"
+    error: str = ""
+    window_index: int | None = None
+    window_label: str = ""
+    window_start_fraction: float | None = None
+    window_end_fraction: float | None = None
+    call_start: int | None = None
+    call_end: int | None = None
+    window_count: int | None = None
+    step_index: int | None = None
+    sampler_index: int | None = None
+    timestep: float | None = None
+    sigma: float | None = None
+    logsnr: float | None = None
+    sampler_type: str = ""
+    calls_per_step: int | None = None
+    mapping_status: str = ""
+    null_kind: str = ""
+    source: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "lane_name": self.lane_name,
+            "region_mode": self.region_mode,
+            "region_family": self.region_family,
+            "target_name": f"{self.lane_name}.{self.region_mode}",
+            "layer_index": int(self.layer_index),
+            "window_index": None if self.window_index is None else int(self.window_index),
+            "window_label": self.window_label,
+            "window_start_fraction": (
+                None if self.window_start_fraction is None else float(self.window_start_fraction)
+            ),
+            "window_end_fraction": None if self.window_end_fraction is None else float(self.window_end_fraction),
+            "call_start": None if self.call_start is None else int(self.call_start),
+            "call_end": None if self.call_end is None else int(self.call_end),
+            "window_count": None if self.window_count is None else int(self.window_count),
+            "step_index": None if self.step_index is None else int(self.step_index),
+            "sampler_index": None if self.sampler_index is None else int(self.sampler_index),
+            "timestep": None if self.timestep is None else float(self.timestep),
+            "sigma": None if self.sigma is None else float(self.sigma),
+            "logsnr": None if self.logsnr is None else float(self.logsnr),
+            "sampler_type": self.sampler_type,
+            "calls_per_step": None if self.calls_per_step is None else int(self.calls_per_step),
+            "mapping_status": self.mapping_status,
+            "null_kind": self.null_kind,
+            "method": self.method,
+            "alignment_mode": self.alignment_mode,
+            "auc_mean": float(self.auc_mean),
+            "auc_std": float(self.auc_std),
+            "balanced_accuracy_mean": float(self.balanced_accuracy_mean),
+            "balanced_accuracy_std": float(self.balanced_accuracy_std),
+            "correlation_mean": float(self.correlation_mean),
+            "correlation_std": float(self.correlation_std),
+            "normalized_mse_mean": float(self.normalized_mse_mean),
+            "normalized_mse_std": float(self.normalized_mse_std),
+            "fold_count": int(self.fold_count),
+            "sample_count": int(self.sample_count),
+            "feature_count": int(self.feature_count),
+            "lane_frames": int(self.lane_frames),
+            "activation_call_count": int(self.activation_call_count),
+            "region_count": int(self.region_count),
+            "positive_count": int(self.positive_count),
+            "negative_count": int(self.negative_count),
+            "positive_fraction": float(self.positive_fraction),
+            "region_delta_norm": float(self.region_delta_norm),
+            "ridge_region_cosine": float(self.ridge_region_cosine),
+            "call_group_count": int(self.call_group_count),
+            "call_heldout_auc_mean": float(self.call_heldout_auc_mean),
+            "call_heldout_auc_std": float(self.call_heldout_auc_std),
+            "call_heldout_balanced_accuracy_mean": float(self.call_heldout_balanced_accuracy_mean),
+            "call_heldout_balanced_accuracy_std": float(self.call_heldout_balanced_accuracy_std),
+            "call_heldout_correlation_mean": float(self.call_heldout_correlation_mean),
+            "call_heldout_correlation_std": float(self.call_heldout_correlation_std),
             "call_heldout_fold_count": int(self.call_heldout_fold_count),
             "call_heldout_status": self.call_heldout_status,
             "rank": int(self.rank),
@@ -420,8 +549,412 @@ def control_lane_null_timestep_probe_rows(
     return _rank_rows_within_lane(rows)
 
 
+def control_lane_region_layer_probe_rows(
+    raw_activations: Mapping[int, Sequence[Any] | Any],
+    lanes: Sequence[ControlLane],
+    *,
+    region_modes: Sequence[str] = ("crest", "change", "sustain_high", "smooth"),
+    lane_names: Sequence[str] | None = None,
+    layer_indices: Sequence[int] | None = None,
+    region_percentiles: Mapping[str, float] | float | None = None,
+    region_thresholds: Mapping[str, float] | float | None = None,
+    region_min_duration_seconds: float = 0.0,
+    region_merge_gap_seconds: float = 0.0,
+    cv_folds: int = 5,
+    ridge_alpha: float = 1.0,
+    min_samples: int = 16,
+    min_positive_samples: int = 4,
+    min_negative_samples: int = 4,
+    min_confidence: float = 0.0,
+) -> list[ControlLaneRegionProbeRow]:
+    """Rank layers by visibility of typed lane-region masks."""
+
+    selected_lanes = _select_lanes(lanes, lane_names)
+    selected_layers = _select_layers(raw_activations, layer_indices)
+    rows: list[ControlLaneRegionProbeRow] = []
+    for lane in selected_lanes:
+        for region_mode in region_modes:
+            target_lane, region_count, region_family = _region_target_lane(
+                lane,
+                region_mode=region_mode,
+                region_thresholds=region_thresholds,
+                region_percentiles=region_percentiles,
+                region_min_duration_seconds=region_min_duration_seconds,
+                region_merge_gap_seconds=region_merge_gap_seconds,
+                min_confidence=min_confidence,
+            )
+            for layer_idx in selected_layers:
+                rows.append(
+                    _probe_calls_for_region_lane(
+                        _activation_calls(raw_activations[layer_idx]),
+                        target_lane,
+                        base_lane_name=lane.name,
+                        region_mode=str(target_lane.metadata.get("region_mode", region_mode)),
+                        region_family=region_family,
+                        region_count=region_count,
+                        layer_index=int(layer_idx),
+                        alignment_mode="token_time_repeated_over_observed_calls",
+                        cv_folds=cv_folds,
+                        ridge_alpha=ridge_alpha,
+                        min_samples=min_samples,
+                        min_positive_samples=min_positive_samples,
+                        min_negative_samples=min_negative_samples,
+                        min_confidence=min_confidence,
+                    )
+                )
+    return _rank_region_rows(rows)
+
+
+def control_lane_region_window_probe_rows(
+    raw_activations: Mapping[int, Sequence[Any] | Any],
+    lanes: Sequence[ControlLane],
+    *,
+    region_modes: Sequence[str] = ("crest", "change", "sustain_high", "smooth"),
+    lane_names: Sequence[str] | None = None,
+    layer_indices: Sequence[int] | None = None,
+    window_count: int | None = 5,
+    window_size: int | None = None,
+    region_percentiles: Mapping[str, float] | float | None = None,
+    region_thresholds: Mapping[str, float] | float | None = None,
+    region_min_duration_seconds: float = 0.0,
+    region_merge_gap_seconds: float = 0.0,
+    cv_folds: int = 5,
+    ridge_alpha: float = 1.0,
+    min_samples: int = 16,
+    min_positive_samples: int = 4,
+    min_negative_samples: int = 4,
+    min_confidence: float = 0.0,
+) -> list[ControlLaneRegionProbeRow]:
+    """Rank observed layer/call-window cells by typed region visibility."""
+
+    selected_lanes = _select_lanes(lanes, lane_names)
+    selected_layers = _select_layers(raw_activations, layer_indices)
+    rows: list[ControlLaneRegionProbeRow] = []
+    for lane in selected_lanes:
+        for region_mode in region_modes:
+            target_lane, region_count, region_family = _region_target_lane(
+                lane,
+                region_mode=region_mode,
+                region_thresholds=region_thresholds,
+                region_percentiles=region_percentiles,
+                region_min_duration_seconds=region_min_duration_seconds,
+                region_merge_gap_seconds=region_merge_gap_seconds,
+                min_confidence=min_confidence,
+            )
+            for layer_idx in selected_layers:
+                calls = _activation_calls(raw_activations[layer_idx])
+                windows = control_lane_probe_call_windows(
+                    len(calls),
+                    window_count=window_count,
+                    window_size=window_size,
+                )
+                for window_index, (start, end) in enumerate(windows):
+                    rows.append(
+                        _probe_calls_for_region_lane(
+                            calls[start:end],
+                            target_lane,
+                            base_lane_name=lane.name,
+                            region_mode=str(target_lane.metadata.get("region_mode", region_mode)),
+                            region_family=region_family,
+                            region_count=region_count,
+                            layer_index=int(layer_idx),
+                            alignment_mode="token_time_within_observed_call_window",
+                            cv_folds=cv_folds,
+                            ridge_alpha=ridge_alpha,
+                            min_samples=min_samples,
+                            min_positive_samples=min_positive_samples,
+                            min_negative_samples=min_negative_samples,
+                            min_confidence=min_confidence,
+                            window_index=window_index,
+                            window_label=_window_label(window_index, len(windows), start, end),
+                            call_start=start,
+                            call_end=end,
+                            window_count=len(windows),
+                            total_call_count=len(calls),
+                        )
+                    )
+    return _rank_region_rows(rows)
+
+
+def control_lane_region_timestep_probe_rows(
+    layer_timestep_activations: Mapping[int, Mapping[int, Any]] | Mapping[tuple[int, int], Any],
+    lanes: Sequence[ControlLane],
+    *,
+    layer_timestep_metadata: Mapping[int, Mapping[int, Mapping[str, Any]]] | Mapping[tuple[int, int], Mapping[str, Any]] | None = None,
+    region_modes: Sequence[str] = ("crest", "change", "sustain_high", "smooth"),
+    lane_names: Sequence[str] | None = None,
+    layer_indices: Sequence[int] | None = None,
+    region_percentiles: Mapping[str, float] | float | None = None,
+    region_thresholds: Mapping[str, float] | float | None = None,
+    region_min_duration_seconds: float = 0.0,
+    region_merge_gap_seconds: float = 0.0,
+    cv_folds: int = 5,
+    ridge_alpha: float = 1.0,
+    min_samples: int = 16,
+    min_positive_samples: int = 4,
+    min_negative_samples: int = 4,
+    min_confidence: float = 0.0,
+) -> list[ControlLaneRegionProbeRow]:
+    """Rank layer/sampler-step cells by typed region visibility."""
+
+    selected_lanes = _select_lanes(lanes, lane_names)
+    selected_layers = _select_timestep_layers(layer_timestep_activations, layer_indices)
+    rows: list[ControlLaneRegionProbeRow] = []
+    for lane in selected_lanes:
+        for region_mode in region_modes:
+            target_lane, region_count, region_family = _region_target_lane(
+                lane,
+                region_mode=region_mode,
+                region_thresholds=region_thresholds,
+                region_percentiles=region_percentiles,
+                region_min_duration_seconds=region_min_duration_seconds,
+                region_merge_gap_seconds=region_merge_gap_seconds,
+                min_confidence=min_confidence,
+            )
+            for layer_idx in selected_layers:
+                for step_idx, activation, metadata in _iter_layer_timestep_activations(
+                    layer_timestep_activations,
+                    layer_idx,
+                    layer_timestep_metadata,
+                ):
+                    rows.append(
+                        _probe_calls_for_region_lane(
+                            [activation],
+                            target_lane,
+                            base_lane_name=lane.name,
+                            region_mode=str(target_lane.metadata.get("region_mode", region_mode)),
+                            region_family=region_family,
+                            region_count=region_count,
+                            layer_index=int(layer_idx),
+                            alignment_mode="token_time_within_sampler_timestep",
+                            cv_folds=cv_folds,
+                            ridge_alpha=ridge_alpha,
+                            min_samples=min_samples,
+                            min_positive_samples=min_positive_samples,
+                            min_negative_samples=min_negative_samples,
+                            min_confidence=min_confidence,
+                            step_metadata={**metadata, "step_index": step_idx},
+                        )
+                    )
+    return _rank_region_rows(rows)
+
+
+def control_lane_null_region_layer_probe_rows(
+    raw_activations: Mapping[int, Sequence[Any] | Any],
+    lanes: Sequence[ControlLane],
+    *,
+    null_kinds: Sequence[str] = ("shuffle", "reverse", "random"),
+    seed: int = 0,
+    region_modes: Sequence[str] = ("crest", "change", "sustain_high", "smooth"),
+    lane_names: Sequence[str] | None = None,
+    layer_indices: Sequence[int] | None = None,
+    region_percentiles: Mapping[str, float] | float | None = None,
+    region_thresholds: Mapping[str, float] | float | None = None,
+    region_min_duration_seconds: float = 0.0,
+    region_merge_gap_seconds: float = 0.0,
+    cv_folds: int = 5,
+    ridge_alpha: float = 1.0,
+    min_samples: int = 16,
+    min_positive_samples: int = 4,
+    min_negative_samples: int = 4,
+    min_confidence: float = 0.0,
+) -> list[ControlLaneRegionProbeRow]:
+    """Run typed region layer probes against matched binary region nulls."""
+
+    rng = np.random.default_rng(int(seed))
+    selected_lanes = _select_lanes(lanes, lane_names)
+    selected_layers = _select_layers(raw_activations, layer_indices)
+    rows: list[ControlLaneRegionProbeRow] = []
+    for null_kind in null_kinds:
+        for lane in selected_lanes:
+            for region_mode in region_modes:
+                target_lane, region_count, region_family = _region_target_lane(
+                    lane,
+                    region_mode=region_mode,
+                    region_thresholds=region_thresholds,
+                    region_percentiles=region_percentiles,
+                    region_min_duration_seconds=region_min_duration_seconds,
+                    region_merge_gap_seconds=region_merge_gap_seconds,
+                    min_confidence=min_confidence,
+                )
+                null_lane = _null_region_lane(target_lane, null_kind, rng)
+                for layer_idx in selected_layers:
+                    rows.append(
+                        _probe_calls_for_region_lane(
+                            _activation_calls(raw_activations[layer_idx]),
+                            null_lane,
+                            base_lane_name=lane.name,
+                            region_mode=str(target_lane.metadata.get("region_mode", region_mode)),
+                            region_family=region_family,
+                            region_count=region_count,
+                            layer_index=int(layer_idx),
+                            alignment_mode="token_time_repeated_over_observed_calls",
+                            cv_folds=cv_folds,
+                            ridge_alpha=ridge_alpha,
+                            min_samples=min_samples,
+                            min_positive_samples=min_positive_samples,
+                            min_negative_samples=min_negative_samples,
+                            min_confidence=min_confidence,
+                            null_kind=null_kind,
+                        )
+                    )
+    return _rank_region_rows(rows)
+
+
+def control_lane_null_region_window_probe_rows(
+    raw_activations: Mapping[int, Sequence[Any] | Any],
+    lanes: Sequence[ControlLane],
+    *,
+    null_kinds: Sequence[str] = ("shuffle", "reverse", "random"),
+    seed: int = 0,
+    region_modes: Sequence[str] = ("crest", "change", "sustain_high", "smooth"),
+    lane_names: Sequence[str] | None = None,
+    layer_indices: Sequence[int] | None = None,
+    window_count: int | None = 5,
+    window_size: int | None = None,
+    region_percentiles: Mapping[str, float] | float | None = None,
+    region_thresholds: Mapping[str, float] | float | None = None,
+    region_min_duration_seconds: float = 0.0,
+    region_merge_gap_seconds: float = 0.0,
+    cv_folds: int = 5,
+    ridge_alpha: float = 1.0,
+    min_samples: int = 16,
+    min_positive_samples: int = 4,
+    min_negative_samples: int = 4,
+    min_confidence: float = 0.0,
+) -> list[ControlLaneRegionProbeRow]:
+    """Run typed region observed-call window probes against binary region nulls."""
+
+    rng = np.random.default_rng(int(seed))
+    selected_lanes = _select_lanes(lanes, lane_names)
+    selected_layers = _select_layers(raw_activations, layer_indices)
+    rows: list[ControlLaneRegionProbeRow] = []
+    for null_kind in null_kinds:
+        for lane in selected_lanes:
+            for region_mode in region_modes:
+                target_lane, region_count, region_family = _region_target_lane(
+                    lane,
+                    region_mode=region_mode,
+                    region_thresholds=region_thresholds,
+                    region_percentiles=region_percentiles,
+                    region_min_duration_seconds=region_min_duration_seconds,
+                    region_merge_gap_seconds=region_merge_gap_seconds,
+                    min_confidence=min_confidence,
+                )
+                null_lane = _null_region_lane(target_lane, null_kind, rng)
+                for layer_idx in selected_layers:
+                    calls = _activation_calls(raw_activations[layer_idx])
+                    windows = control_lane_probe_call_windows(
+                        len(calls),
+                        window_count=window_count,
+                        window_size=window_size,
+                    )
+                    for window_index, (start, end) in enumerate(windows):
+                        rows.append(
+                            _probe_calls_for_region_lane(
+                                calls[start:end],
+                                null_lane,
+                                base_lane_name=lane.name,
+                                region_mode=str(target_lane.metadata.get("region_mode", region_mode)),
+                                region_family=region_family,
+                                region_count=region_count,
+                                layer_index=int(layer_idx),
+                                alignment_mode="token_time_within_observed_call_window",
+                                cv_folds=cv_folds,
+                                ridge_alpha=ridge_alpha,
+                                min_samples=min_samples,
+                                min_positive_samples=min_positive_samples,
+                                min_negative_samples=min_negative_samples,
+                                min_confidence=min_confidence,
+                                window_index=window_index,
+                                window_label=_window_label(window_index, len(windows), start, end),
+                                call_start=start,
+                                call_end=end,
+                                window_count=len(windows),
+                                total_call_count=len(calls),
+                                null_kind=null_kind,
+                            )
+                        )
+    return _rank_region_rows(rows)
+
+
+def control_lane_null_region_timestep_probe_rows(
+    layer_timestep_activations: Mapping[int, Mapping[int, Any]] | Mapping[tuple[int, int], Any],
+    lanes: Sequence[ControlLane],
+    *,
+    layer_timestep_metadata: Mapping[int, Mapping[int, Mapping[str, Any]]] | Mapping[tuple[int, int], Mapping[str, Any]] | None = None,
+    null_kinds: Sequence[str] = ("shuffle", "reverse", "random"),
+    seed: int = 0,
+    region_modes: Sequence[str] = ("crest", "change", "sustain_high", "smooth"),
+    lane_names: Sequence[str] | None = None,
+    layer_indices: Sequence[int] | None = None,
+    region_percentiles: Mapping[str, float] | float | None = None,
+    region_thresholds: Mapping[str, float] | float | None = None,
+    region_min_duration_seconds: float = 0.0,
+    region_merge_gap_seconds: float = 0.0,
+    cv_folds: int = 5,
+    ridge_alpha: float = 1.0,
+    min_samples: int = 16,
+    min_positive_samples: int = 4,
+    min_negative_samples: int = 4,
+    min_confidence: float = 0.0,
+) -> list[ControlLaneRegionProbeRow]:
+    """Run typed region sampler-step probes against binary region nulls."""
+
+    rng = np.random.default_rng(int(seed))
+    selected_lanes = _select_lanes(lanes, lane_names)
+    selected_layers = _select_timestep_layers(layer_timestep_activations, layer_indices)
+    rows: list[ControlLaneRegionProbeRow] = []
+    for null_kind in null_kinds:
+        for lane in selected_lanes:
+            for region_mode in region_modes:
+                target_lane, region_count, region_family = _region_target_lane(
+                    lane,
+                    region_mode=region_mode,
+                    region_thresholds=region_thresholds,
+                    region_percentiles=region_percentiles,
+                    region_min_duration_seconds=region_min_duration_seconds,
+                    region_merge_gap_seconds=region_merge_gap_seconds,
+                    min_confidence=min_confidence,
+                )
+                null_lane = _null_region_lane(target_lane, null_kind, rng)
+                for layer_idx in selected_layers:
+                    for step_idx, activation, metadata in _iter_layer_timestep_activations(
+                        layer_timestep_activations,
+                        layer_idx,
+                        layer_timestep_metadata,
+                    ):
+                        rows.append(
+                            _probe_calls_for_region_lane(
+                                [activation],
+                                null_lane,
+                                base_lane_name=lane.name,
+                                region_mode=str(target_lane.metadata.get("region_mode", region_mode)),
+                                region_family=region_family,
+                                region_count=region_count,
+                                layer_index=int(layer_idx),
+                                alignment_mode="token_time_within_sampler_timestep",
+                                cv_folds=cv_folds,
+                                ridge_alpha=ridge_alpha,
+                                min_samples=min_samples,
+                                min_positive_samples=min_positive_samples,
+                                min_negative_samples=min_negative_samples,
+                                min_confidence=min_confidence,
+                                step_metadata={**metadata, "step_index": step_idx},
+                                null_kind=null_kind,
+                            )
+                        )
+    return _rank_region_rows(rows)
+
+
 def control_lane_probe_table(rows: Sequence[ControlLaneProbeRow]) -> list[dict[str, Any]]:
     """Return JSON/table-friendly control-lane probe rows."""
+
+    return [row.to_dict() for row in rows]
+
+
+def control_lane_region_probe_table(rows: Sequence[ControlLaneRegionProbeRow]) -> list[dict[str, Any]]:
+    """Return JSON/table-friendly typed region probe rows."""
 
     return [row.to_dict() for row in rows]
 
@@ -519,6 +1052,115 @@ def control_lane_null_margin_table(
             -float(row["null_margin"]),
             -float(row["true_score"]),
             str(row["lane_name"]),
+        )
+    )
+    for rank, row in enumerate(out, start=1):
+        row["null_margin_rank"] = int(rank)
+    return out
+
+
+def control_lane_region_null_margin_table(
+    true_rows: Sequence[ControlLaneRegionProbeRow | Mapping[str, Any]],
+    null_rows: Sequence[ControlLaneRegionProbeRow | Mapping[str, Any]],
+    *,
+    score_key: str = "auc_mean",
+    heldout_score_key: str = "call_heldout_auc_mean",
+) -> list[dict[str, Any]]:
+    """Compare typed region probe rows against matched binary-region null rows."""
+
+    null_by_key: dict[tuple[Any, ...], list[ControlLaneRegionProbeRow | Mapping[str, Any]]] = {}
+    for row in null_rows:
+        if str(_row_get(row, "status", "ok") or "ok") not in {"", "ok"}:
+            continue
+        key = _region_probe_match_key(row)
+        null_by_key.setdefault(key, []).append(row)
+
+    out: list[dict[str, Any]] = []
+    for true_row in true_rows:
+        if str(_row_get(true_row, "status", "ok") or "ok") not in {"", "ok"}:
+            continue
+        if str(_row_get(true_row, "null_kind", "") or ""):
+            continue
+        key = _region_probe_match_key(true_row)
+        matched = null_by_key.get(key, [])
+        true_score = float(_row_get(true_row, score_key, 0.0) or 0.0)
+        true_heldout_status = str(_row_get(true_row, "call_heldout_status", "") or "")
+        true_heldout_score = float(_row_get(true_row, heldout_score_key, 0.0) or 0.0)
+        null_scores = [float(_row_get(row, score_key, 0.0) or 0.0) for row in matched]
+        null_heldout_scores = [
+            float(_row_get(row, heldout_score_key, 0.0) or 0.0)
+            for row in matched
+            if str(_row_get(row, "call_heldout_status", "") or "") == "ok"
+        ]
+        if null_scores:
+            max_null = float(max(null_scores))
+            mean_null = float(np.mean(null_scores))
+            margin = float(true_score - max_null)
+            status = "ok"
+        else:
+            max_null = 0.0
+            mean_null = 0.0
+            margin = 0.0
+            status = "no_null_rows"
+
+        if true_heldout_status == "ok" and null_heldout_scores:
+            max_null_heldout: float | None = float(max(null_heldout_scores))
+            mean_null_heldout: float | None = float(np.mean(null_heldout_scores))
+            heldout_margin: float | None = float(true_heldout_score - max_null_heldout)
+            beats_null_heldout: bool | None = bool(heldout_margin > 0.0)
+        else:
+            max_null_heldout = None
+            mean_null_heldout = None
+            heldout_margin = None
+            beats_null_heldout = None
+
+        out.append(
+            {
+                "lane_name": str(_row_get(true_row, "lane_name", "")),
+                "region_mode": str(_row_get(true_row, "region_mode", "")),
+                "region_family": str(_row_get(true_row, "region_family", "") or ""),
+                "target_name": (
+                    f"{str(_row_get(true_row, 'lane_name', ''))}."
+                    f"{str(_row_get(true_row, 'region_mode', ''))}"
+                ),
+                "region_count": int(_row_get(true_row, "region_count", 0) or 0),
+                "positive_fraction": float(_row_get(true_row, "positive_fraction", 0.0) or 0.0),
+                "layer_index": _optional_int(_row_get(true_row, "layer_index")),
+                "alignment_mode": str(_row_get(true_row, "alignment_mode", "")),
+                "window_index": _optional_int(_row_get(true_row, "window_index")),
+                "window_label": str(_row_get(true_row, "window_label", "") or ""),
+                "step_index": _optional_int(_row_get(true_row, "step_index")),
+                "sampler_index": _optional_int(_row_get(true_row, "sampler_index")),
+                "timestep": _optional_float(_row_get(true_row, "timestep")),
+                "sigma": _optional_float(_row_get(true_row, "sigma")),
+                "logsnr": _optional_float(_row_get(true_row, "logsnr")),
+                "mapping_status": str(_row_get(true_row, "mapping_status", "") or ""),
+                "score_key": score_key,
+                "true_score": true_score,
+                "max_null_score": max_null,
+                "mean_null_score": mean_null,
+                "null_margin": margin,
+                "beats_null": bool(null_scores and margin > 0.0),
+                "null_count": int(len(matched)),
+                "null_kinds": _matched_null_kinds(matched),
+                "call_heldout_score_key": heldout_score_key,
+                "true_call_heldout_status": true_heldout_status,
+                "true_call_heldout_score": true_heldout_score if true_heldout_status == "ok" else None,
+                "max_null_call_heldout_score": max_null_heldout,
+                "mean_null_call_heldout_score": mean_null_heldout,
+                "call_heldout_null_margin": heldout_margin,
+                "beats_null_call_heldout": beats_null_heldout,
+                "rank": int(_row_get(true_row, "rank", 0) or 0),
+                "status": status,
+            }
+        )
+    out.sort(
+        key=lambda row: (
+            row["status"] != "ok",
+            -float(row["null_margin"]),
+            -float(row["true_score"]),
+            str(row["lane_name"]),
+            str(row["region_mode"]),
         )
     )
     for rank, row in enumerate(out, start=1):
@@ -635,6 +1277,147 @@ def control_lane_active_direction_table(
     return out
 
 
+def control_lane_region_prediction_table(
+    raw_activations: Mapping[int, Sequence[Any] | Any],
+    lanes: Sequence[ControlLane],
+    region_probe_rows: Sequence[ControlLaneRegionProbeRow | Mapping[str, Any]],
+    *,
+    top_k_per_target: int = 1,
+    max_points_per_row: int = 240,
+    ridge_alpha: float = 1.0,
+    cv_folds: int = 5,
+    min_confidence: float = 0.0,
+    region_percentiles: Mapping[str, float] | float | None = None,
+    region_thresholds: Mapping[str, float] | float | None = None,
+    region_min_duration_seconds: float = 0.0,
+    region_merge_gap_seconds: float = 0.0,
+) -> list[dict[str, Any]]:
+    """Return held-out actual-vs-predicted samples for typed region probe rows."""
+
+    lane_by_name = {lane.name: lane for lane in lanes}
+    selected_rows = _select_top_region_probe_rows(region_probe_rows, top_k_per_target=top_k_per_target)
+    out: list[dict[str, Any]] = []
+    for row in selected_rows:
+        lane_name = str(_row_get(row, "lane_name"))
+        region_mode = str(_row_get(row, "region_mode"))
+        lane = lane_by_name.get(lane_name)
+        layer_idx = _optional_int(_row_get(row, "layer_index"))
+        if lane is None or layer_idx is None or layer_idx not in raw_activations:
+            continue
+        target_lane, _region_count, _region_family = _region_target_lane(
+            lane,
+            region_mode=region_mode,
+            region_thresholds=region_thresholds,
+            region_percentiles=region_percentiles,
+            region_min_duration_seconds=region_min_duration_seconds,
+            region_merge_gap_seconds=region_merge_gap_seconds,
+            min_confidence=min_confidence,
+        )
+        calls = _calls_for_probe_row(raw_activations[layer_idx], row)
+        try:
+            x, y = _features_and_targets_for_calls(calls, target_lane, min_confidence=min_confidence)
+        except Exception:
+            continue
+        predictions = _ridge_blocked_cv_binary_predictions(
+            x,
+            y,
+            cv_folds=cv_folds,
+            ridge_alpha=ridge_alpha,
+        )
+        if not predictions:
+            continue
+        sample_indices = np.arange(len(predictions), dtype=np.int64)
+        if max_points_per_row is not None and len(sample_indices) > int(max_points_per_row):
+            sample_indices = np.linspace(0, len(predictions) - 1, int(max_points_per_row), dtype=np.int64)
+        for point_index in sample_indices:
+            pred = predictions[int(point_index)]
+            out.append(
+                {
+                    "lane_name": lane_name,
+                    "region_mode": region_mode,
+                    "region_family": str(_row_get(row, "region_family", "") or ""),
+                    "target_name": f"{lane_name}.{region_mode}",
+                    "layer_index": int(layer_idx),
+                    "window_index": _optional_int(_row_get(row, "window_index")),
+                    "window_label": str(_row_get(row, "window_label", "") or ""),
+                    "rank": int(_row_get(row, "rank", 0) or 0),
+                    "sample_index": int(point_index),
+                    "sample_fraction": float(point_index / max(len(predictions) - 1, 1)),
+                    "target": float(pred["target"]),
+                    "prediction": float(pred["prediction"]),
+                    "predicted_label": int(pred["predicted_label"]),
+                    "threshold": float(pred["threshold"]),
+                    "residual": float(pred["prediction"] - pred["target"]),
+                    "fold_index": int(pred["fold_index"]),
+                    "source": _row_get(row, "source"),
+                }
+            )
+    return out
+
+
+def control_lane_region_direction_table(
+    raw_activations: Mapping[int, Sequence[Any] | Any],
+    lanes: Sequence[ControlLane],
+    region_probe_rows: Sequence[ControlLaneRegionProbeRow | Mapping[str, Any]],
+    *,
+    top_k_per_target: int = 1,
+    top_features: int = 16,
+    ridge_alpha: float = 1.0,
+    min_confidence: float = 0.0,
+    region_percentiles: Mapping[str, float] | float | None = None,
+    region_thresholds: Mapping[str, float] | float | None = None,
+    region_min_duration_seconds: float = 0.0,
+    region_merge_gap_seconds: float = 0.0,
+) -> list[dict[str, Any]]:
+    """Return compact region-vs-complement residual direction previews."""
+
+    lane_by_name = {lane.name: lane for lane in lanes}
+    rows = _select_top_region_probe_rows(region_probe_rows, top_k_per_target=top_k_per_target)
+    out: list[dict[str, Any]] = []
+    for row in rows:
+        lane_name = str(_row_get(row, "lane_name"))
+        region_mode = str(_row_get(row, "region_mode"))
+        lane = lane_by_name.get(lane_name)
+        layer_idx = _optional_int(_row_get(row, "layer_index"))
+        if lane is None or layer_idx is None or layer_idx not in raw_activations:
+            continue
+        target_lane, _region_count, _region_family = _region_target_lane(
+            lane,
+            region_mode=region_mode,
+            region_thresholds=region_thresholds,
+            region_percentiles=region_percentiles,
+            region_min_duration_seconds=region_min_duration_seconds,
+            region_merge_gap_seconds=region_merge_gap_seconds,
+            min_confidence=min_confidence,
+        )
+        calls = _calls_for_probe_row(raw_activations[layer_idx], row)
+        try:
+            x, y = _features_and_targets_for_calls(calls, target_lane, min_confidence=min_confidence)
+        except Exception:
+            continue
+        preview = _region_direction_preview(
+            x,
+            y,
+            ridge_alpha=ridge_alpha,
+            top_features=top_features,
+        )
+        out.append(
+            {
+                "lane_name": lane_name,
+                "region_mode": region_mode,
+                "region_family": str(_row_get(row, "region_family", "") or ""),
+                "target_name": f"{lane_name}.{region_mode}",
+                "layer_index": int(layer_idx),
+                "window_index": _optional_int(_row_get(row, "window_index")),
+                "window_label": str(_row_get(row, "window_label", "") or ""),
+                "rank": int(_row_get(row, "rank", 0) or 0),
+                "feature_count": int(x.shape[1]),
+                **preview,
+            }
+        )
+    return out
+
+
 def control_lane_probe_top_table(
     rows: Sequence[ControlLaneProbeRow | Mapping[str, Any]],
     *,
@@ -646,6 +1429,24 @@ def control_lane_probe_top_table(
     return [
         _row_to_dict(row)
         for row in _select_top_probe_rows(rows, top_k_per_lane=top_k_per_lane, include_null=include_null)
+    ]
+
+
+def control_lane_region_probe_top_table(
+    rows: Sequence[ControlLaneRegionProbeRow | Mapping[str, Any]],
+    *,
+    top_k_per_target: int = 1,
+    include_null: bool = False,
+) -> list[dict[str, Any]]:
+    """Return compact top typed-region rows for repeatability ledgers."""
+
+    return [
+        _row_to_dict(row)
+        for row in _select_top_region_probe_rows(
+            rows,
+            top_k_per_target=top_k_per_target,
+            include_null=include_null,
+        )
     ]
 
 
@@ -806,6 +1607,160 @@ def _probe_calls_for_lane(
     )
 
 
+def _probe_calls_for_region_lane(
+    calls: Sequence[Any],
+    target_lane: ControlLane,
+    *,
+    base_lane_name: str,
+    region_mode: str,
+    region_family: str,
+    region_count: int,
+    layer_index: int,
+    alignment_mode: str,
+    cv_folds: int,
+    ridge_alpha: float,
+    min_samples: int,
+    min_positive_samples: int,
+    min_negative_samples: int,
+    min_confidence: float,
+    window_index: int | None = None,
+    window_label: str = "",
+    call_start: int | None = None,
+    call_end: int | None = None,
+    window_count: int | None = None,
+    total_call_count: int | None = None,
+    step_metadata: Mapping[str, Any] | None = None,
+    null_kind: str = "",
+) -> ControlLaneRegionProbeRow:
+    step_metadata = dict(step_metadata or {})
+    try:
+        x, y, groups = _features_targets_groups_for_calls(calls, target_lane, min_confidence=min_confidence)
+        y = (y >= 0.5).astype(np.float32)
+    except Exception as exc:
+        return _empty_region_probe_row(
+            target_lane,
+            base_lane_name=base_lane_name,
+            region_mode=region_mode,
+            region_family=region_family,
+            region_count=region_count,
+            layer_index=layer_index,
+            alignment_mode=alignment_mode,
+            method="ridge_binary_blocked_cv",
+            status="alignment_error",
+            error=str(exc),
+            window_index=window_index,
+            window_label=window_label,
+            call_start=call_start,
+            call_end=call_end,
+            window_count=window_count,
+            activation_call_count=total_call_count if total_call_count is not None else len(calls),
+            step_metadata=step_metadata,
+            null_kind=null_kind,
+        )
+    positive_count = int(np.sum(y >= 0.5))
+    negative_count = int(y.shape[0] - positive_count)
+    if (
+        x.shape[0] < min_samples
+        or x.shape[1] < 1
+        or positive_count < int(min_positive_samples)
+        or negative_count < int(min_negative_samples)
+    ):
+        return _empty_region_probe_row(
+            target_lane,
+            base_lane_name=base_lane_name,
+            region_mode=region_mode,
+            region_family=region_family,
+            region_count=region_count,
+            layer_index=layer_index,
+            alignment_mode=alignment_mode,
+            method="ridge_binary_blocked_cv",
+            status="insufficient",
+            error=(
+                f"need {min_samples} samples, {min_positive_samples} positive, "
+                f"and {min_negative_samples} negative samples"
+            ),
+            window_index=window_index,
+            window_label=window_label,
+            call_start=call_start,
+            call_end=call_end,
+            window_count=window_count,
+            sample_count=x.shape[0],
+            feature_count=x.shape[1],
+            positive_count=positive_count,
+            negative_count=negative_count,
+            activation_call_count=total_call_count if total_call_count is not None else len(calls),
+            step_metadata=step_metadata,
+            null_kind=null_kind,
+        )
+    metrics = _ridge_blocked_binary_cv(
+        x,
+        y,
+        cv_folds=cv_folds,
+        ridge_alpha=ridge_alpha,
+    )
+    call_metrics = _ridge_call_heldout_binary_cv(
+        x,
+        y,
+        groups,
+        cv_folds=cv_folds,
+        ridge_alpha=ridge_alpha,
+    )
+    contrast = _region_direction_contrast(x, y, ridge_alpha=ridge_alpha)
+    return ControlLaneRegionProbeRow(
+        lane_name=base_lane_name,
+        region_mode=region_mode,
+        region_family=region_family,
+        layer_index=layer_index,
+        method="ridge_binary_blocked_cv",
+        alignment_mode=alignment_mode,
+        auc_mean=metrics["auc_mean"],
+        auc_std=metrics["auc_std"],
+        balanced_accuracy_mean=metrics["balanced_accuracy_mean"],
+        balanced_accuracy_std=metrics["balanced_accuracy_std"],
+        correlation_mean=metrics["correlation_mean"],
+        correlation_std=metrics["correlation_std"],
+        normalized_mse_mean=metrics["normalized_mse_mean"],
+        normalized_mse_std=metrics["normalized_mse_std"],
+        fold_count=metrics["fold_count"],
+        sample_count=int(x.shape[0]),
+        feature_count=int(x.shape[1]),
+        lane_frames=target_lane.frames,
+        activation_call_count=total_call_count if total_call_count is not None else len(calls),
+        region_count=int(region_count),
+        positive_count=positive_count,
+        negative_count=negative_count,
+        positive_fraction=float(positive_count / max(positive_count + negative_count, 1)),
+        region_delta_norm=contrast["region_delta_norm"],
+        ridge_region_cosine=contrast["ridge_region_cosine"],
+        call_group_count=call_metrics["call_group_count"],
+        call_heldout_auc_mean=call_metrics["auc_mean"],
+        call_heldout_auc_std=call_metrics["auc_std"],
+        call_heldout_balanced_accuracy_mean=call_metrics["balanced_accuracy_mean"],
+        call_heldout_balanced_accuracy_std=call_metrics["balanced_accuracy_std"],
+        call_heldout_correlation_mean=call_metrics["correlation_mean"],
+        call_heldout_correlation_std=call_metrics["correlation_std"],
+        call_heldout_fold_count=call_metrics["fold_count"],
+        call_heldout_status=str(call_metrics["status"]),
+        window_index=window_index,
+        window_label=window_label,
+        window_start_fraction=None if call_start is None else call_start / max(total_call_count or len(calls), 1),
+        window_end_fraction=None if call_end is None else call_end / max(total_call_count or len(calls), 1),
+        call_start=call_start,
+        call_end=call_end,
+        window_count=window_count,
+        step_index=_optional_int(step_metadata.get("step_index")),
+        sampler_index=_optional_int(step_metadata.get("sampler_index")),
+        timestep=_optional_float(step_metadata.get("timestep")),
+        sigma=_optional_float(step_metadata.get("sigma")),
+        logsnr=_optional_float(step_metadata.get("logsnr")),
+        sampler_type=str(step_metadata.get("sampler_type", "") or ""),
+        calls_per_step=_optional_int(step_metadata.get("calls_per_step")),
+        mapping_status=str(step_metadata.get("mapping_status", "") or ""),
+        null_kind=str(null_kind or ""),
+        source=target_lane.source,
+    )
+
+
 def _features_and_targets_for_calls(
     calls: Sequence[Any],
     lane: ControlLane,
@@ -890,6 +1845,45 @@ def _ridge_call_heldout_cv(
     return {**metrics, "call_group_count": call_group_count, "status": "ok"}
 
 
+def _ridge_blocked_binary_cv(
+    x: np.ndarray,
+    y: np.ndarray,
+    *,
+    cv_folds: int,
+    ridge_alpha: float,
+) -> dict[str, float | int]:
+    folds = _blocked_fold_indices(x.shape[0], cv_folds=cv_folds)
+    return _ridge_binary_cv_metrics(x, y, folds=folds, ridge_alpha=ridge_alpha)
+
+
+def _ridge_call_heldout_binary_cv(
+    x: np.ndarray,
+    y: np.ndarray,
+    groups: np.ndarray,
+    *,
+    cv_folds: int,
+    ridge_alpha: float,
+) -> dict[str, float | int | str]:
+    call_group_count = int(np.unique(groups).shape[0])
+    folds = _group_heldout_fold_indices(groups, cv_folds=cv_folds)
+    if not folds:
+        return {
+            "auc_mean": 0.0,
+            "auc_std": 0.0,
+            "balanced_accuracy_mean": 0.0,
+            "balanced_accuracy_std": 0.0,
+            "correlation_mean": 0.0,
+            "correlation_std": 0.0,
+            "normalized_mse_mean": 0.0,
+            "normalized_mse_std": 0.0,
+            "fold_count": 0,
+            "call_group_count": call_group_count,
+            "status": "insufficient_call_groups",
+        }
+    metrics = _ridge_binary_cv_metrics(x, y, folds=folds, ridge_alpha=ridge_alpha)
+    return {**metrics, "call_group_count": call_group_count, "status": "ok"}
+
+
 def _ridge_cv_metrics(
     x: np.ndarray,
     y: np.ndarray,
@@ -935,6 +1929,59 @@ def _ridge_cv_metrics(
     }
 
 
+def _ridge_binary_cv_metrics(
+    x: np.ndarray,
+    y: np.ndarray,
+    *,
+    folds: Sequence[tuple[np.ndarray, np.ndarray]],
+    ridge_alpha: float,
+) -> dict[str, float | int]:
+    aucs = []
+    balanced_accuracies = []
+    correlations = []
+    normalized_mses = []
+    y = (y >= 0.5).astype(np.float32)
+    for train_idx, test_idx in folds:
+        pred = _fit_predict_ridge(
+            x[train_idx],
+            y[train_idx],
+            x[test_idx],
+            ridge_alpha=ridge_alpha,
+        )
+        target = y[test_idx].astype(np.float32)
+        threshold = float(np.mean(y[train_idx]))
+        predicted_label = (pred >= threshold).astype(np.float32)
+        mse = float(np.mean((pred - target) ** 2))
+        target_var = float(np.var(target))
+        normalized_mses.append(mse / max(target_var, 1e-8))
+        aucs.append(_safe_auc(pred, target))
+        balanced_accuracies.append(_balanced_accuracy(predicted_label, target))
+        correlations.append(_safe_correlation(pred, target))
+    if not aucs:
+        return {
+            "auc_mean": 0.0,
+            "auc_std": 0.0,
+            "balanced_accuracy_mean": 0.0,
+            "balanced_accuracy_std": 0.0,
+            "correlation_mean": 0.0,
+            "correlation_std": 0.0,
+            "normalized_mse_mean": 0.0,
+            "normalized_mse_std": 0.0,
+            "fold_count": 0,
+        }
+    return {
+        "auc_mean": float(np.mean(aucs)),
+        "auc_std": float(np.std(aucs)),
+        "balanced_accuracy_mean": float(np.mean(balanced_accuracies)),
+        "balanced_accuracy_std": float(np.std(balanced_accuracies)),
+        "correlation_mean": float(np.mean(correlations)),
+        "correlation_std": float(np.std(correlations)),
+        "normalized_mse_mean": float(np.mean(normalized_mses)),
+        "normalized_mse_std": float(np.std(normalized_mses)),
+        "fold_count": int(len(folds)),
+    }
+
+
 def _ridge_blocked_cv_predictions(
     x: np.ndarray,
     y: np.ndarray,
@@ -960,6 +2007,41 @@ def _ridge_blocked_cv_predictions(
             predictions[int(sample_index)] = {
                 "target": float(y[int(sample_index)]),
                 "prediction": float(pred[local_index]),
+                "fold_index": int(fold_index),
+            }
+    return predictions
+
+
+def _ridge_blocked_cv_binary_predictions(
+    x: np.ndarray,
+    y: np.ndarray,
+    *,
+    cv_folds: int,
+    ridge_alpha: float,
+) -> list[dict[str, float | int]]:
+    folds = _blocked_fold_indices(x.shape[0], cv_folds=cv_folds)
+    if not folds:
+        return []
+    y = (y >= 0.5).astype(np.float32)
+    predictions: list[dict[str, float | int]] = [
+        {"target": float(value), "prediction": 0.0, "predicted_label": 0, "threshold": 0.0, "fold_index": -1}
+        for value in y.astype(np.float32)
+    ]
+    for fold_index, (train_idx, test_idx) in enumerate(folds):
+        threshold = float(np.mean(y[train_idx]))
+        pred = _fit_predict_ridge(
+            x[train_idx],
+            y[train_idx],
+            x[test_idx],
+            ridge_alpha=ridge_alpha,
+        )
+        for local_index, sample_index in enumerate(test_idx):
+            score = float(pred[local_index])
+            predictions[int(sample_index)] = {
+                "target": float(y[int(sample_index)]),
+                "prediction": score,
+                "predicted_label": int(score >= threshold),
+                "threshold": threshold,
                 "fold_index": int(fold_index),
             }
     return predictions
@@ -1057,6 +2139,68 @@ def _active_quiet_direction_preview(
     }
 
 
+def _region_direction_contrast(
+    x: np.ndarray,
+    y: np.ndarray,
+    *,
+    ridge_alpha: float,
+) -> dict[str, float | int]:
+    x_std, _ = _standardize_train_test(x, x)
+    y_binary = (y >= 0.5).astype(np.float32)
+    positive_mask = y_binary >= 0.5
+    negative_mask = ~positive_mask
+    if not np.any(positive_mask) or not np.any(negative_mask):
+        return {
+            "positive_count": int(np.sum(positive_mask)),
+            "negative_count": int(np.sum(negative_mask)),
+            "region_delta_norm": 0.0,
+            "ridge_region_cosine": 0.0,
+        }
+    delta = x_std[positive_mask].mean(axis=0) - x_std[negative_mask].mean(axis=0)
+    weights = _ridge_weights(x_std, y_binary - float(np.mean(y_binary)), ridge_alpha=ridge_alpha)
+    return {
+        "positive_count": int(np.sum(positive_mask)),
+        "negative_count": int(np.sum(negative_mask)),
+        "region_delta_norm": float(np.linalg.norm(delta)),
+        "ridge_region_cosine": _safe_cosine(delta, weights),
+    }
+
+
+def _region_direction_preview(
+    x: np.ndarray,
+    y: np.ndarray,
+    *,
+    ridge_alpha: float,
+    top_features: int,
+) -> dict[str, Any]:
+    x_std, _ = _standardize_train_test(x, x)
+    y_binary = (y >= 0.5).astype(np.float32)
+    positive_mask = y_binary >= 0.5
+    negative_mask = ~positive_mask
+    if not np.any(positive_mask) or not np.any(negative_mask):
+        return {
+            "positive_count": int(np.sum(positive_mask)),
+            "negative_count": int(np.sum(negative_mask)),
+            "region_delta_norm": 0.0,
+            "ridge_region_cosine": 0.0,
+            "top_feature_indices": [],
+            "top_feature_values": [],
+            "top_feature_abs_values": [],
+        }
+    delta = x_std[positive_mask].mean(axis=0) - x_std[negative_mask].mean(axis=0)
+    weights = _ridge_weights(x_std, y_binary - float(np.mean(y_binary)), ridge_alpha=ridge_alpha)
+    order = np.argsort(-np.abs(delta))[: max(1, int(top_features))]
+    return {
+        "positive_count": int(np.sum(positive_mask)),
+        "negative_count": int(np.sum(negative_mask)),
+        "region_delta_norm": float(np.linalg.norm(delta)),
+        "ridge_region_cosine": _safe_cosine(delta, weights),
+        "top_feature_indices": [int(index) for index in order],
+        "top_feature_values": [float(delta[index]) for index in order],
+        "top_feature_abs_values": [float(abs(delta[index])) for index in order],
+    }
+
+
 def _ridge_weights(x: np.ndarray, y: np.ndarray, *, ridge_alpha: float) -> np.ndarray:
     alpha = float(ridge_alpha)
     sample_count, feature_count = x.shape
@@ -1121,6 +2265,36 @@ def _safe_correlation(a: np.ndarray, b: np.ndarray) -> float:
     if float(np.std(a)) < 1e-8 or float(np.std(b)) < 1e-8:
         return 0.0
     return float(np.corrcoef(a, b)[0, 1])
+
+
+def _safe_auc(scores: np.ndarray, target: np.ndarray) -> float:
+    scores = np.asarray(scores, dtype=np.float32).reshape(-1)
+    target = (np.asarray(target, dtype=np.float32).reshape(-1) >= 0.5).astype(np.float32)
+    positive_count = int(np.sum(target >= 0.5))
+    negative_count = int(target.shape[0] - positive_count)
+    if positive_count == 0 or negative_count == 0:
+        return 0.5
+    order = np.argsort(scores, kind="mergesort")
+    ranks = np.empty_like(order, dtype=np.float64)
+    ranks[order] = np.arange(1, scores.shape[0] + 1, dtype=np.float64)
+    positive_rank_sum = float(np.sum(ranks[target >= 0.5]))
+    auc = (positive_rank_sum - positive_count * (positive_count + 1) / 2.0) / max(
+        positive_count * negative_count,
+        1,
+    )
+    return float(np.clip(auc, 0.0, 1.0))
+
+
+def _balanced_accuracy(predicted_label: np.ndarray, target: np.ndarray) -> float:
+    pred = (np.asarray(predicted_label, dtype=np.float32).reshape(-1) >= 0.5)
+    target_bool = (np.asarray(target, dtype=np.float32).reshape(-1) >= 0.5)
+    positive = target_bool
+    negative = ~target_bool
+    if not np.any(positive) or not np.any(negative):
+        return 0.5
+    true_positive_rate = float(np.mean(pred[positive] == target_bool[positive]))
+    true_negative_rate = float(np.mean(pred[negative] == target_bool[negative]))
+    return 0.5 * (true_positive_rate + true_negative_rate)
 
 
 def _safe_cosine(a: np.ndarray, b: np.ndarray) -> float:
@@ -1224,10 +2398,38 @@ def _rank_rows_within_lane(rows: Sequence[ControlLaneProbeRow]) -> list[ControlL
     return ranked
 
 
+def _rank_region_rows(rows: Sequence[ControlLaneRegionProbeRow]) -> list[ControlLaneRegionProbeRow]:
+    ranked: list[ControlLaneRegionProbeRow] = []
+    keys = sorted({(row.lane_name, row.region_mode) for row in rows})
+    for lane_name, region_mode in keys:
+        target_rows = [row for row in rows if row.lane_name == lane_name and row.region_mode == region_mode]
+        target_rows.sort(
+            key=lambda row: (
+                row.status != "ok",
+                row.call_group_count < 2,
+                -_region_row_rank_score(row),
+                -row.auc_mean,
+                -row.balanced_accuracy_mean,
+                row.normalized_mse_mean,
+                row.layer_index,
+                -1 if row.window_index is None else row.window_index,
+            )
+        )
+        for rank, row in enumerate(target_rows, start=1):
+            ranked.append(_copy_region_row_with_rank(row, rank=rank))
+    return ranked
+
+
 def _row_rank_score(row: ControlLaneProbeRow) -> float:
     if row.call_heldout_status == "ok":
         return float(row.call_heldout_correlation_mean)
     return float(row.correlation_mean)
+
+
+def _region_row_rank_score(row: ControlLaneRegionProbeRow) -> float:
+    if row.call_heldout_status == "ok":
+        return float(row.call_heldout_auc_mean)
+    return float(row.auc_mean)
 
 
 def _copy_row_with_rank(row: ControlLaneProbeRow, *, rank: int) -> ControlLaneProbeRow:
@@ -1285,6 +2487,65 @@ def _copy_row_with_rank(row: ControlLaneProbeRow, *, rank: int) -> ControlLanePr
     )
 
 
+def _copy_region_row_with_rank(row: ControlLaneRegionProbeRow, *, rank: int) -> ControlLaneRegionProbeRow:
+    return ControlLaneRegionProbeRow(
+        lane_name=row.lane_name,
+        region_mode=row.region_mode,
+        region_family=row.region_family,
+        layer_index=row.layer_index,
+        method=row.method,
+        alignment_mode=row.alignment_mode,
+        auc_mean=row.auc_mean,
+        auc_std=row.auc_std,
+        balanced_accuracy_mean=row.balanced_accuracy_mean,
+        balanced_accuracy_std=row.balanced_accuracy_std,
+        correlation_mean=row.correlation_mean,
+        correlation_std=row.correlation_std,
+        normalized_mse_mean=row.normalized_mse_mean,
+        normalized_mse_std=row.normalized_mse_std,
+        fold_count=row.fold_count,
+        sample_count=row.sample_count,
+        feature_count=row.feature_count,
+        lane_frames=row.lane_frames,
+        activation_call_count=row.activation_call_count,
+        region_count=row.region_count,
+        positive_count=row.positive_count,
+        negative_count=row.negative_count,
+        positive_fraction=row.positive_fraction,
+        region_delta_norm=row.region_delta_norm,
+        ridge_region_cosine=row.ridge_region_cosine,
+        call_group_count=row.call_group_count,
+        call_heldout_auc_mean=row.call_heldout_auc_mean,
+        call_heldout_auc_std=row.call_heldout_auc_std,
+        call_heldout_balanced_accuracy_mean=row.call_heldout_balanced_accuracy_mean,
+        call_heldout_balanced_accuracy_std=row.call_heldout_balanced_accuracy_std,
+        call_heldout_correlation_mean=row.call_heldout_correlation_mean,
+        call_heldout_correlation_std=row.call_heldout_correlation_std,
+        call_heldout_fold_count=row.call_heldout_fold_count,
+        call_heldout_status=row.call_heldout_status,
+        rank=rank,
+        status=row.status,
+        error=row.error,
+        window_index=row.window_index,
+        window_label=row.window_label,
+        window_start_fraction=row.window_start_fraction,
+        window_end_fraction=row.window_end_fraction,
+        call_start=row.call_start,
+        call_end=row.call_end,
+        window_count=row.window_count,
+        step_index=row.step_index,
+        sampler_index=row.sampler_index,
+        timestep=row.timestep,
+        sigma=row.sigma,
+        logsnr=row.logsnr,
+        sampler_type=row.sampler_type,
+        calls_per_step=row.calls_per_step,
+        mapping_status=row.mapping_status,
+        null_kind=row.null_kind,
+        source=row.source,
+    )
+
+
 def _probe_match_key(row: ControlLaneProbeRow | Mapping[str, Any]) -> tuple[Any, ...]:
     layer_index = _optional_int(_row_get(row, "layer_index"))
     return (
@@ -1299,7 +2560,22 @@ def _probe_match_key(row: ControlLaneProbeRow | Mapping[str, Any]) -> tuple[Any,
     )
 
 
-def _matched_null_kinds(rows: Sequence[ControlLaneProbeRow | Mapping[str, Any]]) -> list[str]:
+def _region_probe_match_key(row: ControlLaneRegionProbeRow | Mapping[str, Any]) -> tuple[Any, ...]:
+    layer_index = _optional_int(_row_get(row, "layer_index"))
+    return (
+        str(_row_get(row, "lane_name", "")),
+        str(_row_get(row, "region_mode", "")),
+        -1 if layer_index is None else int(layer_index),
+        str(_row_get(row, "alignment_mode", "")),
+        _optional_int(_row_get(row, "window_index")),
+        _optional_int(_row_get(row, "call_start")),
+        _optional_int(_row_get(row, "call_end")),
+        _optional_int(_row_get(row, "step_index")),
+        _optional_int(_row_get(row, "sampler_index")),
+    )
+
+
+def _matched_null_kinds(rows: Sequence[ControlLaneProbeRow | ControlLaneRegionProbeRow | Mapping[str, Any]]) -> list[str]:
     return sorted(
         {
             str(_row_get(row, "null_kind", "") or "")
@@ -1371,6 +2647,78 @@ def _empty_probe_row(
     )
 
 
+def _empty_region_probe_row(
+    target_lane: ControlLane,
+    *,
+    base_lane_name: str,
+    region_mode: str,
+    region_family: str,
+    region_count: int,
+    layer_index: int,
+    alignment_mode: str,
+    method: str,
+    status: str,
+    error: str,
+    window_index: int | None,
+    window_label: str,
+    call_start: int | None,
+    call_end: int | None,
+    window_count: int | None,
+    sample_count: int = 0,
+    feature_count: int = 0,
+    positive_count: int = 0,
+    negative_count: int = 0,
+    activation_call_count: int = 0,
+    step_metadata: Mapping[str, Any] | None = None,
+    null_kind: str = "",
+) -> ControlLaneRegionProbeRow:
+    step_metadata = dict(step_metadata or {})
+    return ControlLaneRegionProbeRow(
+        lane_name=base_lane_name,
+        region_mode=region_mode,
+        region_family=region_family,
+        layer_index=layer_index,
+        method=method,
+        alignment_mode=alignment_mode,
+        auc_mean=0.0,
+        auc_std=0.0,
+        balanced_accuracy_mean=0.0,
+        balanced_accuracy_std=0.0,
+        correlation_mean=0.0,
+        correlation_std=0.0,
+        normalized_mse_mean=0.0,
+        normalized_mse_std=0.0,
+        fold_count=0,
+        sample_count=int(sample_count),
+        feature_count=int(feature_count),
+        lane_frames=target_lane.frames,
+        activation_call_count=int(activation_call_count),
+        region_count=int(region_count),
+        positive_count=int(positive_count),
+        negative_count=int(negative_count),
+        positive_fraction=float(positive_count / max(positive_count + negative_count, 1)),
+        region_delta_norm=0.0,
+        ridge_region_cosine=0.0,
+        status=status,
+        error=error,
+        window_index=window_index,
+        window_label=window_label,
+        call_start=call_start,
+        call_end=call_end,
+        window_count=window_count,
+        step_index=_optional_int(step_metadata.get("step_index")),
+        sampler_index=_optional_int(step_metadata.get("sampler_index")),
+        timestep=_optional_float(step_metadata.get("timestep")),
+        sigma=_optional_float(step_metadata.get("sigma")),
+        logsnr=_optional_float(step_metadata.get("logsnr")),
+        sampler_type=str(step_metadata.get("sampler_type", "") or ""),
+        calls_per_step=_optional_int(step_metadata.get("calls_per_step")),
+        mapping_status=str(step_metadata.get("mapping_status", "") or ""),
+        null_kind=str(null_kind or ""),
+        source=target_lane.source,
+    )
+
+
 def _window_label(window_index: int, window_count: int, start: int, end: int) -> str:
     if window_count == 1:
         return "all"
@@ -1389,6 +2737,105 @@ def _to_numpy(value: Any) -> np.ndarray:
     if torch is not None and isinstance(value, torch.Tensor):
         return value.detach().float().cpu().numpy()
     return np.asarray(value, dtype=np.float32)
+
+
+def _region_target_lane(
+    lane: ControlLane,
+    *,
+    region_mode: str,
+    region_thresholds: Mapping[str, float] | float | None = None,
+    region_percentiles: Mapping[str, float] | float | None = None,
+    region_min_duration_seconds: float = 0.0,
+    region_merge_gap_seconds: float = 0.0,
+    min_confidence: float = 0.0,
+) -> tuple[ControlLane, int, str]:
+    threshold = _mode_value(region_thresholds, region_mode)
+    percentile = _mode_value(region_percentiles, region_mode)
+    regions = regions_from_control_lane(
+        lane,
+        mode=region_mode,
+        threshold=threshold,
+        percentile=percentile,
+        min_duration_seconds=region_min_duration_seconds,
+        merge_gap_seconds=region_merge_gap_seconds,
+        min_confidence=min_confidence,
+    )
+    values = control_lane_mask(lane, regions=regions)
+    requested_mode = str(region_mode).lower().strip()
+    canonical_mode = str(CONTROL_LANE_REGION_MODE_ALIASES.get(requested_mode, requested_mode))
+    region_family = _region_family_for_mode(canonical_mode)
+    if regions:
+        canonical_mode = str(regions[0].metadata.get("mode", canonical_mode) or canonical_mode)
+        region_family = str(regions[0].metadata.get("mode_family", region_family) or region_family)
+    target_lane = ControlLane(
+        name=f"{lane.name}.{canonical_mode}",
+        values=values.astype(np.float32),
+        rate_hz=lane.rate_hz,
+        confidence=lane.confidence,
+        source=lane.source,
+        metadata={
+            **lane.metadata,
+            "base_lane_name": lane.name,
+            "region_mode": canonical_mode,
+            "requested_region_mode": str(region_mode),
+            "region_family": region_family,
+            "region_count": int(len(regions)),
+            "region_threshold": threshold,
+            "region_percentile": percentile,
+            "region_min_duration_seconds": float(region_min_duration_seconds),
+            "region_merge_gap_seconds": float(region_merge_gap_seconds),
+        },
+    )
+    return target_lane, int(len(regions)), region_family
+
+
+def _null_region_lane(lane: ControlLane, null_kind: str, rng: np.random.Generator) -> ControlLane:
+    kind = str(null_kind).lower()
+    values = (lane.values.astype(np.float32) >= 0.5).astype(np.float32)
+    confidence = None if lane.confidence is None else lane.confidence.astype(np.float32)
+    if kind in {"shuffle", "shuffled", "permute", "permutation"}:
+        values = values[rng.permutation(values.shape[0])]
+    elif kind in {"reverse", "reversed", "time_reverse"}:
+        values = values[::-1]
+        confidence = None if confidence is None else confidence[::-1]
+    elif kind in {"random", "duration_matched", "prevalence"}:
+        positive_count = int(np.sum(values >= 0.5))
+        values = np.zeros_like(values, dtype=np.float32)
+        if positive_count > 0:
+            indices = rng.choice(values.shape[0], size=positive_count, replace=False)
+            values[indices] = 1.0
+    else:
+        raise ValueError("region null_kind must be 'shuffle', 'reverse', or 'random'")
+    return ControlLane(
+        name=lane.name,
+        values=values.astype(np.float32),
+        rate_hz=lane.rate_hz,
+        confidence=confidence,
+        source=lane.source,
+        metadata={**lane.metadata, "null_kind": kind},
+    )
+
+
+def _mode_value(values: Mapping[str, float] | float | None, mode: str) -> float | None:
+    if values is None:
+        return None
+    if isinstance(values, Mapping):
+        mode_key = str(mode)
+        canonical_key = CONTROL_LANE_REGION_MODE_ALIASES.get(mode_key.lower().strip(), mode_key.lower().strip())
+        value = values.get(mode_key)
+        if value is None:
+            value = values.get(mode_key.lower().strip())
+        if value is None:
+            value = values.get(canonical_key)
+        return None if value is None else float(value)
+    return float(values)
+
+
+def _region_family_for_mode(mode: str) -> str:
+    for family, modes in control_lane_region_mode_families().items():
+        if str(mode) in modes:
+            return family
+    return "unknown"
 
 
 def _null_control_lane(lane: ControlLane, null_kind: str, rng: np.random.Generator) -> ControlLane:
@@ -1455,13 +2902,45 @@ def _select_top_probe_rows(
     return selected
 
 
-def _row_get(row: ControlLaneProbeRow | Mapping[str, Any], key: str, default: Any = None) -> Any:
+def _select_top_region_probe_rows(
+    rows: Sequence[ControlLaneRegionProbeRow | Mapping[str, Any]],
+    *,
+    top_k_per_target: int,
+    include_null: bool = False,
+) -> list[ControlLaneRegionProbeRow | Mapping[str, Any]]:
+    grouped: dict[tuple[str, str], list[ControlLaneRegionProbeRow | Mapping[str, Any]]] = {}
+    for row in rows:
+        if str(_row_get(row, "status", "ok") or "ok") not in {"", "ok"}:
+            continue
+        if not include_null and str(_row_get(row, "null_kind", "") or ""):
+            continue
+        lane_name = str(_row_get(row, "lane_name", ""))
+        region_mode = str(_row_get(row, "region_mode", ""))
+        if not lane_name or not region_mode:
+            continue
+        grouped.setdefault((lane_name, region_mode), []).append(row)
+    selected: list[ControlLaneRegionProbeRow | Mapping[str, Any]] = []
+    for key in sorted(grouped):
+        target_rows = grouped[key]
+        target_rows.sort(
+            key=lambda row: (
+                int(_row_get(row, "rank", 999999) or 999999),
+                -float(_row_get(row, "auc_mean", 0.0) or 0.0),
+                -float(_row_get(row, "balanced_accuracy_mean", 0.0) or 0.0),
+                float(_row_get(row, "normalized_mse_mean", 0.0) or 0.0),
+            )
+        )
+        selected.extend(target_rows[: max(1, int(top_k_per_target))])
+    return selected
+
+
+def _row_get(row: ControlLaneProbeRow | ControlLaneRegionProbeRow | Mapping[str, Any], key: str, default: Any = None) -> Any:
     if isinstance(row, Mapping):
         return row.get(key, default)
     return getattr(row, key, default)
 
 
-def _row_to_dict(row: ControlLaneProbeRow | Mapping[str, Any]) -> dict[str, Any]:
+def _row_to_dict(row: ControlLaneProbeRow | ControlLaneRegionProbeRow | Mapping[str, Any]) -> dict[str, Any]:
     if isinstance(row, Mapping):
         return dict(row)
     return row.to_dict()

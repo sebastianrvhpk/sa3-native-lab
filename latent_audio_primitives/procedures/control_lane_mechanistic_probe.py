@@ -11,8 +11,12 @@ from latent_audio_primitives.adapters.sa3_residual_hooks import ActivationCollec
 from latent_audio_primitives.control_lanes import ControlLane
 from latent_audio_primitives.control_lane_probes import (
     ControlLaneProbeRow,
+    ControlLaneRegionProbeRow,
     control_lane_active_direction_table,
     control_lane_layer_probe_rows,
+    control_lane_null_region_layer_probe_rows,
+    control_lane_null_region_timestep_probe_rows,
+    control_lane_null_region_window_probe_rows,
     control_lane_null_layer_probe_rows,
     control_lane_null_timestep_probe_rows,
     control_lane_null_window_probe_rows,
@@ -20,6 +24,14 @@ from latent_audio_primitives.control_lane_probes import (
     control_lane_probe_prediction_table,
     control_lane_probe_table,
     control_lane_probe_top_table,
+    control_lane_region_direction_table,
+    control_lane_region_layer_probe_rows,
+    control_lane_region_null_margin_table,
+    control_lane_region_prediction_table,
+    control_lane_region_probe_table,
+    control_lane_region_probe_top_table,
+    control_lane_region_timestep_probe_rows,
+    control_lane_region_window_probe_rows,
     control_lane_timestep_probe_rows,
     control_lane_window_probe_rows,
 )
@@ -36,10 +48,20 @@ class ControlLaneMechanisticProbeResult:
     null_layer_rows: list[ControlLaneProbeRow] = field(default_factory=list)
     null_window_rows: list[ControlLaneProbeRow] = field(default_factory=list)
     null_timestep_rows: list[ControlLaneProbeRow] = field(default_factory=list)
+    region_layer_rows: list[ControlLaneRegionProbeRow] = field(default_factory=list)
+    region_window_rows: list[ControlLaneRegionProbeRow] = field(default_factory=list)
+    region_timestep_rows: list[ControlLaneRegionProbeRow] = field(default_factory=list)
+    null_region_layer_rows: list[ControlLaneRegionProbeRow] = field(default_factory=list)
+    null_region_window_rows: list[ControlLaneRegionProbeRow] = field(default_factory=list)
+    null_region_timestep_rows: list[ControlLaneRegionProbeRow] = field(default_factory=list)
     null_margin_rows: list[dict[str, Any]] = field(default_factory=list)
+    region_null_margin_rows: list[dict[str, Any]] = field(default_factory=list)
     prediction_rows: list[dict[str, Any]] = field(default_factory=list)
+    region_prediction_rows: list[dict[str, Any]] = field(default_factory=list)
     active_direction_rows: list[dict[str, Any]] = field(default_factory=list)
+    region_direction_rows: list[dict[str, Any]] = field(default_factory=list)
     top_rows: list[dict[str, Any]] = field(default_factory=list)
+    region_top_rows: list[dict[str, Any]] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def save(self, directory: str | Path) -> Path:
@@ -57,14 +79,34 @@ class ControlLaneMechanisticProbeResult:
             json.dump(control_lane_probe_table(self.null_window_rows), f, indent=2, sort_keys=True)
         with (directory / "control_lane_null_timestep_probe_rows.json").open("w", encoding="utf-8") as f:
             json.dump(control_lane_probe_table(self.null_timestep_rows), f, indent=2, sort_keys=True)
+        with (directory / "control_lane_region_layer_probe_rows.json").open("w", encoding="utf-8") as f:
+            json.dump(control_lane_region_probe_table(self.region_layer_rows), f, indent=2, sort_keys=True)
+        with (directory / "control_lane_region_window_probe_rows.json").open("w", encoding="utf-8") as f:
+            json.dump(control_lane_region_probe_table(self.region_window_rows), f, indent=2, sort_keys=True)
+        with (directory / "control_lane_region_timestep_probe_rows.json").open("w", encoding="utf-8") as f:
+            json.dump(control_lane_region_probe_table(self.region_timestep_rows), f, indent=2, sort_keys=True)
+        with (directory / "control_lane_null_region_layer_probe_rows.json").open("w", encoding="utf-8") as f:
+            json.dump(control_lane_region_probe_table(self.null_region_layer_rows), f, indent=2, sort_keys=True)
+        with (directory / "control_lane_null_region_window_probe_rows.json").open("w", encoding="utf-8") as f:
+            json.dump(control_lane_region_probe_table(self.null_region_window_rows), f, indent=2, sort_keys=True)
+        with (directory / "control_lane_null_region_timestep_probe_rows.json").open("w", encoding="utf-8") as f:
+            json.dump(control_lane_region_probe_table(self.null_region_timestep_rows), f, indent=2, sort_keys=True)
         with (directory / "control_lane_null_margin_rows.json").open("w", encoding="utf-8") as f:
             json.dump(self.null_margin_rows, f, indent=2, sort_keys=True)
+        with (directory / "control_lane_region_null_margin_rows.json").open("w", encoding="utf-8") as f:
+            json.dump(self.region_null_margin_rows, f, indent=2, sort_keys=True)
         with (directory / "control_lane_prediction_rows.json").open("w", encoding="utf-8") as f:
             json.dump(self.prediction_rows, f, indent=2, sort_keys=True)
+        with (directory / "control_lane_region_prediction_rows.json").open("w", encoding="utf-8") as f:
+            json.dump(self.region_prediction_rows, f, indent=2, sort_keys=True)
         with (directory / "control_lane_active_direction_rows.json").open("w", encoding="utf-8") as f:
             json.dump(self.active_direction_rows, f, indent=2, sort_keys=True)
+        with (directory / "control_lane_region_direction_rows.json").open("w", encoding="utf-8") as f:
+            json.dump(self.region_direction_rows, f, indent=2, sort_keys=True)
         with (directory / "control_lane_top_rows.json").open("w", encoding="utf-8") as f:
             json.dump(self.top_rows, f, indent=2, sort_keys=True)
+        with (directory / "control_lane_region_top_rows.json").open("w", encoding="utf-8") as f:
+            json.dump(self.region_top_rows, f, indent=2, sort_keys=True)
         with (directory / "metadata.json").open("w", encoding="utf-8") as f:
             json.dump(self.metadata, f, indent=2, sort_keys=True)
         return directory
@@ -106,6 +148,18 @@ class SA3ControlLaneProbeExtractor:
         null_timestep_probe: bool = False,
         null_kinds: Sequence[str] = ("shuffle", "reverse", "random"),
         null_seed: int = 0,
+        region_probe: bool = False,
+        region_modes: Sequence[str] = ("crest", "change", "sustain_high", "smooth"),
+        region_percentiles: dict[str, float] | float | None = None,
+        region_min_duration_seconds: float = 0.0,
+        region_merge_gap_seconds: float = 0.0,
+        region_null_probe: bool = False,
+        region_null_timestep_probe: bool = False,
+        region_prediction_probe: bool = True,
+        region_direction_preview: bool = True,
+        region_top_k_per_target: int = 1,
+        region_min_positive_samples: int = 4,
+        region_min_negative_samples: int = 4,
         prediction_probe: bool = True,
         prediction_top_k_per_lane: int = 1,
         prediction_max_points_per_row: int = 240,
@@ -126,6 +180,8 @@ class SA3ControlLaneProbeExtractor:
             raise ValueError("timestep_activation_mode must be 'tokens' or 'mean'")
         if null_timestep_probe and not timestep_probe:
             raise ValueError("null_timestep_probe=True requires timestep_probe=True")
+        if region_null_timestep_probe and not timestep_probe:
+            raise ValueError("region_null_timestep_probe=True requires timestep_probe=True")
 
         torch = _require_torch()
         torchaudio = _require_torchaudio()
@@ -259,6 +315,121 @@ class SA3ControlLaneProbeExtractor:
                     active_percentile=active_percentile,
                     quiet_percentile=quiet_percentile,
                 )
+        region_layer_rows: list[ControlLaneRegionProbeRow] = []
+        region_window_rows: list[ControlLaneRegionProbeRow] = []
+        region_timestep_rows: list[ControlLaneRegionProbeRow] = []
+        null_region_layer_rows: list[ControlLaneRegionProbeRow] = []
+        null_region_window_rows: list[ControlLaneRegionProbeRow] = []
+        null_region_timestep_rows: list[ControlLaneRegionProbeRow] = []
+        if region_probe:
+            region_layer_rows = control_lane_region_layer_probe_rows(
+                raw_activations,
+                lanes,
+                region_modes=region_modes,
+                lane_names=lane_names,
+                region_percentiles=region_percentiles,
+                region_min_duration_seconds=region_min_duration_seconds,
+                region_merge_gap_seconds=region_merge_gap_seconds,
+                cv_folds=cv_folds,
+                ridge_alpha=ridge_alpha,
+                min_samples=min_samples,
+                min_positive_samples=region_min_positive_samples,
+                min_negative_samples=region_min_negative_samples,
+                min_confidence=min_confidence,
+            )
+            if trajectory_probe:
+                region_window_rows = control_lane_region_window_probe_rows(
+                    raw_activations,
+                    lanes,
+                    region_modes=region_modes,
+                    lane_names=lane_names,
+                    window_count=trajectory_window_count,
+                    window_size=trajectory_window_size,
+                    region_percentiles=region_percentiles,
+                    region_min_duration_seconds=region_min_duration_seconds,
+                    region_merge_gap_seconds=region_merge_gap_seconds,
+                    cv_folds=cv_folds,
+                    ridge_alpha=ridge_alpha,
+                    min_samples=min_samples,
+                    min_positive_samples=region_min_positive_samples,
+                    min_negative_samples=region_min_negative_samples,
+                    min_confidence=min_confidence,
+                )
+            if timestep_probe and timestep_activations:
+                region_timestep_rows = control_lane_region_timestep_probe_rows(
+                    timestep_activations,
+                    lanes,
+                    layer_timestep_metadata=timestep_metadata,
+                    region_modes=region_modes,
+                    lane_names=lane_names,
+                    region_percentiles=region_percentiles,
+                    region_min_duration_seconds=region_min_duration_seconds,
+                    region_merge_gap_seconds=region_merge_gap_seconds,
+                    cv_folds=cv_folds,
+                    ridge_alpha=ridge_alpha,
+                    min_samples=min_samples,
+                    min_positive_samples=region_min_positive_samples,
+                    min_negative_samples=region_min_negative_samples,
+                    min_confidence=min_confidence,
+                )
+            if region_null_probe:
+                null_region_layer_rows = control_lane_null_region_layer_probe_rows(
+                    raw_activations,
+                    lanes,
+                    null_kinds=null_kinds,
+                    seed=null_seed + 10,
+                    region_modes=region_modes,
+                    lane_names=lane_names,
+                    region_percentiles=region_percentiles,
+                    region_min_duration_seconds=region_min_duration_seconds,
+                    region_merge_gap_seconds=region_merge_gap_seconds,
+                    cv_folds=cv_folds,
+                    ridge_alpha=ridge_alpha,
+                    min_samples=min_samples,
+                    min_positive_samples=region_min_positive_samples,
+                    min_negative_samples=region_min_negative_samples,
+                    min_confidence=min_confidence,
+                )
+                if trajectory_probe:
+                    null_region_window_rows = control_lane_null_region_window_probe_rows(
+                        raw_activations,
+                        lanes,
+                        null_kinds=null_kinds,
+                        seed=null_seed + 11,
+                        region_modes=region_modes,
+                        lane_names=lane_names,
+                        layer_indices=None,
+                        window_count=trajectory_window_count,
+                        window_size=trajectory_window_size,
+                        region_percentiles=region_percentiles,
+                        region_min_duration_seconds=region_min_duration_seconds,
+                        region_merge_gap_seconds=region_merge_gap_seconds,
+                        cv_folds=cv_folds,
+                        ridge_alpha=ridge_alpha,
+                        min_samples=min_samples,
+                        min_positive_samples=region_min_positive_samples,
+                        min_negative_samples=region_min_negative_samples,
+                        min_confidence=min_confidence,
+                    )
+                if region_null_timestep_probe and timestep_probe and timestep_activations:
+                    null_region_timestep_rows = control_lane_null_region_timestep_probe_rows(
+                        timestep_activations,
+                        lanes,
+                        layer_timestep_metadata=timestep_metadata,
+                        null_kinds=null_kinds,
+                        seed=null_seed + 12,
+                        region_modes=region_modes,
+                        lane_names=lane_names,
+                        region_percentiles=region_percentiles,
+                        region_min_duration_seconds=region_min_duration_seconds,
+                        region_merge_gap_seconds=region_merge_gap_seconds,
+                        cv_folds=cv_folds,
+                        ridge_alpha=ridge_alpha,
+                        min_samples=min_samples,
+                        min_positive_samples=region_min_positive_samples,
+                        min_negative_samples=region_min_negative_samples,
+                        min_confidence=min_confidence,
+                    )
         null_margin_rows: list[dict[str, Any]] = []
         if null_probe:
             null_margin_rows.extend(control_lane_null_margin_table(layer_rows, null_layer_rows))
@@ -266,6 +437,19 @@ class SA3ControlLaneProbeExtractor:
                 null_margin_rows.extend(control_lane_null_margin_table(window_rows, null_window_rows))
             if timestep_rows and null_timestep_rows:
                 null_margin_rows.extend(control_lane_null_margin_table(timestep_rows, null_timestep_rows))
+        region_null_margin_rows: list[dict[str, Any]] = []
+        if region_probe and region_null_probe:
+            region_null_margin_rows.extend(
+                control_lane_region_null_margin_table(region_layer_rows, null_region_layer_rows)
+            )
+            if region_window_rows:
+                region_null_margin_rows.extend(
+                    control_lane_region_null_margin_table(region_window_rows, null_region_window_rows)
+                )
+            if region_timestep_rows and null_region_timestep_rows:
+                region_null_margin_rows.extend(
+                    control_lane_region_null_margin_table(region_timestep_rows, null_region_timestep_rows)
+                )
         prediction_rows: list[dict[str, Any]] = []
         if prediction_probe:
             prediction_rows = control_lane_probe_prediction_table(
@@ -277,6 +461,21 @@ class SA3ControlLaneProbeExtractor:
                 ridge_alpha=ridge_alpha,
                 cv_folds=cv_folds,
                 min_confidence=min_confidence,
+            )
+        region_prediction_rows: list[dict[str, Any]] = []
+        if region_probe and region_prediction_probe:
+            region_prediction_rows = control_lane_region_prediction_table(
+                raw_activations,
+                lanes,
+                region_window_rows or region_layer_rows,
+                top_k_per_target=region_top_k_per_target,
+                max_points_per_row=prediction_max_points_per_row,
+                ridge_alpha=ridge_alpha,
+                cv_folds=cv_folds,
+                min_confidence=min_confidence,
+                region_percentiles=region_percentiles,
+                region_min_duration_seconds=region_min_duration_seconds,
+                region_merge_gap_seconds=region_merge_gap_seconds,
             )
         active_direction_rows: list[dict[str, Any]] = []
         if active_direction_preview:
@@ -291,11 +490,43 @@ class SA3ControlLaneProbeExtractor:
                 active_percentile=active_percentile,
                 quiet_percentile=quiet_percentile,
             )
+        region_direction_rows: list[dict[str, Any]] = []
+        if region_probe and region_direction_preview:
+            region_direction_rows = control_lane_region_direction_table(
+                raw_activations,
+                lanes,
+                region_window_rows or region_layer_rows,
+                top_k_per_target=region_top_k_per_target,
+                top_features=direction_top_features,
+                ridge_alpha=ridge_alpha,
+                min_confidence=min_confidence,
+                region_percentiles=region_percentiles,
+                region_min_duration_seconds=region_min_duration_seconds,
+                region_merge_gap_seconds=region_merge_gap_seconds,
+            )
         top_rows = control_lane_probe_top_table(layer_rows, top_k_per_lane=1)
         if window_rows:
             top_rows.extend(control_lane_probe_top_table(window_rows, top_k_per_lane=1))
         if timestep_rows:
             top_rows.extend(control_lane_probe_top_table(timestep_rows, top_k_per_lane=1))
+        region_top_rows = control_lane_region_probe_top_table(
+            region_layer_rows,
+            top_k_per_target=region_top_k_per_target,
+        )
+        if region_window_rows:
+            region_top_rows.extend(
+                control_lane_region_probe_top_table(
+                    region_window_rows,
+                    top_k_per_target=region_top_k_per_target,
+                )
+            )
+        if region_timestep_rows:
+            region_top_rows.extend(
+                control_lane_region_probe_top_table(
+                    region_timestep_rows,
+                    top_k_per_target=region_top_k_per_target,
+                )
+            )
         return ControlLaneMechanisticProbeResult(
             layer_rows=layer_rows,
             window_rows=window_rows,
@@ -303,10 +534,20 @@ class SA3ControlLaneProbeExtractor:
             null_layer_rows=null_layer_rows,
             null_window_rows=null_window_rows,
             null_timestep_rows=null_timestep_rows,
+            region_layer_rows=region_layer_rows,
+            region_window_rows=region_window_rows,
+            region_timestep_rows=region_timestep_rows,
+            null_region_layer_rows=null_region_layer_rows,
+            null_region_window_rows=null_region_window_rows,
+            null_region_timestep_rows=null_region_timestep_rows,
             null_margin_rows=null_margin_rows,
+            region_null_margin_rows=region_null_margin_rows,
             prediction_rows=prediction_rows,
+            region_prediction_rows=region_prediction_rows,
             active_direction_rows=active_direction_rows,
+            region_direction_rows=region_direction_rows,
             top_rows=top_rows,
+            region_top_rows=region_top_rows,
             metadata={
                 "source_audio": str(path),
                 "source_duration_seconds": float(audio_duration),
@@ -338,6 +579,19 @@ class SA3ControlLaneProbeExtractor:
                 "null_kinds": list(null_kinds) if null_probe else [],
                 "null_seed": int(null_seed) if null_probe else None,
                 "null_margin_row_count": int(len(null_margin_rows)),
+                "region_probe": bool(region_probe),
+                "region_modes": list(region_modes) if region_probe else [],
+                "region_percentiles": region_percentiles if region_probe else None,
+                "region_min_duration_seconds": float(region_min_duration_seconds) if region_probe else None,
+                "region_merge_gap_seconds": float(region_merge_gap_seconds) if region_probe else None,
+                "region_null_probe": bool(region_null_probe) if region_probe else False,
+                "region_null_timestep_probe": bool(region_null_timestep_probe) if region_probe else False,
+                "region_null_margin_row_count": int(len(region_null_margin_rows)),
+                "region_prediction_probe": bool(region_prediction_probe) if region_probe else False,
+                "region_direction_preview": bool(region_direction_preview) if region_probe else False,
+                "region_top_k_per_target": int(region_top_k_per_target) if region_probe else None,
+                "region_min_positive_samples": int(region_min_positive_samples) if region_probe else None,
+                "region_min_negative_samples": int(region_min_negative_samples) if region_probe else None,
                 "prediction_probe": bool(prediction_probe),
                 "prediction_top_k_per_lane": int(prediction_top_k_per_lane) if prediction_probe else None,
                 "prediction_max_points_per_row": int(prediction_max_points_per_row) if prediction_probe else None,

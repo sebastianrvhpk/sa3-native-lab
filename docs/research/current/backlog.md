@@ -223,30 +223,33 @@ Evidence gap: residual activations are measurable, and layer plus sampler-step,
 observed trajectory-window, and control-lane predictability can now be ranked
 with cross-validated probes, but causal audio movement is not yet established.
 
-Native transition: `audio/control lanes or prompt/audio examples -> residual activations -> lane/layer rows + layer/timestep rows + layer/window rows -> residual direction -> alpha sweep -> evidence packet`.
+Native transition: `audio/control lanes or typed lane regions or prompt/audio examples -> residual activations -> lane/layer rows + typed region rows + layer/timestep rows + layer/window rows -> residual direction -> alpha sweep -> evidence packet`.
 
 Current support: residual hooks, prompt/audio vector extraction, root
 `residual_probes.py` activation examples/vector containers/probe rows,
 `control_lane_probes.py` continuous lane-predictability rows, sampler-timestep
 rows with `mapping_status`, token-blocked and call-held-out control-lane
-scores, null-control rows, true-vs-null margin rows, held-out prediction
-curves, active/quiet direction previews, alpha sweeps, residual feature basis,
-cross-validated layer, sampler-timestep, trajectory-window, and control-lane
-probe rows, trajectory maps, trajectory-derived alpha schedules,
+scores, typed state/event/transition/persistence region rows with AUC and
+balanced accuracy, prevalence-matched binary region nulls, true-vs-null margin
+rows, held-out prediction curves, active/quiet and region-vs-complement
+direction previews, alpha sweeps, residual feature basis, cross-validated
+layer, sampler-timestep, trajectory-window, and control-lane probe rows,
+trajectory maps, trajectory-derived alpha schedules,
 trajectory-derived flow probe banks, player/descriptors.
 
 Next run: run control-lane mechanistic probing on one source at true source
 duration with RMS, spectral flux, onset density, spectral-density band,
 latent-motion, and latent-channel lanes. Start with layer/window rows and null
 window margins; keep exact timestep probing disabled until the first pass
-identifies a small lane/layer set. Then run a narrowed exact-timestep audit with
+identifies a small lane/layer/region-mode set. Then run a narrowed exact-timestep audit with
 token-preserving timestep activations and optional timestep null controls.
 Before any long audit, run the control-lane preflight cell and require a nonzero
 active-source span plus `ok` timestep sample counts when timestep probing is
 enabled.
-Inspect layer/window/timestep heatmaps, null-control margins, prediction curves,
-active-direction previews, call-held-out scores, and repeatability rows across
-at least two seeds, prompts, or init-noise levels.
+Inspect layer/window/timestep heatmaps, typed region AUC heatmaps,
+null-control margins, region null margins, prediction curves, active-direction
+and region-vs-complement previews, call-held-out scores, and repeatability rows
+across at least two seeds, prompts, or init-noise levels.
 Only then choose whether a bounded alpha/patch sweep is scientifically
 justified.
 
@@ -255,9 +258,13 @@ Promote if:
 - alpha changes target qualities monotonically or predictably,
 - probe-ranked layers, timesteps, and windows repeat across seeds or example subsets,
 - lane-predictive layers/windows repeat for the same control lane,
+- typed region-predictive layers/windows repeat for the same lane and region
+  mode,
 - lane/timestep rows report exact or honestly grouped mapping rather than
   silently using observed-call windows,
 - true-lane rows beat shuffled/reversed/random null controls,
+- true typed-region rows beat shuffled/reversed/prevalence-matched binary null
+  controls,
 - call-held-out scores remain positive when enough observed calls are available,
 - held-out prediction curves track active source regions rather than padded
   silence,

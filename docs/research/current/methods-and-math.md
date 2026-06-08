@@ -1006,13 +1006,25 @@ metadata is unavailable or when extra model evaluations need grouping.
 ### Control-Lane Mechanistic Probing
 
 Control-lane probes ask whether SA3 residual activations expose measurable
-audio/SAME control lanes. The target is continuous, not a positive/reference
-class label.
+audio/SAME control lanes and typed temporal regions from those lanes. There are
+two target families:
+
+```text
+continuous lane target: y(t)
+typed region target:   m_r(t) in {0, 1}
+```
 
 For a control lane:
 
 ```text
 y(t) = lane value at audio or SAME latent time t
+```
+
+and for a typed region mode `r`:
+
+```text
+m_r(t) = 1[t belongs to a selected region of mode r]
+r in {high, low, crest, change, rising, falling, sustain_high, smooth, ...}
 ```
 
 and a captured residual activation with feature dimension last:
@@ -1047,6 +1059,32 @@ Score rows with held-out correlation, normalized MSE, and R2:
 score_l = corr(y_holdout, y_hat_holdout)
 NMSE_l = MSE(y_holdout, y_hat_holdout) / var(y_holdout)
 ```
+
+Typed region probe:
+
+```text
+x_j = a_l^{c,i}
+m_j = m_r^{c,i}
+```
+
+Fit the same ridge readout against the binary mask:
+
+```text
+w_{l,r}, b_{l,r} =
+  argmin_{w,b} sum_j (w^T x_j + b - m_j)^2 + lambda ||w||_2^2
+```
+
+Score typed-region rows with AUC, balanced accuracy, held-out correlation, and
+normalized MSE:
+
+```text
+AUC_{l,r} = P(score_positive > score_negative)
+BA_{l,r} = 0.5 * (TPR + TNR)
+```
+
+This is not a classifier claim about the model. It is a linear visibility test:
+does a residual layer/window/timestep contain enough information to separate a
+typed temporal condition from its complement?
 
 There are two evidence levels:
 
@@ -1109,6 +1147,12 @@ y_null(t) in {
   reversed y(t),
   random lane with mean/std of y(t)
 }
+
+m_null(t) in {
+  shuffled binary region mask,
+  reversed binary region mask,
+  random prevalence-matched binary mask
+}
 ```
 
 The useful evidence is not only `score(y)`, but the margin:
@@ -1142,14 +1186,39 @@ The active-direction preview stores only compact feature-index summaries, not a
 steering vector. It is a candidate microscope for later residual intervention,
 not an intervention by itself.
 
+Typed region contrast:
+
+```text
+d_{l,r} = mean(x_j | m_j = 1) - mean(x_j | m_j = 0)
+cos_{l,r} = cosine(d_{l,r}, w_{l,r})
+```
+
+This is stronger than a generic active/quiet split when the research question is
+about a specific event or state. Examples:
+
+```text
+spectral_flux.change
+spectral_density_high.sustain_high
+latent_motion_energy.crest
+latent_channel_energy.smooth
+```
+
+Typed region rows are the bridge from the full evidence atlas to mechanistic
+probing: the evidence cell finds complete lane/channel regions; the SA3 probe
+asks where those same typed regions are visible in residual activations.
+
 Interpretation:
 
 - high held-out correlation means a lane is linearly visible in a layer/window,
+- high typed-region AUC means a state/event/transition/persistence mask is
+  linearly separable in a layer/window,
 - call-held-out correlation means visibility is less likely to be an artifact
   of repeated lane curves across observed calls,
 - low normalized MSE means the probe beats a variance baseline,
 - a strong active/quiet delta means high-lane and low-lane regions occupy
   separated residual states,
+- a strong region-vs-complement delta means a typed temporal condition occupies
+  a separated residual state,
 - null margins test whether the lane relationship is stronger than trivial
   time/order controls,
 - `exact_one_call_per_step` is the cleanest sampler-coordinate evidence; grouped
