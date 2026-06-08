@@ -1,8 +1,8 @@
-"""Experiment-suite helpers for the SA3/SAME notebook lab.
+"""Measurement recipes for the SA3/SAME notebook lab.
 
 The helpers in this module keep the notebook cells small without turning the
-project into an app framework. They describe experiment rows, perturbation
-recipes, and lightweight measurements that compose the lower-level primitives.
+project into an app framework. They describe evidence rows, perturbation
+recipes, and lightweight measurements that compose lower-level primitives.
 """
 
 from __future__ import annotations
@@ -16,24 +16,6 @@ import numpy as np
 
 from .latent_blur import LatentBlurSpec, apply_latent_blur
 from .latent_dsp import LatentDSPSpec, apply_latent_dsp, latent_change_report
-
-
-@dataclass(frozen=True, slots=True)
-class ExperimentSuiteCard:
-    """One native experiment suite expressed as an executable notebook target."""
-
-    name: str
-    layer: str
-    object: str
-    transition: str
-    operation: str
-    measurement: str
-    maturity: str
-    promote_if: str
-    revise_if: str
-
-    def to_row(self) -> dict[str, str]:
-        return asdict(self)
 
 
 @dataclass(frozen=True, slots=True)
@@ -66,123 +48,6 @@ class LatentConstraintSpec:
         row = asdict(self)
         row["params"] = dict(self.params)
         return row
-
-
-def default_experiment_suite_cards() -> list[ExperimentSuiteCard]:
-    """Return the current ten notebook experiment suites."""
-
-    return [
-        ExperimentSuiteCard(
-            name="SAME bottleneck tomography",
-            layer="SAME representation",
-            object="target audio -> SAME latent z0",
-            transition="latent-preserving vs latent-breaking transforms",
-            operation="apply structured perturbations and direct-decode them",
-            measurement="audio/latent descriptor deltas, channel/temporal sensitivity",
-            maturity="microscope",
-            promote_if="the same perturbation families repeatedly predict audible failure modes",
-            revise_if="descriptor shifts do not line up with listening notes",
-        ),
-        ExperimentSuiteCard(
-            name="SA3 flow-semantic cartography",
-            layer="SA3 flow/conditioning",
-            object="z_t, t, prompt condition C(p)",
-            transition="prompt changes over fixed SAME target and flow probe bank",
-            operation="teacher-force SA3 velocity prediction under prompt families",
-            measurement="banded flow loss, cosine direction, conditional delta",
-            maturity="selector",
-            promote_if="low-loss prompts survive held-out timesteps and audible polishing",
-            revise_if="scores rank prompts well only for one source or one timestep band",
-        ),
-        ExperimentSuiteCard(
-            name="coupled edit survival",
-            layer="SA3-over-SAME coupled editing",
-            object="edited SAME latent and SA3 polished output",
-            transition="direct decode -> SA3 polish -> re-encode",
-            operation="compare whether edits are preserved, erased, amplified, or invented",
-            measurement="survival ratio against direct edit and plain-polish baselines",
-            maturity="measurement",
-            promote_if="survival labels predict which edits can become reliable operations",
-            revise_if="SA3 prior motion dominates every perturbation family",
-        ),
-        ExperimentSuiteCard(
-            name="latent control system identification",
-            layer="SAME representation",
-            object="latent trajectory and control lanes",
-            transition="audio examples -> lane values -> latent regressors",
-            operation="fit simple probes and test intervention sensitivity",
-            measurement="predictability, monotonic response, cross-file stability",
-            maturity="microscope",
-            promote_if="one lane has stable latent directions and audible monotonic control",
-            revise_if="probe scores vanish outside the fitting files",
-        ),
-        ExperimentSuiteCard(
-            name="stemless source cartography",
-            layer="SAME representation",
-            object="source latent, donor latent, channel/time masks",
-            transition="masked graft / dropout / interpolation",
-            operation="map which latent regions carry source-like or donor-like evidence",
-            measurement="source distance, donor pull, leakage under direct and polished decode",
-            maturity="microscope",
-            promote_if="regions behave consistently across donors and source families",
-            revise_if="all grafts behave like generic noise injection",
-        ),
-        ExperimentSuiteCard(
-            name="melody rhythm timbre factor atlas",
-            layer="cross-layer evidence join",
-            object="factor hypotheses over latents, lanes, prompts, and residual cells",
-            transition="factor-preserving vs factor-changing probes",
-            operation="collect convergent evidence for musical factor separability",
-            measurement="SAME lane score, flow score, trajectory score, listening note",
-            maturity="atlas",
-            promote_if="multiple microscopes agree on one factor boundary",
-            revise_if="a factor is only visible in one measurement family",
-        ),
-        ExperimentSuiteCard(
-            name="long-form latent composition",
-            layer="SAME memory / composition",
-            object="latent clips as graph nodes",
-            transition="continuation, bridge, loop, motif return",
-            operation="rank edges before auditioning long-form assembly",
-            measurement="boundary cost, loop cost, descriptor continuity, novelty budget",
-            maturity="selector",
-            promote_if="ranked edges reduce failed long-form auditions",
-            revise_if="low-cost edges still sound discontinuous",
-        ),
-        ExperimentSuiteCard(
-            name="prompt-condition geometry",
-            layer="SA3 conditioning",
-            object="prompt condition tensors and soft prompt states",
-            transition="prompt interpolation, prompt family deltas, learned soft tokens",
-            operation="measure condition-space neighborhoods against flow behavior",
-            measurement="condition distance, cosine, flow-loss delta, residual target overlap",
-            maturity="microscope",
-            promote_if="condition neighborhoods explain flow-score and soft-prompt behavior",
-            revise_if="condition distance is uninformative for flow loss or listening",
-        ),
-        ExperimentSuiteCard(
-            name="sampler physiology",
-            layer="SA3 internal trajectory",
-            object="sampler type, sigma/logSNR path, init noise, CFG, steps",
-            transition="same source and prompt over sampler settings",
-            operation="record trajectory metadata and compare output changes",
-            measurement="sigma/logSNR coverage, output delta, residual-band concentration",
-            maturity="microscope",
-            promote_if="sampler settings expose stable trajectory regions for intervention",
-            revise_if="recorded paths do not explain output variation",
-        ),
-        ExperimentSuiteCard(
-            name="latent constraint library",
-            layer="SAME intervention candidates",
-            object="latent scalar constraints and reference distances",
-            transition="latent update under explicit measurable objective",
-            operation="evaluate or optimize RMS, motion, loop, channel, and reference losses",
-            measurement="before/after constraint value, audio descriptor delta, survival",
-            maturity="intervention candidate",
-            promote_if="constraints move one property without broad representation damage",
-            revise_if="every constraint acts like an uncontrolled energy change",
-        ),
-    ]
 
 
 def default_bottleneck_specs() -> list[BottleneckPerturbationSpec]:

@@ -109,11 +109,12 @@ Coupled claim = compare direct SAME decode against SA3 polish.
 Promoted claim = add descriptors, listening notes, and ledger decisions.
 ```
 
-## Native Experiment Suite Measurements
+## Measurement Recipes
 
-The current notebook section `6. Native Experiment Suites` collects ten
-row-producing experiment suites over SA3/SAME native objects. These are
-implemented scaffolds, not promoted claims.
+The notebook includes row-producing method cells over SA3/SAME native objects.
+They are placed inside the relevant SAME, flow/conditioning, trajectory,
+memory/composition, or coupled-editing sections. These are implemented
+scaffolds, not promoted claims.
 
 ### SAME Bottleneck Tomography
 

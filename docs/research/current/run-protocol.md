@@ -101,7 +101,6 @@ evidence utility -> evidence packet setup, ledger and decision board
 | SA3 internal trajectory science | residual activations, sampler states, trajectory cells | activation/state -> trajectory map -> scheduled candidate -> output | Which internal signals are visible, schedulable, and eventually causal? |
 | SA3-over-SAME coupled editing bench | edited SAME latents | `z0` -> `z0'` -> direct decode / SA3 polish | Which latent edits survive, get erased, or get amplified by SA3? |
 | External comparison bench | imported audio/checkpoints/run notes | external audio output -> evidence packet | How do imported outputs compare under the same local evidence? |
-| Native experiment suites | native objects from all four layers | one of the ten section-6 suite transitions -> rows / audio / decisions | Which current avenue is ready to revise, promote, or drop from real evidence? |
 | Ledger and decision board | evidence packets and decisions | evidence -> maturity update | What is real, repeatable, useful, or only diagnostic? |
 
 ## Evidence Panels
@@ -126,7 +125,7 @@ For a method to be reviewable, collect:
 ```text
 commit hash
 research layer / evidence utility
-workbench / program
+notebook workbench
 object transition and method name
 claim maturity before the run
 model ID / SA3 checkpoint

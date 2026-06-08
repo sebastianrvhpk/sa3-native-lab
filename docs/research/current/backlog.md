@@ -45,7 +45,7 @@ evidence utility
 | High-risk intervention candidate | residual steering, cyclic trajectory, gradient guidance, posterior guidance, null-condition inversion | implemented/scaffolded, needs causal proof and artifact checks |
 | Promoted method | none yet | no repeated ledger evidence yet |
 | External comparison | Underfit handoff and audio-output baseline harness | scaffolded/import-only |
-| Implemented workbench scaffold | ten native experiment suite cells and `experiment_suites.py` rows | ready for Colab L4 execution, decoded evidence, listening notes, and ledger decisions |
+| Implemented method scaffolds | integrated method cells and `measurement_recipes.py` rows | ready for Colab L4 execution, decoded evidence, listening notes, and ledger decisions |
 
 ## Gap 1. Reproducible Flow Probe Evidence
 

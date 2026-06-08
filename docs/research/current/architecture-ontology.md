@@ -200,13 +200,13 @@ compare: preserved / amplified / repaired / erased / invented
 Notebook consequence: every coupled edit needs source, direct decode, plain
 polish, method polish, descriptor rows, source-preservation rows, and listening.
 
-## Native Experiment Suites
+## Current Method Inventory
 
-The notebook now has a section named `6. Native Experiment Suites`. These are
-the current ten executable suites. They are grouped by native objects and
-measurements rather than by legacy mode numbering.
+The newly added method cells are integrated into their existing notebook
+layers. This inventory names them in one place for review; it is not a separate
+notebook section or research category.
 
-| Suite | Layer | Native transition | Current maturity |
+| Line | Layer | Native transition | Current maturity |
 |---|---|---|---|
 | SAME bottleneck tomography | SAME representation | `z0 -> structured perturbation -> D(z0')` | microscope |
 | SA3 flow-semantic cartography | SA3 flow/conditioning | `target z0 + prompt family + shared probes -> banded flow rows` | microscope / selector |
@@ -221,7 +221,7 @@ measurements rather than by legacy mode numbering.
 
 ### Promotion Discipline
 
-These suites are deliberately not claims yet. Promotion still flows through
+These methods are deliberately not claims yet. Promotion still flows through
 the same evidence chain:
 
 ```text
