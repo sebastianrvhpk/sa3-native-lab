@@ -178,6 +178,10 @@ capability map is [Capability map](capability-map.md).
   summaries, geometry, periodicity, control lanes, audio descriptors, memory,
   curriculum, composition, style profiles/directions, flow-probe manifests,
   prompt semantic rows, and disagreement rows.
+- Control-lane evidence now separates complete measurement from probe
+  selection: the notebook exports full lane/channel artifacts, compact
+  channel-region overlap audits, ranked target rows, and a mech-probe target
+  manifest before any long SA3 residual probe is launched.
 
 Conclusion: the current library shape is coherent. The remaining issue is not
 whether these files are needed; it is whether each notebook method earns

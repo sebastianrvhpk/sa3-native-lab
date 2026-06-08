@@ -120,10 +120,17 @@ include enough evidence for its decision.
 | Frontier hypothesis | source link, native-object mapping, one concrete notebook run | native disagreement panel, runtime audit |
 
 For control-lane mechanistic probing, run the notebook preflight before a long
-audit. The preflight should report a non-empty active-source span and at least
-one `ok` token-preserving timestep row when timestep probing is enabled. If the
-preflight fails, fix the lane mask, hook mapping, or layer/lane selection before
-launching the expensive null/repeatability run.
+audit. The evidence preflight should report a non-empty active-source span,
+typed region-sweep rows, audio-event/SAME-event region comparisons,
+all-channel lane correlations, channel-region rows, a channel-region overlap
+summary/top-row packet, and a non-empty mech-target manifest. Treat the manifest
+as a spending plan for the expensive probe, not as proof of control. The
+mechanistic probe should then run on the strongest non-redundant manifest rows
+with null controls, typed region rows, prediction curves, and repeatability
+metadata. If timestep probing is enabled, the preflight should also report at
+least one `ok` token-preserving timestep row; otherwise fix the lane mask, hook
+mapping, timestep metadata, or layer/lane selection before launching the
+expensive null/repeatability run.
 
 ## Minimum Evidence Packet
 

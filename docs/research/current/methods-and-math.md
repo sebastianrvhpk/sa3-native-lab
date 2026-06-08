@@ -1613,6 +1613,7 @@ c_i(t) -> typed channel regions using the same temporal grammar
 lane regions x channel regions -> temporal overlap rows
 channel correlations -> coarse family labels
 top channels -> display-only individual channel lanes / heatmap
+overlap rows -> exhaustive counts + ranked top rows + probe-target manifest
 ```
 
 The atlas artifacts are intentionally more complete than the notebook display.
@@ -1622,6 +1623,31 @@ can be tested without repeating the source encode. Family labels such as
 `spectral_density`, `transient`, `same_motion`, or `weak_or_private` are
 selector summaries of the strongest active-window correlation; they are not a
 claim that a channel is causally dedicated to that factor.
+
+The channel-region overlap audit keeps the exhaustive count structure without
+requiring every raw overlap row to be written on every Colab pass. It reports
+row counts, positive overlaps, IoU-threshold counts, reference-lane groups,
+reference-lane/mode groups, channel-mode groups, channel-rank bands, ranked
+top rows, target rows, best-per-reference rows, and best-per-channel rows. The
+optional raw table remains available when the research question needs the full
+materialized Cartesian audit, but the default preflight artifact is the compact
+audit plus target manifest.
+
+The mech target manifest is a selector, not a conclusion:
+
+```text
+typed lane regions
++ audio-event/SAME-event region sweep matches
++ all-channel lane correlations
++ channel-region overlap targets
+-> lane_name, region_mode, candidate_times, supporting_channels,
+   target_priority_score, recommended_for_mech_probe
+```
+
+Recommended rows are the places worth spending SA3 residual-probe time. They
+only become control-lane evidence if the mechanistic probe later beats shuffled,
+reversed, random, and prevalence-matched nulls, and if repeated runs show the
+same lane/layer/window structure.
 
 Lane status:
 

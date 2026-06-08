@@ -187,18 +187,23 @@ Native transition: `audio -> deterministic MIR/DSP lane bank -> SAME z0 / SA3 re
 Current support: audio descriptors, RMS/spectral centroid/spectral flux lanes,
 spectral bandwidth, entropy, flatness, contrast, low/mid/high spectral-density
 band lanes, onset density, active source masks, active-window correlations,
-per-lane region sweeps, audio-event versus SAME-event region comparisons, full
-SAME-channel scores, full channel-lane traces, all-channel lane correlations,
-channel-region rows, channel-region overlap rows, channel-family summaries,
-lane mechanistic probes, latent DSP, descriptor deltas, and listening/ledger
-surfaces.
+per-lane region sweeps, full typed audio-event versus SAME-event region-sweep
+comparisons, full SAME-channel scores, full channel-lane traces, all-channel
+lane correlations, channel-region rows, compact channel-region overlap audits,
+ranked overlap top/target rows, mech-probe target manifests, optional raw
+channel-region overlap dumps, channel-family summaries, lane mechanistic
+probes, latent DSP, descriptor deltas, and listening/ledger surfaces.
 
-Next run: run the direct control-lane evidence cell on at least two clips and
-review the complete atlas artifacts before choosing display slices: active
-spans, active-window lane correlations, region sweeps, all-channel lane
-correlations, channel-family rows, and channel-region overlap rows. Then run
-SA3 control-lane mechanistic probing on the strongest non-redundant MIR/DSP
-lanes and on one or two high-confidence SAME-channel families.
+Next run: rerun the direct control-lane evidence cell on the current short clip
+with the default compact overlap audit, then inspect
+`evidence_control_lane_mech_target_manifest.json`,
+`evidence_control_lane_channel_region_overlap_summary.json`, and
+`evidence_control_lane_channel_region_overlap_targets.json`. If the manifest is
+non-empty and not just loudness/padding structure, run the evidence cell on one
+additional clip before the hour-long SA3 probe. Configure mechanistic probing
+from the strongest non-redundant manifest rows: one transient/event row, one
+spectral-density row, one SAME-motion row, and one SAME-channel-energy row when
+available.
 
 Promote if:
 
