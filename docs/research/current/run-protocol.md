@@ -113,6 +113,7 @@ include enough evidence for its decision.
 | Prompt inversion | flow loss rows, prompt candidates, baseline prompt | loss-by-timestep, attribution, decoded audition |
 | Source-preserving edit | source audio, baseline, method output, descriptor delta, nearest-memory rows | flow score, control lanes, geometry report |
 | Latent operator control | direct decode or polish, descriptor delta, listening notes | SAME bottleneck stress rows, flow score |
+| Latent objective/guidance | objective rows, before/after latent values, direct decode or polish, listening notes | control-lane renderings, geometry report, source-preservation rows |
 | Loop/continuation | loop preview, boundary/periodicity metrics, listening notes | bridge cost, lane continuity |
 | Residual steering | layer-probe rows, sampler-timestep rows, trajectory map, selected top-k cells/layers, vector metadata, alpha schedule, alpha sweep, descriptor/listening deltas | trajectory window rows, residual feature atlas, repeat probe run, trajectory-derived flow probe bank |
 | Dataset/memory method | memory rows, cluster/donor selection evidence, output audition | heldout rows, geometry/lane scores |

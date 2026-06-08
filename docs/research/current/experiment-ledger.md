@@ -149,7 +149,8 @@ Each promoted experiment should fill as many of these as relevant:
 | Loss-by-timestep panel | Which logSNR/timestep bands moved |
 | Memory-nearest rows | Distinguish source preservation from copying |
 | Geometry report | PCA, Mahalanobis movement, covariance transport effects |
-| Control-lane panel | Whether time-varying controls moved as intended |
+| Control-lane panel | Whether time-varying controls moved as intended, including overlays or heatmaps when useful |
+| Latent objective panel | Constraint values, before/after rows, and decoded evidence for objective-driven edits |
 | Residual atlas panel | Which layer/features moved and whether intervention was causal |
 | Trajectory cartography panel | Which layer/timestep cells were visible, selected, scheduled, and repeated |
 | Listening annotation | Human judgement with task-specific labels |

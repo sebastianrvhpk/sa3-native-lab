@@ -45,7 +45,7 @@ evidence utility
 | High-risk intervention candidate | residual steering, cyclic trajectory, gradient guidance, posterior guidance, null-condition inversion | implemented/scaffolded, needs causal proof and artifact checks |
 | Promoted method | none yet | no repeated ledger evidence yet |
 | External comparison | Underfit handoff and audio-output baseline harness | scaffolded/import-only |
-| Implemented method scaffolds | integrated method cells and `measurement_recipes.py` rows | ready for Colab L4 execution, decoded evidence, listening notes, and ledger decisions |
+| Implemented method scaffolds | integrated method cells plus `measurement_recipes.py`, `latent_constraints.py`, `residual_probes.py`, and evidence-rendering rows | ready for Colab L4 execution, decoded evidence, listening notes, and ledger decisions |
 
 ## Gap 1. Reproducible Flow Probe Evidence
 
@@ -153,8 +153,9 @@ their selection value is not yet proven.
 Native transition: `collection -> lane/geometry/memory ranking -> donor/bridge/source choice`.
 
 Current support: geometry reports, control lanes, lane comparison, silence
-confidence, lane-selected regions, latent-channel atlas, lane-mask latent DSP,
-memory index, curriculum, bridge ranking, and composition helpers.
+confidence, lane-selected regions, latent-channel atlas, rendered lane/heatmap
+evidence, lane-mask latent DSP, memory index, curriculum, bridge ranking, and
+composition helpers.
 
 Next run: compare manual/random donor or bridge choices against lane/geometry
 ranked choices, then audition lane-masked edits against full-region edits.
@@ -182,8 +183,9 @@ audio movement is not yet established.
 
 Native transition: `prompt/audio examples -> residual activations -> layer rows + layer/timestep rows + layer/window rows -> residual direction -> alpha sweep -> evidence packet`.
 
-Current support: residual hooks, prompt/audio vector extraction, alpha sweeps,
-residual feature basis, cross-validated layer, sampler-timestep, and
+Current support: residual hooks, prompt/audio vector extraction, root
+`residual_probes.py` activation examples/vector containers/probe rows, alpha
+sweeps, residual feature basis, cross-validated layer, sampler-timestep, and
 trajectory-window probe rows, trajectory maps, trajectory-derived alpha
 schedules, trajectory-derived flow probe banks, player/descriptors.
 
@@ -211,8 +213,9 @@ improving audio.
 
 Native transition: `objective recipe -> latent/sampler update -> output evidence`.
 
-Current support: `guidance.py`, geometry, control lanes, periodicity, descriptor
-loss candidates, gradient edit and audio posterior scaffolds.
+Current support: `guidance.py`, `latent_constraints.py`, geometry, control
+lanes, periodicity, descriptor loss candidates, gradient edit and audio
+posterior scaffolds.
 
 Next run: test a compact JSON-like objective recipe against a prompt/audio
 baseline.
@@ -395,7 +398,7 @@ that should now be run, audited, and revised from evidence.
 | Long-form latent composition | SAME memory / composition | continuation, bridge, and path rows before audition |
 | Prompt-condition geometry | SA3 flow/conditioning | pairwise condition distances and soft-prompt neighborhood rows |
 | Sampler physiology | SA3 internal trajectory | sampler settings, step-record summaries, output deltas |
-| Latent constraint library | SAME intervention candidates | constraint specs, before/after values, latent-change rows, decoded outputs |
+| Latent constraint library | latent objective candidates | constraint specs, before/after values, latent-change rows, decoded outputs |
 
 ## Priority Order
 

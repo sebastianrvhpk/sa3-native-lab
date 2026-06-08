@@ -84,7 +84,7 @@ should be combined only after their failure modes are visible.
 |---|---|---|---|
 | Descriptor rows | decoded audio, baseline audio, method audio | make audible changes inspectable before listening | never alone |
 | Memory/source rows | SAME latents, source/donor collections | expose copying, novelty, and neighborhood movement | only with audition |
-| Control lanes | audio or latent trajectories | summarize, compare, segment, and mask time-varying structure | selector evidence; intervention only after audition |
+| Control lanes | audio or latent trajectories | summarize, compare, segment, mask, and render time-varying structure | selector evidence; intervention only after audition |
 | Notebook player and annotations | output paths, loop ranges, notes | collect listening evidence in the same run context | required for promotion |
 | Disagreement rows | SAME, flow, descriptor, memory, listening lanes | surface metric conflicts instead of hiding them in a scalar | triage only |
 | Manifest and ledger | run parameters, artifacts, decisions | make claims reproducible and comparable | final local authority |
@@ -131,14 +131,15 @@ Evidence:
 
 | Layer | Current support | Main gap |
 |---|---|---|
-| SAME Representation Science | geometry, periodicity, latent DSP, blur/filter, selective renoise/graft, style profile/direction, memory | systematic bottleneck and direct-decode evidence |
+| SAME Representation Science | geometry, periodicity, latent DSP, blur/filter, selective renoise/graft, style profile/direction, memory, latent constraint objectives | systematic bottleneck and direct-decode evidence |
 | SA3 Flow and Conditioning Science | flow probe banks, prompt scoring, attribution, soft/hard/readable prompt search, null-condition scaffold | predictive validity against generated audio |
-| SA3 Internal Trajectory Science | residual hooks, residual vectors, residual-timestep cartography, residual feature atlas, cyclic projection, guidance scaffolds | layer/timestep and layer/window causal evidence and artifact checks |
+| SA3 Internal Trajectory Science | residual hooks, root residual probe rows/vectors, residual-timestep cartography, residual feature atlas, cyclic projection, guidance scaffolds | layer/timestep and layer/window causal evidence and artifact checks |
 | SA3-over-SAME Coupled Editing | SA3 polish, selective SA3, continuation/inpainting, direct decode helpers | survival matrix: what edits SA3 preserves or erases |
 
 Evidence utilities already exist as player, descriptors, annotations,
-disagreement rows, manifests, and the ledger template. The main gap is not more
-infrastructure; it is the first repeated completed evidence packets.
+control-lane renderings, disagreement rows, manifests, and the ledger template.
+The main gap is not more infrastructure; it is the first repeated completed
+evidence packets.
 
 ## Expert Layer Interpretation
 
@@ -217,7 +218,7 @@ notebook section or research category.
 | Long-form latent composition | SAME memory / composition | `memory clips -> continuation / bridge / path candidates` | selector |
 | Prompt-condition geometry | SA3 flow/conditioning | `C(p_i), C(p_j), soft states -> condition distance rows` | microscope |
 | Sampler physiology | SA3 internal trajectory | `sampler settings + observed step records -> path summary` | microscope |
-| Latent constraint library | SAME intervention candidates | `constraint specs -> J(z) -> before/after rows` | high-risk intervention candidate |
+| Latent constraint library | latent objective candidates | `constraint specs -> J(z) -> before/after rows` | high-risk intervention candidate |
 
 ### Promotion Discipline
 
