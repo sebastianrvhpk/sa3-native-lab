@@ -15,9 +15,9 @@ from latent_audio_primitives.procedures.residual_activation_vectors import (
     probe_layer_window_rows,
     probe_layer_rows,
     probe_layer_timestep_rows,
-    sampler_timestep_recorder,
     vectors_from_examples,
 )
+from latent_audio_primitives.trajectory import sampler_timestep_recorder
 
 
 @dataclass(frozen=True, slots=True)

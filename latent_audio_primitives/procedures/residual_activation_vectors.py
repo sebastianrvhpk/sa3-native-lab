@@ -13,6 +13,7 @@ from latent_audio_primitives.adapters.sa3_residual_hooks import (
     mean_difference_vectors,
 )
 from latent_audio_primitives.prompt_pairs import DEFAULT_PROMPT_PAIRS, PromptPair
+from latent_audio_primitives.trajectory import sampler_timestep_recorder
 
 
 @dataclass(slots=True)
@@ -774,74 +775,6 @@ def _optional_int(value: Any) -> int | None:
 
 def _optional_float(value: Any) -> float | None:
     return None if value is None else float(value)
-
-
-def sampler_timestep_recorder(
-    records: list[dict[str, Any]],
-    *,
-    user_callback: Any = None,
-    sampler_type: str | None = None,
-):
-    """Return an upstream SA3 sampler callback that records step metadata."""
-
-    def callback(info: dict[str, Any]) -> None:
-        record = normalize_sampler_step_record(info, sampler_type=sampler_type)
-        records.append(record)
-        if user_callback is not None:
-            user_callback(info)
-
-    return callback
-
-
-def normalize_sampler_step_record(info: dict[str, Any], *, sampler_type: str | None = None) -> dict[str, Any]:
-    timestep = _tensor_scalar_summary(info.get("t"))
-    sigma = _tensor_scalar_summary(info.get("sigma", info.get("sigma_hat", info.get("t"))))
-    sigma_value = sigma.get("mean")
-    return {
-        "sampler_index": _optional_int(info.get("i")),
-        "timestep": timestep.get("mean"),
-        "timestep_min": timestep.get("min"),
-        "timestep_max": timestep.get("max"),
-        "sigma": sigma_value,
-        "sigma_min": sigma.get("min"),
-        "sigma_max": sigma.get("max"),
-        "logsnr": _logsnr_from_sigma(sigma_value),
-        "sampler_type": sampler_type or "",
-    }
-
-
-def _tensor_scalar_summary(value: Any) -> dict[str, float | None]:
-    if value is None:
-        return {"mean": None, "min": None, "max": None}
-    try:
-        import torch
-
-        if isinstance(value, torch.Tensor):
-            tensor = value.detach().float().cpu().reshape(-1)
-            if tensor.numel() == 0:
-                return {"mean": None, "min": None, "max": None}
-            return {
-                "mean": float(tensor.mean().item()),
-                "min": float(tensor.min().item()),
-                "max": float(tensor.max().item()),
-            }
-    except Exception:
-        pass
-    try:
-        scalar = float(value)
-    except Exception:
-        return {"mean": None, "min": None, "max": None}
-    return {"mean": scalar, "min": scalar, "max": scalar}
-
-
-def _logsnr_from_sigma(sigma: float | None) -> float | None:
-    if sigma is None:
-        return None
-    import math
-
-    eps = 1e-8
-    clipped = min(max(float(sigma), eps), 1.0 - eps)
-    return float(math.log((1.0 - clipped) / clipped))
 
 
 def _probe_matrix(values: list[tuple[Any, int]]):
