@@ -56,9 +56,10 @@ ledger docs audit every research layer instead of defining a fifth layer.
 including deterministic MIR/DSP lanes, computes source-active masks, compares
 source/output lanes, builds active-window correlations, ranks lane-similar
 memory rows, selects lane regions, compares audio-event and SAME-event regions,
-and creates masks that other latent operators may use. A lane mask is an
-intervention surface only after direct decode, polish, and listening evidence
-support it.
+exports complete SAME-channel atlases, correlates every latent channel against
+every lane, and creates masks that other latent operators may use. A lane mask
+or channel family is an intervention surface only after direct decode, polish,
+and listening evidence support it.
 
 `latent_constraints.py` is objective-first: it defines scalar latent constraints
 that can be reported as rows or used by guidance/optimization procedures. It

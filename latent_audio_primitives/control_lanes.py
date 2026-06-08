@@ -748,6 +748,403 @@ def control_lane_correlation_table(
     return rows
 
 
+def control_lane_region_sweep(
+    lanes: Sequence[ControlLane],
+    *,
+    modes: Sequence[str] = ("peaks", "stable", "above", "below", "silence"),
+    names: Sequence[str] | None = None,
+    thresholds: Mapping[str, float] | float | None = None,
+    percentiles: Mapping[str, float] | float | None = None,
+    min_duration_seconds: float = 0.0,
+    merge_gap_seconds: float = 0.0,
+    top_k_per_lane: int | None = None,
+    min_confidence: float = 0.0,
+    active_mask: Sequence[float] | None = None,
+    normalize: bool = True,
+) -> list[LaneRegion]:
+    """Select regions for every requested mode/lane pair."""
+
+    regions: list[LaneRegion] = []
+    for mode in modes:
+        mode = str(mode)
+        threshold = _mode_value(thresholds, mode)
+        percentile = _mode_value(percentiles, mode)
+        for region in regions_for_control_lanes(
+            lanes,
+            names=names,
+            mode=mode,
+            threshold=threshold,
+            percentile=percentile,
+            min_duration_seconds=min_duration_seconds,
+            merge_gap_seconds=merge_gap_seconds,
+            top_k_per_lane=top_k_per_lane,
+            min_confidence=min_confidence,
+            active_mask=active_mask,
+            normalize=normalize,
+        ):
+            regions.append(
+                LaneRegion(
+                    lane_name=region.lane_name,
+                    start_frame=region.start_frame,
+                    end_frame=region.end_frame,
+                    start_seconds=region.start_seconds,
+                    end_seconds=region.end_seconds,
+                    score=region.score,
+                    label=mode,
+                    metadata={**region.metadata, "sweep_mode": mode},
+                )
+            )
+    regions.sort(
+        key=lambda region: (
+            str(region.metadata.get("sweep_mode", region.label)),
+            region.lane_name,
+            region.start_frame,
+        )
+    )
+    return regions
+
+
+def latent_channel_correlation_table(
+    latent: Any,
+    reference_lanes: Sequence[ControlLane],
+    *,
+    latent_rate: float,
+    channels: Sequence[int] | None = None,
+    channel_score: str = "motion",
+    absolute: bool = True,
+    active_mask: Sequence[float] | None = None,
+    use_confidence: bool = True,
+    normalize_channel: bool = True,
+    source: str | None = None,
+) -> list[dict[str, Any]]:
+    """Return all selected SAME-channel correlations to reference lanes."""
+
+    z = as_time_major(latent)
+    score_rows = latent_channel_scores(z, top_k=None, score=channel_score)
+    score_by_channel = {int(row["channel"]): row for row in score_rows}
+    selected_channels = (
+        [int(row["channel"]) for row in score_rows]
+        if channels is None
+        else [int(channel) for channel in channels]
+    )
+    rows: list[dict[str, Any]] = []
+    for channel in selected_channels:
+        if channel < 0 or channel >= z.shape[1]:
+            raise IndexError(f"channel {channel} out of range for {z.shape[1]} latent channels")
+        channel_lane = latent_channel_lanes(
+            z,
+            latent_rate=latent_rate,
+            channels=[channel],
+            absolute=absolute,
+            normalize=normalize_channel,
+            source=source,
+        )[0]
+        channel_score_row = score_by_channel.get(channel, {})
+        for reference_lane in reference_lanes:
+            frames = max(channel_lane.frames, reference_lane.frames)
+            channel_values = resample_control_lane(channel_lane, frames).values
+            reference_values = resample_control_lane(reference_lane, frames).values
+            weights = (
+                _resample_values(reference_lane.confidence, frames)
+                if use_confidence and reference_lane.confidence is not None
+                else np.ones(frames, dtype=np.float32)
+            )
+            if active_mask is not None:
+                active = _resample_values(np.asarray(active_mask, dtype=np.float32), frames) >= 0.5
+                weights = weights * active
+            positive_weight_frames = int(np.sum(weights > 0))
+            if active_mask is not None and positive_weight_frames == 0:
+                correlation = 0.0
+                similarity = 0.0
+                status = "no_active_frames"
+                active_frames = 0
+            else:
+                weights = _safe_weights(weights)
+                correlation = _weighted_correlation(channel_values, reference_values, weights)
+                similarity = _weighted_cosine(
+                    _weighted_zscore(channel_values, weights),
+                    _weighted_zscore(reference_values, weights),
+                    weights,
+                )
+                status = "ok"
+                active_frames = (
+                    positive_weight_frames
+                    if active_mask is not None
+                    else int(np.sum(weights > 0))
+                )
+            rows.append(
+                {
+                    "channel": int(channel),
+                    "channel_rank": int(channel_score_row.get("rank", 0) or 0),
+                    "channel_score_mode": channel_score,
+                    "channel_score": float(channel_score_row.get("score", 0.0) or 0.0),
+                    "reference_lane": reference_lane.name,
+                    "correlation": float(correlation),
+                    "abs_correlation": float(abs(correlation)),
+                    "similarity": float(similarity),
+                    "frames": int(frames),
+                    "active_frames": int(active_frames),
+                    "active_only": active_mask is not None,
+                    "confidence_weighted": bool(use_confidence),
+                    "absolute_channel": bool(absolute),
+                    "status": status,
+                    "rms_energy": float(channel_score_row.get("rms_energy", 0.0) or 0.0),
+                    "mean_abs": float(channel_score_row.get("mean_abs", 0.0) or 0.0),
+                    "std": float(channel_score_row.get("std", 0.0) or 0.0),
+                    "motion_energy": float(channel_score_row.get("motion_energy", 0.0) or 0.0),
+                    "peak_abs": float(channel_score_row.get("peak_abs", 0.0) or 0.0),
+                }
+            )
+    rows.sort(
+        key=lambda row: (
+            int(row["channel"]),
+            -float(row["abs_correlation"]),
+            str(row["reference_lane"]),
+        )
+    )
+    return rows
+
+
+def latent_channel_region_overlap_table(
+    latent: Any,
+    reference_regions: Sequence[LaneRegion],
+    *,
+    latent_rate: float,
+    channels: Sequence[int] | None = None,
+    channel_modes: Sequence[str] = ("peaks", "stable", "above", "below"),
+    channel_score: str = "motion",
+    percentiles: Mapping[str, float] | float | None = None,
+    min_duration_seconds: float = 0.0,
+    merge_gap_seconds: float = 0.0,
+    top_k_per_channel_mode: int | None = None,
+    active_mask: Sequence[float] | None = None,
+    absolute: bool = True,
+    normalize: bool = True,
+    source: str | None = None,
+) -> list[dict[str, Any]]:
+    """Compare all selected SAME-channel regions against reference lane regions."""
+
+    z = as_time_major(latent)
+    score_rows = latent_channel_scores(z, top_k=None, score=channel_score)
+    score_by_channel = {int(row["channel"]): row for row in score_rows}
+    selected_channels = (
+        [int(row["channel"]) for row in score_rows]
+        if channels is None
+        else [int(channel) for channel in channels]
+    )
+    reference_regions = list(reference_regions)
+    rows: list[dict[str, Any]] = []
+    for channel in selected_channels:
+        if channel < 0 or channel >= z.shape[1]:
+            raise IndexError(f"channel {channel} out of range for {z.shape[1]} latent channels")
+        channel_lane = latent_channel_lanes(
+            z,
+            latent_rate=latent_rate,
+            channels=[channel],
+            absolute=absolute,
+            normalize=normalize,
+            source=source,
+        )[0]
+        channel_score_row = score_by_channel.get(channel, {})
+        for mode in channel_modes:
+            channel_regions = regions_from_control_lane(
+                channel_lane,
+                mode=mode,
+                percentile=_mode_value(percentiles, mode),
+                min_duration_seconds=min_duration_seconds,
+                merge_gap_seconds=merge_gap_seconds,
+                top_k=top_k_per_channel_mode,
+                active_mask=active_mask,
+                normalize=normalize,
+                label=mode,
+            )
+            comparisons = compare_lane_region_sets(
+                reference_regions,
+                channel_regions,
+                reference_label="reference_lane_region",
+                candidate_label=f"latent_channel_{mode}",
+            )
+            for comparison in comparisons:
+                reference_index = int(comparison["reference_index"])
+                reference_region = reference_regions[reference_index]
+                rows.append(
+                    {
+                        **comparison,
+                        "reference_mode": str(
+                            reference_region.metadata.get("sweep_mode", reference_region.label)
+                        ),
+                        "channel": int(channel),
+                        "channel_mode": str(mode),
+                        "channel_rank": int(channel_score_row.get("rank", 0) or 0),
+                        "channel_score_mode": channel_score,
+                        "channel_score": float(channel_score_row.get("score", 0.0) or 0.0),
+                        "absolute_channel": bool(absolute),
+                    }
+                )
+    rows.sort(
+        key=lambda row: (
+            int(row["channel"]),
+            str(row["reference_lane"]),
+            str(row["reference_mode"]),
+            -float(row["intersection_over_union"]),
+            float(row["abs_center_delta_seconds"]),
+        )
+    )
+    return rows
+
+
+def latent_channel_region_table(
+    latent: Any,
+    *,
+    latent_rate: float,
+    channels: Sequence[int] | None = None,
+    channel_modes: Sequence[str] = ("peaks", "stable", "above", "below", "silence"),
+    channel_score: str = "motion",
+    thresholds: Mapping[str, float] | float | None = None,
+    percentiles: Mapping[str, float] | float | None = None,
+    min_duration_seconds: float = 0.0,
+    merge_gap_seconds: float = 0.0,
+    top_k_per_channel_mode: int | None = None,
+    active_mask: Sequence[float] | None = None,
+    absolute: bool = True,
+    normalize: bool = True,
+    source: str | None = None,
+) -> list[dict[str, Any]]:
+    """Return selected regions for every requested SAME channel/mode pair."""
+
+    z = as_time_major(latent)
+    score_rows = latent_channel_scores(z, top_k=None, score=channel_score)
+    score_by_channel = {int(row["channel"]): row for row in score_rows}
+    selected_channels = (
+        [int(row["channel"]) for row in score_rows]
+        if channels is None
+        else [int(channel) for channel in channels]
+    )
+    rows: list[dict[str, Any]] = []
+    for channel in selected_channels:
+        if channel < 0 or channel >= z.shape[1]:
+            raise IndexError(f"channel {channel} out of range for {z.shape[1]} latent channels")
+        channel_lane = latent_channel_lanes(
+            z,
+            latent_rate=latent_rate,
+            channels=[channel],
+            absolute=absolute,
+            normalize=normalize,
+            source=source,
+        )[0]
+        channel_score_row = score_by_channel.get(channel, {})
+        for mode in channel_modes:
+            mode = str(mode)
+            regions = regions_from_control_lane(
+                channel_lane,
+                mode=mode,
+                threshold=_mode_value(thresholds, mode),
+                percentile=_mode_value(percentiles, mode),
+                min_duration_seconds=min_duration_seconds,
+                merge_gap_seconds=merge_gap_seconds,
+                top_k=top_k_per_channel_mode,
+                active_mask=active_mask,
+                normalize=normalize,
+                label=mode,
+            )
+            for region in regions:
+                rows.append(
+                    {
+                        **region.to_dict(),
+                        "duration_seconds": float(region.end_seconds - region.start_seconds),
+                        "frames": int(region.end_frame - region.start_frame),
+                        "channel": int(channel),
+                        "channel_mode": mode,
+                        "channel_rank": int(channel_score_row.get("rank", 0) or 0),
+                        "channel_score_mode": channel_score,
+                        "channel_score": float(channel_score_row.get("score", 0.0) or 0.0),
+                        "absolute_channel": bool(absolute),
+                        "rms_energy": float(channel_score_row.get("rms_energy", 0.0) or 0.0),
+                        "mean_abs": float(channel_score_row.get("mean_abs", 0.0) or 0.0),
+                        "std": float(channel_score_row.get("std", 0.0) or 0.0),
+                        "motion_energy": float(channel_score_row.get("motion_energy", 0.0) or 0.0),
+                        "peak_abs": float(channel_score_row.get("peak_abs", 0.0) or 0.0),
+                    }
+                )
+    rows.sort(
+        key=lambda row: (
+            int(row["channel"]),
+            str(row["channel_mode"]),
+            int(row["start_frame"]),
+        )
+    )
+    return rows
+
+
+def latent_channel_family_table(
+    channel_scores: Sequence[Mapping[str, Any]],
+    channel_correlations: Sequence[Mapping[str, Any]],
+    *,
+    min_abs_correlation: float = 0.35,
+    top_k_lanes: int = 3,
+) -> list[dict[str, Any]]:
+    """Summarize full-channel correlations into coarse selector families."""
+
+    correlations_by_channel: dict[int, list[Mapping[str, Any]]] = {}
+    for row in channel_correlations:
+        if str(row.get("status", "ok") or "ok") not in {"", "ok"}:
+            continue
+        correlations_by_channel.setdefault(int(row["channel"]), []).append(row)
+
+    rows: list[dict[str, Any]] = []
+    for score_row in channel_scores:
+        channel = int(score_row["channel"])
+        correlations = sorted(
+            correlations_by_channel.get(channel, []),
+            key=lambda row: float(
+                row.get("abs_correlation", abs(float(row.get("correlation", 0.0))))
+            ),
+            reverse=True,
+        )
+        top = correlations[: max(1, int(top_k_lanes))]
+        best = top[0] if top else {}
+        best_lane = str(best.get("reference_lane", ""))
+        best_abs = float(best.get("abs_correlation", 0.0) or 0.0)
+        rows.append(
+            {
+                "channel": channel,
+                "channel_rank": int(score_row.get("rank", 0) or 0),
+                "channel_score": float(score_row.get("score", 0.0) or 0.0),
+                "channel_score_mode": str(score_row.get("score_mode", "unknown") or "unknown"),
+                "family": _channel_family_label(
+                    best_lane,
+                    best_abs,
+                    min_abs_correlation=min_abs_correlation,
+                ),
+                "family_confidence": best_abs,
+                "primary_lane": best_lane,
+                "primary_correlation": float(best.get("correlation", 0.0) or 0.0),
+                "primary_abs_correlation": best_abs,
+                "top_lanes": [
+                    {
+                        "lane": str(item.get("reference_lane", "")),
+                        "correlation": float(item.get("correlation", 0.0) or 0.0),
+                        "abs_correlation": float(item.get("abs_correlation", 0.0) or 0.0),
+                    }
+                    for item in top
+                ],
+                "rms_energy": float(score_row.get("rms_energy", 0.0) or 0.0),
+                "mean_abs": float(score_row.get("mean_abs", 0.0) or 0.0),
+                "std": float(score_row.get("std", 0.0) or 0.0),
+                "motion_energy": float(score_row.get("motion_energy", 0.0) or 0.0),
+                "peak_abs": float(score_row.get("peak_abs", 0.0) or 0.0),
+            }
+        )
+    rows.sort(
+        key=lambda row: (
+            str(row["family"]),
+            -float(row["family_confidence"]),
+            int(row["channel"]),
+        )
+    )
+    return rows
+
+
 def lane_region_table(regions: Sequence[LaneRegion]) -> list[dict[str, Any]]:
     """Return JSON/table-friendly rows for selected lane regions."""
 
@@ -988,7 +1385,7 @@ def latent_channel_scores(
     *,
     top_k: int | None = None,
     score: str = "motion",
-) -> list[dict[str, float | int]]:
+) -> list[dict[str, float | int | str]]:
     """Rank SAME latent channels by energy, variance, or motion."""
 
     z = as_time_major(latent)
@@ -1022,6 +1419,7 @@ def latent_channel_scores(
     for rank, row in enumerate(rows, start=1):
         row["rank"] = int(rank)
         row["score"] = float(row[key])
+        row["score_mode"] = score.lower()
     return rows
 
 
@@ -1239,6 +1637,42 @@ def _lane_map(lanes: Sequence[ControlLane]) -> dict[str, ControlLane]:
 def _rms_to_confidence(rms: np.ndarray, *, floor_db: float, full_db: float) -> np.ndarray:
     db = 20.0 * np.log10(np.asarray(rms, dtype=np.float32).clip(1e-10))
     return np.clip((db - float(floor_db)) / max(float(full_db) - float(floor_db), 1e-8), 0.0, 1.0).astype(np.float32)
+
+
+def _mode_value(values: Mapping[str, float] | float | None, mode: str) -> float | None:
+    if values is None:
+        return None
+    if isinstance(values, Mapping):
+        value = values.get(str(mode))
+        return None if value is None else float(value)
+    return float(values)
+
+
+def _channel_family_label(lane_name: str, abs_correlation: float, *, min_abs_correlation: float) -> str:
+    if abs_correlation < float(min_abs_correlation) or not lane_name:
+        return "weak_or_private"
+    if lane_name in {"spectral_flux", "onset_density"}:
+        return "transient"
+    if lane_name == "rms_envelope":
+        return "level"
+    if lane_name.startswith("spectral_density_"):
+        return "spectral_density"
+    spectral_shape_lanes = {
+        "spectral_centroid_hz",
+        "spectral_bandwidth_hz",
+        "spectral_entropy",
+        "spectral_flatness",
+        "spectral_contrast",
+    }
+    if lane_name in spectral_shape_lanes:
+        return "spectral_shape"
+    if lane_name == "latent_motion_energy":
+        return "same_motion"
+    if lane_name == "latent_channel_energy":
+        return "same_energy"
+    if lane_name == "audio_confidence":
+        return "source_confidence"
+    return f"lane:{lane_name}"
 
 
 def _combined_confidence(a: ControlLane, b: ControlLane, frames: int) -> np.ndarray:

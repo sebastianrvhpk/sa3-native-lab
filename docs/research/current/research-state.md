@@ -250,7 +250,8 @@ LoRA/style fine-tuning need
 - Which logSNR bands correspond to style, structure, transient detail, or prompt
   adherence?
 - Which SAME latent edits survive direct decode and SA3 polish?
-- Which control lanes are observable, predictable, and intervenable?
+- Which control lanes and SAME-channel families are observable, predictable,
+  and intervenable after complete-atlas review rather than top-k display alone?
 - Which residual layers produce stable causal audio controls?
 - Can sampler-level guidance improve loopability or source preservation without
   artifacts?

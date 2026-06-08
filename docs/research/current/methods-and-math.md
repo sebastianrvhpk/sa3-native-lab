@@ -1501,8 +1501,21 @@ Channel atlas:
 
 ```text
 z0 -> per-channel rms, mean_abs, std, motion_energy, peak_abs
-top channels -> individual channel lanes / heatmap
+z0 -> all individual channel lanes c_i(t)
+audio/SAME lanes x c_i(t) -> active-window channel-lane correlations
+c_i(t) -> peaks / stable / silence / above / below channel regions
+lane regions x channel regions -> temporal overlap rows
+channel correlations -> coarse family labels
+top channels -> display-only individual channel lanes / heatmap
 ```
+
+The atlas artifacts are intentionally more complete than the notebook display.
+Top-k channel plots are only a review slice. The saved research object is the
+full SAME-channel table and full channel-lane time series so later hypotheses
+can be tested without repeating the source encode. Family labels such as
+`spectral_density`, `transient`, `same_motion`, or `weak_or_private` are
+selector summaries of the strongest active-window correlation; they are not a
+claim that a channel is causally dedicated to that factor.
 
 Lane status:
 

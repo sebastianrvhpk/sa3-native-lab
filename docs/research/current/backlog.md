@@ -186,14 +186,18 @@ Native transition: `audio -> deterministic MIR/DSP lane bank -> SAME z0 / SA3 re
 Current support: audio descriptors, RMS/spectral centroid/spectral flux lanes,
 spectral bandwidth, entropy, flatness, contrast, low/mid/high spectral-density
 band lanes, onset density, active source masks, active-window correlations,
-per-lane regions, audio-event versus SAME-event region comparisons, latent
-motion/channel lanes, lane mechanistic probes, latent DSP, descriptor deltas,
-and listening/ledger surfaces.
+per-lane region sweeps, audio-event versus SAME-event region comparisons, full
+SAME-channel scores, full channel-lane traces, all-channel lane correlations,
+channel-region rows, channel-region overlap rows, channel-family summaries,
+lane mechanistic probes, latent DSP, descriptor deltas, and listening/ledger
+surfaces.
 
 Next run: run the direct control-lane evidence cell on at least two clips and
-inspect active-window correlations, per-lane region overlays, top-channel
-traces, and audio-event versus SAME-event region comparisons. Then run SA3
-control-lane mechanistic probing on the strongest non-redundant MIR/DSP lanes.
+review the complete atlas artifacts before choosing display slices: active
+spans, active-window lane correlations, region sweeps, all-channel lane
+correlations, channel-family rows, and channel-region overlap rows. Then run
+SA3 control-lane mechanistic probing on the strongest non-redundant MIR/DSP
+lanes and on one or two high-confidence SAME-channel families.
 
 Promote if:
 
