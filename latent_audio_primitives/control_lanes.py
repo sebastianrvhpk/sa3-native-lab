@@ -174,7 +174,10 @@ def audio_envelope_lane(
     """Return a framewise audio control lane.
 
     Supported names: ``rms_envelope``, ``zero_crossing_rate``,
-    ``spectral_centroid_hz``, and ``spectral_flux``.
+    ``spectral_centroid_hz``, ``spectral_flux``, ``spectral_bandwidth_hz``,
+    ``spectral_entropy``, ``spectral_flatness``, ``spectral_contrast``,
+    ``spectral_density_low``, ``spectral_density_mid``,
+    ``spectral_density_high``, and ``onset_density``.
     """
 
     if sample_rate <= 0:
@@ -192,21 +195,60 @@ def audio_envelope_lane(
         values = np.mean(np.signbit(frames[:, 1:]) != np.signbit(frames[:, :-1]), axis=1)
         lane_confidence = confidence
     elif name == "spectral_centroid_hz":
-        window = np.hanning(frame).astype(np.float32)
-        spectrum = np.abs(np.fft.rfft(frames * window[None, :], axis=1)).astype(np.float32) + 1e-10
-        freqs = np.fft.rfftfreq(frame, d=1.0 / sample_rate).astype(np.float32)
-        values = (spectrum * freqs[None, :]).sum(axis=1) / spectrum.sum(axis=1)
+        spectrum, power, freqs = _spectral_frame_features(frames, frame, sample_rate)
+        values = (power * freqs[None, :]).sum(axis=1) / np.maximum(power.sum(axis=1), 1e-10)
         lane_confidence = confidence
     elif name == "spectral_flux":
-        window = np.hanning(frame).astype(np.float32)
-        spectrum = np.abs(np.fft.rfft(frames * window[None, :], axis=1)).astype(np.float32)
+        spectrum, _power, _freqs = _spectral_frame_features(frames, frame, sample_rate)
         norm = np.linalg.norm(spectrum, axis=1, keepdims=True)
         spectrum = spectrum / np.maximum(norm, 1e-10)
         diff = np.diff(spectrum, axis=0, prepend=spectrum[:1])
         values = np.sqrt(np.mean(diff * diff, axis=1))
         lane_confidence = confidence
+    elif name == "spectral_bandwidth_hz":
+        _spectrum, power, freqs = _spectral_frame_features(frames, frame, sample_rate)
+        total = np.maximum(power.sum(axis=1), 1e-10)
+        centroid = (power * freqs[None, :]).sum(axis=1) / total
+        values = np.sqrt((power * (freqs[None, :] - centroid[:, None]) ** 2).sum(axis=1) / total)
+        lane_confidence = confidence
+    elif name == "spectral_entropy":
+        _spectrum, power, _freqs = _spectral_frame_features(frames, frame, sample_rate)
+        prob = power / np.maximum(power.sum(axis=1, keepdims=True), 1e-10)
+        values = -np.sum(prob * np.log(np.maximum(prob, 1e-10)), axis=1) / np.log(max(prob.shape[1], 2))
+        lane_confidence = confidence
+    elif name == "spectral_flatness":
+        _spectrum, power, _freqs = _spectral_frame_features(frames, frame, sample_rate)
+        values = np.exp(np.mean(np.log(np.maximum(power, 1e-10)), axis=1)) / np.maximum(np.mean(power, axis=1), 1e-10)
+        lane_confidence = confidence
+    elif name == "spectral_contrast":
+        spectrum, _power, _freqs = _spectral_frame_features(frames, frame, sample_rate)
+        db = 20.0 * np.log10(np.maximum(spectrum, 1e-10))
+        values = np.percentile(db, 90.0, axis=1) - np.percentile(db, 10.0, axis=1)
+        lane_confidence = confidence
+    elif name in {"spectral_density_low", "spectral_density_mid", "spectral_density_high"}:
+        _spectrum, power, freqs = _spectral_frame_features(frames, frame, sample_rate)
+        nyquist = float(sample_rate) / 2.0
+        bands = {
+            "spectral_density_low": (20.0, min(250.0, nyquist)),
+            "spectral_density_mid": (250.0, min(4000.0, nyquist)),
+            "spectral_density_high": (4000.0, nyquist),
+        }
+        low_hz, high_hz = bands[name]
+        values = _spectral_band_fraction(power, freqs, low_hz, high_hz)
+        lane_confidence = confidence
+    elif name == "onset_density":
+        spectrum, _power, _freqs = _spectral_frame_features(frames, frame, sample_rate)
+        norm = np.linalg.norm(spectrum, axis=1, keepdims=True)
+        spectrum = spectrum / np.maximum(norm, 1e-10)
+        positive_flux = np.maximum(np.diff(spectrum, axis=0, prepend=spectrum[:1]), 0.0).sum(axis=1)
+        smooth_frames = max(1, int(round(0.25 / (hop / sample_rate))))
+        values = _moving_average(normalize_array(positive_flux), smooth_frames)
+        lane_confidence = confidence
     else:
-        raise ValueError("name must be 'rms_envelope', 'zero_crossing_rate', 'spectral_centroid_hz', or 'spectral_flux'")
+        raise ValueError(
+            "unsupported audio lane name: "
+            f"{name!r}. Use core envelope/spectral lanes or MIR/DSP lane-bank names."
+        )
     return ControlLane(
         name=name,
         values=values.astype(np.float32),
@@ -256,6 +298,47 @@ def audio_loudness_confidence_lane(
     )
 
 
+def audio_mir_control_lanes(
+    audio: Any,
+    sample_rate: int,
+    *,
+    frame_seconds: float = 0.05,
+    hop_seconds: float | None = None,
+    names: Sequence[str] | None = None,
+    source: str | None = None,
+    normalize: bool = True,
+) -> list[ControlLane]:
+    """Return deterministic MIR/DSP lanes from framed audio spectra.
+
+    These are evidence lanes, not semantic labels. They are useful for asking
+    whether SAME latents or SA3 residual activations expose measurable spectral
+    density, entropy, flatness, contrast, band-energy, or onset structure.
+    """
+
+    resolved_names = list(names) if names is not None else [
+        "spectral_bandwidth_hz",
+        "spectral_entropy",
+        "spectral_flatness",
+        "spectral_contrast",
+        "spectral_density_low",
+        "spectral_density_mid",
+        "spectral_density_high",
+        "onset_density",
+    ]
+    lanes = [
+        audio_envelope_lane(
+            audio,
+            sample_rate,
+            frame_seconds=frame_seconds,
+            hop_seconds=hop_seconds,
+            name=name,
+            source=source,
+        )
+        for name in resolved_names
+    ]
+    return [normalize_control_lane(lane, mode="minmax") for lane in lanes] if normalize else lanes
+
+
 def audio_same_control_lanes(
     *,
     audio: Any | None = None,
@@ -265,6 +348,8 @@ def audio_same_control_lanes(
     frame_seconds: float = 0.05,
     source: str | None = None,
     normalize: bool = True,
+    include_mir: bool = False,
+    mir_names: Sequence[str] | None = None,
 ) -> list[ControlLane]:
     """Build the standard notebook lane set from audio and/or SAME latents."""
 
@@ -280,6 +365,17 @@ def audio_same_control_lanes(
                 audio_loudness_confidence_lane(audio, sample_rate, frame_seconds=frame_seconds, source=source),
             ]
         )
+        if include_mir:
+            lanes.extend(
+                audio_mir_control_lanes(
+                    audio,
+                    sample_rate,
+                    frame_seconds=frame_seconds,
+                    names=mir_names,
+                    source=source,
+                    normalize=False,
+                )
+            )
     if latent is not None:
         if latent_rate is None:
             raise ValueError("latent_rate is required when latent is provided")
@@ -424,7 +520,12 @@ def control_lane_comparison_table(rows: Sequence[ControlLaneComparisonRow]) -> l
     return [row.to_dict() for row in rows]
 
 
-def control_lane_summary_row(lane: ControlLane) -> dict[str, Any]:
+def control_lane_summary_row(
+    lane: ControlLane,
+    *,
+    active_mask: Sequence[float] | None = None,
+    min_active_frames: int = 1,
+) -> dict[str, Any]:
     """Return a compact descriptive row for one control lane."""
 
     values = lane.values.astype(np.float32)
@@ -432,7 +533,7 @@ def control_lane_summary_row(lane: ControlLane) -> dict[str, Any]:
     normalized = normalize_array(values)
     peak_frame = int(np.argmax(values))
     trough_frame = int(np.argmin(values))
-    return {
+    row: dict[str, Any] = {
         "name": lane.name,
         "source": lane.source,
         "frames": int(lane.frames),
@@ -453,12 +554,176 @@ def control_lane_summary_row(lane: ControlLane) -> dict[str, Any]:
         "confidence_min": float(np.min(confidence)),
         "normalization": lane.metadata.get("normalization"),
     }
+    if active_mask is not None:
+        mask = _resample_values(np.asarray(active_mask, dtype=np.float32), lane.frames) >= 0.5
+        active_values = values[mask]
+        row["active_frames"] = int(mask.sum())
+        row["active_fraction"] = float(mask.mean())
+        row["active_duration_seconds"] = float(mask.sum() / lane.rate_hz)
+        if active_values.shape[0] >= int(min_active_frames):
+            active_peak_frame = int(np.argmax(np.where(mask, values, -np.inf)))
+            row.update(
+                {
+                    "active_mean": float(np.mean(active_values)),
+                    "active_std": float(np.std(active_values)),
+                    "active_min": float(np.min(active_values)),
+                    "active_max": float(np.max(active_values)),
+                    "active_peak_frame": active_peak_frame,
+                    "active_peak_seconds": float(active_peak_frame / lane.rate_hz),
+                    "active_peak_value": float(values[active_peak_frame]),
+                }
+            )
+        else:
+            row.update(
+                {
+                    "active_mean": None,
+                    "active_std": None,
+                    "active_min": None,
+                    "active_max": None,
+                    "active_peak_frame": None,
+                    "active_peak_seconds": None,
+                    "active_peak_value": None,
+                }
+            )
+    return row
 
 
-def control_lane_summary_table(lanes: Sequence[ControlLane]) -> list[dict[str, Any]]:
+def control_lane_summary_table(
+    lanes: Sequence[ControlLane],
+    *,
+    active_mask: Sequence[float] | None = None,
+    min_active_frames: int = 1,
+) -> list[dict[str, Any]]:
     """Return JSON/table-friendly summaries for a lane set."""
 
-    return [control_lane_summary_row(lane) for lane in lanes]
+    return [
+        control_lane_summary_row(lane, active_mask=active_mask, min_active_frames=min_active_frames)
+        for lane in lanes
+    ]
+
+
+def active_source_mask_from_lanes(
+    lanes: Sequence[ControlLane],
+    *,
+    confidence_lane_name: str = "audio_confidence",
+    min_confidence: float = 0.05,
+    target_frames: int | None = None,
+    pad_seconds: float = 0.0,
+) -> np.ndarray:
+    """Return a source-active mask, preferably from the audio-confidence lane."""
+
+    lane_list = list(lanes)
+    if not lane_list:
+        raise ValueError("at least one lane is required")
+    confidence_lane = _lane_map(lane_list).get(confidence_lane_name)
+    base_lane = confidence_lane or lane_list[0]
+    frames = int(target_frames) if target_frames is not None else base_lane.frames
+    if confidence_lane is None:
+        return np.ones(frames, dtype=np.float32)
+    confidence = resample_control_lane(confidence_lane, frames).values
+    mask = confidence >= float(min_confidence)
+    if pad_seconds > 0:
+        pad_frames = int(round(float(pad_seconds) * confidence_lane.rate_hz))
+        if pad_frames > 0 and np.any(mask):
+            expanded = mask.copy()
+            active_indices = np.flatnonzero(mask)
+            start = max(0, int(active_indices[0]) - pad_frames)
+            end = min(frames, int(active_indices[-1]) + pad_frames + 1)
+            expanded[start:end] = True
+            mask = expanded
+    return mask.astype(np.float32)
+
+
+def active_source_span_from_lanes(
+    lanes: Sequence[ControlLane],
+    *,
+    confidence_lane_name: str = "audio_confidence",
+    min_confidence: float = 0.05,
+    target_rate_hz: float | None = None,
+) -> dict[str, Any]:
+    """Return start/end metadata for the active source region."""
+
+    lane_list = list(lanes)
+    if not lane_list:
+        raise ValueError("at least one lane is required")
+    confidence_lane = _lane_map(lane_list).get(confidence_lane_name)
+    base_lane = confidence_lane or lane_list[0]
+    mask = active_source_mask_from_lanes(
+        lane_list,
+        confidence_lane_name=confidence_lane_name,
+        min_confidence=min_confidence,
+        target_frames=base_lane.frames,
+    ).astype(bool)
+    active = np.flatnonzero(mask)
+    if active.size == 0:
+        return {
+            "confidence_lane": confidence_lane_name if confidence_lane is not None else None,
+            "status": "no_active_frames",
+            "frames": int(base_lane.frames),
+            "rate_hz": float(target_rate_hz or base_lane.rate_hz),
+            "start_frame": 0,
+            "end_frame": 0,
+            "start_seconds": 0.0,
+            "end_seconds": 0.0,
+            "active_duration_seconds": 0.0,
+            "active_fraction": 0.0,
+            "min_confidence": float(min_confidence),
+        }
+    start = int(active[0])
+    end = int(active[-1]) + 1
+    rate = float(target_rate_hz or base_lane.rate_hz)
+    return {
+        "confidence_lane": confidence_lane_name if confidence_lane is not None else None,
+        "status": "ok" if confidence_lane is not None else "fallback_all_active",
+        "frames": int(base_lane.frames),
+        "rate_hz": rate,
+        "start_frame": start,
+        "end_frame": end,
+        "start_seconds": float(start / rate),
+        "end_seconds": float(end / rate),
+        "active_duration_seconds": float((end - start) / rate),
+        "active_fraction": float(mask.mean()),
+        "min_confidence": float(min_confidence),
+    }
+
+
+def control_lane_correlation_table(
+    lanes: Sequence[ControlLane],
+    *,
+    names: Sequence[str] | None = None,
+    active_mask: Sequence[float] | None = None,
+    use_confidence: bool = True,
+) -> list[dict[str, Any]]:
+    """Return pairwise lane correlations, optionally over active source frames."""
+
+    lane_by_name = _lane_map(lanes)
+    resolved_names = list(names) if names is not None else [lane.name for lane in lanes]
+    resolved = [lane_by_name[name] for name in resolved_names if name in lane_by_name]
+    rows: list[dict[str, Any]] = []
+    for i, a in enumerate(resolved):
+        for b in resolved[i + 1 :]:
+            frames = max(a.frames, b.frames)
+            av = resample_control_lane(a, frames).values
+            bv = resample_control_lane(b, frames).values
+            weights = _combined_confidence(a, b, frames) if use_confidence else np.ones(frames, dtype=np.float32)
+            if active_mask is not None:
+                mask = _resample_values(np.asarray(active_mask, dtype=np.float32), frames)
+                weights = weights * (mask >= 0.5)
+            weights = _safe_weights(weights)
+            rows.append(
+                {
+                    "lane_a": a.name,
+                    "lane_b": b.name,
+                    "correlation": _weighted_correlation(av, bv, weights),
+                    "similarity": _weighted_cosine(_weighted_zscore(av, weights), _weighted_zscore(bv, weights), weights),
+                    "frames": int(frames),
+                    "active_frames": int(np.sum(weights > 0)),
+                    "active_only": active_mask is not None,
+                    "confidence_weighted": bool(use_confidence),
+                }
+            )
+    rows.sort(key=lambda row: abs(float(row["correlation"])), reverse=True)
+    return rows
 
 
 def lane_region_table(regions: Sequence[LaneRegion]) -> list[dict[str, Any]]:
@@ -473,6 +738,91 @@ def lane_region_table(regions: Sequence[LaneRegion]) -> list[dict[str, Any]]:
     return rows
 
 
+def regions_for_control_lanes(
+    lanes: Sequence[ControlLane],
+    *,
+    names: Sequence[str] | None = None,
+    mode: str = "peaks",
+    threshold: float | None = None,
+    percentile: float | None = None,
+    min_duration_seconds: float = 0.0,
+    merge_gap_seconds: float = 0.0,
+    top_k_per_lane: int | None = None,
+    min_confidence: float = 0.0,
+    active_mask: Sequence[float] | None = None,
+    normalize: bool = True,
+) -> list[LaneRegion]:
+    """Select regions independently for every requested lane."""
+
+    lane_by_name = _lane_map(lanes)
+    resolved_names = list(names) if names is not None else [lane.name for lane in lanes]
+    regions: list[LaneRegion] = []
+    for name in resolved_names:
+        lane = lane_by_name.get(name)
+        if lane is None:
+            continue
+        regions.extend(
+            regions_from_control_lane(
+                lane,
+                mode=mode,
+                threshold=threshold,
+                percentile=percentile,
+                min_duration_seconds=min_duration_seconds,
+                merge_gap_seconds=merge_gap_seconds,
+                top_k=top_k_per_lane,
+                min_confidence=min_confidence,
+                active_mask=active_mask,
+                normalize=normalize,
+            )
+        )
+    regions.sort(key=lambda region: (region.lane_name, region.start_frame))
+    return regions
+
+
+def compare_lane_region_sets(
+    reference_regions: Sequence[LaneRegion],
+    candidate_regions: Sequence[LaneRegion],
+    *,
+    reference_label: str = "reference",
+    candidate_label: str = "candidate",
+) -> list[dict[str, Any]]:
+    """Compare two region sets by nearest temporal overlap/center distance."""
+
+    rows: list[dict[str, Any]] = []
+    for ref_index, ref in enumerate(reference_regions):
+        best = None
+        for cand_index, cand in enumerate(candidate_regions):
+            overlap = max(0.0, min(ref.end_seconds, cand.end_seconds) - max(ref.start_seconds, cand.start_seconds))
+            union = max(ref.end_seconds, cand.end_seconds) - min(ref.start_seconds, cand.start_seconds)
+            ref_center = 0.5 * (ref.start_seconds + ref.end_seconds)
+            cand_center = 0.5 * (cand.start_seconds + cand.end_seconds)
+            row = {
+                "reference_label": reference_label,
+                "candidate_label": candidate_label,
+                "reference_index": int(ref_index),
+                "candidate_index": int(cand_index),
+                "reference_lane": ref.lane_name,
+                "candidate_lane": cand.lane_name,
+                "reference_start_seconds": float(ref.start_seconds),
+                "reference_end_seconds": float(ref.end_seconds),
+                "candidate_start_seconds": float(cand.start_seconds),
+                "candidate_end_seconds": float(cand.end_seconds),
+                "overlap_seconds": float(overlap),
+                "intersection_over_union": float(overlap / max(union, 1e-8)),
+                "center_delta_seconds": float(cand_center - ref_center),
+                "abs_center_delta_seconds": float(abs(cand_center - ref_center)),
+                "reference_score": float(ref.score),
+                "candidate_score": float(cand.score),
+            }
+            key = (-row["intersection_over_union"], row["abs_center_delta_seconds"])
+            if best is None or key < best[0]:
+                best = (key, row)
+        if best is not None:
+            rows.append(best[1])
+    rows.sort(key=lambda row: (row["reference_lane"], row["abs_center_delta_seconds"]))
+    return rows
+
+
 def regions_from_control_lane(
     lane: ControlLane,
     *,
@@ -483,6 +833,7 @@ def regions_from_control_lane(
     merge_gap_seconds: float = 0.0,
     top_k: int | None = None,
     min_confidence: float = 0.0,
+    active_mask: Sequence[float] | None = None,
     normalize: bool = True,
     label: str | None = None,
 ) -> list[LaneRegion]:
@@ -525,6 +876,9 @@ def regions_from_control_lane(
 
     if min_confidence > 0:
         mask = mask & (confidence >= float(min_confidence))
+    if active_mask is not None:
+        active = _resample_values(np.asarray(active_mask, dtype=np.float32), lane.frames) >= 0.5
+        mask = mask & active
 
     return _regions_from_mask(
         lane,
@@ -831,6 +1185,31 @@ def _frame_audio(audio: np.ndarray, frame: int, hop: int) -> np.ndarray:
     return frames
 
 
+def _spectral_frame_features(frames: np.ndarray, frame: int, sample_rate: int) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    window = np.hanning(frame).astype(np.float32)
+    spectrum = np.abs(np.fft.rfft(frames * window[None, :], axis=1)).astype(np.float32) + 1e-10
+    power = (spectrum * spectrum).astype(np.float32) + 1e-10
+    freqs = np.fft.rfftfreq(frame, d=1.0 / sample_rate).astype(np.float32)
+    return spectrum, power, freqs
+
+
+def _spectral_band_fraction(power: np.ndarray, freqs: np.ndarray, low_hz: float, high_hz: float) -> np.ndarray:
+    mask = (freqs >= float(low_hz)) & (freqs < float(high_hz))
+    if not np.any(mask):
+        return np.zeros(power.shape[0], dtype=np.float32)
+    total = np.maximum(power.sum(axis=1), 1e-10)
+    return (power[:, mask].sum(axis=1) / total).astype(np.float32)
+
+
+def _moving_average(values: np.ndarray, window: int) -> np.ndarray:
+    values = np.asarray(values, dtype=np.float32).reshape(-1)
+    window = max(1, int(window))
+    if window <= 1 or values.shape[0] <= 1:
+        return values.astype(np.float32, copy=True)
+    kernel = np.ones(window, dtype=np.float32) / float(window)
+    return np.convolve(values, kernel, mode="same").astype(np.float32)
+
+
 def _lane_map(lanes: Sequence[ControlLane]) -> dict[str, ControlLane]:
     return {lane.name: lane for lane in lanes}
 
@@ -876,6 +1255,15 @@ def _weighted_cosine(a: np.ndarray, b: np.ndarray, weights: np.ndarray) -> float
     if denom <= 1e-8:
         return 0.0
     return float(np.dot(wa, wb) / denom)
+
+
+def _weighted_correlation(a: np.ndarray, b: np.ndarray, weights: np.ndarray) -> float:
+    weights = _safe_weights(weights).astype(np.float32)
+    if float(weights.sum()) <= 1e-8:
+        return 0.0
+    av = _weighted_zscore(a, weights)
+    bv = _weighted_zscore(b, weights)
+    return _weighted_cosine(av, bv, weights)
 
 
 def _resolve_threshold(

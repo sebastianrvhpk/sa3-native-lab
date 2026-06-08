@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Sequence
+from typing import Any, Mapping, Sequence
 
 import numpy as np
 
@@ -105,6 +105,131 @@ def control_lane_region_svg(
     return "\n".join(parts)
 
 
+def control_lane_regions_svg(
+    lanes: Sequence[ControlLane],
+    regions: Sequence[LaneRegion],
+    *,
+    width: int = 720,
+    lane_height: int = 72,
+) -> str:
+    """Return stacked lane views with each lane's selected regions highlighted."""
+
+    lanes = list(lanes)
+    if not lanes:
+        return "<div>No control lanes.</div>"
+    regions_by_lane: dict[str, list[LaneRegion]] = {}
+    for region in regions:
+        regions_by_lane.setdefault(region.lane_name, []).append(region)
+    height = max(1, len(lanes)) * lane_height
+    parts = [f'<svg viewBox="0 0 {width} {height}" width="100%" height="{height}" role="img" aria-label="control lane regions">']
+    for lane_index, lane in enumerate(lanes):
+        y0 = lane_index * lane_height
+        values = normalize_control_lane(lane, mode="minmax").values
+        parts.append(f'<rect x="0" y="{y0}" width="{width}" height="{lane_height}" fill="#10131a"/>')
+        for region in regions_by_lane.get(lane.name, []):
+            x = width * (region.start_frame / max(lane.frames - 1, 1))
+            w = width * ((region.end_frame - region.start_frame) / max(lane.frames - 1, 1))
+            parts.append(
+                f'<rect x="{x:.1f}" y="{y0}" width="{max(w, 1.0):.1f}" height="{lane_height}" fill="#ff8eb3" opacity="0.24"/>'
+            )
+        parts.append(f'<text x="8" y="{y0 + 14}" fill="#dce3ee" font-size="11">{_escape_xml(lane.name)}</text>')
+        parts.append(f'<polyline points="{_polyline_points(values, y0, width, lane_height)}" fill="none" stroke="#6dd6b0" stroke-width="2"/>')
+    parts.append("</svg>")
+    return "\n".join(parts)
+
+
+def control_lane_probe_heatmap_svg(
+    rows: Sequence[Mapping[str, Any] | Any],
+    *,
+    x_key: str = "layer_index",
+    y_key: str = "lane_name",
+    value_key: str = "correlation_mean",
+    title: str = "control-lane probe heatmap",
+    width: int = 720,
+    cell_height: int = 24,
+    absolute: bool = True,
+) -> str:
+    """Return a compact heatmap over lane/probe rows."""
+
+    clean_rows = [row for row in rows if str(_row_get(row, "status", "ok") or "ok") in {"", "ok"}]
+    if not clean_rows:
+        return "<div>No probe rows.</div>"
+    x_values = _sorted_axis_values(_row_get(row, x_key) for row in clean_rows)
+    y_values = _sorted_axis_values(_row_get(row, y_key) for row in clean_rows)
+    if not x_values or not y_values:
+        return "<div>No probe rows.</div>"
+    left = 150
+    top = 26
+    cell_w = max(10.0, (width - left - 8) / max(len(x_values), 1))
+    height = top + len(y_values) * cell_height + 8
+    values: dict[tuple[Any, Any], float] = {}
+    for row in clean_rows:
+        x = _row_get(row, x_key)
+        y = _row_get(row, y_key)
+        if x not in x_values or y not in y_values:
+            continue
+        value = _float_or_zero(_row_get(row, value_key))
+        if absolute:
+            value = abs(value)
+        key = (x, y)
+        values[key] = max(values.get(key, float("-inf")), value)
+    parts = [f'<svg viewBox="0 0 {width} {height}" width="100%" height="{height}" role="img" aria-label="{_escape_xml(title)}">']
+    parts.append(f'<rect x="0" y="0" width="{width}" height="{height}" fill="#10131a"/>')
+    parts.append(f'<text x="8" y="16" fill="#dce3ee" font-size="12">{_escape_xml(title)}</text>')
+    for col, x in enumerate(x_values):
+        parts.append(f'<text x="{left + col * cell_w + 2:.1f}" y="16" fill="#9fb1c7" font-size="9">{_escape_xml(_axis_label(x))}</text>')
+    for row_index, y in enumerate(y_values):
+        y0 = top + row_index * cell_height
+        parts.append(f'<text x="8" y="{y0 + 16}" fill="#dce3ee" font-size="10">{_escape_xml(_axis_label(y))}</text>')
+        for col, x in enumerate(x_values):
+            value = values.get((x, y), 0.0)
+            color = _heat_color(min(max(float(value), 0.0), 1.0))
+            parts.append(f'<rect x="{left + col * cell_w:.1f}" y="{y0}" width="{max(cell_w - 1, 1.0):.1f}" height="{cell_height - 1}" fill="{color}"/>')
+    parts.append("</svg>")
+    return "\n".join(parts)
+
+
+def control_lane_prediction_svg(
+    prediction_rows: Sequence[Mapping[str, Any]],
+    *,
+    width: int = 720,
+    lane_height: int = 112,
+    max_panels: int = 6,
+) -> str:
+    """Return actual-vs-predicted lane curves from prediction rows."""
+
+    groups: dict[tuple[str, int, str], list[Mapping[str, Any]]] = {}
+    for row in prediction_rows:
+        key = (
+            str(row.get("lane_name", "")),
+            int(row.get("layer_index", -1)),
+            str(row.get("window_label", "") or "all"),
+        )
+        groups.setdefault(key, []).append(row)
+    items = list(groups.items())[: max(1, int(max_panels))]
+    if not items:
+        return "<div>No prediction rows.</div>"
+    height = len(items) * lane_height
+    parts = [f'<svg viewBox="0 0 {width} {height}" width="100%" height="{height}" role="img" aria-label="actual vs predicted control lanes">']
+    for panel_index, ((lane_name, layer_index, window_label), rows) in enumerate(items):
+        y0 = panel_index * lane_height
+        rows = sorted(rows, key=lambda row: float(row.get("sample_fraction", 0.0)))
+        target = np.asarray([float(row.get("target", 0.0)) for row in rows], dtype=np.float32)
+        pred = np.asarray([float(row.get("prediction", 0.0)) for row in rows], dtype=np.float32)
+        pair = np.concatenate([target, pred])
+        lo = float(pair.min())
+        hi = float(pair.max())
+        target_norm = (target - lo) / max(hi - lo, 1e-8)
+        pred_norm = (pred - lo) / max(hi - lo, 1e-8)
+        parts.append(f'<rect x="0" y="{y0}" width="{width}" height="{lane_height}" fill="#10131a"/>')
+        title = f"{lane_name} layer {layer_index} {window_label}".strip()
+        parts.append(f'<text x="8" y="{y0 + 14}" fill="#dce3ee" font-size="11">{_escape_xml(title)}</text>')
+        parts.append(f'<polyline points="{_polyline_points(target_norm, y0, width, lane_height)}" fill="none" stroke="#6dd6b0" stroke-width="2"/>')
+        parts.append(f'<polyline points="{_polyline_points(pred_norm, y0, width, lane_height)}" fill="none" stroke="#ff8eb3" stroke-width="2"/>')
+    parts.append("</svg>")
+    return "\n".join(parts)
+
+
 def latent_channel_heatmap_svg(
     latent: Any,
     *,
@@ -187,3 +312,31 @@ def _heat_color(value: float) -> str:
     g = int(48 + 110 * (1.0 - abs(value - 0.55)))
     b = int(72 + 110 * (1.0 - value))
     return f"rgb({r},{g},{b})"
+
+
+def _row_get(row: Mapping[str, Any] | Any, key: str, default: Any = None) -> Any:
+    if isinstance(row, Mapping):
+        return row.get(key, default)
+    return getattr(row, key, default)
+
+
+def _sorted_axis_values(values: Sequence[Any]) -> list[Any]:
+    clean = [value for value in values if value is not None and value != ""]
+    unique = list(dict.fromkeys(clean))
+    try:
+        return sorted(unique, key=lambda value: float(value))
+    except (TypeError, ValueError):
+        return sorted(unique, key=lambda value: str(value))
+
+
+def _axis_label(value: Any) -> str:
+    if isinstance(value, float):
+        return f"{value:.2g}"
+    return str(value)
+
+
+def _float_or_zero(value: Any) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
