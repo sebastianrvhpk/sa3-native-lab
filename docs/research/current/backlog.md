@@ -176,23 +176,24 @@ Drop or revise if:
 
 ## Gap 5b. MIR/DSP Control-Lane Atlas And Native Knob Discovery
 
-Evidence gap: the notebook has a small control-lane set, but it does not yet
-separate musically useful MIR/DSP factors such as spectral density, noisiness,
-brightness, harmonic/percussive balance, transient density, band occupancy, and
-effect-like timbral movement.
+Evidence gap: the notebook now has a deterministic MIR/DSP lane bank, but those
+lanes still need repeated evidence showing which factors are distinct,
+predictable, and useful as selectors before any lane-targeted intervention is
+claimed.
 
 Native transition: `audio -> deterministic MIR/DSP lane bank -> SAME z0 / SA3 residual activations -> lane observability, lane predictability, and candidate knob rows`.
 
 Current support: audio descriptors, RMS/spectral centroid/spectral flux lanes,
-latent motion/channel lanes, lane summaries, lane regions, lane mechanistic
-probes, latent DSP, descriptor deltas, and listening/ledger surfaces.
+spectral bandwidth, entropy, flatness, contrast, low/mid/high spectral-density
+band lanes, onset density, active source masks, active-window correlations,
+per-lane regions, audio-event versus SAME-event region comparisons, latent
+motion/channel lanes, lane mechanistic probes, latent DSP, descriptor deltas,
+and listening/ledger surfaces.
 
-Next run: build a compact deterministic MIR/DSP lane bank before adding any
-deep MIR judge. Start with spectral density/entropy, flatness/noisiness,
-spectral contrast, low/mid/high band energy, band occupancy, harmonic versus
-percussive ratio, and onset density. Run each lane through SAME observability,
-SA3 control-lane mechanistic probing, and one small direct-decode evidence
-packet.
+Next run: run the direct control-lane evidence cell on at least two clips and
+inspect active-window correlations, per-lane region overlays, top-channel
+traces, and audio-event versus SAME-event region comparisons. Then run SA3
+control-lane mechanistic probing on the strongest non-redundant MIR/DSP lanes.
 
 Promote if:
 
@@ -221,22 +222,31 @@ Native transition: `audio/control lanes or prompt/audio examples -> residual act
 
 Current support: residual hooks, prompt/audio vector extraction, root
 `residual_probes.py` activation examples/vector containers/probe rows,
-`control_lane_probes.py` continuous lane-predictability rows, alpha sweeps,
-residual feature basis, cross-validated layer, sampler-timestep,
-trajectory-window, and control-lane probe rows, trajectory maps,
-trajectory-derived alpha schedules, trajectory-derived flow probe banks,
-player/descriptors.
+`control_lane_probes.py` continuous lane-predictability rows, sampler-timestep
+rows with `mapping_status`, null-control rows, held-out prediction curves,
+active/quiet direction previews, alpha sweeps, residual feature basis,
+cross-validated layer, sampler-timestep, trajectory-window, and control-lane
+probe rows, trajectory maps, trajectory-derived alpha schedules,
+trajectory-derived flow probe banks, player/descriptors.
 
-Next run: run control-lane mechanistic probing on one source with RMS,
-spectral-flux, latent-motion, and latent-channel lanes. Repeat across at least
-two seeds or prompts, inspect top lane/layer and lane/window rows, and only
-then choose whether a bounded alpha/patch sweep is scientifically justified.
+Next run: run control-lane mechanistic probing on one source at true source
+duration with RMS, spectral flux, onset density, spectral-density band,
+latent-motion, and latent-channel lanes. Inspect layer/window/timestep
+heatmaps, null-control margins, prediction curves, active-direction previews,
+and repeatability rows across at least two seeds, prompts, or init-noise levels.
+Only then choose whether a bounded alpha/patch sweep is scientifically
+justified.
 
 Promote if:
 
 - alpha changes target qualities monotonically or predictably,
 - probe-ranked layers, timesteps, and windows repeat across seeds or example subsets,
 - lane-predictive layers/windows repeat for the same control lane,
+- lane/timestep rows report exact or honestly grouped mapping rather than
+  silently using observed-call windows,
+- true-lane rows beat shuffled/reversed/random null controls,
+- held-out prediction curves track active source regions rather than padded
+  silence,
 - effects repeat across seeds/prompts,
 - artifacts remain bounded.
 
@@ -245,7 +255,8 @@ Drop or revise if:
 - hooks are too fragile,
 - steering only creates artifacts,
 - layer rankings do not repeat.
-- lane probes overfit one clip or only predict padded/silent tails.
+- lane probes overfit one clip, fail null controls, or only predict
+  padded/silent tails.
 
 ## Gap 7. Guidance Objective Honesty
 

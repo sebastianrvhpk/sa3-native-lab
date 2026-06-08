@@ -53,7 +53,7 @@ utilities:
 | Residual activation `a_l` | layer activation tensors | `adapters/sa3_residual_hooks.py`, `residual_probes.py`, residual procedures | captured, contrasted, probed, steered, summarized | confirmed |
 | Trajectory cell/map | layer, sampler step/window, sigma/logSNR, score, mapping status | `trajectory.py`, residual procedures, notebook cells | ranked, summarized, converted into probe banks or schedules | confirmed |
 | `LatentItem` | ID, latent, rate, prompt, descriptors, labels, metadata | `schema.py`, `io.py` | saved, loaded, indexed, clustered | confirmed |
-| Control lane | time-varying values, rate, confidence, metadata | `control_lanes.py`, `evidence/control_lane_rendering.py` | extracted, normalized, compared, segmented, masked, saved, rendered as evidence | confirmed |
+| Control lane | time-varying values, rate, confidence, metadata, active-source span | `control_lanes.py`, `evidence/control_lane_rendering.py` | extracted, normalized, masked for active source, correlated, compared, segmented, saved, rendered as evidence | confirmed |
 | Descriptor report | JSON-friendly audio statistics | `audio_descriptors.py` | computed for source/baseline/method outputs | confirmed |
 | Evidence packet | source/baseline/method outputs plus rows and notes | notebook, `evidence/`, ledger | records reviewable claims | template ready |
 | Disagreement row | native evidence lanes for one artifact or prompt | `evidence/disagreement.py` | surfaces conflicts before decisions | confirmed |
@@ -67,7 +67,7 @@ utilities:
 | SAME summaries | `z0` -> summary vectors | observe/compare | root measurement | confirmed | nearest-memory/source-preservation checks |
 | Geometry reports | `z0` collection -> PCA/covariance/transport rows | observe/select | root measurement | microscope | connect geometry movement to audition |
 | Periodicity and loop metrics | audio or `z0` -> loop rows | observe/compare | root measurement | microscope | compare against loop listening notes |
-| Control lanes | audio/latent -> time-varying lanes -> comparison rows / regions / masks / SVG evidence | observe/select/intervene candidate/render | root measurement plus evidence rendering | microscope/selector | lane similarity and lane masks must improve retrieval, review, or edits |
+| Control lanes | audio/latent -> time-varying lanes -> active span / active-window correlations / comparison rows / per-lane regions / masks / SVG evidence | observe/select/intervene candidate/render | root measurement plus evidence rendering | microscope/selector | lane similarity and lane masks must improve retrieval, review, or edits |
 | Latent memory | `LatentItem` collection -> nearest rows | select | root memory | selector | show better donor/source/novelty decisions |
 | Curriculum clustering | memory collection -> clusters/heldout rows | select | root memory | selector | show clusters improve prompt or donor choices |
 | Bridge/continuation ranking | memory rows -> ranked paths | select | root composition | selector | bridge scores must predict audible continuity |
@@ -88,7 +88,7 @@ utilities:
 | Residual sampler-timestep probing | residual examples + sampler callback -> cross-validated layer/timestep rows | observe/select | root residual probes plus adapter/procedure collection | microscope/selector | exact mappings must report `exact_one_call_per_step` or disclose grouping |
 | Residual-timestep cartography | layer/timestep rows -> trajectory cells -> band summaries, flow probes, alpha schedules, cyclic schedules | observe/select/intervene candidate | root trajectory map | microscope/selector | maps and schedules must repeat before causal claims |
 | Residual trajectory probing | residual examples -> cross-validated layer/window rows | observe/select | root residual probes plus adapter/procedure collection | microscope/selector | window-ranked rows must repeat before timestep claims |
-| Control-lane mechanistic probing | control lanes + audio-conditioned residual activations -> lane/layer and lane/window rows | observe/select | root lane probes plus procedure collection | microscope/selector | lane-visible layers/windows must repeat before any lane-steering claim |
+| Control-lane mechanistic probing | control lanes + audio-conditioned residual activations -> lane/layer, lane/window, lane/timestep, null, prediction, and active-direction rows | observe/select | root lane probes plus procedure collection | microscope/selector | lane-visible cells must beat nulls and repeat before any lane-steering claim |
 | Residual steering | residual vector -> patched generation | intervene/render | adapter plus procedure | high-risk candidate | alpha sweeps, preferably trajectory-gated, must move audio without artifacts |
 | Residual feature atlas | activations -> feature basis/report | observe/select | root measurement plus procedure | microscope | atlas rankings must predict interventions |
 | Gradient/posterior guidance | objective -> latent/sampler update | intervene/render | root operator/scaffold | high-risk candidate | objective movement must beat baselines audibly |

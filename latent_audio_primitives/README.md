@@ -53,10 +53,12 @@ Evidence utilities are shared review surfaces: evidence modules, manifests, and
 ledger docs audit every research layer instead of defining a fifth layer.
 
 `control_lanes.py` is measurement-first: it extracts audio/SAME temporal lanes,
-compares source/output lanes, builds silence confidence, ranks lane-similar
-memory rows, selects lane regions, and creates masks that other latent
-operators may use. A lane mask is an intervention surface only after direct
-decode, polish, and listening evidence support it.
+including deterministic MIR/DSP lanes, computes source-active masks, compares
+source/output lanes, builds active-window correlations, ranks lane-similar
+memory rows, selects lane regions, compares audio-event and SAME-event regions,
+and creates masks that other latent operators may use. A lane mask is an
+intervention surface only after direct decode, polish, and listening evidence
+support it.
 
 `latent_constraints.py` is objective-first: it defines scalar latent constraints
 that can be reported as rows or used by guidance/optimization procedures. It
@@ -67,9 +69,15 @@ steering vector containers, and probe rows after activations have already been
 captured. SA3 layer discovery and hook execution remain in `adapters/` and
 `procedures/`.
 
+`control_lane_probes.py` is residual-lane-probe-first: it owns continuous
+ridge probes from captured SA3 residual activations to control lanes, including
+layer rows, observed-call window rows, sampler-timestep rows, null controls,
+held-out prediction rows, and active/quiet direction previews. It does not run
+SA3.
+
 `evidence/control_lane_rendering.py` owns notebook SVG views for lane overlays,
-regions, and latent-channel heatmaps. Rendering is evidence presentation, not
-the definition of a control lane.
+regions, latent-channel heatmaps, probe heatmaps, and prediction curves.
+Rendering is evidence presentation, not the definition of a control lane.
 
 `trajectory.py` is microscope/selector-first: it turns residual layer/timestep
 probe rows into trajectory cells, band summaries, flow probe banks, residual

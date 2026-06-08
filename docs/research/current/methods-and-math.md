@@ -1055,9 +1055,55 @@ W_h = observed forward-call window h
 score_{l,h} = score using only calls c in W_h
 ```
 
-This is an observed hook-call trajectory microscope. It is not exact sampler
-timestep attribution unless the sampler path also exposes trustworthy timestep
-metadata.
+Sampler-timestep probe:
+
+```text
+s_k = sampler callback record {step index k, timestep t_k, sigma_k, logSNR_k}
+C_k = hook-call span mapped to sampler step k
+score_{l,k} = score using activations in C_k
+```
+
+This is exact timestep attribution only when the hook calls and sampler callback
+records map cleanly. Rows therefore carry:
+
+```text
+mapping_status in {
+  exact_one_call_per_step,
+  grouped_calls_per_step,
+  approximate_even_mapping
+}
+```
+
+Observed-call windows remain an honest fallback microscope when sampler
+metadata is unavailable or when multiple hook calls cannot be assigned exactly.
+
+Null controls:
+
+```text
+y_null(t) in {
+  shuffled y(t),
+  reversed y(t),
+  random lane with mean/std of y(t)
+}
+```
+
+The useful evidence is not only `score(y)`, but the margin:
+
+```text
+visibility_margin = score(y) - max_null_score(y_null)
+```
+
+If a lane probe does not beat its null rows, the result is treated as overfit or
+clip-specific noise.
+
+Held-out prediction rows export samples:
+
+```text
+{lane, layer, window/timestep, sample_fraction, target y_j, prediction y_hat_j}
+```
+
+These rows are for visual diagnosis: a smooth curve fit over the active source
+duration is more convincing than a single high average score.
 
 Active/quiet contrast:
 
@@ -1066,12 +1112,20 @@ d_l = mean(x_j | y_j >= q_active) - mean(x_j | y_j <= q_quiet)
 cos_l = cosine(d_l, w_l)
 ```
 
+The active-direction preview stores only compact feature-index summaries, not a
+steering vector. It is a candidate microscope for later residual intervention,
+not an intervention by itself.
+
 Interpretation:
 
 - high held-out correlation means a lane is linearly visible in a layer/window,
 - low normalized MSE means the probe beats a variance baseline,
 - a strong active/quiet delta means high-lane and low-lane regions occupy
   separated residual states,
+- null margins test whether the lane relationship is stronger than trivial
+  time/order controls,
+- `exact_one_call_per_step` is the cleanest sampler-coordinate evidence; grouped
+  or approximate rows must be described as less certain,
 - none of these prove causal control until a later residual patch or steering
   sweep moves decoded audio without artifacts.
 
@@ -1349,11 +1403,11 @@ audio confidence from RMS
 latent motion
 latent channel energy
 individual latent-channel traces
-brightness
-stereo width
-onset density
 spectral flux
-periodicity
+spectral centroid and bandwidth
+spectral entropy / flatness / contrast
+low / mid / high spectral-density band fractions
+onset density
 ```
 
 Core lane measurements:
@@ -1363,10 +1417,26 @@ latent_motion_energy(t) = RMS_c(z_t,c - z_{t-1,c})
 latent_channel_energy(t) = RMS_c(z_t,c)
 audio_confidence(t) = clamp((RMS_dB(t) - floor_dB) / (full_dB - floor_dB), 0, 1)
 spectral_flux(t) = RMS_f(norm(|STFT_t|)_f - norm(|STFT_{t-1}|)_f)
+spectral_density_band(t) = sum_{f in band} |STFT_t(f)|^2 / sum_f |STFT_t(f)|^2
+spectral_entropy(t) = -sum_f p_t(f) log p_t(f) / log(F)
+spectral_flatness(t) = geometric_mean(|STFT_t|^2) / arithmetic_mean(|STFT_t|^2)
+spectral_contrast(t) = percentile_90(dB_t(f)) - percentile_10(dB_t(f))
 ```
 
 The audio-confidence lane gates features that become unstable in near silence,
 especially spectral centroid and zero-crossing rate.
+
+Active source masking:
+
+```text
+active_mask(t) = 1[audio_confidence(t) >= tau]
+active_span = first/last active frame under active_mask
+```
+
+When a requested notebook duration exceeds the source duration, padded tails can
+inflate correlations by making every lane go flat together. Active-window
+summary and correlation rows therefore use `active_mask` and report
+`active_only=true`.
 
 Lane comparison:
 
@@ -1377,6 +1447,13 @@ reference lanes + candidate lanes
 -> confidence-weighted distance, similarity, delta rows
 ```
 
+Lane correlation:
+
+```text
+lane_a, lane_b, active_mask
+-> confidence-weighted active-window correlation and cosine similarity
+```
+
 Lane region selection:
 
 ```text
@@ -1384,6 +1461,12 @@ lane -> peaks / stable / silence / above / below regions
 regions -> time mask
 time mask + latent edit -> lane-masked latent intervention
 ```
+
+Every lane can export its own region rows. Audio-event regions such as RMS,
+spectral flux, onset density, or band-density peaks can be compared against SAME
+event regions such as latent motion or latent-channel energy by overlap and
+center-distance rows. This helps separate "audio event occurred" from "SAME
+latent state moved" without treating either as a control yet.
 
 Channel atlas:
 
