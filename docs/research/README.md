@@ -13,7 +13,7 @@ are organized as a lab record:
 - `current/methods-and-math.md`: how the notebook methods work.
 - `current/primitive-map.md`: how the helper modules cluster into a coherent
   notebook primitive library.
-- `current/capability-map.md`: bottom-up map of native objects, operations,
+- `current/capability-map.md`: native-object map of native objects, operations,
   evidence maturity, artifacts, and justified notebook workbenches.
 - `current/frontier-architecture-transfer.md`: current multimodal/audio
   architecture scout and transfer map into notebook experiments.
@@ -29,7 +29,7 @@ are organized as a lab record:
   modules, artifact graph, runtime assumptions, and current unknowns.
 - [Architecture ontology](current/architecture-ontology.md): canonical four
   research layers, evidence utilities, object transitions, placement rules,
-  existing coverage, bottom-up research programs, and priority order.
+  existing coverage, native experiment suites, and priority order.
 - [Methods and math](current/methods-and-math.md): SA3/SAME objects, frozen-model
   principle, flow scoring, object-transition equations, latent DSP, geometry,
   control observability, guidance, residual probing/steering, and implementation

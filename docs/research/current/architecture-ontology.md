@@ -1,6 +1,6 @@
 # SA3 Native Lab Research-Layer Ontology
 
-Status: current research-layer map for the notebook-first research program as
+Status: current research-layer map for the notebook-first research project as
 of 2026-06-06.
 
 This document answers: which model-native research layers the SA3/SAME
@@ -200,13 +200,13 @@ compare: preserved / amplified / repaired / erased / invented
 Notebook consequence: every coupled edit needs source, direct decode, plain
 polish, method polish, descriptor rows, source-preservation rows, and listening.
 
-## Bottom-Up Research Programs
+## Native Experiment Suites
 
-The notebook now has a section named `6. Bottom-Up Research Program
-Workbenches`. These are the current ten executable avenues. They emerged from
-the native objects and measurements rather than from legacy mode numbering.
+The notebook now has a section named `6. Native Experiment Suites`. These are
+the current ten executable suites. They are grouped by native objects and
+measurements rather than by legacy mode numbering.
 
-| Program | Layer | Native transition | Current maturity |
+| Suite | Layer | Native transition | Current maturity |
 |---|---|---|---|
 | SAME bottleneck tomography | SAME representation | `z0 -> structured perturbation -> D(z0')` | microscope |
 | SA3 flow-semantic cartography | SA3 flow/conditioning | `target z0 + prompt family + shared probes -> banded flow rows` | microscope / selector |
@@ -221,7 +221,7 @@ the native objects and measurements rather than from legacy mode numbering.
 
 ### Promotion Discipline
 
-These programs are deliberately not claims yet. Promotion still flows through
+These suites are deliberately not claims yet. Promotion still flows through
 the same evidence chain:
 
 ```text

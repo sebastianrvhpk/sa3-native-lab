@@ -1,4 +1,4 @@
-"""Research-program helpers for the SA3/SAME notebook lab.
+"""Experiment-suite helpers for the SA3/SAME notebook lab.
 
 The helpers in this module keep the notebook cells small without turning the
 project into an app framework. They describe experiment rows, perturbation
@@ -19,8 +19,8 @@ from .latent_dsp import LatentDSPSpec, apply_latent_dsp, latent_change_report
 
 
 @dataclass(frozen=True, slots=True)
-class ResearchProgramCard:
-    """One bottom-up research avenue expressed as an executable notebook target."""
+class ExperimentSuiteCard:
+    """One native experiment suite expressed as an executable notebook target."""
 
     name: str
     layer: str
@@ -68,11 +68,11 @@ class LatentConstraintSpec:
         return row
 
 
-def default_research_program_cards() -> list[ResearchProgramCard]:
-    """Return the current ten notebook research avenues."""
+def default_experiment_suite_cards() -> list[ExperimentSuiteCard]:
+    """Return the current ten notebook experiment suites."""
 
     return [
-        ResearchProgramCard(
+        ExperimentSuiteCard(
             name="SAME bottleneck tomography",
             layer="SAME representation",
             object="target audio -> SAME latent z0",
@@ -83,7 +83,7 @@ def default_research_program_cards() -> list[ResearchProgramCard]:
             promote_if="the same perturbation families repeatedly predict audible failure modes",
             revise_if="descriptor shifts do not line up with listening notes",
         ),
-        ResearchProgramCard(
+        ExperimentSuiteCard(
             name="SA3 flow-semantic cartography",
             layer="SA3 flow/conditioning",
             object="z_t, t, prompt condition C(p)",
@@ -94,7 +94,7 @@ def default_research_program_cards() -> list[ResearchProgramCard]:
             promote_if="low-loss prompts survive held-out timesteps and audible polishing",
             revise_if="scores rank prompts well only for one source or one timestep band",
         ),
-        ResearchProgramCard(
+        ExperimentSuiteCard(
             name="coupled edit survival",
             layer="SA3-over-SAME coupled editing",
             object="edited SAME latent and SA3 polished output",
@@ -105,7 +105,7 @@ def default_research_program_cards() -> list[ResearchProgramCard]:
             promote_if="survival labels predict which edits can become reliable operations",
             revise_if="SA3 prior motion dominates every perturbation family",
         ),
-        ResearchProgramCard(
+        ExperimentSuiteCard(
             name="latent control system identification",
             layer="SAME representation",
             object="latent trajectory and control lanes",
@@ -116,7 +116,7 @@ def default_research_program_cards() -> list[ResearchProgramCard]:
             promote_if="one lane has stable latent directions and audible monotonic control",
             revise_if="probe scores vanish outside the fitting files",
         ),
-        ResearchProgramCard(
+        ExperimentSuiteCard(
             name="stemless source cartography",
             layer="SAME representation",
             object="source latent, donor latent, channel/time masks",
@@ -127,7 +127,7 @@ def default_research_program_cards() -> list[ResearchProgramCard]:
             promote_if="regions behave consistently across donors and source families",
             revise_if="all grafts behave like generic noise injection",
         ),
-        ResearchProgramCard(
+        ExperimentSuiteCard(
             name="melody rhythm timbre factor atlas",
             layer="cross-layer evidence join",
             object="factor hypotheses over latents, lanes, prompts, and residual cells",
@@ -138,7 +138,7 @@ def default_research_program_cards() -> list[ResearchProgramCard]:
             promote_if="multiple microscopes agree on one factor boundary",
             revise_if="a factor is only visible in one measurement family",
         ),
-        ResearchProgramCard(
+        ExperimentSuiteCard(
             name="long-form latent composition",
             layer="SAME memory / composition",
             object="latent clips as graph nodes",
@@ -149,7 +149,7 @@ def default_research_program_cards() -> list[ResearchProgramCard]:
             promote_if="ranked edges reduce failed long-form auditions",
             revise_if="low-cost edges still sound discontinuous",
         ),
-        ResearchProgramCard(
+        ExperimentSuiteCard(
             name="prompt-condition geometry",
             layer="SA3 conditioning",
             object="prompt condition tensors and soft prompt states",
@@ -160,7 +160,7 @@ def default_research_program_cards() -> list[ResearchProgramCard]:
             promote_if="condition neighborhoods explain flow-score and soft-prompt behavior",
             revise_if="condition distance is uninformative for flow loss or listening",
         ),
-        ResearchProgramCard(
+        ExperimentSuiteCard(
             name="sampler physiology",
             layer="SA3 internal trajectory",
             object="sampler type, sigma/logSNR path, init noise, CFG, steps",
@@ -171,7 +171,7 @@ def default_research_program_cards() -> list[ResearchProgramCard]:
             promote_if="sampler settings expose stable trajectory regions for intervention",
             revise_if="recorded paths do not explain output variation",
         ),
-        ResearchProgramCard(
+        ExperimentSuiteCard(
             name="latent constraint library",
             layer="SAME intervention candidates",
             object="latent scalar constraints and reference distances",

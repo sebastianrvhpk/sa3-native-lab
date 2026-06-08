@@ -118,7 +118,7 @@ when primitive APIs change.
 | Prompt semantics | `make_prompt_variants(...)`, `prompt_semantic_rows(...)`, `rank_prompt_semantic_rows(...)` | prompt variants + native evidence -> prompt rows | transparency before treating text as discovered description |
 | Residual probes | `SA3ActivationVectorExtractor`, `SA3AudioResidualVectorExtractor`, `fit_residual_feature_basis(...)`, `alpha_sweep(...)` | prompts/audio -> residual examples -> layer rows + layer/timestep rows + layer/window rows -> residual direction -> sweep outputs | sampler-step microscope and layer selector first; steering remains high-risk candidate |
 | Guidance probes | `gradient_guidance_step(...)`, `combine_guidance_losses(...)` | differentiable objective -> latent/state update | scaffold until objective movement matches listening |
-| Research-program rows | `default_research_program_cards(...)`, `apply_bottleneck_perturbation(...)`, `bottleneck_row(...)`, `classify_edit_survival(...)`, `flow_semantic_band_rows(...)`, `condition_geometry_rows(...)`, `sampler_physiology_row(...)`, `latent_constraint_loss(...)` | native-object avenue -> JSON-friendly row / loss / evidence packet | ten bottom-up Colab workbenches; scaffold until L4 runs and ledger decisions exist |
+| Experiment-suite rows | `default_experiment_suite_cards(...)`, `apply_bottleneck_perturbation(...)`, `bottleneck_row(...)`, `classify_edit_survival(...)`, `flow_semantic_band_rows(...)`, `condition_geometry_rows(...)`, `sampler_physiology_row(...)`, `latent_constraint_loss(...)` | native-object avenue -> JSON-friendly row / loss / evidence packet | ten native Colab experiment suites; scaffold until L4 runs and ledger decisions exist |
 | Evidence utilities | `display_audio_player(...)`, `save_audio_annotation(...)`, `make_disagreement_row(...)` | outputs + rows + notes -> evidence packet | review, disagreement, and ledger decisions |
 
 ## Procedure Honesty Board
@@ -183,7 +183,7 @@ an operator is useful.
 | `observability.py` | confirmed | Linear probes for whether controls are visible in latent summaries. |
 | `residual_features.py` | confirmed | Residual activation bases and directions. |
 | `prompt_semantics.py` | confirmed | Prompt variant records, semantic tags, prompt evidence rows, and manifests. |
-| `research_programs.py` | confirmed | Research-program cards, tomography perturbation specs, survival labels, flow-semantic aggregation, control/source/composition rows, condition geometry, sampler physiology summaries, and latent constraint losses. |
+| `experiment_suites.py` | confirmed | Experiment-suite cards, tomography perturbation specs, survival labels, flow-semantic aggregation, control/source/composition rows, condition geometry, sampler physiology summaries, and latent constraint losses. |
 
 Narrative role: these modules keep the project honest. A control is not real
 until it is measurable, audible, and repeatable.

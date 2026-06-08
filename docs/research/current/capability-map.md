@@ -1,6 +1,6 @@
 # SA3 Native Lab Capability Map
 
-Status: bottom-up capability and maturity map for the current notebook and
+Status: native-object capability and maturity map for the current notebook and
 `latent_audio_primitives/` package as of 2026-06-06.
 
 This document answers: what the repo can actually do, which native-object

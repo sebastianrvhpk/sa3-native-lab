@@ -97,7 +97,7 @@ The canonical layer map is [Architecture ontology](architecture-ontology.md).
 
 The notebook should read as a lab instrument over native-object transitions,
 with each workbench moving from object to evidence to decision. The current
-order is bottom-up: runtime and evidence surfaces first, SAME representation
+order follows native-object transitions: runtime and evidence surfaces first, SAME representation
 next, then SA3 flow, SA3 internals, and finally coupled SA3-over-SAME editing.
 
 | Workbench | Main transition | Main artifacts | Current status |
@@ -111,7 +111,7 @@ next, then SA3 flow, SA3 internals, and finally coupled SA3-over-SAME editing.
 | SA3 internal trajectory science | activation/state -> trajectory map -> scheduled candidate -> output | residual vectors, residual-timestep maps, alpha schedules, cyclic schedules, guided variants | implemented plus high-risk scaffolds |
 | SA3-over-SAME coupled editing bench | `z0` -> edited `z0'` -> direct decode / SA3 polish | direct decodes, SA3-polished audio, deltas, source-preservation rows | implemented |
 | External comparison bench | external artifacts -> evidence packet | Underfit/cross-model audio, descriptor/player rows | external/scaffold |
-| Bottom-up research program workbenches | ten native-object avenues -> JSON rows / audio packets / decision evidence | research-program index, tomography, flow semantics, survival, controls, source maps, factor atlas, composition, condition geometry, sampler physiology, constraints | implemented scaffold |
+| Native experiment suites | ten native-object avenues -> JSON rows / audio packets / decision evidence | experiment-suite index, tomography, flow semantics, survival, controls, source maps, factor atlas, composition, condition geometry, sampler physiology, constraints | implemented scaffold |
 | Ledger and decision board | evidence packet -> maturity decision | ledger rows, promote/revise/drop decisions | template ready; no completed runs recorded |
 
 ## Claim Maturity Board
@@ -127,7 +127,7 @@ should be updated from `experiment-ledger.md`, not from speculation.
 | High-risk intervention candidate | residual steering, cyclic denoising projection, gradient guidance, posterior guidance, null-condition inversion | proof of causal movement without artifacts or fragile internals |
 | Promoted method | none yet | at least repeated evidence packets and ledger decisions |
 | External comparison | Underfit handoff and audio-output baseline harness | imported audio artifacts and fixed comparison packets |
-| Implemented workbench scaffold | ten bottom-up research program cells plus `research_programs.py` helper rows | Colab execution with L4 runtime, decoded outputs, listening notes, and ledger decisions |
+| Implemented workbench scaffold | ten native experiment suite cells plus `experiment_suites.py` helper rows | Colab execution with L4 runtime, decoded outputs, listening notes, and ledger decisions |
 
 ## Reusable Local Modules
 
@@ -140,7 +140,7 @@ should be updated from `experiment-ledger.md`, not from speculation.
   `style.py`, `flow_prompt.py`, `prompt_semantics.py`,
   `prompt_optimization.py`, `tokenizer_vocab.py`, `index.py`,
   `curriculum.py`, `composition.py`, `guidance.py`, `trajectory.py`,
-  `research_programs.py`, and `residual_features.py`.
+  `experiment_suites.py`, and `residual_features.py`.
 - Model boundary: `adapters/` isolates official SA3/SAME loading, encoding,
   generation, tokenizer access, and residual-hook surfaces.
 - Executable procedures: `procedures/` runs SA3/SAME flow scoring, soft prompt
@@ -166,7 +166,7 @@ capability map is [Capability map](capability-map.md).
 - Residual-timestep cartography is owned by `trajectory.py` with ranked cells,
   band summaries, trajectory-derived flow probe banks, residual alpha schedules,
   cyclic mix schedules, and sampler-step record normalization.
-- Bottom-up research program scaffolds are owned by `research_programs.py` with
+- Native experiment suite scaffolds are owned by `experiment_suites.py` with
   executable rows for SAME bottleneck tomography, flow-semantic cartography,
   coupled edit survival, control identification, source cartography, factor
   atlas rows, long-form composition rows, condition geometry, sampler

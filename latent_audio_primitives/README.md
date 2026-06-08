@@ -67,7 +67,7 @@ The full map lives in
 [`docs/research/current/primitive-map.md`](../docs/research/current/primitive-map.md).
 The research-layer ontology lives in
 [`docs/research/current/architecture-ontology.md`](../docs/research/current/architecture-ontology.md).
-The bottom-up object/capability map lives in
+The native-object capability map lives in
 [`docs/research/current/capability-map.md`](../docs/research/current/capability-map.md).
 
 ## Maintenance Rule
