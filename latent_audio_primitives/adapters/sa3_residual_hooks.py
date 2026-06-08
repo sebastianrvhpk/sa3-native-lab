@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any
+
+from latent_audio_primitives.residual_probes import SteeringVectors
 
 
 class AudioscopeIntegrationError(RuntimeError):
@@ -219,75 +220,6 @@ class ActivationCollector:
 
     def __exit__(self, *_args) -> None:
         self.remove_hooks()
-
-
-@dataclass
-class SteeringVectors:
-    """audioscope-compatible steering vector container."""
-
-    vectors: dict[int, Any] = field(default_factory=dict)
-    probe_accuracy: dict[int, float] = field(default_factory=dict)
-    best_layer: int | None = None
-
-    @classmethod
-    def load(cls, path: str | Path) -> "SteeringVectors":
-        torch = _require_torch()
-        data = torch.load(path, map_location="cpu")
-        return cls(
-            vectors=dict(data["vectors"]),
-            probe_accuracy=dict(data.get("probe_accuracy", {})),
-            best_layer=data.get("best_layer"),
-        )
-
-    def save(self, path: str | Path) -> None:
-        torch = _require_torch()
-        path = Path(path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        torch.save(
-            {
-                "vectors": self.vectors,
-                "probe_accuracy": self.probe_accuracy,
-                "best_layer": self.best_layer,
-            },
-            path,
-        )
-
-    def target_layers(self, *, layer: int | None = None, top_k: int = 5) -> list[int]:
-        if layer is not None:
-            layers = [layer]
-        elif self.probe_accuracy:
-            layers = [
-                index
-                for index, _score in sorted(self.probe_accuracy.items(), key=lambda item: -item[1])[:top_k]
-            ]
-        elif self.best_layer is not None:
-            layers = [self.best_layer]
-        else:
-            layers = sorted(self.vectors)
-        missing = [index for index in layers if index not in self.vectors]
-        if missing:
-            raise KeyError(f"missing steering vectors for layers {missing}")
-        return layers
-
-
-def mean_difference_vectors(
-    positive_activations: dict[int, Any],
-    negative_activations: dict[int, Any],
-    *,
-    normalize: bool = True,
-) -> SteeringVectors:
-    """Compute audioscope-style contrastive mean-difference directions."""
-
-    torch = _require_torch()
-    vectors = {}
-    for layer_idx, pos in positive_activations.items():
-        if layer_idx not in negative_activations:
-            raise KeyError(f"negative activations missing layer {layer_idx}")
-        diff = pos.float() - negative_activations[layer_idx].float()
-        if normalize:
-            diff = diff / (torch.linalg.vector_norm(diff) + 1e-8)
-        vectors[layer_idx] = diff.detach().cpu()
-    return SteeringVectors(vectors=vectors)
 
 
 class ResidualSteerer:

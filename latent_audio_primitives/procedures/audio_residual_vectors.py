@@ -7,10 +7,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from latent_audio_primitives.adapters.sa3_residual_hooks import ActivationCollector, SteeringVectors
-from latent_audio_primitives.procedures.residual_activation_vectors import (
+from latent_audio_primitives.adapters.sa3_residual_hooks import ActivationCollector
+from latent_audio_primitives.residual_probes import (
     ActivationExample,
     LayerProbeRow,
+    SteeringVectors,
     flatten_layer_windows,
     probe_layer_window_rows,
     probe_layer_rows,

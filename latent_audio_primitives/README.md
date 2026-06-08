@@ -35,10 +35,10 @@ upstream-version-sensitive behavior behind generic abstractions.
 
 | Layer | Modules | Object | Research Role |
 |---|---|---|---|
-| Root primitives | `schema.py`, `latent_math.py`, `geometry.py`, `latent_blur.py`, `selective_renoise.py`, `flow_prompt.py`, `trajectory.py`, `prompt_semantics.py`, etc. | native objects, math, measurements, operators, search | define what the lab manipulates and measures |
+| Root primitives | `schema.py`, `latent_math.py`, `geometry.py`, `control_lanes.py`, `latent_constraints.py`, `residual_probes.py`, `latent_blur.py`, `selective_renoise.py`, `flow_prompt.py`, `trajectory.py`, `prompt_semantics.py`, etc. | native objects, math, measurements, operators, search | define what the lab manipulates and measures |
 | Model boundary | `adapters/` | upstream SA3/SAME wrappers, residual hooks, tokenizer access | isolate external runtime coupling |
 | Procedures | `procedures/` | soft prompts, flow scoring, SA3 polish, selective SA3, cyclic SA3, residual probes and sweeps | run executable notebook methods |
-| Evidence | `evidence/`, `audio_descriptors.py`, `control_lanes.py` | player panels, annotations, descriptor/lane/disagreement rows, lane masks | support auditioning, selectors, and decisions |
+| Evidence | `evidence/`, `audio_descriptors.py`, `evidence/control_lane_rendering.py` | player panels, annotations, descriptor/lane/disagreement rows, SVG views | support auditioning, selectors, and decisions |
 
 Research layers are different from code altitude:
 
@@ -57,6 +57,19 @@ compares source/output lanes, builds silence confidence, ranks lane-similar
 memory rows, selects lane regions, and creates masks that other latent
 operators may use. A lane mask is an intervention surface only after direct
 decode, polish, and listening evidence support it.
+
+`latent_constraints.py` is objective-first: it defines scalar latent constraints
+that can be reported as rows or used by guidance/optimization procedures. It
+does not own evidence packet aggregation.
+
+`residual_probes.py` is residual-math-first: it owns activation examples,
+steering vector containers, and probe rows after activations have already been
+captured. SA3 layer discovery and hook execution remain in `adapters/` and
+`procedures/`.
+
+`evidence/control_lane_rendering.py` owns notebook SVG views for lane overlays,
+regions, and latent-channel heatmaps. Rendering is evidence presentation, not
+the definition of a control lane.
 
 `trajectory.py` is microscope/selector-first: it turns residual layer/timestep
 probe rows into trajectory cells, band summaries, flow probe banks, residual

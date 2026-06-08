@@ -34,22 +34,6 @@ class BottleneckPerturbationSpec:
         return row
 
 
-@dataclass(frozen=True, slots=True)
-class LatentConstraintSpec:
-    """A differentiable-ish latent measurement objective."""
-
-    name: str
-    kind: str
-    target: float = 0.0
-    weight: float = 1.0
-    params: Mapping[str, Any] = field(default_factory=dict)
-
-    def to_row(self) -> dict[str, Any]:
-        row = asdict(self)
-        row["params"] = dict(self.params)
-        return row
-
-
 def default_bottleneck_specs() -> list[BottleneckPerturbationSpec]:
     """Structured perturbations that test what the SAME latent bottleneck carries."""
 
@@ -525,103 +509,6 @@ def sampler_physiology_row(
     return row
 
 
-def default_latent_constraint_specs() -> list[LatentConstraintSpec]:
-    """A small constraint library for first-pass latent optimization."""
-
-    return [
-        LatentConstraintSpec(name="match_reference", kind="reference_distance", target=0.0, weight=1.0),
-        LatentConstraintSpec(name="preserve_rms", kind="rms", target=1.0, weight=0.25),
-        LatentConstraintSpec(name="motion_energy", kind="motion_energy", target=0.0, weight=0.5),
-        LatentConstraintSpec(name="loop_boundary", kind="loop_boundary", target=0.0, weight=0.5),
-        LatentConstraintSpec(
-            name="channel_energy_focus",
-            kind="channel_energy",
-            target=1.0,
-            weight=0.5,
-            params={"channels": [0, 1, 2, 3]},
-        ),
-    ]
-
-
-def latent_constraint_value(latents: Any, spec: LatentConstraintSpec, *, reference: Any | None = None) -> Any:
-    """Return a scalar tensor/number for a single latent constraint."""
-
-    x = latents
-    if spec.kind == "reference_distance":
-        if reference is None:
-            return _tensor_zero_like(x)
-        return ((x - reference) ** 2).mean()
-    if spec.kind == "rms":
-        return (x.square().mean() + 1e-12).sqrt()
-    if spec.kind == "motion_energy":
-        if x.shape[-1] < 2:
-            return _tensor_zero_like(x)
-        return (x[..., 1:] - x[..., :-1]).square().mean()
-    if spec.kind == "loop_boundary":
-        return (x[..., 0] - x[..., -1]).square().mean()
-    if spec.kind == "channel_energy":
-        channels = list(spec.params.get("channels", []))
-        channel_dim = -2 if x.ndim >= 2 else 0
-        channels = [channel for channel in channels if 0 <= int(channel) < x.shape[channel_dim]]
-        if not channels:
-            return _tensor_zero_like(x)
-        idx = _tensor_index(channels, device=x.device)
-        selected = x.index_select(channel_dim, idx)
-        return selected.square().mean()
-    if spec.kind == "mean":
-        return x.mean()
-    raise ValueError(f"Unknown latent constraint kind: {spec.kind!r}")
-
-
-def latent_constraint_loss(
-    latents: Any,
-    specs: Sequence[LatentConstraintSpec],
-    *,
-    reference: Any | None = None,
-) -> Any:
-    """Combine constraint specs into a scalar objective."""
-
-    total = _tensor_zero_like(latents)
-    for spec in specs:
-        value = latent_constraint_value(latents, spec, reference=reference)
-        target = value.new_tensor(float(spec.target)) if hasattr(value, "new_tensor") else float(spec.target)
-        total = total + float(spec.weight) * (value - target).square()
-    return total
-
-
-def evaluate_latent_constraints(
-    before_latents: Any,
-    after_latents: Any,
-    specs: Sequence[LatentConstraintSpec],
-    *,
-    reference: Any | None = None,
-) -> list[dict[str, Any]]:
-    """Report how constraints changed between two latent states."""
-
-    rows: list[dict[str, Any]] = []
-    for spec in specs:
-        before = _to_float(latent_constraint_value(before_latents, spec, reference=reference))
-        after = _to_float(latent_constraint_value(after_latents, spec, reference=reference))
-        delta = after - before
-        target_delta_before = abs(before - float(spec.target))
-        target_delta_after = abs(after - float(spec.target))
-        rows.append(
-            {
-                "name": spec.name,
-                "kind": spec.kind,
-                "target": spec.target,
-                "weight": spec.weight,
-                "before": before,
-                "after": after,
-                "delta": delta,
-                "target_error_before": target_delta_before,
-                "target_error_after": target_delta_after,
-                "status": "improved" if target_delta_after < target_delta_before else "worse_or_unchanged",
-            }
-        )
-    return rows
-
-
 def _apply_channel_dropout(latents: Any, *, fraction: float = 0.1, seed: int = 0, fill: str = "mean") -> Any:
     import torch
 
@@ -732,21 +619,3 @@ def _logsnr_band(logsnr: float | None) -> str:
     if logsnr <= 2.0:
         return "mid_trajectory"
     return "low_noise"
-
-
-def _tensor_zero_like(x: Any) -> Any:
-    if hasattr(x, "new_zeros"):
-        return x.new_zeros(())
-    return 0.0
-
-
-def _tensor_index(values: Sequence[int], *, device: Any) -> Any:
-    import torch
-
-    return torch.tensor(list(values), dtype=torch.long, device=device)
-
-
-def _to_float(value: Any) -> float:
-    if hasattr(value, "detach"):
-        return float(value.detach().float().cpu().item())
-    return float(value)

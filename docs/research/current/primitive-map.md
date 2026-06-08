@@ -107,6 +107,7 @@ when primitive APIs change.
 | SAME geometry | `fit_latent_geometry(items)`, `geometry_report(items)`, `mahalanobis_summary_distance(a,b,geometry)`, `covariance_transport(z, reference)` | latent collection -> PCA geometry or transported latent | microscope first; intervention only after decode/listening |
 | Periodicity | `periodicity_report(z)`, `loop_boundary_loss(z)`, `latent_autocorrelation(z)` | latent/audio segment -> loop and periodic rows | loopability microscope and bridge evidence |
 | Control lanes | `audio_same_control_lanes(...)`, `compare_control_lane_sets(...)`, `regions_from_control_lane(...)`, `control_lane_mask(...)`, `latent_channel_scores(...)`, `rank_control_lane_matches(...)`, `rank_control_lane_bridges(...)` | audio/latent trajectory -> lanes -> comparison rows / regions / masks / retrieval rows | measurement first; selector and intervention-mask evidence after review |
+| Control-lane rendering | `control_lane_svg(...)`, `control_lane_overlay_svg(...)`, `control_lane_region_svg(...)`, `latent_channel_heatmap_svg(...)` | lanes / latent channel scores -> SVG evidence views | evidence presentation; no lane math or intervention claim |
 | Descriptors | `audio_descriptor_report(audio, sample_rate)`, `descriptor_delta(a,b)` | decoded audio -> descriptor rows | evidence utility; never promotion alone |
 | Memory | `LatentMemoryIndex(items).query(...)`, `.query_controls(...)`, `.query_hybrid(...)`, `control_score(...)` | collection + query/control target -> nearest rows | selector; requires copying/source-preservation review |
 | Curriculum | `build_memory_curriculum(items, cluster_count=...)`, `nearest_memory_rows(query, items)` | collection -> clusters / nearest rows | dataset design and heldout/listening planning |
@@ -116,9 +117,11 @@ when primitive APIs change.
 | Trajectory cartography | `trajectory_map_from_probe_rows(...)`, `summarize_trajectory_bands(...)`, `trajectory_cells_to_alpha_schedule(...)`, `trajectory_cells_to_flow_probe_bank(...)`, `trajectory_cells_to_cyclic_mix_schedule(...)` | residual layer/timestep rows -> ranked trajectory cells -> schedules/probe banks | microscope/selector; schedules remain intervention candidates |
 | Native tokenizer vocabulary | `native_tokenizer_vocabulary(...)`, `extract_prompt_tokenizer(...)` | SA3 conditioner/tokenizer -> hard prompt candidates | prompt-search support, not a separate adapter layer |
 | Prompt semantics | `make_prompt_variants(...)`, `prompt_semantic_rows(...)`, `rank_prompt_semantic_rows(...)` | prompt variants + native evidence -> prompt rows | transparency before treating text as discovered description |
-| Residual probes | `SA3ActivationVectorExtractor`, `SA3AudioResidualVectorExtractor`, `fit_residual_feature_basis(...)`, `alpha_sweep(...)` | prompts/audio -> residual examples -> layer rows + layer/timestep rows + layer/window rows -> residual direction -> sweep outputs | sampler-step microscope and layer selector first; steering remains high-risk candidate |
+| Residual probe math | `ActivationExample`, `SteeringVectors`, `probe_layer_rows(...)`, `probe_layer_timestep_rows(...)`, `probe_layer_window_rows(...)`, `vectors_from_examples(...)` | captured residual activations -> vectors / layer rows / timestep rows / window rows | root microscope and selector math; no SA3 execution |
+| Residual procedures | `SA3ActivationVectorExtractor`, `SA3AudioResidualVectorExtractor`, `alpha_sweep(...)` | prompts/audio -> captured residual examples -> sweep outputs | SA3 execution and rendering; steering remains high-risk candidate |
 | Guidance probes | `gradient_guidance_step(...)`, `combine_guidance_losses(...)` | differentiable objective -> latent/state update | scaffold until objective movement matches listening |
-| Measurement recipes | `apply_bottleneck_perturbation(...)`, `bottleneck_row(...)`, `classify_edit_survival(...)`, `flow_semantic_band_rows(...)`, `condition_geometry_rows(...)`, `sampler_physiology_row(...)`, `latent_constraint_loss(...)` | native-object transition -> JSON-friendly row / loss / evidence packet | integrated Colab method cells; scaffold until L4 runs and ledger decisions exist |
+| Latent constraints | `LatentConstraintSpec`, `latent_constraint_value(...)`, `latent_constraint_loss(...)`, `evaluate_latent_constraints(...)` | latent tensor + constraint spec -> scalar objective / before-after rows | root objective math for guidance or optimization; high-risk until audio evidence agrees |
+| Measurement recipes | `apply_bottleneck_perturbation(...)`, `bottleneck_row(...)`, `classify_edit_survival(...)`, `flow_semantic_band_rows(...)`, `condition_geometry_rows(...)`, `sampler_physiology_row(...)` | native-object transition -> JSON-friendly row / evidence packet | integrated Colab method cells; scaffold until L4 runs and ledger decisions exist |
 | Evidence utilities | `display_audio_player(...)`, `save_audio_annotation(...)`, `make_disagreement_row(...)` | outputs + rows + notes -> evidence packet | review, disagreement, and ledger decisions |
 
 ## Procedure Honesty Board
@@ -134,8 +137,8 @@ metadata.
 | `sa3_latent_sampling.py` | SA3-over-SAME coupled editing | intervention candidate | Passes edited SAME latents through upstream SA3 init-latent sampling. |
 | `selective_sa3.py` | SA3-over-SAME coupled editing | intervention candidate | Combines SAME channel masks with upstream SA3 variation sampling. |
 | `cyclic_sa3.py` | SA3 internal trajectory | high-risk sampler microscope / intervention candidate | Inserts cyclic projections inside a sampler trajectory, optionally with trajectory-derived per-step mix schedules. |
-| `residual_activation_vectors.py` | SA3 internal trajectory | microscope / selector | Captures prompt-pair residual examples and emits layer, sampler-timestep, and layer-window probe rows. |
-| `audio_residual_vectors.py` | SA3 internal trajectory | high-risk microscope / selector | Captures audio-derived residual examples and emits layer, sampler-timestep, and layer-window probe rows. |
+| `residual_activation_vectors.py` | SA3 internal trajectory | microscope / selector | Runs prompt-pair SA3 generations, captures residual examples, and delegates vector/probe math to `residual_probes.py`. |
+| `audio_residual_vectors.py` | SA3 internal trajectory | high-risk microscope / selector | Runs audio-conditioned SA3 paths, captures residual examples, and delegates vector/probe math to `residual_probes.py`. |
 | `residual_sweeps.py` | SA3 internal trajectory | high-risk intervention candidate | Renders residual steering sweeps for audition and descriptors. |
 
 No row above is promoted by being present. Promotion requires repeated evidence
@@ -179,11 +182,13 @@ an operator is useful.
 | `audio_descriptors.py` | confirmed | Lightweight audio descriptor reports and deltas. |
 | `periodic.py` | confirmed | Autocorrelation, periodicity, spectral centroid, and loop boundary probes. |
 | `geometry.py` | confirmed | PCA, whitening, Mahalanobis distance, barycenters, covariance transport. |
-| `control_lanes.py` | confirmed | Time-varying envelope/motion/channel lanes, normalization, similarity, SVG, persistence. |
+| `control_lanes.py` | confirmed | Time-varying envelope/motion/channel lanes, normalization, similarity, region masks, retrieval/bridge ranking, and persistence. |
 | `observability.py` | confirmed | Linear probes for whether controls are visible in latent summaries. |
 | `residual_features.py` | confirmed | Residual activation bases and directions. |
+| `residual_probes.py` | confirmed | Activation examples, steering-vector containers, and layer/window/timestep probe rows after residual activations are collected. |
 | `prompt_semantics.py` | confirmed | Prompt variant records, semantic tags, prompt evidence rows, and manifests. |
-| `measurement_recipes.py` | confirmed | Tomography perturbation specs, survival labels, flow-semantic aggregation, control/source/composition rows, condition geometry, sampler physiology summaries, and latent constraint losses. |
+| `latent_constraints.py` | confirmed | Scalar latent constraint specs, objective values/losses, and before-after constraint rows. |
+| `measurement_recipes.py` | confirmed | Tomography perturbation specs, survival labels, flow-semantic aggregation, control/source/composition rows, condition geometry, and sampler physiology summaries. |
 
 Narrative role: these modules keep the project honest. A control is not real
 until it is measurable, audible, and repeatable.
@@ -232,8 +237,9 @@ interventions change generated audio, not just whether a signal is measurable.
 |---|---|---|
 | `adapters/sa3_residual_hooks.py` | confirmed | Residual activation capture and residual steering. |
 | `trajectory.py` | confirmed | Residual-timestep cartography cells, band summaries, flow-probe conversion, cyclic mix schedules, and residual alpha schedules. |
-| `procedures/residual_activation_vectors.py` | confirmed | SA3 activation-vector extraction plus layer, sampler-timestep, and trajectory-window probing from prompt pairs. |
-| `procedures/audio_residual_vectors.py` | confirmed | Residual vectors plus layer, sampler-timestep, and trajectory-window probes from audio examples. |
+| `residual_probes.py` | confirmed | Residual activation examples, steering-vector math, and reusable layer/window/timestep probe rows. |
+| `procedures/residual_activation_vectors.py` | confirmed | Prompt-pair SA3 residual activation collection and extraction packaging. |
+| `procedures/audio_residual_vectors.py` | confirmed | Audio-derived SA3 residual activation collection and extraction packaging. |
 | `prompt_pairs.py` | confirmed | Prompt-pair presets for residual steering probes. |
 | `procedures/residual_sweeps.py` | confirmed | Alpha sweep generation, optional audio export, and optional trajectory-gated steering schedules. |
 | `residual_features.py` | confirmed | Residual activation bases and directions. |
@@ -271,7 +277,8 @@ Purpose: turn many clips and many variants into decisions.
 | `evidence/annotations.py` | confirmed | Annotation save/load/search store for listening evidence. |
 | `evidence/disagreement.py` | confirmed | Native evidence disagreement rows for SAME, flow, descriptors, memory, and listening. |
 | `audio_descriptors.py` | confirmed | Lightweight audio descriptor reports and deltas. |
-| `control_lanes.py` | confirmed | Time-varying evidence lanes, overlays, region SVGs, channel heatmaps, persistence, and comparison rows. |
+| `control_lanes.py` | confirmed | Time-varying evidence lanes, persistence, masks, and comparison rows. |
+| `evidence/control_lane_rendering.py` | confirmed | Lane overlays, region SVGs, and latent-channel heatmaps for notebook display. |
 | Notebook manifest cell | confirmed | Run metadata, experiment switches, model/runtime context. |
 | `docs/research/current/experiment-ledger.md` | confirmed | Listening notes and promote/revise/drop decisions. |
 

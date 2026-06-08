@@ -50,10 +50,10 @@ utilities:
 | Flow probe bank | timestep/logSNR, noise seed/sign, velocity convention | `flow_prompt.py`, notebook cells | reused across prompt variants and flow panels | confirmed |
 | Prompt condition `C(p)` | SA3 conditioner outputs or optimized tensors | upstream SA3 plus `flow_prompt.py`, `procedures/soft_prompt.py` | scored, optimized, attributed, auditioned | confirmed |
 | Prompt semantic row | prompt variant, tags, flow/listening evidence | `prompt_semantics.py`, notebook cells | compares raw, readable, and flow-found language | confirmed |
-| Residual activation `a_l` | layer activation tensors | `adapters/sa3_residual_hooks.py`, residual procedures | captured, contrasted, steered, summarized | confirmed |
+| Residual activation `a_l` | layer activation tensors | `adapters/sa3_residual_hooks.py`, `residual_probes.py`, residual procedures | captured, contrasted, probed, steered, summarized | confirmed |
 | Trajectory cell/map | layer, sampler step/window, sigma/logSNR, score, mapping status | `trajectory.py`, residual procedures, notebook cells | ranked, summarized, converted into probe banks or schedules | confirmed |
 | `LatentItem` | ID, latent, rate, prompt, descriptors, labels, metadata | `schema.py`, `io.py` | saved, loaded, indexed, clustered | confirmed |
-| Control lane | time-varying values, rate, confidence, metadata | `control_lanes.py` | extracted, normalized, compared, segmented, masked, saved, rendered | confirmed |
+| Control lane | time-varying values, rate, confidence, metadata | `control_lanes.py`, `evidence/control_lane_rendering.py` | extracted, normalized, compared, segmented, masked, saved, rendered as evidence | confirmed |
 | Descriptor report | JSON-friendly audio statistics | `audio_descriptors.py` | computed for source/baseline/method outputs | confirmed |
 | Evidence packet | source/baseline/method outputs plus rows and notes | notebook, `evidence/`, ledger | records reviewable claims | template ready |
 | Disagreement row | native evidence lanes for one artifact or prompt | `evidence/disagreement.py` | surfaces conflicts before decisions | confirmed |
@@ -67,7 +67,7 @@ utilities:
 | SAME summaries | `z0` -> summary vectors | observe/compare | root measurement | confirmed | nearest-memory/source-preservation checks |
 | Geometry reports | `z0` collection -> PCA/covariance/transport rows | observe/select | root measurement | microscope | connect geometry movement to audition |
 | Periodicity and loop metrics | audio or `z0` -> loop rows | observe/compare | root measurement | microscope | compare against loop listening notes |
-| Control lanes | audio/latent -> time-varying lanes -> comparison rows / regions / masks | observe/select/intervene candidate | root measurement plus evidence | microscope/selector | lane similarity and lane masks must improve retrieval, review, or edits |
+| Control lanes | audio/latent -> time-varying lanes -> comparison rows / regions / masks / SVG evidence | observe/select/intervene candidate/render | root measurement plus evidence rendering | microscope/selector | lane similarity and lane masks must improve retrieval, review, or edits |
 | Latent memory | `LatentItem` collection -> nearest rows | select | root memory | selector | show better donor/source/novelty decisions |
 | Curriculum clustering | memory collection -> clusters/heldout rows | select | root memory | selector | show clusters improve prompt or donor choices |
 | Bridge/continuation ranking | memory rows -> ranked paths | select | root composition | selector | bridge scores must predict audible continuity |
@@ -84,10 +84,10 @@ utilities:
 | Style profile/direction | collection stats -> latent edit | intervene/render | root operator | intervention candidate | nearest-memory and listening checks for copying |
 | Cyclic loop repair | audio/`z0` -> rolled/repair output | intervene/render | root operator plus procedure | intervention candidate | loop metrics must match loop audition |
 | Residual activation capture | prompt/audio -> residual activations | observe | adapter plus procedure | microscope | layer maps must repeat |
-| Residual layer probing | residual examples -> cross-validated layer rows | observe/select | procedure | selector | probe-ranked layers must repeat before steering |
-| Residual sampler-timestep probing | residual examples + sampler callback -> cross-validated layer/timestep rows | observe/select | adapter plus procedure | microscope/selector | exact mappings must report `exact_one_call_per_step` or disclose grouping |
+| Residual layer probing | residual examples -> cross-validated layer rows | observe/select | root residual probes plus procedure collection | selector | probe-ranked layers must repeat before steering |
+| Residual sampler-timestep probing | residual examples + sampler callback -> cross-validated layer/timestep rows | observe/select | root residual probes plus adapter/procedure collection | microscope/selector | exact mappings must report `exact_one_call_per_step` or disclose grouping |
 | Residual-timestep cartography | layer/timestep rows -> trajectory cells -> band summaries, flow probes, alpha schedules, cyclic schedules | observe/select/intervene candidate | root trajectory map | microscope/selector | maps and schedules must repeat before causal claims |
-| Residual trajectory probing | residual examples -> cross-validated layer/window rows | observe/select | adapter plus procedure | microscope/selector | window-ranked rows must repeat before timestep claims |
+| Residual trajectory probing | residual examples -> cross-validated layer/window rows | observe/select | root residual probes plus adapter/procedure collection | microscope/selector | window-ranked rows must repeat before timestep claims |
 | Residual steering | residual vector -> patched generation | intervene/render | adapter plus procedure | high-risk candidate | alpha sweeps, preferably trajectory-gated, must move audio without artifacts |
 | Residual feature atlas | activations -> feature basis/report | observe/select | root measurement plus procedure | microscope | atlas rankings must predict interventions |
 | Gradient/posterior guidance | objective -> latent/sampler update | intervene/render | root operator/scaffold | high-risk candidate | objective movement must beat baselines audibly |
@@ -103,7 +103,7 @@ utilities:
 | Long-form composition map | memory items -> continuations / bridges / path rows | select | composition plus measurement recipes | selector | ranked plans must improve continuity auditions |
 | Prompt-condition geometry | conditions / soft prompt tensors -> pairwise distances | observe/compare | SA3 conditioner plus measurement recipes | microscope | condition neighborhoods must explain flow and audition behavior |
 | Sampler physiology | settings + sampler step records -> trajectory summaries | observe/compare | procedure plus research map | microscope | sampler paths must explain output variation and intervention windows |
-| Latent constraint library | constraint specs -> differentiable loss -> before/after rows | intervene candidate | root research map | high-risk candidate | constraints must move target properties without broad representation damage |
+| Latent constraint library | constraint specs -> differentiable loss -> before/after rows | intervene candidate/compare | root latent objective | high-risk candidate | constraints must move target properties without broad representation damage |
 
 Function-audit interpretation:
 

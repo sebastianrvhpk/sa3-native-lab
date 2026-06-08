@@ -134,7 +134,8 @@ should be updated from `experiment-ledger.md`, not from speculation.
 - Root native objects, math, measurements, and operators:
   `schema.py`, `io.py`, `latent_math.py`, `audio_descriptors.py`,
   `geometry.py`, `periodic.py`, `control_lanes.py`, `observability.py`,
-  `latent_blur.py`, `latent_dsp.py`, `selective_renoise.py`, `looping.py`,
+  `latent_constraints.py`, `residual_probes.py`, `latent_blur.py`,
+  `latent_dsp.py`, `selective_renoise.py`, `looping.py`,
   `style.py`, `flow_prompt.py`, `prompt_semantics.py`,
   `prompt_optimization.py`, `tokenizer_vocab.py`, `index.py`,
   `curriculum.py`, `composition.py`, `guidance.py`, `trajectory.py`,
@@ -146,8 +147,8 @@ should be updated from `experiment-ledger.md`, not from speculation.
   residual sweeps. Procedure maturity is documented in research docs and ledger
   decisions rather than encoded as package-level metadata.
 - Evidence loop: `evidence/audio_player.py`, `evidence/annotations.py`,
-  `evidence/disagreement.py`, `audio_descriptors.py`, and `control_lanes.py`
-  turn outputs into reviewable packets and decisions.
+  `evidence/disagreement.py`, `evidence/control_lane_rendering.py`, and
+  `audio_descriptors.py` turn outputs into reviewable packets and decisions.
 
 The detailed module map is [Primitive map](primitive-map.md). The object and
 capability map is [Capability map](capability-map.md).
@@ -164,11 +165,15 @@ capability map is [Capability map](capability-map.md).
 - Residual-timestep cartography is owned by `trajectory.py` with ranked cells,
   band summaries, trajectory-derived flow probe banks, residual alpha schedules,
   cyclic mix schedules, and sampler-step record normalization.
+- Residual examples, steering vector containers, and layer/window/timestep
+  probe rows are owned by `residual_probes.py`; residual procedures only
+  collect activations and render sweeps.
+- Latent scalar objectives are owned by `latent_constraints.py` so optimization
+  losses are separated from evidence-packet row aggregation.
 - Measurement recipes are owned by `measurement_recipes.py` with row helpers
   for SAME bottleneck tomography, flow-semantic cartography, coupled edit
   survival, control identification, source cartography, factor atlas rows,
-  long-form composition rows, condition geometry, sampler physiology, and
-  latent constraints.
+  long-form composition rows, condition geometry, and sampler physiology.
 - A synthetic smoke run covers the NumPy-only research grammar: `LatentItem`,
   summaries, geometry, periodicity, control lanes, audio descriptors, memory,
   curriculum, composition, style profiles/directions, flow-probe manifests,
