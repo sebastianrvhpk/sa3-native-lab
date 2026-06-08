@@ -71,9 +71,9 @@ captured. SA3 layer discovery and hook execution remain in `adapters/` and
 
 `control_lane_probes.py` is residual-lane-probe-first: it owns continuous
 ridge probes from captured SA3 residual activations to control lanes, including
-layer rows, observed-call window rows, sampler-timestep rows, null controls,
-held-out prediction rows, and active/quiet direction previews. It does not run
-SA3.
+layer rows, observed-call window rows, sampler-timestep rows, token-blocked and
+call-held-out CV scores, null controls, true-vs-null margins, held-out
+prediction rows, and active/quiet direction previews. It does not run SA3.
 
 `evidence/control_lane_rendering.py` owns notebook SVG views for lane overlays,
 regions, latent-channel heatmaps, probe heatmaps, and prediction curves.

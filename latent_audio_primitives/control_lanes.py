@@ -709,7 +709,24 @@ def control_lane_correlation_table(
             if active_mask is not None:
                 mask = _resample_values(np.asarray(active_mask, dtype=np.float32), frames)
                 weights = weights * (mask >= 0.5)
+            positive_weight_frames = int(np.sum(weights > 0))
+            if active_mask is not None and positive_weight_frames == 0:
+                rows.append(
+                    {
+                        "lane_a": a.name,
+                        "lane_b": b.name,
+                        "correlation": 0.0,
+                        "similarity": 0.0,
+                        "frames": int(frames),
+                        "active_frames": 0,
+                        "active_only": True,
+                        "confidence_weighted": bool(use_confidence),
+                        "status": "no_active_frames",
+                    }
+                )
+                continue
             weights = _safe_weights(weights)
+            active_frames = positive_weight_frames if active_mask is not None else int(np.sum(weights > 0))
             rows.append(
                 {
                     "lane_a": a.name,
@@ -717,9 +734,10 @@ def control_lane_correlation_table(
                     "correlation": _weighted_correlation(av, bv, weights),
                     "similarity": _weighted_cosine(_weighted_zscore(av, weights), _weighted_zscore(bv, weights), weights),
                     "frames": int(frames),
-                    "active_frames": int(np.sum(weights > 0)),
+                    "active_frames": active_frames,
                     "active_only": active_mask is not None,
                     "confidence_weighted": bool(use_confidence),
+                    "status": "ok",
                 }
             )
     rows.sort(key=lambda row: abs(float(row["correlation"])), reverse=True)

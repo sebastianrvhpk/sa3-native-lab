@@ -35,6 +35,15 @@ class ControlLaneProbeRow:
     ridge_active_cosine: float
     active_threshold: float
     quiet_threshold: float
+    call_group_count: int = 0
+    call_heldout_correlation_mean: float = 0.0
+    call_heldout_correlation_std: float = 0.0
+    call_heldout_normalized_mse_mean: float = 0.0
+    call_heldout_normalized_mse_std: float = 0.0
+    call_heldout_r2_mean: float = 0.0
+    call_heldout_r2_std: float = 0.0
+    call_heldout_fold_count: int = 0
+    call_heldout_status: str = ""
     rank: int = 0
     status: str = "ok"
     error: str = ""
@@ -97,6 +106,15 @@ class ControlLaneProbeRow:
             "ridge_active_cosine": float(self.ridge_active_cosine),
             "active_threshold": float(self.active_threshold),
             "quiet_threshold": float(self.quiet_threshold),
+            "call_group_count": int(self.call_group_count),
+            "call_heldout_correlation_mean": float(self.call_heldout_correlation_mean),
+            "call_heldout_correlation_std": float(self.call_heldout_correlation_std),
+            "call_heldout_normalized_mse_mean": float(self.call_heldout_normalized_mse_mean),
+            "call_heldout_normalized_mse_std": float(self.call_heldout_normalized_mse_std),
+            "call_heldout_r2_mean": float(self.call_heldout_r2_mean),
+            "call_heldout_r2_std": float(self.call_heldout_r2_std),
+            "call_heldout_fold_count": int(self.call_heldout_fold_count),
+            "call_heldout_status": self.call_heldout_status,
             "rank": int(self.rank),
             "status": self.status,
             "error": self.error,
@@ -408,6 +426,106 @@ def control_lane_probe_table(rows: Sequence[ControlLaneProbeRow]) -> list[dict[s
     return [row.to_dict() for row in rows]
 
 
+def control_lane_null_margin_table(
+    true_rows: Sequence[ControlLaneProbeRow | Mapping[str, Any]],
+    null_rows: Sequence[ControlLaneProbeRow | Mapping[str, Any]],
+    *,
+    score_key: str = "correlation_mean",
+    heldout_score_key: str = "call_heldout_correlation_mean",
+) -> list[dict[str, Any]]:
+    """Compare true-lane probe rows against matched shuffled/reversed/random rows."""
+
+    null_by_key: dict[tuple[Any, ...], list[ControlLaneProbeRow | Mapping[str, Any]]] = {}
+    for row in null_rows:
+        if str(_row_get(row, "status", "ok") or "ok") not in {"", "ok"}:
+            continue
+        key = _probe_match_key(row)
+        null_by_key.setdefault(key, []).append(row)
+
+    out: list[dict[str, Any]] = []
+    for true_row in true_rows:
+        if str(_row_get(true_row, "status", "ok") or "ok") not in {"", "ok"}:
+            continue
+        if str(_row_get(true_row, "null_kind", "") or ""):
+            continue
+        key = _probe_match_key(true_row)
+        matched = null_by_key.get(key, [])
+        true_score = float(_row_get(true_row, score_key, 0.0) or 0.0)
+        true_heldout_status = str(_row_get(true_row, "call_heldout_status", "") or "")
+        true_heldout_score = float(_row_get(true_row, heldout_score_key, 0.0) or 0.0)
+        null_scores = [float(_row_get(row, score_key, 0.0) or 0.0) for row in matched]
+        null_heldout_scores = [
+            float(_row_get(row, heldout_score_key, 0.0) or 0.0)
+            for row in matched
+            if str(_row_get(row, "call_heldout_status", "") or "") == "ok"
+        ]
+        if null_scores:
+            max_null = float(max(null_scores))
+            mean_null = float(np.mean(null_scores))
+            margin = float(true_score - max_null)
+            status = "ok"
+        else:
+            max_null = 0.0
+            mean_null = 0.0
+            margin = 0.0
+            status = "no_null_rows"
+
+        if true_heldout_status == "ok" and null_heldout_scores:
+            max_null_heldout: float | None = float(max(null_heldout_scores))
+            mean_null_heldout: float | None = float(np.mean(null_heldout_scores))
+            heldout_margin: float | None = float(true_heldout_score - max_null_heldout)
+            beats_null_heldout: bool | None = bool(heldout_margin > 0.0)
+        else:
+            max_null_heldout = None
+            mean_null_heldout = None
+            heldout_margin = None
+            beats_null_heldout = None
+
+        out.append(
+            {
+                "lane_name": str(_row_get(true_row, "lane_name", "")),
+                "layer_index": _optional_int(_row_get(true_row, "layer_index")),
+                "alignment_mode": str(_row_get(true_row, "alignment_mode", "")),
+                "window_index": _optional_int(_row_get(true_row, "window_index")),
+                "window_label": str(_row_get(true_row, "window_label", "") or ""),
+                "step_index": _optional_int(_row_get(true_row, "step_index")),
+                "sampler_index": _optional_int(_row_get(true_row, "sampler_index")),
+                "timestep": _optional_float(_row_get(true_row, "timestep")),
+                "sigma": _optional_float(_row_get(true_row, "sigma")),
+                "logsnr": _optional_float(_row_get(true_row, "logsnr")),
+                "mapping_status": str(_row_get(true_row, "mapping_status", "") or ""),
+                "score_key": score_key,
+                "true_score": true_score,
+                "max_null_score": max_null,
+                "mean_null_score": mean_null,
+                "null_margin": margin,
+                "beats_null": bool(null_scores and margin > 0.0),
+                "null_count": int(len(matched)),
+                "null_kinds": _matched_null_kinds(matched),
+                "call_heldout_score_key": heldout_score_key,
+                "true_call_heldout_status": true_heldout_status,
+                "true_call_heldout_score": true_heldout_score if true_heldout_status == "ok" else None,
+                "max_null_call_heldout_score": max_null_heldout,
+                "mean_null_call_heldout_score": mean_null_heldout,
+                "call_heldout_null_margin": heldout_margin,
+                "beats_null_call_heldout": beats_null_heldout,
+                "rank": int(_row_get(true_row, "rank", 0) or 0),
+                "status": status,
+            }
+        )
+    out.sort(
+        key=lambda row: (
+            row["status"] != "ok",
+            -float(row["null_margin"]),
+            -float(row["true_score"]),
+            str(row["lane_name"]),
+        )
+    )
+    for rank, row in enumerate(out, start=1):
+        row["null_margin_rank"] = int(rank)
+    return out
+
+
 def control_lane_probe_prediction_table(
     raw_activations: Mapping[int, Sequence[Any] | Any],
     lanes: Sequence[ControlLane],
@@ -580,7 +698,7 @@ def _probe_calls_for_lane(
 ) -> ControlLaneProbeRow:
     step_metadata = dict(step_metadata or {})
     try:
-        x, y = _features_and_targets_for_calls(calls, lane, min_confidence=min_confidence)
+        x, y, groups = _features_targets_groups_for_calls(calls, lane, min_confidence=min_confidence)
     except Exception as exc:
         return _empty_probe_row(
             lane,
@@ -623,6 +741,13 @@ def _probe_calls_for_lane(
         cv_folds=cv_folds,
         ridge_alpha=ridge_alpha,
     )
+    call_metrics = _ridge_call_heldout_cv(
+        x,
+        y,
+        groups,
+        cv_folds=cv_folds,
+        ridge_alpha=ridge_alpha,
+    )
     contrast = _active_quiet_contrast(
         x,
         y,
@@ -652,6 +777,15 @@ def _probe_calls_for_lane(
         ridge_active_cosine=contrast["ridge_active_cosine"],
         active_threshold=contrast["active_threshold"],
         quiet_threshold=contrast["quiet_threshold"],
+        call_group_count=call_metrics["call_group_count"],
+        call_heldout_correlation_mean=call_metrics["correlation_mean"],
+        call_heldout_correlation_std=call_metrics["correlation_std"],
+        call_heldout_normalized_mse_mean=call_metrics["normalized_mse_mean"],
+        call_heldout_normalized_mse_std=call_metrics["normalized_mse_std"],
+        call_heldout_r2_mean=call_metrics["r2_mean"],
+        call_heldout_r2_std=call_metrics["r2_std"],
+        call_heldout_fold_count=call_metrics["fold_count"],
+        call_heldout_status=str(call_metrics["status"]),
         window_index=window_index,
         window_label=window_label,
         window_start_fraction=None if call_start is None else call_start / max(total_call_count or len(calls), 1),
@@ -678,9 +812,20 @@ def _features_and_targets_for_calls(
     *,
     min_confidence: float,
 ) -> tuple[np.ndarray, np.ndarray]:
+    x, y, _groups = _features_targets_groups_for_calls(calls, lane, min_confidence=min_confidence)
+    return x, y
+
+
+def _features_targets_groups_for_calls(
+    calls: Sequence[Any],
+    lane: ControlLane,
+    *,
+    min_confidence: float,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     features = []
     targets = []
-    for activation in calls:
+    groups = []
+    for call_index, activation in enumerate(calls):
         x = _token_feature_matrix(activation)
         y_lane = resample_control_lane(lane, x.shape[0]).values.astype(np.float32)
         keep = np.ones(x.shape[0], dtype=bool)
@@ -693,9 +838,10 @@ def _features_and_targets_for_calls(
         if np.any(keep):
             features.append(x[keep])
             targets.append(y_lane[keep])
+            groups.append(np.full(int(np.sum(keep)), int(call_index), dtype=np.int64))
     if not features:
         raise ValueError("no activation/lane samples after confidence filtering")
-    return np.concatenate(features, axis=0), np.concatenate(targets, axis=0)
+    return np.concatenate(features, axis=0), np.concatenate(targets, axis=0), np.concatenate(groups, axis=0)
 
 
 def _token_feature_matrix(activation: Any) -> np.ndarray:
@@ -715,6 +861,42 @@ def _ridge_blocked_cv(
     ridge_alpha: float,
 ) -> dict[str, float | int]:
     folds = _blocked_fold_indices(x.shape[0], cv_folds=cv_folds)
+    return _ridge_cv_metrics(x, y, folds=folds, ridge_alpha=ridge_alpha)
+
+
+def _ridge_call_heldout_cv(
+    x: np.ndarray,
+    y: np.ndarray,
+    groups: np.ndarray,
+    *,
+    cv_folds: int,
+    ridge_alpha: float,
+) -> dict[str, float | int | str]:
+    call_group_count = int(np.unique(groups).shape[0])
+    folds = _group_heldout_fold_indices(groups, cv_folds=cv_folds)
+    if not folds:
+        return {
+            "correlation_mean": 0.0,
+            "correlation_std": 0.0,
+            "normalized_mse_mean": 0.0,
+            "normalized_mse_std": 0.0,
+            "r2_mean": 0.0,
+            "r2_std": 0.0,
+            "fold_count": 0,
+            "call_group_count": call_group_count,
+            "status": "insufficient_call_groups",
+        }
+    metrics = _ridge_cv_metrics(x, y, folds=folds, ridge_alpha=ridge_alpha)
+    return {**metrics, "call_group_count": call_group_count, "status": "ok"}
+
+
+def _ridge_cv_metrics(
+    x: np.ndarray,
+    y: np.ndarray,
+    *,
+    folds: Sequence[tuple[np.ndarray, np.ndarray]],
+    ridge_alpha: float,
+) -> dict[str, float | int]:
     correlations = []
     normalized_mses = []
     r2s = []
@@ -732,6 +914,16 @@ def _ridge_blocked_cv(
         normalized_mses.append(mse / max(target_var, 1e-8))
         r2s.append(1.0 - mse / max(baseline, 1e-8))
         correlations.append(_safe_correlation(pred, target))
+    if not correlations:
+        return {
+            "correlation_mean": 0.0,
+            "correlation_std": 0.0,
+            "normalized_mse_mean": 0.0,
+            "normalized_mse_std": 0.0,
+            "r2_mean": 0.0,
+            "r2_std": 0.0,
+            "fold_count": 0,
+        }
     return {
         "correlation_mean": float(np.mean(correlations)),
         "correlation_std": float(np.std(correlations)),
@@ -905,6 +1097,26 @@ def _blocked_fold_indices(n: int, *, cv_folds: int) -> list[tuple[np.ndarray, np
     return result
 
 
+def _group_heldout_fold_indices(groups: np.ndarray, *, cv_folds: int) -> list[tuple[np.ndarray, np.ndarray]]:
+    groups = np.asarray(groups, dtype=np.int64).reshape(-1)
+    unique_groups = np.unique(groups)
+    if unique_groups.shape[0] < 2:
+        return []
+    fold_count = min(max(2, int(cv_folds)), int(unique_groups.shape[0]))
+    group_folds = np.array_split(unique_groups, fold_count)
+    result: list[tuple[np.ndarray, np.ndarray]] = []
+    indices = np.arange(groups.shape[0], dtype=np.int64)
+    for test_groups in group_folds:
+        if test_groups.size == 0:
+            continue
+        test_mask = np.isin(groups, test_groups)
+        train_mask = ~test_mask
+        if not np.any(test_mask) or not np.any(train_mask):
+            continue
+        result.append((indices[train_mask], indices[test_mask]))
+    return result
+
+
 def _safe_correlation(a: np.ndarray, b: np.ndarray) -> float:
     if float(np.std(a)) < 1e-8 or float(np.std(b)) < 1e-8:
         return 0.0
@@ -999,6 +1211,8 @@ def _rank_rows_within_lane(rows: Sequence[ControlLaneProbeRow]) -> list[ControlL
         lane_rows.sort(
             key=lambda row: (
                 row.status != "ok",
+                row.call_group_count < 2,
+                -_row_rank_score(row),
                 -row.correlation_mean,
                 row.normalized_mse_mean,
                 row.layer_index,
@@ -1008,6 +1222,12 @@ def _rank_rows_within_lane(rows: Sequence[ControlLaneProbeRow]) -> list[ControlL
         for rank, row in enumerate(lane_rows, start=1):
             ranked.append(_copy_row_with_rank(row, rank=rank))
     return ranked
+
+
+def _row_rank_score(row: ControlLaneProbeRow) -> float:
+    if row.call_heldout_status == "ok":
+        return float(row.call_heldout_correlation_mean)
+    return float(row.correlation_mean)
 
 
 def _copy_row_with_rank(row: ControlLaneProbeRow, *, rank: int) -> ControlLaneProbeRow:
@@ -1033,6 +1253,15 @@ def _copy_row_with_rank(row: ControlLaneProbeRow, *, rank: int) -> ControlLanePr
         ridge_active_cosine=row.ridge_active_cosine,
         active_threshold=row.active_threshold,
         quiet_threshold=row.quiet_threshold,
+        call_group_count=row.call_group_count,
+        call_heldout_correlation_mean=row.call_heldout_correlation_mean,
+        call_heldout_correlation_std=row.call_heldout_correlation_std,
+        call_heldout_normalized_mse_mean=row.call_heldout_normalized_mse_mean,
+        call_heldout_normalized_mse_std=row.call_heldout_normalized_mse_std,
+        call_heldout_r2_mean=row.call_heldout_r2_mean,
+        call_heldout_r2_std=row.call_heldout_r2_std,
+        call_heldout_fold_count=row.call_heldout_fold_count,
+        call_heldout_status=row.call_heldout_status,
         rank=rank,
         status=row.status,
         error=row.error,
@@ -1053,6 +1282,30 @@ def _copy_row_with_rank(row: ControlLaneProbeRow, *, rank: int) -> ControlLanePr
         mapping_status=row.mapping_status,
         null_kind=row.null_kind,
         source=row.source,
+    )
+
+
+def _probe_match_key(row: ControlLaneProbeRow | Mapping[str, Any]) -> tuple[Any, ...]:
+    layer_index = _optional_int(_row_get(row, "layer_index"))
+    return (
+        str(_row_get(row, "lane_name", "")),
+        -1 if layer_index is None else int(layer_index),
+        str(_row_get(row, "alignment_mode", "")),
+        _optional_int(_row_get(row, "window_index")),
+        _optional_int(_row_get(row, "call_start")),
+        _optional_int(_row_get(row, "call_end")),
+        _optional_int(_row_get(row, "step_index")),
+        _optional_int(_row_get(row, "sampler_index")),
+    )
+
+
+def _matched_null_kinds(rows: Sequence[ControlLaneProbeRow | Mapping[str, Any]]) -> list[str]:
+    return sorted(
+        {
+            str(_row_get(row, "null_kind", "") or "")
+            for row in rows
+            if str(_row_get(row, "null_kind", "") or "")
+        }
     )
 
 

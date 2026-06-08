@@ -223,8 +223,9 @@ Native transition: `audio/control lanes or prompt/audio examples -> residual act
 Current support: residual hooks, prompt/audio vector extraction, root
 `residual_probes.py` activation examples/vector containers/probe rows,
 `control_lane_probes.py` continuous lane-predictability rows, sampler-timestep
-rows with `mapping_status`, null-control rows, held-out prediction curves,
-active/quiet direction previews, alpha sweeps, residual feature basis,
+rows with `mapping_status`, token-blocked and call-held-out control-lane
+scores, null-control rows, true-vs-null margin rows, held-out prediction
+curves, active/quiet direction previews, alpha sweeps, residual feature basis,
 cross-validated layer, sampler-timestep, trajectory-window, and control-lane
 probe rows, trajectory maps, trajectory-derived alpha schedules,
 trajectory-derived flow probe banks, player/descriptors.
@@ -233,7 +234,8 @@ Next run: run control-lane mechanistic probing on one source at true source
 duration with RMS, spectral flux, onset density, spectral-density band,
 latent-motion, and latent-channel lanes. Inspect layer/window/timestep
 heatmaps, null-control margins, prediction curves, active-direction previews,
-and repeatability rows across at least two seeds, prompts, or init-noise levels.
+call-held-out scores, and repeatability rows across at least two seeds, prompts,
+or init-noise levels.
 Only then choose whether a bounded alpha/patch sweep is scientifically
 justified.
 
@@ -245,6 +247,7 @@ Promote if:
 - lane/timestep rows report exact or honestly grouped mapping rather than
   silently using observed-call windows,
 - true-lane rows beat shuffled/reversed/random null controls,
+- call-held-out scores remain positive when enough observed calls are available,
 - held-out prediction curves track active source regions rather than padded
   silence,
 - effects repeat across seeds/prompts,

@@ -1048,6 +1048,26 @@ score_l = corr(y_holdout, y_hat_holdout)
 NMSE_l = MSE(y_holdout, y_hat_holdout) / var(y_holdout)
 ```
 
+There are two evidence levels:
+
+```text
+token_blocked_cv:
+  hold out contiguous token-time samples from the concatenated call trace
+
+call_heldout_cv:
+  hold out whole observed forward calls when more than one call is available
+```
+
+`token_blocked_cv` is the sensitive microscope: it asks whether a layer exposes
+the lane along token-time. `call_heldout_cv` is the stricter check: it asks
+whether the same lane/readout relation survives when complete hook calls are
+held out. A row with strong token-blocked score but weak call-held-out score may
+still be useful for inspection, but it should not be treated as a robust
+selector for residual interventions.
+
+Within a lane, row ranks prefer call-held-out correlation when it exists and
+fall back to token-blocked correlation for single-call sampler-step cells.
+
 Observed-call window probe:
 
 ```text
@@ -1091,6 +1111,8 @@ The useful evidence is not only `score(y)`, but the margin:
 
 ```text
 visibility_margin = score(y) - max_null_score(y_null)
+call_heldout_visibility_margin =
+  call_heldout_score(y) - max_call_heldout_null_score(y_null)
 ```
 
 If a lane probe does not beat its null rows, the result is treated as overfit or
@@ -1119,6 +1141,8 @@ not an intervention by itself.
 Interpretation:
 
 - high held-out correlation means a lane is linearly visible in a layer/window,
+- call-held-out correlation means visibility is less likely to be an artifact
+  of repeated lane curves across observed calls,
 - low normalized MSE means the probe beats a variance baseline,
 - a strong active/quiet delta means high-lane and low-lane regions occupy
   separated residual states,

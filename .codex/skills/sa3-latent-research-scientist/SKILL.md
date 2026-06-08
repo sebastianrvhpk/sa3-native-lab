@@ -100,6 +100,8 @@ sections are execution surfaces, not scientific categories or claims.
 - A visible lane is not a control. Control-lane rows must beat shuffled,
   reversed, or random nulls before they become selectors, and still need
   decoded/listening evidence before intervention language.
+- Control-lane probe rows should separate token-blocked visibility from
+  call-held-out evidence when multiple observed calls are available.
 - Observed hook-call windows are not sampler timesteps. Timestep rows must carry
   `mapping_status`; only `exact_one_call_per_step` is clean attribution.
 - Prediction curves and active/quiet direction previews are diagnostics. They

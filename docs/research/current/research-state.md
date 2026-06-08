@@ -197,7 +197,7 @@ methods under review, not as a list of promoted controls.
 | `procedures/cyclic_sa3.py` | SA3 internal trajectory | high-risk sampler microscope / intervention candidate | Loop metrics and auditions improve versus baselines without collapse or sampler artifacts; trajectory-derived mix schedules must beat uniform mix. |
 | `procedures/residual_activation_vectors.py` | SA3 internal trajectory | microscope / selector | Prompt-derived residual examples produce cross-validated layer, sampler-timestep, and trajectory-window probe rows before steering. |
 | `procedures/audio_residual_vectors.py` | SA3 internal trajectory | high-risk microscope / selector | Audio-derived residual examples produce layer, sampler-timestep, and trajectory-window probe rows; directions still need source-leakage and alpha-sweep review. |
-| `procedures/control_lane_mechanistic_probe.py` | SA3 internal trajectory plus SAME representation evidence | microscope / selector | Control-lane layer/window/timestep rows, null controls, prediction curves, and active-direction previews repeat before any lane-targeted residual patch or steering claim. |
+| `procedures/control_lane_mechanistic_probe.py` | SA3 internal trajectory plus SAME representation evidence | microscope / selector | Control-lane layer/window/timestep rows, call-held-out checks, null-margin rows, prediction curves, and active-direction previews repeat before any lane-targeted residual patch or steering claim. |
 | `procedures/residual_sweeps.py` | SA3 internal trajectory | high-risk intervention candidate | Global or trajectory-gated alpha changes are audible, monotonic or interpretable, and not just artifact injection. |
 
 ## Artifact Graph

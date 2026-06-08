@@ -16,6 +16,7 @@ from latent_audio_primitives.control_lane_probes import (
     control_lane_null_layer_probe_rows,
     control_lane_null_timestep_probe_rows,
     control_lane_null_window_probe_rows,
+    control_lane_null_margin_table,
     control_lane_probe_prediction_table,
     control_lane_probe_table,
     control_lane_probe_top_table,
@@ -35,6 +36,7 @@ class ControlLaneMechanisticProbeResult:
     null_layer_rows: list[ControlLaneProbeRow] = field(default_factory=list)
     null_window_rows: list[ControlLaneProbeRow] = field(default_factory=list)
     null_timestep_rows: list[ControlLaneProbeRow] = field(default_factory=list)
+    null_margin_rows: list[dict[str, Any]] = field(default_factory=list)
     prediction_rows: list[dict[str, Any]] = field(default_factory=list)
     active_direction_rows: list[dict[str, Any]] = field(default_factory=list)
     top_rows: list[dict[str, Any]] = field(default_factory=list)
@@ -55,6 +57,8 @@ class ControlLaneMechanisticProbeResult:
             json.dump(control_lane_probe_table(self.null_window_rows), f, indent=2, sort_keys=True)
         with (directory / "control_lane_null_timestep_probe_rows.json").open("w", encoding="utf-8") as f:
             json.dump(control_lane_probe_table(self.null_timestep_rows), f, indent=2, sort_keys=True)
+        with (directory / "control_lane_null_margin_rows.json").open("w", encoding="utf-8") as f:
+            json.dump(self.null_margin_rows, f, indent=2, sort_keys=True)
         with (directory / "control_lane_prediction_rows.json").open("w", encoding="utf-8") as f:
             json.dump(self.prediction_rows, f, indent=2, sort_keys=True)
         with (directory / "control_lane_active_direction_rows.json").open("w", encoding="utf-8") as f:
@@ -245,6 +249,13 @@ class SA3ControlLaneProbeExtractor:
                     active_percentile=active_percentile,
                     quiet_percentile=quiet_percentile,
                 )
+        null_margin_rows: list[dict[str, Any]] = []
+        if null_probe:
+            null_margin_rows.extend(control_lane_null_margin_table(layer_rows, null_layer_rows))
+            if window_rows:
+                null_margin_rows.extend(control_lane_null_margin_table(window_rows, null_window_rows))
+            if timestep_rows:
+                null_margin_rows.extend(control_lane_null_margin_table(timestep_rows, null_timestep_rows))
         prediction_rows: list[dict[str, Any]] = []
         if prediction_probe:
             prediction_rows = control_lane_probe_prediction_table(
@@ -282,6 +293,7 @@ class SA3ControlLaneProbeExtractor:
             null_layer_rows=null_layer_rows,
             null_window_rows=null_window_rows,
             null_timestep_rows=null_timestep_rows,
+            null_margin_rows=null_margin_rows,
             prediction_rows=prediction_rows,
             active_direction_rows=active_direction_rows,
             top_rows=top_rows,
@@ -313,6 +325,7 @@ class SA3ControlLaneProbeExtractor:
                 "null_probe": bool(null_probe),
                 "null_kinds": list(null_kinds) if null_probe else [],
                 "null_seed": int(null_seed) if null_probe else None,
+                "null_margin_row_count": int(len(null_margin_rows)),
                 "prediction_probe": bool(prediction_probe),
                 "prediction_top_k_per_lane": int(prediction_top_k_per_lane) if prediction_probe else None,
                 "prediction_max_points_per_row": int(prediction_max_points_per_row) if prediction_probe else None,
