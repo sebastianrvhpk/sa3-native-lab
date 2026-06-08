@@ -615,7 +615,7 @@ def probe_layer_accuracy(
     require_sklearn: bool = False,
     random_state: int = 0,
 ) -> dict[int, float]:
-    """Return layer -> accuracy for compatibility with older notebook cells.
+    """Return a compact layer -> accuracy map for quick notebook display.
 
     Prefer ``probe_layer_rows`` when displaying or saving layer evidence.
     """

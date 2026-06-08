@@ -94,6 +94,17 @@ utilities:
 | External comparison | imported outputs -> evidence packet | compare | evidence/procedure | comparison | fixed task packets with descriptors and notes |
 | Audio player and annotations | output paths -> audition notes | decide | evidence | confirmed | routine ledger use |
 | Semantic disagreement panel | artifact/prompt rows -> evidence conflicts | decide | evidence | microscope/decision support | show conflicts change promote/revise/drop choices |
+| Research-program index | ten native-object avenues -> cards / row schema | observe/plan | root research map plus notebook | implemented scaffold | run each workbench and record ledger decisions |
+| SAME bottleneck tomography | `z0 -> structured perturbation -> D(z0')` | observe/compare | root research map plus SAME operators | microscope | perturbation families must predict audible failures |
+| Flow-semantic cartography | `target z0 + prompt family + probe bank -> banded flow rows` | observe/select | root research map plus flow procedure | microscope/selector | banded scores must predict generated audio or useful prompts |
+| Coupled edit survival matrix | `z0' -> direct decode / plain polish / method polish` | compare/decide | root research map plus SA3 polish procedure | measurement scaffold | labels must identify preserved, erased, amplified, invented edits |
+| Latent control identification | collection descriptors -> latent probes -> maturity rows | observe/select | root measurement plus research map | microscope | probe-visible lanes must move under controlled intervention |
+| Stemless source cartography | source/donor latents + masks -> donor-pull rows | observe/intervene candidate | root SAME operator plus research map | microscope | source/donor effects must be stable across masks and files |
+| Factor atlas | prompt families + SAME/flow/trajectory rows -> factor evidence | observe/compare | root research map | atlas scaffold | multiple microscopes must agree on melody/rhythm/timbre/density boundaries |
+| Long-form composition map | memory items -> continuations / bridges / path rows | select | root composition plus research map | selector | ranked plans must improve continuity auditions |
+| Prompt-condition geometry | conditions / soft prompt tensors -> pairwise distances | observe/compare | root research map plus SA3 conditioner | microscope | condition neighborhoods must explain flow and audition behavior |
+| Sampler physiology | settings + sampler step records -> trajectory summaries | observe/compare | procedure plus research map | microscope | sampler paths must explain output variation and intervention windows |
+| Latent constraint library | constraint specs -> differentiable loss -> before/after rows | intervene candidate | root research map | high-risk candidate | constraints must move target properties without broad representation damage |
 
 Function-audit interpretation:
 

@@ -45,6 +45,7 @@ evidence utility
 | High-risk intervention candidate | residual steering, cyclic trajectory, gradient guidance, posterior guidance, null-condition inversion | implemented/scaffolded, needs causal proof and artifact checks |
 | Promoted method | none yet | no repeated ledger evidence yet |
 | External comparison | Underfit handoff and audio-output baseline harness | scaffolded/import-only |
+| Implemented workbench scaffold | ten bottom-up research program cells and `research_programs.py` rows | ready for Colab L4 execution, decoded evidence, listening notes, and ledger decisions |
 
 ## Gap 1. Reproducible Flow Probe Evidence
 
@@ -378,52 +379,42 @@ Drop or revise if:
 - metrics disagree randomly,
 - the panel slows the notebook without improving decisions.
 
-## Architecture-Layer Expansion Candidates
+## Current Workbench Scaffolds
 
-These are not separate priorities from the gaps above; they are cleaner
-architecture-level implementations that make the gaps easier to run.
+These are no longer backlog items to implement. They are notebook workbenches
+that should now be run, audited, and revised from evidence.
 
-| Candidate | Layer | Concrete implementation |
+| Workbench | Layer | Evidence it should produce next |
 |---|---|---|
-| SAME bottleneck atlas | SAME representation | Sweep low-rank, channel dropout, temporal blur, FFT bands, noise radius, direct decode, and descriptor/listening rows. |
-| SAME edit survival matrix | SA3-over-SAME coupled editing | For each SAME operator, compare source, direct decode, plain polish, and method polish; classify preserved, erased, amplified, repaired. |
-| Flow timestep semantic bands | SA3 flow/conditioning | Aggregate loss-by-logSNR across prompt categories and target clips; compare against descriptors and listening tags. |
-| Prompt condition counterfactuals | SA3 flow/conditioning | Score raw, rewritten, readable-search, hard-search, blank, and wrong prompts under one shared probe bank. |
-| Residual-timestep cartography | SA3 internal trajectory | Capture residual activations by layer and sampler timestep, summarize trajectory bands, and convert top cells into flow probe banks, alpha schedules, and cyclic schedules before steering claims. |
-| Residual causal sweep | SA3 internal trajectory | Sweep layer, sampler step/window, vector source, and alpha; require bounded descriptor/listening movement. |
-| SA3 polish/rescue audit | SA3-over-SAME coupled editing | Feed degraded or edited SAME latents into polish/init paths and classify rescue, erasure, invention, or preservation. |
-| Trajectory objective honesty packet | SA3 internal trajectory | Compare guidance-objective improvement against descriptor, source-preservation, and listening rows. |
-| Segment and continuation structure bench | SA3-over-SAME coupled editing / memory | Compare global prompt continuation against chunk/control-lane/bridge-planned continuation. |
-| Procedure honesty status audit | evidence utility | Keep the procedure honesty board, notebook manifests for specific runs, and ledger decisions synchronized after any procedure changes maturity. |
-| Primitive function smoke packet | evidence utility | Keep a tiny synthetic run that exercises the NumPy-only primitive grammar: records, summaries, geometry, lanes, descriptors, memory, composition, style, flow-probe manifests, prompt rows, and disagreement rows. |
-| Research-layer evidence field | evidence utility | Add research-layer/evidence-utility labels to manifests and ledger rows for every completed run. |
+| SAME bottleneck tomography | SAME representation | direct decodes, perturbation rows, descriptor deltas, listening notes |
+| SA3 flow-semantic cartography | SA3 flow/conditioning | shared-probe flow rows by prompt family and logSNR band |
+| Coupled edit survival matrix | SA3-over-SAME coupled editing | source/direct/plain-polish/method-polish packets and survival labels |
+| Latent control system identification | SAME representation | descriptor/lane probe rows and held-out observability checks |
+| Stemless source cartography | SAME representation | source/donor/self-graft rows, donor-pull, leakage flags |
+| Melody/rhythm/timbre factor atlas | cross-layer evidence join | factor rows that join SAME, flow, trajectory, and listening evidence |
+| Long-form latent composition | SAME memory / composition | continuation, bridge, and path rows before audition |
+| Prompt-condition geometry | SA3 flow/conditioning | pairwise condition distances and soft-prompt neighborhood rows |
+| Sampler physiology | SA3 internal trajectory | sampler settings, step-record summaries, output deltas |
+| Latent constraint library | SAME intervention candidates | constraint specs, before/after values, latent-change rows, decoded outputs |
 
 ## Priority Order
 
-1. SAME bottleneck atlas.
-2. SAME edit survival matrix.
-3. Reproducible flow probe evidence.
-4. Flow timestep semantic bands.
-5. Prompt semantic transparency and condition counterfactuals.
-6. Source preservation versus copying panel.
-7. Direct decode versus SA3 polish audit.
-8. Semantic bottleneck disagreement panel.
-9. Flow score predictive validity.
-10. Control-lane and geometry selection value.
-11. SA3 polish/rescue audit.
-12. Residual-timestep cartography.
-13. Residual causality.
-14. Guidance objective honesty.
-15. Segment and continuation structure bench.
-16. Null-condition editing.
-17. Seed and recipe repeatability.
-18. External comparison packets.
-19. Procedure honesty status audit.
-20. Primitive function smoke packet.
-21. Reportable evidence packets.
+1. Run SAME bottleneck tomography and coupled edit survival on the same source.
+2. Run flow-semantic cartography and prompt-condition geometry on the same
+   target.
+3. Run stemless source cartography with self-graft controls before donor claims.
+4. Run latent control identification on a small labeled/descriptor-rich dataset.
+5. Run factor-atlas rows only after at least one SAME row family and one flow
+   row family exist.
+6. Run long-form composition after memory items have descriptor and listening
+   notes.
+7. Run sampler physiology to explain noise/step sensitivity before stronger
+   sampler interventions.
+8. Run latent constraints as direct-decode probes before SA3 polish.
+9. Then return to residual causality, guidance objective honesty, null-condition
+   editing, seed repeatability, external comparison packets, and shareable
+   reports.
 
-The first two establish SAME on its own and SA3-over-SAME survival behavior.
-The next six stabilize SA3 flow/conditioning evidence and disagreement panels.
-Residual and guidance work comes after the surrounding SAME/flow evidence is
-interpretable. The final items make the lab easier to repeat, compare, and
-review without adding extra infrastructure.
+The immediate backlog is evidence generation and revision. The implementation
+surface is now broad enough; the next progress should come from completed
+packets, not from adding another framework or category list.

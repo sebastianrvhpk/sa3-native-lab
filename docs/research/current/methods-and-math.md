@@ -109,6 +109,187 @@ Coupled claim = compare direct SAME decode against SA3 polish.
 Promoted claim = add descriptors, listening notes, and ledger decisions.
 ```
 
+## Bottom-Up Research Program Measurements
+
+The current notebook section `6. Bottom-Up Research Program Workbenches` turns
+ten research avenues into row-producing experiments. These are implemented
+scaffolds, not promoted claims.
+
+### SAME Bottleneck Tomography
+
+Let `T_i` be a structured SAME-latent perturbation:
+
+```text
+z_i = T_i(z0)
+delta_i = z_i - z0
+x_i = D(z_i)
+```
+
+Tomography rows record:
+
+```text
+delta_rms_i = sqrt(mean(delta_i^2))
+cos_i = cosine(flatten(z0), flatten(z_i))
+descriptor_delta_i = descriptors(D(z_i)) - descriptors(D(z0))
+```
+
+Perturbation families include temporal blur, channel blur/dropout, low-rank
+projection, latent-time FFT bands, noise radius, and latent dynamics. A family
+is only meaningful if repeated descriptor/listening packets expose stable SAME
+preservation or failure behavior.
+
+### Coupled Edit Survival
+
+For a SAME edit `T`:
+
+```text
+z_edit = T(z0)
+z_plain = SA3_polish(z0)
+z_polish = SA3_polish(z_edit)
+```
+
+The survival ratio is:
+
+```text
+r_survive = rms(z_polish - z0) / max(rms(z_edit - z0), eps)
+```
+
+Local labels are deliberately coarse:
+
+```text
+no_op_or_failed_edit, erased, preserved, amplified,
+prior_dominated_or_unstable, prior_invention_or_plain_polish
+```
+
+This is a measurement of the coupled SAME/SA3 path. It should not be read as
+proof that the latent edit is useful until direct decode, plain polish, method
+polish, descriptors, and listening agree.
+
+### Flow-Semantic Cartography
+
+Given a prompt family `P_f`, reuse the shared flow probe bank and aggregate:
+
+```text
+L_band(p, b) = mean_{k in band b} L_flow(p; probe_k)
+```
+
+Bands are currently coarse logSNR regions:
+
+```text
+high_noise: logSNR < -2
+mid_trajectory: -2 <= logSNR <= 2
+low_noise: logSNR > 2
+```
+
+The point is not to claim semantic truth from text labels. The point is to ask
+whether prompt families produce stable flow-field differences at different
+trajectory regions.
+
+### Latent Control System Identification
+
+For an observed scalar lane or descriptor `y`, fit a plain probe on SAME
+summaries:
+
+```text
+y_hat = w^T normalize(summary(z)) + b
+R2_train = 1 - SSE / SST
+```
+
+A control is only observable when `R2_train` survives held-out examples. It is
+only steerable when an intervention moves `y_hat` and decoded audio in the
+intended direction.
+
+### Stemless Source Cartography
+
+For source `z_s`, donor `z_d`, selected channels or regions `M`, and amount
+`a`:
+
+```text
+z_graft = (1 - M a) z_s + (M a) z_d
+donor_pull = rms(z_graft - z_s) / max(rms(z_graft - z_s) + rms(z_graft - z_d), eps)
+```
+
+The self-graft control is mandatory:
+
+```text
+graft(z_s, z_s, M, a)
+```
+
+If the self-graft behaves like an arbitrary donor graft, the mask/edit math is
+not measuring source content.
+
+### Factor Atlas
+
+The factor atlas is an evidence join, not a classifier:
+
+```text
+factor row = join(SAME rows, flow rows, trajectory rows, listening notes)
+```
+
+Candidate factors currently include rhythm, timbre, melody/harmony, and
+density. A factor becomes worth using only when multiple microscopes agree.
+
+### Long-Form Latent Composition
+
+Composition remains a selector over boundary states:
+
+```text
+cost(a -> b) =
+  w_state ||end_state(a) - start_state(b)||_2
+  + w_velocity ||end_velocity(a) - start_velocity(b)||_2
+```
+
+Bridge and path rows rank candidates before audition:
+
+```text
+bridge_cost(a, m, b) = cost(a -> m) + cost(m -> b)
+```
+
+Low cost is a candidate for continuity, not proof of musical continuity.
+
+### Prompt-Condition Geometry
+
+For SA3 condition tensors or soft-prompt states:
+
+```text
+d(c_i, c_j) = ||flatten(c_i) - flatten(c_j)||_2
+cos(c_i, c_j) = cosine(flatten(c_i), flatten(c_j))
+```
+
+Useful condition geometry should explain flow-score neighborhoods or soft-prompt
+behavior. It is not enough for nearby text to be nearby in condition space.
+
+### Sampler Physiology
+
+Sampler physiology records the settings and observed path metadata:
+
+```text
+sampler_type, steps, init_noise, CFG, sigma range, logSNR range, timestep range
+```
+
+When sampler callbacks expose step records, rows summarize coverage and compare
+the final latent against the source:
+
+```text
+output_delta = rms(z_out - z0)
+```
+
+These rows are an observed trajectory microscope. Exact sampler timestep
+attribution still depends on upstream sampler metadata.
+
+### Latent Constraint Library
+
+A latent constraint is an inspectable scalar objective:
+
+```text
+J(z) = sum_i lambda_i (m_i(z) - target_i)^2
+```
+
+Initial constraints include reference distance, RMS, motion energy, loop
+boundary distance, channel energy, and mean. A constraint is not a control until
+before/after rows, direct decode, optional SA3 polish, descriptors, and
+listening show bounded movement.
+
 ## Frozen-Model Principle
 
 Most experiments keep SA3 and SAME frozen:

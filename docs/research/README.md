@@ -29,7 +29,7 @@ are organized as a lab record:
   modules, artifact graph, runtime assumptions, and current unknowns.
 - [Architecture ontology](current/architecture-ontology.md): canonical four
   research layers, evidence utilities, object transitions, placement rules,
-  existing coverage, new research programs, and priority order.
+  existing coverage, bottom-up research programs, and priority order.
 - [Methods and math](current/methods-and-math.md): SA3/SAME objects, frozen-model
   principle, flow scoring, object-transition equations, latent DSP, geometry,
   control observability, guidance, residual probing/steering, and implementation

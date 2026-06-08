@@ -412,17 +412,17 @@ review.
 Use the measurement-first backlog sequence:
 
 ```text
-SAME bottleneck atlas
--> SAME edit survival matrix
--> reproducible flow probe evidence
--> flow timestep semantic bands
--> prompt semantic transparency and condition counterfactuals
--> source preservation versus copying panel
--> direct decode versus SA3 polish audit
--> semantic bottleneck disagreement panel
--> residual layer-window atlas
--> residual causal sweep
--> trajectory objective honesty packet
+SAME bottleneck tomography
+-> coupled edit survival
+-> flow-semantic cartography
+-> prompt-condition geometry
+-> stemless source cartography
+-> latent control system identification
+-> melody/rhythm/timbre factor atlas
+-> long-form latent composition
+-> sampler physiology
+-> latent constraint library
+-> residual causal sweep / guidance honesty only after evidence packets exist
 ```
 
 SAME-only and coupled SA3-over-SAME behavior should be understood before

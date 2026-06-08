@@ -200,162 +200,43 @@ compare: preserved / amplified / repaired / erased / invented
 Notebook consequence: every coupled edit needs source, direct decode, plain
 polish, method polish, descriptor rows, source-preservation rows, and listening.
 
-## New Research Programs
+## Bottom-Up Research Programs
 
-### 1. SAME Bottleneck Atlas
+The notebook now has a section named `6. Bottom-Up Research Program
+Workbenches`. These are the current ten executable avenues. They emerged from
+the native objects and measurements rather than from legacy mode numbering.
 
-Native transition: `x -> z0 -> controlled bottleneck perturbation -> D(z0')`.
+| Program | Layer | Native transition | Current maturity |
+|---|---|---|---|
+| SAME bottleneck tomography | SAME representation | `z0 -> structured perturbation -> D(z0')` | microscope |
+| SA3 flow-semantic cartography | SA3 flow/conditioning | `target z0 + prompt family + shared probes -> banded flow rows` | microscope / selector |
+| Coupled edit survival | SA3-over-SAME coupled editing | `edited z0' -> direct decode / plain polish / method polish` | measurement scaffold |
+| Latent control system identification | SAME representation | `collection descriptors -> latent-summary probe -> maturity row` | microscope |
+| Stemless source cartography | SAME representation | `source/donor z0 + mask -> donor-pull and leakage rows` | microscope |
+| Melody/rhythm/timbre factor atlas | cross-layer evidence join | `SAME rows + flow rows + trajectory rows + listening notes -> factor row` | atlas scaffold |
+| Long-form latent composition | SAME memory / composition | `memory clips -> continuation / bridge / path candidates` | selector |
+| Prompt-condition geometry | SA3 flow/conditioning | `C(p_i), C(p_j), soft states -> condition distance rows` | microscope |
+| Sampler physiology | SA3 internal trajectory | `sampler settings + observed step records -> path summary` | microscope |
+| Latent constraint library | SAME intervention candidates | `constraint specs -> J(z) -> before/after rows` | high-risk intervention candidate |
 
-Implementation shape:
+### Promotion Discipline
 
-- Add a notebook packet that sweeps temporal downsample, low-rank projection,
-  channel dropout, FFT band attenuation, blur/sharpen, and noise radius.
-- For each perturbation, export direct decode, descriptors, SAME summary delta,
-  nearest-memory rows, and listening notes.
-
-Promote if: perturbation families reveal stable semantic/acoustic preservation
-patterns across clips.
-
-### 2. SAME Edit Survival Matrix
-
-Native transition: `z0 -> z0' -> direct decode / SA3 polish`.
-
-Implementation shape:
-
-- For every SAME edit family, create source, direct decode, plain polish, and
-  method polish.
-- Add a compact matrix row: intended movement, direct audible movement, polish
-  audible movement, erased/amplified/repaired.
-
-Promote if: the matrix identifies which SAME operators are real controls and
-which are only probes.
-
-### 3. Flow Timestep Semantic Bands
-
-Native transition: `target z0 -> shared probe bank -> prompt losses by logSNR`.
-
-Implementation shape:
-
-- Aggregate loss-by-timestep panels across several target clips and prompt
-  categories.
-- Compare logSNR bands against descriptor changes and listening tags.
-
-Promote if: some timesteps reliably correspond to prompt adherence, texture,
-  structure, source identity, or transient detail.
-
-### 4. Prompt Condition Counterfactuals
-
-Native transition: `prompt variants -> C(p) -> flow/loss/listening rows`.
-
-Implementation shape:
-
-- Compare raw prompt, semantic rewrite, readable search result, hard-search
-  result, blank prompt, and deliberately wrong prompt under one probe bank.
-- Keep semantic tags and conditional-delta rows.
-
-Promote if: prompt changes are explainable by native flow evidence and audible
-  behavior, not only by text plausibility.
-
-### 5. Residual-Timestep Cartography
-
-Native transition: `(prompt/audio examples, sampler timestep or observed forward-call window, layer) -> residual
-activation basis`.
-
-Implementation shape:
-
-- Capture residual activations by layer and upstream sampler timestep where the
-  callback is available; keep observed forward-call windows as fallback/context.
-- Rank candidate layers with stratified linear-probe rows before any steering
-  layer is chosen.
-- Convert high-scoring cells into band summaries, flow probe banks, residual
-  alpha schedules, and cyclic mix schedules without treating those schedules as
-  promoted controls.
-- Summarize which layers/timesteps/windows separate material, energy, space,
-  and rhythm tags.
-
-Promote if: layer/timestep/window maps and probe-ranked layers repeat before any
-steering claim is made.
-
-### 6. Residual Causal Sweep
-
-Native transition: `residual direction -> layer/timestep/window/alpha patch -> output`.
-
-Implementation shape:
-
-- Sweep one prompt-derived and one audio-derived vector over layer, sampler
-  step/window, and alpha.
-- Review direct outputs with descriptors, flow scores, and listening notes.
-
-Promote if: effects move monotonically or predictably and remain bounded.
-
-### 7. SA3 Polish/Rescue Audit
-
-Native transition: `degraded or edited z0' -> SA3 polish -> z_out`.
-
-Implementation shape:
-
-- Feed deliberately degraded SAME latents into SA3 polish/init-audio paths.
-- Ask whether SA3 restores fidelity, erases source identity, invents content, or
-  preserves intended edits.
-
-Promote if: rescue/erasure behavior becomes predictable enough to choose polish
-  settings.
-
-### 8. Trajectory Objective Honesty Packet
-
-Native transition: `objective recipe -> sampler/latent update -> output`.
-
-Implementation shape:
-
-- Represent guidance objectives as inspectable recipes: loop boundary,
-  descriptor, source-preservation, profile distance, flow agreement.
-- Compare objective improvement against listening and source-preservation rows.
-
-Promote if: objective improvement tracks audible improvement better than a
-  baseline.
-
-### 9. Segment And Continuation Structure Bench
-
-Native transition: `long source/dataset -> chunks/control lanes -> continuation
-or bridge plan`.
-
-Implementation shape:
-
-- Use SAME chunks, memory rows, lane-similar retrieval, lane-continuity bridge
-  search, and control-lane regions to produce segment plans.
-- Compare one global prompt against segment-level prompts and bridge-selected
-  continuations.
-
-Promote if: structure improves without boundary artifacts or copying.
-
-### 10. Research-Layer Evidence Packet
-
-Native transition: `run artifacts -> research-layer/evidence decision`.
-
-Implementation shape:
-
-- Add a `research_layer` field to manifest/ledger rows.
-- Let each completed run declare whether it tested SAME-only, SA3-only,
-  trajectory, coupled editing, or an evidence utility.
-
-Promote if: this makes run comparison clearer and prevents method categories
-  from drifting.
-
-## Priority
+These programs are deliberately not claims yet. Promotion still flows through
+the same evidence chain:
 
 ```text
-1. SAME bottleneck atlas
-2. SAME edit survival matrix
-3. Flow timestep semantic bands
-4. Prompt condition counterfactuals
-5. SA3 polish/rescue audit
-6. Residual-timestep cartography
-7. Residual causal sweep
-8. Trajectory objective honesty packet
-9. Segment and continuation structure bench
-10. Research-layer evidence packet
+object -> baseline -> method -> measurement -> audition -> ledger decision
 ```
 
-The first five should come before stronger residual/guidance claims. Residual
-work is compatible with SA3, but it becomes meaningful only when the surrounding
-SAME/flow/evidence layers are already interpretable.
+The priority is now execution quality, not adding more categories:
+
+1. Run one small packet for SAME bottleneck tomography and coupled edit
+   survival on the same source.
+2. Run flow-semantic cartography and prompt-condition geometry on the same
+   target.
+3. Run stemless source cartography with a self-graft control before donor
+   claims.
+4. Run long-form composition only after a small memory set has reliable
+   descriptors and listening notes.
+5. Treat sampler physiology and latent constraints as microscopes until their
+   outputs survive direct decode / polish evidence.
