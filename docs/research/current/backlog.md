@@ -42,7 +42,7 @@ evidence utility
 | Microscope | flow sign diagnostic, flow attribution, loss-by-timestep, geometry audit, periodicity, residual feature atlas | implemented, needs repeated listening linkage |
 | Selector | memory index, curriculum, bridge search, prompt search, tokenizer vocabulary, donor/source ranking ideas | implemented or scaffolded, needs proof that rankings improve auditions |
 | Intervention candidate | neighborhood renoise, selective renoise, graft, blur/filter, neural latent DSP, style profile/direction, cyclic repair, soft prompt audition | implemented, needs source/baseline/method packets |
-| High-risk intervention candidate | residual steering, cyclic trajectory, gradient guidance, posterior guidance, null-condition inversion | implemented/scaffolded, needs causal proof and artifact checks |
+| High-risk intervention candidate | residual steering, cyclic trajectory, gradient guidance, posterior guidance, null-condition inversion, noise-state inversion | implemented/scaffolded or prioritized, needs causal proof and artifact checks |
 | Promoted method | none yet | no repeated ledger evidence yet |
 | External comparison | Underfit handoff and audio-output baseline harness | scaffolded/import-only |
 | Implemented method scaffolds | integrated method cells plus `measurement_recipes.py`, `latent_constraints.py`, `residual_probes.py`, and evidence-rendering rows | ready for Colab L4 execution, decoded evidence, listening notes, and ledger decisions |
@@ -153,9 +153,9 @@ their selection value is not yet proven.
 Native transition: `collection -> lane/geometry/memory ranking -> donor/bridge/source choice`.
 
 Current support: geometry reports, control lanes, lane comparison, silence
-confidence, lane-selected regions, latent-channel atlas, rendered lane/heatmap
-evidence, lane-mask latent DSP, memory index, curriculum, bridge ranking, and
-composition helpers.
+confidence, spectral-flux/transient evidence, lane summary rows, lane-selected
+regions, latent-channel atlas, rendered lane/heatmap evidence, lane-mask latent
+DSP, memory index, curriculum, bridge ranking, and composition helpers.
 
 Next run: compare manual/random donor or bridge choices against lane/geometry
 ranked choices, then audition lane-masked edits against full-region edits.
@@ -257,7 +257,42 @@ Drop or revise if:
 - preservation does not beat audio-to-audio init,
 - conditioner internals are too unstable.
 
-## Gap 9. Seed And Recipe Repeatability
+## Gap 9. SA3 Noise-State Inversion
+
+Evidence gap: a generated audio state begins from noise, but this repo does not
+yet know whether a target audio clip can be represented by an optimized SA3
+initial-noise state or noise trajectory that preserves useful structure under
+prompt edits.
+
+Native transition: `target audio -> SAME z0 -> optimized noise state/noise trajectory -> SA3 reconstruction or edit -> evidence packet`.
+
+Current support: SAME encoding, shared flow probe banks, flow loss rows,
+latent constraints, sampler physiology summaries, soft/null prompt inversion,
+and the SA3 sampler procedure boundary. The missing support is an exposed
+differentiable sampler/noise-entry path that can optimize a continuous noise
+tensor without pretending the integer seed itself is invertible.
+
+Next run: start as a microscope on one source such as `dance2.mp3`: optimize or
+rank noise tensors against the frozen SA3 flow field and SAME target under a
+fixed prompt, compare against random-noise and audio-to-audio baselines, then
+attempt edited prompts only if reconstruction evidence is real.
+
+Promote if:
+
+- optimized noise preserves temporal structure better than random initial noise,
+- edited prompts keep source rhythm or form while changing the requested quality,
+- the optimized tensor remains close enough to the Gaussian prior to avoid a
+  hidden-copy artifact,
+- evidence rows beat soft/null prompt baselines on at least one repeated target.
+
+Drop or revise if:
+
+- optimization only memorizes one clip,
+- prior deviation becomes the actual representation,
+- sampler internals are too brittle to expose cleanly,
+- listening and descriptor evidence do not beat simpler audio-to-audio init.
+
+## Gap 10. Seed And Recipe Repeatability
 
 Evidence gap: many current operators may work only for one seed or clip.
 
@@ -280,7 +315,7 @@ Drop or revise if:
 - seed grids consume too much runtime,
 - clusters are not interpretable.
 
-## Gap 10. External Comparison Packets
+## Gap 11. External Comparison Packets
 
 Evidence gap: Underfit and other external outputs need the same evidence packet
 shape as local frozen-SA3 runs.
@@ -305,7 +340,7 @@ Drop or revise if:
 - model management creeps into this repo,
 - comparison setup distracts from notebook research.
 
-## Gap 11. Reportable Evidence Packets
+## Gap 12. Reportable Evidence Packets
 
 Evidence gap: generated artifacts are reviewable inside Colab, but not yet
 packaged as concise shareable run reports.
@@ -328,7 +363,7 @@ Drop or revise if:
 - report generation becomes more important than evidence review,
 - it distracts from notebook-first research.
 
-## Gap 12. Prompt Semantic Transparency
+## Gap 13. Prompt Semantic Transparency
 
 Evidence gap: prompt wording, source/listener semantics, flow score, and audible
 prompt adherence can disagree, but the notebook does not yet preserve those
@@ -356,7 +391,7 @@ Drop or revise if:
 - prompt variants become generic,
 - semantic tags add noise instead of review value.
 
-## Gap 13. Semantic Bottleneck Disagreement Panel
+## Gap 14. Semantic Bottleneck Disagreement Panel
 
 Evidence gap: SAME summaries, flow losses, descriptors, memory rows, and
 listening notes may rank the same output differently.
@@ -405,16 +440,19 @@ that should now be run, audited, and revised from evidence.
 1. Run SAME bottleneck tomography and coupled edit survival on the same source.
 2. Run flow-semantic cartography and prompt-condition geometry on the same
    target.
-3. Run stemless source cartography with self-graft controls before donor claims.
-4. Run latent control identification on a small labeled/descriptor-rich dataset.
-5. Run factor-atlas rows only after at least one SAME row family and one flow
+3. Run SA3 noise-state inversion first as a microscope on the same target:
+   optimized-noise rows, prior-deviation rows, reconstruction evidence, and
+   only then edited prompts.
+4. Run stemless source cartography with self-graft controls before donor claims.
+5. Run latent control identification on a small labeled/descriptor-rich dataset.
+6. Run factor-atlas rows only after at least one SAME row family and one flow
    row family exist.
-6. Run long-form composition after memory items have descriptor and listening
+7. Run long-form composition after memory items have descriptor and listening
    notes.
-7. Run sampler physiology to explain noise/step sensitivity before stronger
+8. Run sampler physiology to explain noise/step sensitivity before stronger
    sampler interventions.
-8. Run latent constraints as direct-decode probes before SA3 polish.
-9. Then return to residual causality, guidance objective honesty, null-condition
+9. Run latent constraints as direct-decode probes before SA3 polish.
+10. Then return to residual causality, guidance objective honesty, null-condition
    editing, seed repeatability, external comparison packets, and shareable
    reports.
 

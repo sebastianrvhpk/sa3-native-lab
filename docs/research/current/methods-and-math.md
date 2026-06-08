@@ -314,6 +314,51 @@ sidecar predictors h_psi for LatCH-style probes
 A successful result is evidence about existing latent affordances, not evidence
 that the base model was retrained.
 
+### SA3 Noise-State Inversion
+
+This backlog direction should be stated as continuous noise-state optimization,
+not literal seed inversion. A seed is a discrete recipe for sampling noise; the
+research object is the sampled tensor or an explicit noise trajectory.
+
+Let a frozen SA3 sampler map an initial noise tensor and conditioning to a final
+latent:
+
+```text
+z_hat_0 = Phi_theta(epsilon, C(p), S)
+```
+
+where `S` is the sampler schedule and settings. The basic reconstruction form is:
+
+```text
+epsilon* = argmin_epsilon
+  || Phi_theta(epsilon, C(p), S) - z_0 ||_2^2
+  + lambda_prior R_prior(epsilon)
+```
+
+with `z_0 = SAME(x_target)`. A trajectory version replaces one tensor with
+per-step corrections:
+
+```text
+{delta_k}* = argmin_{delta_k}
+  || Phi_theta(epsilon + delta_0, C(p), S, {delta_k}) - z_0 ||_2^2
+  + lambda_prior sum_k R_prior(delta_k)
+```
+
+Native evidence must include:
+
+```text
+target z0
+optimized noise tensor or trajectory metadata
+Gaussian-prior deviation
+reconstruction distance
+random-noise baseline
+audio-to-audio baseline
+descriptor and listening deltas
+```
+
+Only after reconstruction/preservation is credible should the notebook try
+edited prompts from the optimized noise state.
+
 ## Native Flow-Matching Score
 
 For target audio:
@@ -1235,6 +1280,7 @@ individual latent-channel traces
 brightness
 stereo width
 onset density
+spectral flux
 periodicity
 ```
 
@@ -1244,6 +1290,7 @@ Core lane measurements:
 latent_motion_energy(t) = RMS_c(z_t,c - z_{t-1,c})
 latent_channel_energy(t) = RMS_c(z_t,c)
 audio_confidence(t) = clamp((RMS_dB(t) - floor_dB) / (full_dB - floor_dB), 0, 1)
+spectral_flux(t) = RMS_f(norm(|STFT_t|)_f - norm(|STFT_{t-1}|)_f)
 ```
 
 The audio-confidence lane gates features that become unstable in near silence,
@@ -1425,6 +1472,7 @@ intervenability: can an edit reliably move h(z) and the audio?
 | Neural latent DSP | `latent_dsp.py`, `audio_descriptors.py` | SAME representation / coupled editing benches | yes for decode/polish | no |
 | Direct gradient guidance | `guidance.py` | SA3 internal trajectory science | yes for sampler integration | no base training |
 | Latent constraints | `latent_constraints.py` | SAME representation / SA3 internal trajectory / coupled editing benches | no for tensor-only objective rows, yes for decode/polish evidence | no |
+| Noise-state inversion | backlog only; future sampler/noise procedure | SA3 internal trajectory science | yes | no base training |
 | Prompt inversion | `prompt_optimization.py`, `flow_prompt.py`, `procedures/flow_scoring.py` | SA3 flow/conditioning science | yes | no |
 | Residual probe rows/vectors | `residual_probes.py`, residual procedures | SA3 internal trajectory science | yes for activation capture | no |
 | Residual feature discovery | `residual_features.py` | SA3 internal trajectory science | yes for activation capture | no |
