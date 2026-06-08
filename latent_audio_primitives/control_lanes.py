@@ -174,7 +174,7 @@ def audio_envelope_lane(
     """Return a framewise audio control lane.
 
     Supported names: ``rms_envelope``, ``zero_crossing_rate``,
-    ``spectral_centroid_hz``.
+    ``spectral_centroid_hz``, and ``spectral_flux``.
     """
 
     if sample_rate <= 0:
@@ -197,8 +197,16 @@ def audio_envelope_lane(
         freqs = np.fft.rfftfreq(frame, d=1.0 / sample_rate).astype(np.float32)
         values = (spectrum * freqs[None, :]).sum(axis=1) / spectrum.sum(axis=1)
         lane_confidence = confidence
+    elif name == "spectral_flux":
+        window = np.hanning(frame).astype(np.float32)
+        spectrum = np.abs(np.fft.rfft(frames * window[None, :], axis=1)).astype(np.float32)
+        norm = np.linalg.norm(spectrum, axis=1, keepdims=True)
+        spectrum = spectrum / np.maximum(norm, 1e-10)
+        diff = np.diff(spectrum, axis=0, prepend=spectrum[:1])
+        values = np.sqrt(np.mean(diff * diff, axis=1))
+        lane_confidence = confidence
     else:
-        raise ValueError("name must be 'rms_envelope', 'zero_crossing_rate', or 'spectral_centroid_hz'")
+        raise ValueError("name must be 'rms_envelope', 'zero_crossing_rate', 'spectral_centroid_hz', or 'spectral_flux'")
     return ControlLane(
         name=name,
         values=values.astype(np.float32),
@@ -268,6 +276,7 @@ def audio_same_control_lanes(
             [
                 audio_envelope_lane(audio, sample_rate, frame_seconds=frame_seconds, name="rms_envelope", source=source),
                 audio_envelope_lane(audio, sample_rate, frame_seconds=frame_seconds, name="spectral_centroid_hz", source=source),
+                audio_envelope_lane(audio, sample_rate, frame_seconds=frame_seconds, name="spectral_flux", source=source),
                 audio_loudness_confidence_lane(audio, sample_rate, frame_seconds=frame_seconds, source=source),
             ]
         )
@@ -413,6 +422,55 @@ def control_lane_comparison_table(rows: Sequence[ControlLaneComparisonRow]) -> l
     """Return JSON/table-friendly lane-comparison rows."""
 
     return [row.to_dict() for row in rows]
+
+
+def control_lane_summary_row(lane: ControlLane) -> dict[str, Any]:
+    """Return a compact descriptive row for one control lane."""
+
+    values = lane.values.astype(np.float32)
+    confidence = lane.confidence if lane.confidence is not None else np.ones(lane.frames, dtype=np.float32)
+    normalized = normalize_array(values)
+    peak_frame = int(np.argmax(values))
+    trough_frame = int(np.argmin(values))
+    return {
+        "name": lane.name,
+        "source": lane.source,
+        "frames": int(lane.frames),
+        "duration_seconds": float(lane.duration_seconds),
+        "rate_hz": float(lane.rate_hz),
+        "mean": float(np.mean(values)),
+        "std": float(np.std(values)),
+        "min": float(np.min(values)),
+        "max": float(np.max(values)),
+        "peak_frame": peak_frame,
+        "peak_seconds": float(peak_frame / lane.rate_hz),
+        "peak_value": float(values[peak_frame]),
+        "trough_frame": trough_frame,
+        "trough_seconds": float(trough_frame / lane.rate_hz),
+        "trough_value": float(values[trough_frame]),
+        "high_fraction": float(np.mean(normalized >= 0.75)),
+        "confidence_mean": float(np.mean(confidence)),
+        "confidence_min": float(np.min(confidence)),
+        "normalization": lane.metadata.get("normalization"),
+    }
+
+
+def control_lane_summary_table(lanes: Sequence[ControlLane]) -> list[dict[str, Any]]:
+    """Return JSON/table-friendly summaries for a lane set."""
+
+    return [control_lane_summary_row(lane) for lane in lanes]
+
+
+def lane_region_table(regions: Sequence[LaneRegion]) -> list[dict[str, Any]]:
+    """Return JSON/table-friendly rows for selected lane regions."""
+
+    rows = []
+    for region in regions:
+        row = region.to_dict()
+        row["duration_seconds"] = float(region.end_seconds - region.start_seconds)
+        row["frames"] = int(region.end_frame - region.start_frame)
+        rows.append(row)
+    return rows
 
 
 def regions_from_control_lane(
