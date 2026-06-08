@@ -174,6 +174,43 @@ Drop or revise if:
 - metrics duplicate simple descriptors without added value.
 - lane masks only hide failures without improving decoded or polished audio.
 
+## Gap 5b. MIR/DSP Control-Lane Atlas And Native Knob Discovery
+
+Evidence gap: the notebook has a small control-lane set, but it does not yet
+separate musically useful MIR/DSP factors such as spectral density, noisiness,
+brightness, harmonic/percussive balance, transient density, band occupancy, and
+effect-like timbral movement.
+
+Native transition: `audio -> deterministic MIR/DSP lane bank -> SAME z0 / SA3 residual activations -> lane observability, lane predictability, and candidate knob rows`.
+
+Current support: audio descriptors, RMS/spectral centroid/spectral flux lanes,
+latent motion/channel lanes, lane summaries, lane regions, lane mechanistic
+probes, latent DSP, descriptor deltas, and listening/ledger surfaces.
+
+Next run: build a compact deterministic MIR/DSP lane bank before adding any
+deep MIR judge. Start with spectral density/entropy, flatness/noisiness,
+spectral contrast, low/mid/high band energy, band occupancy, harmonic versus
+percussive ratio, and onset density. Run each lane through SAME observability,
+SA3 control-lane mechanistic probing, and one small direct-decode evidence
+packet.
+
+Promote if:
+
+- MIR/DSP lanes expose distinct behavior instead of duplicating RMS or centroid,
+- SAME latent summaries/channels or SA3 layers/windows predict the same lane
+  across at least two clips,
+- lane movement matches listening notes better than coarse descriptors alone,
+- a lane can define an interpretable candidate knob without collapsing source
+  identity or unrelated lanes.
+
+Drop or revise if:
+
+- lanes are redundant with existing descriptors,
+- lanes only detect silence, padding, or loudness,
+- deep MIR embeddings become an external semantic judge instead of a native
+  evidence source,
+- knob searches optimize metrics while decoded/polished audio gets worse.
+
 ## Gap 6. Residual Causality
 
 Evidence gap: residual activations are measurable, and layer plus sampler-step,
@@ -449,14 +486,16 @@ that should now be run, audited, and revised from evidence.
    only then edited prompts.
 4. Run stemless source cartography with self-graft controls before donor claims.
 5. Run latent control identification on a small labeled/descriptor-rich dataset.
-6. Run factor-atlas rows only after at least one SAME row family and one flow
+6. Build the MIR/DSP control-lane atlas as deterministic lane evidence before
+   any lane-targeted residual steering or deep MIR observer.
+7. Run factor-atlas rows only after at least one SAME row family and one flow
    row family exist.
-7. Run long-form composition after memory items have descriptor and listening
+8. Run long-form composition after memory items have descriptor and listening
    notes.
-8. Run sampler physiology to explain noise/step sensitivity before stronger
+9. Run sampler physiology to explain noise/step sensitivity before stronger
    sampler interventions.
-9. Run latent constraints as direct-decode probes before SA3 polish.
-10. Then return to residual causality, guidance objective honesty, null-condition
+10. Run latent constraints as direct-decode probes before SA3 polish.
+11. Then return to residual causality, guidance objective honesty, null-condition
    editing, seed repeatability, external comparison packets, and shareable
    reports.
 
