@@ -232,10 +232,13 @@ trajectory-derived flow probe banks, player/descriptors.
 
 Next run: run control-lane mechanistic probing on one source at true source
 duration with RMS, spectral flux, onset density, spectral-density band,
-latent-motion, and latent-channel lanes. Inspect layer/window/timestep
-heatmaps, null-control margins, prediction curves, active-direction previews,
-call-held-out scores, and repeatability rows across at least two seeds, prompts,
-or init-noise levels.
+latent-motion, and latent-channel lanes. Start with layer/window rows and null
+window margins; keep exact timestep probing disabled until the first pass
+identifies a small lane/layer set. Then run a narrowed exact-timestep audit with
+token-preserving timestep activations and optional timestep null controls.
+Inspect layer/window/timestep heatmaps, null-control margins, prediction curves,
+active-direction previews, call-held-out scores, and repeatability rows across
+at least two seeds, prompts, or init-noise levels.
 Only then choose whether a bounded alpha/patch sweep is scientifically
 justified.
 

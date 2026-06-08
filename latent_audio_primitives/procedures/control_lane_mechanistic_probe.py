@@ -100,8 +100,10 @@ class SA3ControlLaneProbeExtractor:
         trajectory_window_count: int | None = 5,
         trajectory_window_size: int | None = None,
         timestep_probe: bool = False,
+        timestep_activation_mode: str = "tokens",
         sampler_type: str | None = None,
         null_probe: bool = False,
+        null_timestep_probe: bool = False,
         null_kinds: Sequence[str] = ("shuffle", "reverse", "random"),
         null_seed: int = 0,
         prediction_probe: bool = True,
@@ -160,7 +162,12 @@ class SA3ControlLaneProbeExtractor:
             )
             raw_activations = collector.get_raw_activations()
             if timestep_probe and step_records:
-                timestep_activations, timestep_metadata = collector.get_timestep_mean_activations(step_records)
+                if timestep_activation_mode == "tokens":
+                    timestep_activations, timestep_metadata = collector.get_timestep_token_activations(step_records)
+                elif timestep_activation_mode == "mean":
+                    timestep_activations, timestep_metadata = collector.get_timestep_mean_activations(step_records)
+                else:
+                    raise ValueError("timestep_activation_mode must be 'tokens' or 'mean'")
         layer_rows = control_lane_layer_probe_rows(
             raw_activations,
             lanes,
@@ -234,7 +241,7 @@ class SA3ControlLaneProbeExtractor:
                     active_percentile=active_percentile,
                     quiet_percentile=quiet_percentile,
                 )
-            if timestep_probe and timestep_activations:
+            if null_timestep_probe and timestep_probe and timestep_activations:
                 null_timestep_rows = control_lane_null_timestep_probe_rows(
                     timestep_activations,
                     lanes,
@@ -254,7 +261,7 @@ class SA3ControlLaneProbeExtractor:
             null_margin_rows.extend(control_lane_null_margin_table(layer_rows, null_layer_rows))
             if window_rows:
                 null_margin_rows.extend(control_lane_null_margin_table(window_rows, null_window_rows))
-            if timestep_rows:
+            if timestep_rows and null_timestep_rows:
                 null_margin_rows.extend(control_lane_null_margin_table(timestep_rows, null_timestep_rows))
         prediction_rows: list[dict[str, Any]] = []
         if prediction_probe:
@@ -313,6 +320,7 @@ class SA3ControlLaneProbeExtractor:
                 "trajectory_window_count": trajectory_window_count if trajectory_probe else None,
                 "trajectory_window_size": trajectory_window_size if trajectory_probe else None,
                 "timestep_probe": bool(timestep_probe),
+                "timestep_activation_mode": timestep_activation_mode if timestep_probe else None,
                 "sampler_type": sampler_type,
                 "sampler_step_record_count": int(len(step_records)),
                 "timestep_mapping_statuses": sorted(
@@ -323,6 +331,7 @@ class SA3ControlLaneProbeExtractor:
                     }
                 ),
                 "null_probe": bool(null_probe),
+                "null_timestep_probe": bool(null_timestep_probe) if null_probe else False,
                 "null_kinds": list(null_kinds) if null_probe else [],
                 "null_seed": int(null_seed) if null_probe else None,
                 "null_margin_row_count": int(len(null_margin_rows)),

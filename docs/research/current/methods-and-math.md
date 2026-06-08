@@ -1079,8 +1079,8 @@ Sampler-timestep probe:
 
 ```text
 s_k = sampler callback record {step index k, timestep t_k, sigma_k, logSNR_k}
-C_k = hook-call span mapped to sampler step k
-score_{l,k} = score using activations in C_k
+C_k = token-preserving hook-call group mapped to sampler step k
+score_{l,k} = score using token activations in C_k
 ```
 
 This is exact timestep attribution only when the hook calls and sampler callback
@@ -1096,6 +1096,10 @@ mapping_status in {
 
 Observed-call windows remain an honest fallback microscope when sampler
 metadata is unavailable or when multiple hook calls cannot be assigned exactly.
+For continuous control-lane targets, sampler-step activations must preserve
+token samples inside the step. Mean-pooled timestep vectors are valid for some
+contrast diagnostics, but they collapse a time-varying lane to one sample and
+are insufficient for lane regression.
 
 Null controls:
 
@@ -1448,7 +1452,8 @@ spectral_contrast(t) = percentile_90(dB_t(f)) - percentile_10(dB_t(f))
 ```
 
 The audio-confidence lane gates features that become unstable in near silence,
-especially spectral centroid and zero-crossing rate.
+especially spectral centroid and zero-crossing rate. Active masking uses the
+confidence signal itself, not a display-normalized lane value.
 
 Active source masking:
 

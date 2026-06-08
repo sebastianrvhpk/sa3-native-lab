@@ -399,7 +399,10 @@ def normalize_control_lane(lane: ControlLane, *, mode: str = "minmax", eps: floa
     if mode == "minmax":
         lo = float(values.min())
         hi = float(values.max())
-        normalized = (values - lo) / max(hi - lo, eps)
+        if hi - lo < eps and lane.name.endswith("confidence") and lo >= 0.0 and hi <= 1.0:
+            normalized = values.copy()
+        else:
+            normalized = (values - lo) / max(hi - lo, eps)
     elif mode == "zscore":
         normalized = (values - float(values.mean())) / max(float(values.std()), eps)
     elif mode == "unit_peak":
@@ -620,7 +623,8 @@ def active_source_mask_from_lanes(
     frames = int(target_frames) if target_frames is not None else base_lane.frames
     if confidence_lane is None:
         return np.ones(frames, dtype=np.float32)
-    confidence = resample_control_lane(confidence_lane, frames).values
+    confidence_values = confidence_lane.confidence if confidence_lane.confidence is not None else confidence_lane.values
+    confidence = _resample_values(confidence_values, frames)
     mask = confidence >= float(min_confidence)
     if pad_seconds > 0:
         pad_frames = int(round(float(pad_seconds) * confidence_lane.rate_hz))

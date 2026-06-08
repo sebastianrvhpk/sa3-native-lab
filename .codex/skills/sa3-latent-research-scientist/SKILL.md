@@ -104,6 +104,8 @@ sections are execution surfaces, not scientific categories or claims.
   call-held-out evidence when multiple observed calls are available.
 - Observed hook-call windows are not sampler timesteps. Timestep rows must carry
   `mapping_status`; only `exact_one_call_per_step` is clean attribution.
+- Continuous lane/timestep probes need token-preserving activations; mean-pooled
+  timestep vectors collapse the lane to one sample and are diagnostics only.
 - Prediction curves and active/quiet direction previews are diagnostics. They
   do not become residual steering vectors until a separate bounded sweep proves
   audible movement.

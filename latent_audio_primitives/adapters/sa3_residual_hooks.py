@@ -215,6 +215,51 @@ class ActivationCollector:
                 }
         return pooled, metadata
 
+    def get_timestep_token_activations(
+        self,
+        step_records: list[dict[str, Any]],
+    ) -> tuple[dict[int, dict[int, Any]], dict[int, dict[int, dict[str, Any]]]]:
+        """Group captured calls by sampler step while preserving token samples."""
+
+        if not step_records:
+            raise AudioscopeIntegrationError("sampler timestep records are required")
+        grouped: dict[int, dict[int, Any]] = {}
+        metadata: dict[int, dict[int, dict[str, Any]]] = {}
+        record_count = len(step_records)
+        for index, store in self._layers.items():
+            call_count = len(store.activations)
+            if call_count < record_count:
+                raise AudioscopeIntegrationError(
+                    f"layer {index} captured {call_count} calls for {record_count} sampler records"
+                )
+            if call_count % record_count == 0:
+                calls_per_step = call_count // record_count
+                windows = [
+                    (step_index * calls_per_step, (step_index + 1) * calls_per_step)
+                    for step_index in range(record_count)
+                ]
+                mapping_status = "exact_one_call_per_step" if calls_per_step == 1 else "grouped_calls_per_step"
+            else:
+                windows = activation_call_windows(call_count, window_count=record_count)
+                calls_per_step = None
+                mapping_status = "approximate_even_mapping"
+            grouped[index] = {}
+            metadata[index] = {}
+            for step_index, (start, end) in enumerate(windows):
+                record = dict(step_records[step_index])
+                grouped[index][step_index] = _concat_activation_tensors(store.activations[start:end])
+                metadata[index][step_index] = {
+                    **record,
+                    "step_index": step_index,
+                    "call_start": start,
+                    "call_end": end,
+                    "call_count": call_count,
+                    "calls_per_step": calls_per_step,
+                    "mapping_status": mapping_status,
+                    "activation_pooling": "token_preserving",
+                }
+        return grouped, metadata
+
     def __enter__(self) -> "ActivationCollector":
         return self
 
@@ -342,6 +387,17 @@ def _mean_activation_tensors(activations: list[Any]) -> Any:
     if stacked.ndim <= 1:
         return stacked
     return stacked.mean(dim=tuple(range(stacked.ndim - 1)))
+
+
+def _concat_activation_tensors(activations: list[Any]) -> Any:
+    torch = _require_torch()
+    if not activations:
+        raise AudioscopeIntegrationError("cannot concatenate empty activation list")
+    if len(activations) == 1:
+        return activations[0]
+    if activations[0].ndim <= 1:
+        return torch.stack(activations, dim=0)
+    return torch.cat(activations, dim=0)
 
 
 def _window_label(window_index: int, window_count: int, start: int, end: int) -> str:
