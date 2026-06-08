@@ -20,11 +20,11 @@ What maps into what, or what state is compared?
 Operation:
 observe / select / intervene / render / compare / decide.
 
-Workbench:
+Notebook study surface:
 Runtime and model boundary / Evidence packet setup / Audio and SAME
-preparation / SAME measurement / SAME intervention / SA3 flow prompt /
-Residual and trajectory / Memory and composition / External comparison /
-Ledger and promotion.
+preparation / SAME representation / SA3 flow and conditioning /
+SA3 internal trajectory / SA3-over-SAME coupled editing /
+Memory and composition / External comparison / Ledger and promotion.
 
 Current maturity:
 idea / microscope / selector / intervention candidate / promoted method.
@@ -39,7 +39,7 @@ Method:
 What is observed, selected, edited, optimized, steered, rendered, or compared?
 
 Notebook Touchpoints:
-Notebook workbench/cell:
+Notebook study cell:
 Existing module:
 Proposed placement: root primitive / adapter / procedure / evidence / docs-only
 New cell or helper needed:
@@ -51,19 +51,25 @@ Latents:
 Seeds:
 Timesteps/logSNR:
 Model state:
+Active source duration/mask:
+Null controls:
+Sampler mapping requirement:
 
 Measurements:
 Flow:
 Latent:
 Audio descriptor:
-Control/geometry:
+Control lanes / geometry:
 Nearest-memory/source-preservation:
+Probe prediction curves:
 Listening:
 
 Evidence Packet:
 Audio outputs:
 Rows/tables:
 Plots/SVG:
+Null rows:
+Mapping-status rows:
 Annotations:
 Ledger entry:
 

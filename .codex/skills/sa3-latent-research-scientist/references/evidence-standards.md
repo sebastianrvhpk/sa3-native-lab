@@ -27,6 +27,13 @@
   runtime access.
 - A selector is described as a control without decoded evidence.
 - A notebook cell produces impressive audio but no baseline or artifact rows.
+- Padded silence or a requested duration longer than the source explains the
+  strongest lane correlations.
+- Observed hook-call windows are described as exact sampler timesteps.
+- A probe-visible residual/control lane is treated as a causal direction before
+  null controls, prediction curves, and bounded sweeps.
+- External semantic embeddings are used as direct SA3/SAME judges without a
+  native-object measurement bridge.
 
 ## Keep As Microscope
 
@@ -40,7 +47,7 @@ residual feature maps, geometry reports, and diagnostic roll/periodicity tests.
 Object:
 Transition:
 Operation:
-Workbench:
+Notebook study surface:
 Maturity before:
 Maturity after:
 Altitude:
@@ -49,6 +56,11 @@ Method output:
 Measurements:
 Artifact paths:
 Descriptor/latent/flow rows:
+Active source span/mask:
+Control-lane rows:
+Null/baseline rows:
+Sampler mapping status:
+Prediction/curve evidence:
 Listening notes:
 Repeatability check:
 Decision:

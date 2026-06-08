@@ -1,6 +1,6 @@
 ---
 name: multimodal-ai-research-scout
-description: Use when surveying current state of the art, recent papers, repos, model architectures, training methods, or cross-modal ideas for audio, music, video, image, text, diffusion, flow matching, transformers, latent spaces, controllability, editing, retrieval, representation learning, or multimodal generative AI; especially to translate frontier research into SA3/SAME notebook workbenches with explicit object transitions, claim maturity, evidence packets, and code altitude.
+description: Use when surveying current state of the art, recent papers, repos, model architectures, training methods, or cross-modal ideas for audio, music, video, image, text, diffusion, flow matching, transformers, latent spaces, controllability, editing, retrieval, representation learning, mechanistic probing, control signals, or multimodal generative AI; especially to translate frontier research into SA3/SAME notebook studies with explicit object transitions, claim maturity, active-source evidence, null controls, evidence packets, and code altitude.
 ---
 
 # Multimodal AI Research Scout
@@ -9,6 +9,9 @@ Use this skill for frontier research scouting. The job is to connect current
 papers, repos, and architecture changes to concrete SA3 Native Lab experiments.
 The local lab is notebook-first: upstream SA3 and Underfit stay external unless
 the notebook consumes exported artifacts.
+
+External research suggests questions. SA3/SAME-native notebook evidence decides
+what survives locally.
 
 ## Currentness Rule
 
@@ -35,6 +38,9 @@ Scout across modalities, but translate back to audio/SAME/SA3:
   selection, tool use, eval harnesses, agentic experiment loops.
 - Representation learning: self-supervised audio, disentanglement, native
   probing, causal/linear control directions, and bottleneck audits.
+- Mechanistic probing and controllability: activation probes, residual
+  directions, timestep attribution, null controls, intervention verification,
+  and measurement discipline.
 - 3D/world models: temporal coherence, scene memory, object permanence, motion
   controls, long-horizon generation.
 - Scientific ML: experiment design, ablation, uncertainty, reproducibility,
@@ -54,15 +60,16 @@ Native object it manipulates:
 Evidence/benchmark:
 What transfers to SA3/SAME:
 What probably does not transfer:
-Notebook experiment candidate:
+Notebook study candidate:
 Local object transition:
 Research layer / evidence utility:
 SAME representation / SA3 flow-conditioning / SA3 internal trajectory /
 SA3-over-SAME coupled editing / evidence utility
-Local workbench:
+Local notebook study surface:
 Claim maturity target: microscope / selector / intervention candidate / promoted method
 Local altitude landing: root primitive / adapter / procedure / evidence / docs-only
 Evidence packet needed:
+Active-source / null-control needs:
 Risk or unknown:
 Status: source-confirmed / repo-inferred / hypothesis
 ```
@@ -70,12 +77,12 @@ Status: source-confirmed / repo-inferred / hypothesis
 ## Cross-Modal Transfer Rules
 
 Do not copy architecture terms blindly. Translate by native object, transition,
-workbench, and evidence:
+notebook study surface, and evidence:
 
 - Image latent edit -> SAME latent edit only if the operation has a meaningful
   time/channel/feature analogue.
 - Video temporal control -> audio loop/structure/control-lane experiment only
-  if temporal coherence is measurable.
+  if temporal coherence is measurable over true active source duration.
 - Text or semantic-language methods -> prompt/condition/residual experiment only
   if SA3 exposes a condition or activation path, and the local evidence remains
   SAME/SA3-native plus listening.
@@ -84,12 +91,19 @@ workbench, and evidence:
 - Adapter/LoRA method -> external Underfit workflow unless the notebook only
   consumes exported audio/checkpoints for comparison.
 - External embedding or latent-judge method -> docs-only source context unless
-  reframed as a native SAME/SA3 measurement question; do not propose it as a
-  local guidance or scoring lane by default.
+  reframed as a native SAME/SA3 measurement question. Do not propose CLIP,
+  CLAP, deep MIR embeddings, or other external semantic judges as direct local
+  guidance/scoring lanes by default.
+- Mechanistic-interpretability method -> residual/control-lane probe only if it
+  includes held-out probes, null controls, exact-vs-observed timestep mapping,
+  and later causal intervention tests.
+- Control-signal method -> deterministic audio/SAME lanes first; external
+  learned controls only after the native lane bank fails or exposes a precise
+  gap.
 
-When proposing local implementation, state the workbench, maturity target, and
-altitude explicitly. State the research layer or evidence utility before the
-workbench:
+When proposing local implementation, state the notebook study surface, maturity
+target, and altitude explicitly. State the research layer or evidence utility
+before the notebook study surface:
 
 - SAME representation: autoencoder, codec, latent geometry, memory, direct
   decode, bottleneck, or latent-operator source.
@@ -114,6 +128,14 @@ Then choose code altitude:
   promote/revise/drop decisions.
 - Docs-only: source is promising but not yet concrete enough for a notebook cell.
 
+Evidence packets should name the minimum falsification checks:
+
+- active-source span/mask when source duration or silence matters,
+- shared flow probe bank when comparing prompt/condition variants,
+- null controls for probe-visible lanes or residual features,
+- `mapping_status` for sampler-timestep claims,
+- prediction curves or listening notes when scalar rows are easy to overread.
+
 ## Output Shape
 
 Return:
@@ -125,7 +147,8 @@ Architecture deltas
 Cross-modal transfer matrix
 Candidate SA3/SAME experiments
 Object transitions
-Workbench, maturity, and altitude landing
+Notebook study surface, maturity, and altitude landing
+Active-source and null-control requirements
 Evidence packets required
 Priority order
 Unknowns and verification plan

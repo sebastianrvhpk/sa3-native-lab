@@ -1,6 +1,6 @@
 ---
 name: sa3-latent-research-scientist
-description: Use when formalizing, auditing, extending, or reviewing SA3/SAME latent-audio notebook research; designing evidence workbenches over SAME latents, SA3 flow fields, prompt conditions, residual activations, control lanes, memory, descriptors, or listening evidence; framing object transitions, operations, measurements, claim maturity, and code altitude; deciding whether a method is a microscope, selector, intervention candidate, promoted method, or noise.
+description: Use when formalizing, auditing, extending, or reviewing SA3/SAME latent-audio notebook research; designing evidence studies over SAME latents, SA3 flow fields, prompt conditions, residual activations, sampler trajectories, control lanes, memory, descriptors, or listening evidence; framing object transitions, operations, measurements, claim maturity, code altitude, active-source evidence, null controls, and exact-vs-observed trajectory claims; deciding whether a method is a microscope, selector, intervention candidate, promoted method, or noise.
 ---
 
 # SA3 Latent Research Scientist
@@ -23,7 +23,7 @@ Measurement: what evidence is collected?
 Claim: what would success mean?
 Decision: promote, revise, drop, or keep as microscope/selector?
 Maturity: microscope / selector / intervention candidate / promoted method
-Workbench: which notebook bench owns the evidence?
+Notebook study surface: which concrete cell/group owns the run?
 Altitude: root primitive / adapter / procedure / evidence / docs-only
 ```
 
@@ -31,16 +31,18 @@ If the user asks to implement immediately, still write this frame first in one
 compact paragraph, then proceed. Keep altitude as code placement, not as the
 scientific claim itself.
 
-Research layer is not the same as notebook workbench. There are four
+Research layer is not the same as notebook study surface. There are four
 model-native research layers; evidence utilities are cross-cutting review and
 promotion infrastructure:
 
 - SAME representation: SAME on its own, direct decode, geometry, memory,
-  bottleneck stress, latent DSP, control lanes.
+  bottleneck stress, latent DSP, active-source control lanes, MIR/DSP lane
+  banks.
 - SA3 flow-conditioning: prompt conditions, flow states, logSNR/timestep probes,
   prompt inversion, condition counterfactuals.
 - SA3 internal trajectory: residual activations, sampler states, guidance
-  objectives, layer/time causality.
+  objectives, control-lane probes, exact sampler-step maps, observed hook-call
+  windows, layer/time causality.
 - SA3-over-SAME coupled editing: SAME edits entering SA3 polish, inpainting,
   continuation, audio-to-audio, rescue/erasure tests.
 - Evidence utility: descriptors, player notes, disagreement rows, manifests,
@@ -63,9 +65,10 @@ Prefer local evidence before invention:
 
 Use `rg` for references and notebook imports before moving or deleting anything.
 
-## Workbench Grammar
+## Native Study Grammar
 
-Frame methods as evidence workbenches over native-object transitions:
+Frame methods as evidence studies over native-object transitions. Notebook
+sections are execution surfaces, not scientific categories or claims.
 
 - Runtime and model boundary: proves what upstream SA3/SAME access exists.
 - Evidence packet setup: defines artifacts, rows, listening notes, and ledger
@@ -90,6 +93,24 @@ Frame methods as evidence workbenches over native-object transitions:
 - Ledger and decision board: turns evidence packets into promote/revise/drop
   decisions.
 
+## Current Hard Rules
+
+- Prefer true source duration. If a notebook duration pads the source, export an
+  active-source span and use active-window summaries, regions, and correlations.
+- A visible lane is not a control. Control-lane rows must beat shuffled,
+  reversed, or random nulls before they become selectors, and still need
+  decoded/listening evidence before intervention language.
+- Observed hook-call windows are not sampler timesteps. Timestep rows must carry
+  `mapping_status`; only `exact_one_call_per_step` is clean attribution.
+- Prediction curves and active/quiet direction previews are diagnostics. They
+  do not become residual steering vectors until a separate bounded sweep proves
+  audible movement.
+- External semantic judges, including CLIP/CLAP-style embeddings or deep MIR
+  models, stay docs-only unless reframed as native SAME/SA3 measurement
+  questions. Start with deterministic audio/SAME lanes.
+- Do not add app, service, dashboard, framework, or orchestration scaffolding.
+  The repo is a Colab-first research instrument.
+
 Use these operation roles:
 
 - Observe: reveal structure without changing generation.
@@ -113,8 +134,8 @@ Claim maturity:
 Place code by what it owns:
 
 - Root modules define or transform native objects: latent math, geometry,
-  control lanes, flow probe banks, prompt semantic rows, token search,
-  descriptors, memory, looping, DSP.
+  control lanes, control-lane probes, flow probe banks, prompt semantic rows,
+  token search, descriptors, memory, looping, DSP.
 - `adapters/` talks to external machinery: upstream SA3/SAME, tokenizer access,
   residual hook locations, model loading, encode/decode wrappers.
 - `procedures/` runs executable research methods that call SA3/SAME, optimize
@@ -133,9 +154,11 @@ Do not call a method promoted until it has:
 
 1. a clear mathematical or architectural rationale,
 2. a compact notebook-facing API or cell,
-3. descriptor/latent evidence,
-4. listening notes or a plan for listening notes,
-5. promote/revise/drop criteria.
+3. active-source-aware descriptor/latent/lane evidence when audio duration is
+   involved,
+4. null/baseline rows when a probe or selector is claimed,
+5. listening notes or a plan for listening notes,
+6. promote/revise/drop criteria.
 
 Keep a method as a microscope if it only explains model behavior. Keep it as a
 selector if it ranks candidates without proving an independent intervention.
@@ -155,7 +178,7 @@ For audits or proposals, return:
 ```text
 Research frame
 Object transition map
-Workbench and maturity placement
+Notebook study surface and maturity placement
 Experiment cards
 Evidence packet plan
 Failure modes
@@ -166,18 +189,18 @@ Notebook/docs/code impact
 For implementation, use this loop:
 
 1. Inspect current imports and nearby modules.
-2. Decide workbench, claim maturity, and code altitude before moving or adding
+2. Decide notebook study surface, claim maturity, and code altitude before moving or adding
    code.
 3. Preserve math and signatures unless the change is explicitly a redesign.
-4. Update notebook workbench cells and imports when public paths move.
+4. Update notebook study cells and imports when public paths move.
 5. Update the relevant docs after code changes:
 
-- Method math: `docs/research/current/methods-and-math.md`
+- Method math and conventions: `docs/research/current/methods-and-math.md`
 - Current state/module role: `docs/research/current/research-state.md` or
   `docs/research/current/primitive-map.md`
 - Future work or promotion criteria: `docs/research/current/backlog.md`
 - Real runs/listening decisions: `docs/research/current/experiment-ledger.md`
-- Run protocol or workbench execution order:
+- Run protocol or notebook execution order:
   `docs/research/current/run-protocol.md`
 - Research-layer/evidence-utility framing:
   `docs/research/current/architecture-ontology.md`
