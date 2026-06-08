@@ -12,6 +12,60 @@ import numpy as np
 from .latent_math import as_time_major
 
 
+DEFAULT_CONTROL_LANE_REGION_MODES = (
+    "high",
+    "low",
+    "typical",
+    "crest",
+    "trough",
+    "rising",
+    "falling",
+    "change",
+    "sustain_high",
+    "sustain_low",
+    "stable_mid",
+    "volatile",
+    "smooth",
+)
+
+SOURCE_CONTROL_LANE_REGION_MODES = ("source_active", "source_quiet", "padded_tail")
+
+CONTROL_LANE_REGION_MODE_FAMILIES = {
+    "state": ("high", "low", "typical"),
+    "event": ("crest", "trough", "change"),
+    "transition": ("rising", "falling", "attack", "release"),
+    "persistence": ("sustain_high", "sustain_low", "stable_mid", "volatile", "smooth"),
+    "source_validity": SOURCE_CONTROL_LANE_REGION_MODES,
+    "signed": ("positive", "negative", "sign_flip"),
+}
+
+CONTROL_LANE_REGION_MODE_ALIASES = {
+    "above": "high",
+    "below": "low",
+    "peaks": "crest",
+    "peak": "crest",
+    "events": "crest",
+    "event": "crest",
+    "attacks": "attack",
+    "stable": "smooth",
+    "sustain": "smooth",
+    "quiet": "source_quiet",
+    "silence": "source_quiet",
+    "active": "source_active",
+    "mid": "typical",
+    "middle": "typical",
+}
+
+
+def control_lane_region_mode_families() -> dict[str, list[str]]:
+    """Return the typed temporal-region grammar used by lane selectors."""
+
+    return {
+        family: list(modes)
+        for family, modes in CONTROL_LANE_REGION_MODE_FAMILIES.items()
+    }
+
+
 @dataclass(frozen=True, slots=True)
 class ControlLane:
     """A time-varying control signal aligned to audio or latent time."""
@@ -751,7 +805,7 @@ def control_lane_correlation_table(
 def control_lane_region_sweep(
     lanes: Sequence[ControlLane],
     *,
-    modes: Sequence[str] = ("peaks", "stable", "above", "below", "silence"),
+    modes: Sequence[str] = DEFAULT_CONTROL_LANE_REGION_MODES,
     names: Sequence[str] | None = None,
     thresholds: Mapping[str, float] | float | None = None,
     percentiles: Mapping[str, float] | float | None = None,
@@ -911,7 +965,7 @@ def latent_channel_region_overlap_table(
     *,
     latent_rate: float,
     channels: Sequence[int] | None = None,
-    channel_modes: Sequence[str] = ("peaks", "stable", "above", "below"),
+    channel_modes: Sequence[str] = DEFAULT_CONTROL_LANE_REGION_MODES,
     channel_score: str = "motion",
     percentiles: Mapping[str, float] | float | None = None,
     min_duration_seconds: float = 0.0,
@@ -998,7 +1052,7 @@ def latent_channel_region_table(
     *,
     latent_rate: float,
     channels: Sequence[int] | None = None,
-    channel_modes: Sequence[str] = ("peaks", "stable", "above", "below", "silence"),
+    channel_modes: Sequence[str] = DEFAULT_CONTROL_LANE_REGION_MODES,
     channel_score: str = "motion",
     thresholds: Mapping[str, float] | float | None = None,
     percentiles: Mapping[str, float] | float | None = None,
@@ -1161,7 +1215,7 @@ def regions_for_control_lanes(
     lanes: Sequence[ControlLane],
     *,
     names: Sequence[str] | None = None,
-    mode: str = "peaks",
+    mode: str = "crest",
     threshold: float | None = None,
     percentile: float | None = None,
     min_duration_seconds: float = 0.0,
@@ -1245,7 +1299,7 @@ def compare_lane_region_sets(
 def regions_from_control_lane(
     lane: ControlLane,
     *,
-    mode: str = "peaks",
+    mode: str = "crest",
     threshold: float | None = None,
     percentile: float | None = None,
     min_duration_seconds: float = 0.0,
@@ -1258,46 +1312,228 @@ def regions_from_control_lane(
 ) -> list[LaneRegion]:
     """Select contiguous time regions from a lane.
 
-    Modes: ``above``, ``below``, ``peaks``, ``stable``, and ``silence``.
+    Modes are typed temporal predicates over the lane value, derivative, local
+    support, source validity, or signed channel value. Legacy names such as
+    ``peaks`` and ``stable`` remain accepted aliases.
     Returned frame spans are end-exclusive.
     """
 
-    mode = mode.lower()
-    base_values = normalize_control_lane(lane, mode="minmax").values if normalize else lane.values.astype(np.float32)
+    requested_mode = str(mode).lower().strip()
+    mode = _canonical_region_mode(requested_mode)
+    raw_values = lane.values.astype(np.float32)
+    base_values = normalize_control_lane(lane, mode="minmax").values if normalize else raw_values
     values = base_values.copy()
     confidence = lane.confidence if lane.confidence is not None else np.ones(lane.frames, dtype=np.float32)
     if confidence.shape[0] != lane.frames:
         confidence = resample_control_lane(ControlLane("confidence", confidence, lane.rate_hz), lane.frames).values
 
-    if mode in {"above", "high"}:
-        resolved = _resolve_threshold(values, threshold=threshold, percentile=percentile, default=0.5)
+    derivative = np.diff(values, prepend=values[:1])
+    positive = np.maximum(derivative, 0.0)
+    negative = np.maximum(-derivative, 0.0)
+    motion = np.abs(derivative)
+    metadata: dict[str, Any] = {
+        "mode": mode,
+        "requested_mode": requested_mode,
+        "mode_family": _region_mode_family(mode),
+        "normalized": bool(normalize),
+    }
+    if requested_mode != mode:
+        metadata["alias_of"] = mode
+
+    if mode == "high":
+        resolved = _resolve_threshold(values, threshold=threshold, percentile=percentile, default_percentile=75.0)
         mask = values >= resolved
         score_values = values
-    elif mode in {"below", "low"}:
-        resolved = _resolve_threshold(values, threshold=threshold, percentile=percentile, default=0.5)
+        metadata["threshold"] = float(resolved)
+    elif mode == "low":
+        resolved = _resolve_threshold(values, threshold=threshold, percentile=percentile, default_percentile=25.0)
         mask = values <= resolved
         score_values = 1.0 - values
-    elif mode in {"peaks", "attacks", "events"}:
-        resolved = _resolve_threshold(values, threshold=threshold, percentile=percentile, default_percentile=90.0)
-        mask = values >= resolved
+        metadata["threshold"] = float(resolved)
+    elif mode == "typical":
+        median = float(np.median(values))
+        deviation = np.abs(values - median)
+        resolved = _resolve_threshold(deviation, threshold=threshold, percentile=percentile, default_percentile=25.0)
+        mask = deviation <= resolved
+        score_values = 1.0 - normalize_array(deviation)
+        metadata.update({"threshold": float(resolved), "center": median})
+    elif mode == "crest":
+        resolved = _resolve_threshold(values, threshold=threshold, percentile=percentile, default_percentile=85.0)
+        support = values >= resolved
+        seeds = _local_extrema_mask(values, kind="max") & support
+        mask = _support_components_with_seed(support, seeds)
+        if not np.any(mask):
+            mask = support
         score_values = values
-    elif mode in {"stable", "sustain"}:
-        motion = np.abs(np.diff(values, prepend=values[:1]))
+        metadata["threshold"] = float(resolved)
+    elif mode == "trough":
+        resolved = _resolve_threshold(values, threshold=threshold, percentile=percentile, default_percentile=15.0)
+        support = values <= resolved
+        seeds = _local_extrema_mask(values, kind="min") & support
+        mask = _support_components_with_seed(support, seeds)
+        if not np.any(mask):
+            mask = support
+        score_values = 1.0 - values
+        metadata["threshold"] = float(resolved)
+    elif mode == "change":
+        resolved = _resolve_threshold(motion, threshold=threshold, percentile=percentile, default_percentile=85.0)
+        mask = (motion >= resolved) & (motion > 0.0)
+        score_values = normalize_array(motion)
+        metadata["motion_threshold"] = float(resolved)
+    elif mode == "rising":
+        resolved = _resolve_threshold(positive, threshold=threshold, percentile=percentile, default_percentile=85.0)
+        mask = (positive >= resolved) & (positive > 0.0)
+        score_values = normalize_array(positive)
+        metadata["positive_derivative_threshold"] = float(resolved)
+    elif mode == "falling":
+        resolved = _resolve_threshold(negative, threshold=threshold, percentile=percentile, default_percentile=85.0)
+        mask = (negative >= resolved) & (negative > 0.0)
+        score_values = normalize_array(negative)
+        metadata["negative_derivative_threshold"] = float(resolved)
+    elif mode == "attack":
+        derivative_threshold = _resolve_threshold(
+            positive,
+            threshold=threshold,
+            percentile=percentile,
+            default_percentile=85.0,
+        )
+        value_threshold = _resolve_threshold(
+            values,
+            threshold=None,
+            percentile=None,
+            default_percentile=60.0,
+        )
+        mask = (positive >= derivative_threshold) & (values >= value_threshold)
+        score_values = 0.5 * normalize_array(positive) + 0.5 * values
+        metadata.update(
+            {
+                "positive_derivative_threshold": float(derivative_threshold),
+                "value_threshold": float(value_threshold),
+            }
+        )
+    elif mode == "release":
+        derivative_threshold = _resolve_threshold(
+            negative,
+            threshold=threshold,
+            percentile=percentile,
+            default_percentile=85.0,
+        )
+        value_threshold = _resolve_threshold(
+            values,
+            threshold=None,
+            percentile=None,
+            default_percentile=40.0,
+        )
+        mask = (negative >= derivative_threshold) & (values <= value_threshold)
+        score_values = 0.5 * normalize_array(negative) + 0.5 * (1.0 - values)
+        metadata.update(
+            {
+                "negative_derivative_threshold": float(derivative_threshold),
+                "value_threshold": float(value_threshold),
+            }
+        )
+    elif mode == "sustain_high":
+        value_threshold = _resolve_threshold(
+            values,
+            threshold=threshold,
+            percentile=percentile,
+            default_percentile=75.0,
+        )
+        motion_threshold = _resolve_threshold(motion, threshold=None, percentile=None, default_percentile=25.0)
+        mask = (values >= value_threshold) & (motion <= motion_threshold)
+        score_values = 0.5 * values + 0.5 * (1.0 - normalize_array(motion))
+        metadata.update({"value_threshold": float(value_threshold), "motion_threshold": float(motion_threshold)})
+    elif mode == "sustain_low":
+        value_threshold = _resolve_threshold(
+            values,
+            threshold=threshold,
+            percentile=percentile,
+            default_percentile=25.0,
+        )
+        motion_threshold = _resolve_threshold(motion, threshold=None, percentile=None, default_percentile=25.0)
+        mask = (values <= value_threshold) & (motion <= motion_threshold)
+        score_values = 0.5 * (1.0 - values) + 0.5 * (1.0 - normalize_array(motion))
+        metadata.update({"value_threshold": float(value_threshold), "motion_threshold": float(motion_threshold)})
+    elif mode == "stable_mid":
+        median = float(np.median(values))
+        deviation = np.abs(values - median)
+        deviation_threshold = _resolve_threshold(
+            deviation,
+            threshold=threshold,
+            percentile=percentile,
+            default_percentile=25.0,
+        )
+        motion_threshold = _resolve_threshold(motion, threshold=None, percentile=None, default_percentile=25.0)
+        mask = (deviation <= deviation_threshold) & (motion <= motion_threshold)
+        score_values = 0.5 * (1.0 - normalize_array(deviation)) + 0.5 * (1.0 - normalize_array(motion))
+        metadata.update(
+            {
+                "deviation_threshold": float(deviation_threshold),
+                "motion_threshold": float(motion_threshold),
+                "center": median,
+            }
+        )
+    elif mode == "smooth":
         resolved = _resolve_threshold(motion, threshold=threshold, percentile=percentile, default_percentile=25.0)
         mask = motion <= resolved
         score_values = 1.0 - normalize_array(motion)
-    elif mode in {"silence", "quiet"}:
+        metadata["motion_threshold"] = float(resolved)
+    elif mode == "volatile":
+        local_motion = _moving_average(motion, window=3)
+        resolved = _resolve_threshold(local_motion, threshold=threshold, percentile=percentile, default_percentile=80.0)
+        mask = local_motion >= resolved
+        score_values = normalize_array(local_motion)
+        metadata["local_motion_threshold"] = float(resolved)
+    elif mode == "source_active":
+        resolved = _resolve_threshold(values, threshold=threshold, percentile=percentile, default=0.5)
+        mask = values >= resolved
+        score_values = values
+        metadata["threshold"] = float(resolved)
+    elif mode == "source_quiet":
         resolved = _resolve_threshold(values, threshold=threshold, percentile=percentile, default=0.1)
         mask = values <= resolved
         score_values = 1.0 - values
+        metadata["threshold"] = float(resolved)
+    elif mode == "padded_tail":
+        if active_mask is None:
+            mask = np.zeros(lane.frames, dtype=bool)
+            score_values = np.zeros(lane.frames, dtype=np.float32)
+        else:
+            active = _resample_values(np.asarray(active_mask, dtype=np.float32), lane.frames)
+            mask = active < 0.5
+            score_values = 1.0 - np.clip(active, 0.0, 1.0)
+        metadata["threshold"] = 0.5
+    elif mode == "positive":
+        resolved = _resolve_threshold(raw_values, threshold=threshold, percentile=percentile, default=0.0)
+        mask = raw_values >= resolved
+        score_values = normalize_array(np.maximum(raw_values, 0.0))
+        metadata["threshold"] = float(resolved)
+    elif mode == "negative":
+        resolved = _resolve_threshold(raw_values, threshold=threshold, percentile=percentile, default=0.0)
+        mask = raw_values <= resolved
+        score_values = normalize_array(np.maximum(-raw_values, 0.0))
+        metadata["threshold"] = float(resolved)
+    elif mode == "sign_flip":
+        signed_derivative = np.abs(np.diff(raw_values, prepend=raw_values[:1]))
+        sign_crossings = np.zeros(lane.frames, dtype=bool)
+        sign_crossings[1:] = raw_values[1:] * raw_values[:-1] < 0.0
+        mask = _dilate_boolean_mask(sign_crossings, radius=1)
+        score_values = normalize_array(signed_derivative)
+        metadata["threshold"] = 0.0
     else:
-        raise ValueError("mode must be 'above', 'below', 'peaks', 'stable', or 'silence'")
+        supported = sorted(set(CONTROL_LANE_REGION_MODE_ALIASES) | set(_all_canonical_region_modes()))
+        raise ValueError(f"unsupported control-lane region mode {requested_mode!r}; supported modes: {supported}")
 
-    if min_confidence > 0:
+    source_modes = set(SOURCE_CONTROL_LANE_REGION_MODES)
+    if min_confidence > 0 and mode not in source_modes:
         mask = mask & (confidence >= float(min_confidence))
-    if active_mask is not None:
+        metadata["min_confidence"] = float(min_confidence)
+    if active_mask is not None and mode not in source_modes:
         active = _resample_values(np.asarray(active_mask, dtype=np.float32), lane.frames) >= 0.5
         mask = mask & active
+        metadata["active_mask_applied"] = True
+    else:
+        metadata["active_mask_applied"] = False
 
     return _regions_from_mask(
         lane,
@@ -1307,7 +1543,7 @@ def regions_from_control_lane(
         merge_gap_seconds=merge_gap_seconds,
         top_k=top_k,
         label=label or mode,
-        metadata={"mode": mode, "threshold": float(resolved), "normalized": bool(normalize)},
+        metadata=metadata,
     )
 
 
@@ -1316,7 +1552,7 @@ def control_lane_mask(
     *,
     target_frames: int | None = None,
     regions: Sequence[LaneRegion] | None = None,
-    mode: str = "peaks",
+    mode: str = "crest",
     threshold: float | None = None,
     percentile: float | None = None,
     min_duration_seconds: float = 0.0,
@@ -1637,6 +1873,71 @@ def _lane_map(lanes: Sequence[ControlLane]) -> dict[str, ControlLane]:
 def _rms_to_confidence(rms: np.ndarray, *, floor_db: float, full_db: float) -> np.ndarray:
     db = 20.0 * np.log10(np.asarray(rms, dtype=np.float32).clip(1e-10))
     return np.clip((db - float(floor_db)) / max(float(full_db) - float(floor_db), 1e-8), 0.0, 1.0).astype(np.float32)
+
+
+def _canonical_region_mode(mode: str) -> str:
+    mode = str(mode).lower().strip()
+    return CONTROL_LANE_REGION_MODE_ALIASES.get(mode, mode)
+
+
+def _all_canonical_region_modes() -> tuple[str, ...]:
+    modes: list[str] = []
+    for family_modes in CONTROL_LANE_REGION_MODE_FAMILIES.values():
+        modes.extend(family_modes)
+    return tuple(modes)
+
+
+def _region_mode_family(mode: str) -> str:
+    for family, family_modes in CONTROL_LANE_REGION_MODE_FAMILIES.items():
+        if mode in family_modes:
+            return family
+    return "unknown"
+
+
+def _local_extrema_mask(values: np.ndarray, *, kind: str) -> np.ndarray:
+    values = np.asarray(values, dtype=np.float32).reshape(-1)
+    if values.shape[0] == 1:
+        return np.ones(1, dtype=bool)
+    previous = np.concatenate([values[:1], values[:-1]])
+    following = np.concatenate([values[1:], values[-1:]])
+    if kind == "max":
+        return (values >= previous) & (values >= following)
+    if kind == "min":
+        return (values <= previous) & (values <= following)
+    raise ValueError("kind must be 'max' or 'min'")
+
+
+def _support_components_with_seed(support: np.ndarray, seed: np.ndarray) -> np.ndarray:
+    support = np.asarray(support, dtype=bool).reshape(-1)
+    seed = np.asarray(seed, dtype=bool).reshape(-1)
+    if support.shape != seed.shape:
+        raise ValueError("support and seed masks must have the same shape")
+    mask = np.zeros_like(support, dtype=bool)
+    start = None
+    for index, active in enumerate(support):
+        if active and start is None:
+            start = index
+        elif not active and start is not None:
+            if bool(np.any(seed[start:index])):
+                mask[start:index] = True
+            start = None
+    if start is not None and bool(np.any(seed[start:])):
+        mask[start:] = True
+    return mask
+
+
+def _dilate_boolean_mask(mask: np.ndarray, *, radius: int) -> np.ndarray:
+    mask = np.asarray(mask, dtype=bool).reshape(-1)
+    radius = max(0, int(radius))
+    if radius == 0 or mask.shape[0] == 0:
+        return mask.astype(bool, copy=True)
+    dilated = np.zeros_like(mask, dtype=bool)
+    active_indices = np.flatnonzero(mask)
+    for index in active_indices:
+        start = max(0, int(index) - radius)
+        end = min(mask.shape[0], int(index) + radius + 1)
+        dilated[start:end] = True
+    return dilated
 
 
 def _mode_value(values: Mapping[str, float] | float | None, mode: str) -> float | None:

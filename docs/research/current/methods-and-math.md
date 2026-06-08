@@ -1486,13 +1486,50 @@ lane_a, lane_b, active_mask
 Lane region selection:
 
 ```text
-lane -> peaks / stable / silence / above / below regions
+lane x(t)
+-> state regions: high / low / typical
+-> event regions: crest / trough / change
+-> transition regions: rising / falling / attack / release
+-> persistence regions: sustain_high / sustain_low / stable_mid / volatile / smooth
+-> source-validity regions: source_active / source_quiet / padded_tail
+-> signed-channel regions: positive / negative / sign_flip
 regions -> time mask
 time mask + latent edit -> lane-masked latent intervention
 ```
 
+These region modes are not MIR/DSP features. MIR/DSP features create lanes,
+for example spectral flux, spectral centroid, flatness, band density, or onset
+density. Region modes are typed temporal predicates over an already measured
+lane. The predicate can refer to value `x(t)`, derivative `dx/dt`, local extrema,
+local motion, source confidence, or signed channel value.
+
+Core predicates:
+
+```text
+high:          x(t) >= q_hi
+low:           x(t) <= q_lo
+typical:       |x(t) - median(x)| <= q_dev
+crest:         high-support component containing a local maximum
+trough:        low-support component containing a local minimum
+change:        |dx/dt| >= q_hi
+rising:        dx/dt >= q_hi
+falling:       -dx/dt >= q_hi
+attack:        rising derivative while entering elevated value support
+release:       falling derivative while entering low value support
+sustain_high:  high value and low derivative
+sustain_low:   low value and low derivative
+stable_mid:    typical value and low derivative
+volatile:      smoothed |dx/dt| high
+smooth:        |dx/dt| low
+```
+
+`source_quiet` and `padded_tail` are source-validity selectors, not generic
+"low lane" labels. Legacy names still resolve as aliases for notebook
+compatibility: `above -> high`, `below -> low`, `peaks -> crest`,
+`stable -> smooth`, and `silence -> source_quiet`.
+
 Every lane can export its own region rows. Audio-event regions such as RMS,
-spectral flux, onset density, or band-density peaks can be compared against SAME
+spectral flux, onset density, or band-density crests can be compared against SAME
 event regions such as latent motion or latent-channel energy by overlap and
 center-distance rows. This helps separate "audio event occurred" from "SAME
 latent state moved" without treating either as a control yet.
@@ -1503,7 +1540,7 @@ Channel atlas:
 z0 -> per-channel rms, mean_abs, std, motion_energy, peak_abs
 z0 -> all individual channel lanes c_i(t)
 audio/SAME lanes x c_i(t) -> active-window channel-lane correlations
-c_i(t) -> peaks / stable / silence / above / below channel regions
+c_i(t) -> typed channel regions using the same temporal grammar
 lane regions x channel regions -> temporal overlap rows
 channel correlations -> coarse family labels
 top channels -> display-only individual channel lanes / heatmap

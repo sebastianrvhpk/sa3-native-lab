@@ -152,10 +152,11 @@ their selection value is not yet proven.
 
 Native transition: `collection -> lane/geometry/memory ranking -> donor/bridge/source choice`.
 
-Current support: geometry reports, control lanes, lane comparison, silence
-confidence, spectral-flux/transient evidence, lane summary rows, lane-selected
-regions, latent-channel atlas, rendered lane/heatmap evidence, lane-mask latent
-DSP, memory index, curriculum, bridge ranking, and composition helpers.
+Current support: geometry reports, control lanes, lane comparison, source
+confidence, spectral-flux/transient evidence, lane summary rows, typed
+lane-region grammar, latent-channel atlas, rendered lane/heatmap evidence,
+lane-mask latent DSP, memory index, curriculum, bridge ranking, and composition
+helpers.
 
 Next run: compare manual/random donor or bridge choices against lane/geometry
 ranked choices, then audition lane-masked edits against full-region edits.
@@ -165,8 +166,8 @@ Promote if:
 - ranked choices improve auditions,
 - metrics explain audible differences,
 - heldout rows prevent overfitting to one dataset.
-- lane-selected masks preserve intended transients, sustains, or quiet regions
-  better than whole-clip edits.
+- lane-selected masks preserve intended state, event, transition, persistence,
+  or source-validity regions better than whole-clip edits.
 
 Drop or revise if:
 
@@ -211,7 +212,7 @@ Promote if:
 Drop or revise if:
 
 - lanes are redundant with existing descriptors,
-- lanes only detect silence, padding, or loudness,
+- lanes or region modes only detect source quietness, padding, or loudness,
 - deep MIR embeddings become an external semantic judge instead of a native
   evidence source,
 - knob searches optimize metrics while decoded/polished audio gets worse.

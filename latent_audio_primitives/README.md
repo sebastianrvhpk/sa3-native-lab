@@ -57,9 +57,11 @@ including deterministic MIR/DSP lanes, computes source-active masks, compares
 source/output lanes, builds active-window correlations, ranks lane-similar
 memory rows, selects lane regions, compares audio-event and SAME-event regions,
 exports complete SAME-channel atlases, correlates every latent channel against
-every lane, and creates masks that other latent operators may use. A lane mask
-or channel family is an intervention surface only after direct decode, polish,
-and listening evidence support it.
+every lane, and creates masks that other latent operators may use. Region modes
+are typed temporal predicates over measured lanes: state, event, transition,
+persistence, source-validity, and signed-channel selectors. A lane mask or
+channel family is an intervention surface only after direct decode, polish, and
+listening evidence support it.
 
 `latent_constraints.py` is objective-first: it defines scalar latent constraints
 that can be reported as rows or used by guidance/optimization procedures. It
