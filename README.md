@@ -78,8 +78,9 @@ The research layer is organized by four model-native layers first:
   bottleneck, geometry, memory, and editable representation.
 - SA3 Flow and Conditioning Science: SA3 on its own over SAME-shaped flow
   states, prompt conditions, logSNR/timestep probes, and prompt inversion.
-- SA3 Internal Trajectory Science: residual activations, sampler states,
-  guidance objectives, and layer/timestep/window causal probes.
+- SA3 Internal Trajectory Science: internal feature cartography over residual
+  streams, branch updates, adaLN gates, CFG/APG condition influence, memory
+  tokens, sampler states, and bounded patch/steer probes.
 - SA3-over-SAME Coupled Editing: SAME edits entering SA3 polish, inpainting,
   continuation, audio-to-audio, and source-preservation paths.
 
@@ -94,7 +95,9 @@ The current notebook workbenches implement those layers through:
   memory, latent DSP, style profiles, blur, renoise, grafts, and loop repair,
 - SA3-native flow prompt scoring, soft prompt inversion, and readable prompt
   search,
-- SA3 internal trajectory probes, steering candidates, and guidance candidates,
+- SA3 internal feature cartography, contrastive residual scouts, CFG/APG
+  prompt-influence rows, sparse-feature scaffolds, and bounded patch/steer
+  candidates,
 - memory, composition, curriculum, donor selection, and source-preservation
   checks,
 - external comparison packets for Underfit or other generated artifacts,
@@ -116,8 +119,8 @@ The current methods and math notes are:
 
 That document covers SA3/SAME objects, frozen-model principles, native flow
 prompt scoring, object-transition equations, latent DSP, geometry, control
-observability, guidance, residual probing/steering, and implementation safety
-notes.
+observability, guidance, SA3 internal feature cartography, residual
+probing/steering, and implementation safety notes.
 
 The primitive library map is:
 

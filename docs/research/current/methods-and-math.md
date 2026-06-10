@@ -1003,7 +1003,167 @@ record `mapping_status`; `exact_one_call_per_step` is the clean attribution
 case. Forward-call window rows remain a fallback microscope when sampler
 metadata is unavailable or when extra model evaluations need grouping.
 
-### Control-Lane Mechanistic Probing
+### SA3 Internal Feature Cartography
+
+Internal feature cartography is the primary SA3-internal path:
+
+```text
+evidence atlas
+-> contrastive/internal scout
+-> branch/timestep localization
+-> sparse feature atlas targets
+-> causal patch/steer sweeps
+-> audio evidence and ledger decisions
+```
+
+It studies native SA3 objects rather than arbitrary probe-grid cells:
+
+```text
+post-block residual:        h_l
+self-attention update:      Delta h_l^self
+cross-attention update:     Delta h_l^cross
+feedforward update:         Delta h_l^ff
+local conditioning update:  Delta h_l^local
+adaLN terms:                scale_self, shift_self, gate_self,
+                            scale_ff, shift_ff, gate_ff
+memory tokens:              m_j
+sampler coordinate:         t_k, sigma_k, logSNR_k
+CFG/APG influence:          d_k = z_denoised^cond - z_denoised^uncond
+```
+
+The notebook first records surface rows:
+
+```text
+row(surface, layer) =
+  call_count,
+  tensor shape,
+  token count,
+  feature count,
+  RMS / L2 / abs summaries,
+  status,
+  maturity
+```
+
+These rows are microscopes. They say that a native object was observed and
+measured; they do not claim causality.
+
+#### Branch And Gate Capture
+
+For a SA3 transformer block with global conditioning, upstream SA3 computes:
+
+```text
+scale_self, shift_self, gate_self, scale_ff, shift_ff, gate_ff
+  = chunk(to_scale_shift_gate + global_cond, 6)
+```
+
+Self-attention and feedforward branches use those terms before residual
+addition:
+
+```text
+Delta h_l^self =
+  self_attn_scale(sigmoid(1 - gate_self) *
+    self_attn(norm(h_l) * (1 + scale_self) + shift_self))
+
+Delta h_l^ff =
+  ff_scale(sigmoid(1 - gate_ff) *
+    ff(norm(h_l') * (1 + scale_ff) + shift_ff))
+```
+
+The notebook captures these as branch/gate visibility rows. Branch capture is
+not automatically branch intervention. Branch-level causal editing should only
+be added after post-block residual patching proves that the selected coordinate
+matters.
+
+#### CFG/APG Condition Influence
+
+When classifier-free guidance is active, SA3 runs a conditional and
+unconditional branch. For rectified-flow objectives, upstream SA3 computes:
+
+```text
+z_denoised^cond   = x - sigma v_cond
+z_denoised^uncond = x - sigma v_uncond
+d = z_denoised^cond - z_denoised^uncond
+```
+
+APG decomposes the prompt influence relative to the conditional denoised state:
+
+```text
+d_parallel, d_orthogonal = project(d, z_denoised^cond)
+cfg_diff = d_orthogonal                      when apg_scale = 1
+cfg_diff = d                                 when apg_scale = 0
+cfg_diff = apg_scale d_orthogonal + (1-apg_scale)d otherwise
+```
+
+The local atlas records per-call/timestep rows:
+
+```text
+||d||, RMS(d), ||z_denoised^cond||, ||z_denoised^uncond||,
+cos(z_denoised^cond, z_denoised^uncond),
+||d_parallel||, ||d_orthogonal||,
+||d_orthogonal|| / (||d_parallel|| + ||d_orthogonal||)
+```
+
+This is the cleanest SA3-native prompt-influence object. It asks when and how
+the prompt changes the denoised trajectory, without importing an external
+semantic judge.
+
+#### Sparse Feature Scaffold
+
+Sparse autoencoders are not the first probe. They come after scout evidence
+selects surfaces:
+
+```text
+selected surface/layer/logSNR band
+-> token-level activation dataset
+-> sparse feature model
+-> feature presence / attribution rows
+-> bounded feature intervention
+```
+
+The first notebook implementation exports scaffold rows only:
+
+```text
+surface_name, layer_index, sample_source, selection_reason,
+suggested_training_object, minimum_next_dataset
+```
+
+Promotion requires a real activation dataset, reconstruction quality, feature
+interpretability, and causal audio movement. A PCA residual atlas remains a
+diagnostic baseline, not a replacement for sparse feature evidence.
+
+#### Clean/Corrupt Residual Patching
+
+Clean/corrupt patching is the causal test for selected post-block residual
+coordinates:
+
+```text
+run clean prompt/source -> cache h_l^clean(call)
+run corrupt prompt/source -> produce h_l^corrupt(call)
+patch selected calls:
+  h_l^patched(call) =
+    (1 - alpha) h_l^corrupt(call) + alpha h_l^clean(call)
+```
+
+`alpha=0` is the corrupt baseline. `alpha=1` is full clean replacement at the
+selected coordinate. Intermediate alphas test whether the effect changes
+smoothly. This is currently post-block residual patching only; branch-level
+patching is a separate future causal surface.
+
+#### Relationship To Control Lanes
+
+SAME/audio control lanes still matter, but their role is evidence and target
+selection:
+
+```text
+audio/SAME lanes -> evidence atlas / candidate target manifest
+manifest -> selected SA3 internal scout
+SA3 patch/steer sweep -> audio evidence
+```
+
+Lanes do not prove that SA3 has a causal lane knob. They can suggest where to
+look, and they can measure whether an intervention moved decoded audio.
+
+### Control-Lane Residual Diagnostics
 
 Control-lane probes ask whether SA3 residual activations expose measurable
 audio/SAME control lanes and typed temporal regions from those lanes. There are
@@ -1203,9 +1363,10 @@ latent_motion_energy.crest
 latent_channel_energy.smooth
 ```
 
-Typed region rows are the bridge from the full evidence atlas to mechanistic
-probing: the evidence cell finds complete lane/channel regions; the SA3 probe
-asks where those same typed regions are visible in residual activations.
+Typed region rows are the bridge from the full evidence atlas to SA3 internal
+cartography: the evidence cell finds complete lane/channel regions; internal
+scouts ask where those same typed regions are visible in SA3 activations before
+any causal patch or steer sweep is attempted.
 
 Interpretation:
 
@@ -1593,9 +1754,9 @@ smooth:        |dx/dt| low
 ```
 
 `source_quiet` and `padded_tail` are source-validity selectors, not generic
-"low lane" labels. Legacy names still resolve as aliases for notebook
-compatibility: `above -> high`, `below -> low`, `peaks -> crest`,
-`stable -> smooth`, and `silence -> source_quiet`.
+"low lane" labels. The current region grammar should be written directly as
+`high`, `low`, `crest`, `smooth`, or `source_quiet` instead of older shorthand
+labels.
 
 Every lane can export its own region rows. Audio-event regions such as RMS,
 spectral flux, onset density, or band-density crests can be compared against SAME
@@ -1633,7 +1794,7 @@ optional raw table remains available when the research question needs the full
 materialized Cartesian audit, but the default preflight artifact is the compact
 audit plus target manifest.
 
-The mech target manifest is a selector, not a conclusion:
+The internal target manifest is a selector, not a conclusion:
 
 ```text
 typed lane regions
@@ -1641,13 +1802,13 @@ typed lane regions
 + all-channel lane correlations
 + channel-region overlap targets
 -> lane_name, region_mode, candidate_times, supporting_channels,
-   target_priority_score, recommended_for_mech_probe
+   target_priority_score, recommended_for_internal_cartography
 ```
 
-Recommended rows are the places worth spending SA3 residual-probe time. They
-only become control-lane evidence if the mechanistic probe later beats shuffled,
-reversed, random, and prevalence-matched nulls, and if repeated runs show the
-same lane/layer/window structure.
+Recommended rows are places worth spending SA3-internal compute. They only
+become control-lane evidence if later residual diagnostics beat shuffled,
+reversed, random, and prevalence-matched nulls, and if bounded patch or steer
+sweeps move decoded audio in the predicted direction.
 
 Lane status:
 

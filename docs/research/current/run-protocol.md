@@ -115,22 +115,23 @@ include enough evidence for its decision.
 | Latent operator control | direct decode or polish, descriptor delta, listening notes | SAME bottleneck stress rows, flow score |
 | Latent objective/guidance | objective rows, before/after latent values, direct decode or polish, listening notes | control-lane renderings, geometry report, source-preservation rows |
 | Loop/continuation | loop preview, boundary/periodicity metrics, listening notes | bridge cost, lane continuity |
-| Residual steering | layer-probe rows, sampler-timestep rows, trajectory map, selected top-k cells/layers, vector metadata, alpha schedule, alpha sweep, descriptor/listening deltas | trajectory window rows, residual feature atlas, repeat probe run, trajectory-derived flow probe bank |
+| SA3 internal feature cartography | surface inventory, contrastive residual scout rows, branch/gate rows, CFG/APG influence rows, sparse-feature scaffold rows, selected patch specs, bounded patch or alpha sweep, descriptor/listening deltas | control-lane evidence atlas, trajectory-derived flow probe bank, repeat probe run |
+| Residual steering | layer-probe rows, sampler-timestep rows, trajectory map, selected top-k cells/layers, vector metadata, alpha schedule, alpha sweep, descriptor/listening deltas | trajectory window rows, internal surface rows, repeat probe run, trajectory-derived flow probe bank |
 | Dataset/memory method | memory rows, cluster/donor selection evidence, output audition | heldout rows, geometry/lane scores |
 | Frontier hypothesis | source link, native-object mapping, one concrete notebook run | native disagreement panel, runtime audit |
 
-For control-lane mechanistic probing, run the notebook preflight before a long
-audit. The evidence preflight should report a non-empty active-source span,
-typed region-sweep rows, audio-event/SAME-event region comparisons,
-all-channel lane correlations, channel-region rows, a channel-region overlap
-summary/top-row packet, and a non-empty mech-target manifest. Treat the manifest
-as a spending plan for the expensive probe, not as proof of control. The
-mechanistic probe should then run on the strongest non-redundant manifest rows
-with null controls, typed region rows, prediction curves, and repeatability
-metadata. If timestep probing is enabled, the preflight should also report at
-least one `ok` token-preserving timestep row; otherwise fix the lane mask, hook
-mapping, timestep metadata, or layer/lane selection before launching the
-expensive null/repeatability run.
+For SA3 internal feature cartography, start with cheap selectors before
+spending long GPU time. The evidence atlas should report a non-empty
+active-source span, typed region-sweep rows, audio-event/SAME-event region
+comparisons, all-channel lane correlations, channel-region rows, a compact
+channel-region overlap packet, and candidate target rows. Treat those rows as a
+spending plan for internal capture, not as proof of control. The next run
+should capture only selected SA3 surfaces/layers/timesteps first: post-block
+residuals, branch updates, adaLN terms, memory-token summaries, and CFG/APG
+condition-influence rows. Wider residual-lane diagnostics are optional and
+should be launched only after the feature cartography scout identifies a small
+surface/layer/target set. If exact timestep claims are made, rows must carry
+sampler callback metadata and `mapping_status`.
 
 ## Minimum Evidence Packet
 

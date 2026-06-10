@@ -84,7 +84,7 @@ model-native research layers plus cross-cutting evidence utilities:
 |---|---|---|
 | SAME Representation Science | What does SAME preserve, expose, erase, or make editable on its own? | Run direct-decode, bottleneck, geometry, memory, DSP, and control-lane experiments before invoking SA3 polish. |
 | SA3 Flow and Conditioning Science | What does frozen SA3 know through prompt conditions, flow timesteps, and velocity fields? | Use shared flow probe banks, prompt variants, attribution, and condition inversion as SA3-native evidence. |
-| SA3 Internal Trajectory Science | What do residual activations and sampler states reveal or causally control? | Keep residual/guidance work as microscope or high-risk candidate until layer/window sweeps survive audio review. |
+| SA3 Internal Trajectory Science | What do residual streams, branch updates, condition gates, CFG/APG vectors, memory tokens, and sampler states reveal or causally control? | Run internal feature cartography first: scout, localize, select sparse-feature targets, then patch or steer only selected coordinates with audio evidence. |
 | SA3-over-SAME Coupled Editing | How does SA3 read, repair, erase, or amplify SAME latents? | Compare every coupled edit against direct SAME decode and plain SA3 polish. |
 
 Evidence utilities are not a fifth model-object layer. They are the review
@@ -108,7 +108,7 @@ next, then SA3 flow, SA3 internals, and finally coupled SA3-over-SAME editing.
 | SAME representation bench | `z0` -> summaries/geometry/lanes/direct decodes | descriptor, geometry, periodicity, control-lane, bottleneck rows | implemented |
 | SAME memory and composition bench | collection -> selector -> continuation/bridge/donor | memory indices, curriculum rows, ranked bridges | implemented |
 | SA3 flow and conditioning science | target `z0` -> flow probes -> prompt/condition score | shared probe banks, flow-loss rows, attribution, semantic prompt variants, soft prompts, prompt candidates | implemented plus null-inversion scaffold |
-| SA3 internal trajectory science | activation/state -> trajectory map -> scheduled candidate -> output | residual vectors, residual-timestep maps, control-lane probe rows, alpha schedules, cyclic schedules, guided variants | implemented plus high-risk scaffolds |
+| SA3 internal feature cartography | activation/state/branch/gate/CFG/APG -> surface rows -> selected cells/features -> bounded patch or steer sweep -> output | contrastive residual scouts, internal surface rows, CFG/APG influence rows, sparse-feature scaffolds, residual patch specs, alpha schedules, cyclic schedules | implemented as primary SA3-internal path |
 | SA3-over-SAME coupled editing bench | `z0` -> edited `z0'` -> direct decode / SA3 polish | direct decodes, SA3-polished audio, deltas, source-preservation rows | implemented |
 | External comparison bench | external artifacts -> evidence packet | Underfit/cross-model audio, descriptor/player rows | external/scaffold |
 | Ledger and decision board | evidence packet -> maturity decision | ledger rows, promote/revise/drop decisions | template ready; no completed runs recorded |
@@ -120,7 +120,7 @@ should be updated from `experiment-ledger.md`, not from speculation.
 
 | Maturity | Current methods | What is missing |
 |---|---|---|
-| Microscope | flow sign diagnostic, flow attribution, loss-by-timestep, geometry audit, periodicity, residual feature atlas, residual-timestep cartography, control-lane mechanistic probes | repeated listening evidence before control claims |
+| Microscope | flow sign diagnostic, flow attribution, loss-by-timestep, geometry audit, periodicity, residual-timestep cartography, internal surface cartography, CFG/APG atlas, sparse-feature scaffold, optional control-lane residual diagnostics | repeated listening evidence before control claims |
 | Selector | memory index, curriculum, bridge search, prompt search, tokenizer vocabulary, donor/source ranking ideas | evidence that rankings improve auditions |
 | Intervention candidate | neighborhood renoise, selective renoise, graft, blur/filter, neural latent DSP, style profile/direction, cyclic repair, soft prompt audition | source/baseline/method packets across clips and seeds |
 | High-risk intervention candidate | residual steering, cyclic denoising projection, gradient guidance, posterior guidance, null-condition inversion | proof of causal movement without artifacts or fragile internals |
@@ -134,7 +134,7 @@ should be updated from `experiment-ledger.md`, not from speculation.
 - Root native objects, math, measurements, and operators:
   `schema.py`, `io.py`, `latent_math.py`, `audio_descriptors.py`,
   `geometry.py`, `periodic.py`, `control_lanes.py`, `observability.py`,
-  `latent_constraints.py`, `residual_probes.py`, `latent_blur.py`,
+  `latent_constraints.py`, `residual_probes.py`, `internal_features.py`, `latent_blur.py`,
   `latent_dsp.py`, `selective_renoise.py`, `looping.py`,
   `style.py`, `flow_prompt.py`, `prompt_semantics.py`,
   `prompt_optimization.py`, `tokenizer_vocab.py`, `index.py`,
@@ -165,6 +165,12 @@ capability map is [Capability map](capability-map.md).
 - Residual-timestep cartography is owned by `trajectory.py` with ranked cells,
   band summaries, trajectory-derived flow probe banks, residual alpha schedules,
   cyclic mix schedules, and sampler-step record normalization.
+- SA3 internal feature cartography is owned by `internal_features.py`,
+  `adapters/sa3_internal_hooks.py`, and
+  `procedures/internal_feature_cartography.py`: surface specs, branch/gate
+  capture rows, CFG/APG condition-influence rows, memory-token summaries,
+  sparse-feature target scaffolds, and clean/corrupt post-block residual patch
+  sweeps.
 - Residual examples, steering vector containers, and layer/window/timestep
   probe rows are owned by `residual_probes.py`; residual procedures only
   collect activations and render sweeps.
@@ -180,8 +186,8 @@ capability map is [Capability map](capability-map.md).
   prompt semantic rows, and disagreement rows.
 - Control-lane evidence now separates complete measurement from probe
   selection: the notebook exports full lane/channel artifacts, compact
-  channel-region overlap audits, ranked target rows, and a mech-probe target
-  manifest before any long SA3 residual probe is launched.
+  channel-region overlap audits, ranked target rows, and an internal-cartography
+  target manifest before any expensive SA3-internal run is launched.
 
 Conclusion: the current library shape is coherent. The remaining issue is not
 whether these files are needed; it is whether each notebook method earns
@@ -199,9 +205,10 @@ methods under review, not as a list of promoted controls.
 | `procedures/sa3_latent_sampling.py` | SA3-over-SAME coupled editing | intervention candidate | Method packets show which SAME edits survive direct decode and SA3 polish, with sampler-step records when relevant. |
 | `procedures/selective_sa3.py` | SA3-over-SAME coupled editing | intervention candidate | Source/baseline/method packets show predictable channel, donor, prompt, and sampler-step effects. |
 | `procedures/cyclic_sa3.py` | SA3 internal trajectory | high-risk sampler microscope / intervention candidate | Loop metrics and auditions improve versus baselines without collapse or sampler artifacts; trajectory-derived mix schedules must beat uniform mix. |
-| `procedures/residual_activation_vectors.py` | SA3 internal trajectory | microscope / selector | Prompt-derived residual examples produce cross-validated layer, sampler-timestep, and trajectory-window probe rows before steering. |
+| `procedures/residual_activation_vectors.py` | SA3 internal trajectory | microscope / selector | Prompt-derived residual examples produce cross-validated layer, sampler-timestep, and trajectory-window probe rows before steering; this is the Audioscope-style scout, not final causal evidence. |
 | `procedures/audio_residual_vectors.py` | SA3 internal trajectory | high-risk microscope / selector | Audio-derived residual examples produce layer, sampler-timestep, and trajectory-window probe rows; directions still need source-leakage and alpha-sweep review. |
-| `procedures/control_lane_mechanistic_probe.py` | SA3 internal trajectory plus SAME representation evidence | microscope / selector | Control-lane layer/window/timestep rows, call-held-out checks, null-margin rows, prediction curves, and active-direction previews repeat before any lane-targeted residual patch or steering claim. |
+| `procedures/internal_feature_cartography.py` | SA3 internal trajectory | microscope / selector / intervention candidate | Internal surface capture, CFG/APG atlas, sparse-feature target scaffolds, and bounded clean/corrupt post-block residual patch sweeps form the primary SA3-internal path. |
+| `procedures/control_lane_mechanistic_probe.py` | SA3 internal trajectory plus SAME representation evidence | optional microscope / selector | Control-lane residual rows remain available as a diagnostic selector, but they are not the main research path and do not prove SA3 causality. |
 | `procedures/residual_sweeps.py` | SA3 internal trajectory | high-risk intervention candidate | Global or trajectory-gated alpha changes are audible, monotonic or interpretable, and not just artifact injection. |
 
 ## Artifact Graph
@@ -225,10 +232,10 @@ dataset folders
   -> retrieval, curriculum, bridge search, donor selection
   -> notebook comparison cells
 
-prompt pairs or labeled audio sets
-  -> SA3 residual activation capture
-  -> steering vectors / residual feature basis
-  -> alpha sweeps
+prompt pairs, labeled audio sets, or sampler condition contrasts
+  -> SA3 residual / branch / gate / CFG-APG capture
+  -> internal surface rows / steering vectors / sparse-feature targets
+  -> bounded patch or alpha sweeps
   -> generated outputs + probe reports
 
 LoRA/style fine-tuning need
@@ -256,7 +263,8 @@ LoRA/style fine-tuning need
 - Which SAME latent edits survive direct decode and SA3 polish?
 - Which control lanes and SAME-channel families are observable, predictable,
   and intervenable after complete-atlas review rather than top-k display alone?
-- Which residual layers produce stable causal audio controls?
+- Which SA3 internal surfaces, layers, branches, CFG/APG components, and
+  sampler bands produce stable causal audio controls?
 - Can sampler-level guidance improve loopability or source preservation without
   artifacts?
 - Which evidence panels are lightweight enough for routine Colab review?

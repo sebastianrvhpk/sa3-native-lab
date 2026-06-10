@@ -516,6 +516,74 @@ L_flow(prompt) = E ||v_theta(z_t, t, C(prompt)) - u_t||^2
 - Notebook impact: Supports residual activation patching and layer/control atlas ideas.
 - Status: source context; causal validation remains open.
 
+### Audioscope: Stable Audio 3 Residual Mood Steering
+
+- Sources:
+  - [Audioscope repo](https://github.com/guglielmocamporese/audioscope)
+  - [activation collector](https://github.com/guglielmocamporese/audioscope/blob/main/audioscope/hooks/activation_collector.py)
+  - [vector extractor](https://github.com/guglielmocamporese/audioscope/blob/main/audioscope/steering/vector_extractor.py)
+  - [steerer](https://github.com/guglielmocamporese/audioscope/blob/main/audioscope/steering/steerer.py)
+- Relevant idea: Collect post-block SA3 DiT residual activations, build
+  contrastive mean-difference directions from prompt pairs, rank layers with
+  linear probes, and monkey-patch compiled transformer blocks for inference-time
+  residual steering.
+- Notebook impact: Becomes the contrastive residual scout in this repo. It
+  selects residual layers/timesteps and supplies candidate steering directions,
+  but it is not the endpoint: local runs add sampler metadata, native evidence,
+  and bounded patch/steer sweeps.
+- Status: source-confirmed inspiration; local steering remains an intervention
+  candidate until decoded audio evidence and ledger decisions repeat.
+
+### Stable Audio 3 Internal Architecture
+
+- Sources:
+  - [Stable Audio 3 repo](https://github.com/Stability-AI/stable-audio-3)
+  - [transformer.py](https://github.com/Stability-AI/stable-audio-3/blob/main/stable_audio_3/models/transformer.py)
+  - [dit.py](https://github.com/Stability-AI/stable-audio-3/blob/main/stable_audio_3/models/dit.py)
+  - [sampling.py](https://github.com/Stability-AI/stable-audio-3/blob/main/stable_audio_3/inference/sampling.py)
+  - [model.py](https://github.com/Stability-AI/stable-audio-3/blob/main/stable_audio_3/model.py)
+- Relevant idea: SA3 exposes source-grounded internal objects: post-block
+  residuals, self-attention/cross-attention/feedforward branch updates, local
+  conditioning projections, adaLN scale/shift/gate terms, memory tokens,
+  sampler `t/sigma/logSNR` records, and CFG/APG conditional-vs-unconditional
+  denoised differences.
+- Notebook impact: Defines SA3 Internal Feature Cartography. The notebook now
+  studies those native objects before any wide residual-lane diagnostic. CFG/APG
+  prompt-influence rows are treated as a SA3-native condition microscope.
+- Status: source-confirmed architecture; local causal claims still require
+  patch/steer sweeps and audio evidence.
+
+### Temporal-Aware DiT Sparse Features
+
+- Sources:
+  - [TIDE: Temporal-Aware Sparse Autoencoders for Interpretable Diffusion Transformers](https://arxiv.org/html/2503.07050v2)
+  - [Steering Diffusion Transformers with Sparse Autoencoders](https://openreview.net/forum?id=J48XM0au4u)
+- Relevant idea: Diffusion transformer features should be studied across
+  denoising time, not only as whole-run pooled activations. Sparse features can
+  support steering, but layer/component selection and causal checks are part of
+  the method.
+- Notebook impact: Local SAE work starts as sparse-feature target scaffolding
+  after contrastive/internal scouts select surfaces, layers, and logSNR bands.
+  The notebook should train sparse features only on selected activation datasets
+  with sampler metadata and then test feature interventions.
+- Status: source context; local implementation is scaffolded, not a trained SAE
+  claim.
+
+### Activation Patching Discipline
+
+- Sources:
+  - [Transformer Circuits activation patching update](https://transformer-circuits.pub/2024/march-update/index.html)
+  - [Attribution patching at industrial scale](https://www.alignmentforum.org/posts/gtLLBhzQTG6nKTeCZ/attribution-patching-activation-patching-at-industrial-scale)
+  - [TransformerLens activation patching surfaces](https://transformerlensorg.github.io/TransformerLens/generated/code/transformer_lens.patching.html)
+- Relevant idea: Probe visibility is not causality. Clean/corrupt activation
+  patching tests whether replacing a selected activation coordinate recovers or
+  changes the target behavior.
+- Notebook impact: Adds bounded clean/corrupt post-block residual patch sweeps
+  as the first causal test after scout selection. Branch-level patching remains
+  future work until post-block patching yields useful evidence.
+- Status: source context translated to SA3 residual patching; local causal
+  evidence must come from decoded audio and ledger decisions.
+
 ## Source-Use Rules
 
 - External sources motivate notebook experiments; they do not prove local audio behavior.

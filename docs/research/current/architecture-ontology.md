@@ -72,7 +72,7 @@ audio output + latent rows + flow rows + descriptors + listening notes
 |---|---|---|---|
 | SAME Representation Science | waveform `x`, encoder `E`, SAME latent `z0`, decoder `D`, `LatentItem` | compression, direct decode, geometry, latent memory, source preservation, bottleneck stress, latent DSP | direct decodes, descriptor deltas, geometry rows, nearest-memory rows, control lanes, listening notes |
 | SA3 Flow and Conditioning Science | prompt `p`, condition `C(p)`, flow state `z_t`, timestep/logSNR, velocity `v_theta` | prompt scoring, condition inversion, flow timestep bands, null/conditional-delta probes | shared flow-probe rows, prompt semantic rows, attribution, generated-audio audition |
-| SA3 Internal Trajectory Science | residual activations `a_l`, sampler states, sampler timesteps, observed windows, guidance objectives | residual feature maps, residual-timestep cartography, layer/timestep and layer/window causality, sampler-state edits, guidance honesty, step/polish tradeoffs | activation rows, trajectory maps, alpha/guidance sweeps, flow/descriptor/listening disagreement |
+| SA3 Internal Trajectory Science | residual activations `a_l`, branch updates, adaLN scale/shift/gate terms, CFG/APG condition-influence vectors, memory tokens, sampler states, sampler timesteps, observed windows, guidance objectives | internal feature cartography, residual-timestep cartography, branch/gate visibility, CFG/APG prompt-influence timing, sparse-feature targets, clean/corrupt patching, sampler-state edits, guidance honesty | activation rows, internal surface rows, CFG/APG rows, trajectory maps, patch/alpha/guidance sweeps, flow/descriptor/listening disagreement |
 | SA3-over-SAME Coupled Editing | edited SAME `z0'`, SA3 polish/init-audio/inpainting path, source masks | whether SA3 preserves, repairs, erases, or rewrites SAME edits | direct decode vs SA3 polish packets, source-preservation rows, flow loss, listening |
 
 These layers are not a linear pipeline. They are separate microscopes that
@@ -104,7 +104,8 @@ SA3 only over latent states:
   residual a_l -> layer/timestep and layer/window feature evidence
 
 SA3 internal trajectory:
-  residual or sampler state -> patched/optimized state
+  residual, branch update, gate, CFG/APG vector, memory token, or sampler state
+  -> selected feature / patched activation / scheduled steering candidate
   patched state -> next latent state -> decoded audio
 
 SA3 over SAME:
@@ -133,7 +134,7 @@ Evidence:
 |---|---|---|
 | SAME Representation Science | geometry, periodicity, latent DSP, blur/filter, selective renoise/graft, style profile/direction, memory, latent constraint objectives | systematic bottleneck and direct-decode evidence |
 | SA3 Flow and Conditioning Science | flow probe banks, prompt scoring, attribution, soft/hard/readable prompt search, null-condition scaffold | predictive validity against generated audio |
-| SA3 Internal Trajectory Science | residual hooks, root residual probe rows/vectors, residual-timestep cartography, residual feature atlas, cyclic projection, guidance scaffolds | layer/timestep and layer/window causal evidence and artifact checks |
+| SA3 Internal Trajectory Science | residual hooks, internal feature cartography, CFG/APG atlas rows, root residual probe rows/vectors, residual-timestep cartography, sparse-feature scaffolds, clean/corrupt patch specs, cyclic projection, guidance scaffolds | repeated causal patch/steer evidence and artifact checks |
 | SA3-over-SAME Coupled Editing | SA3 polish, selective SA3, continuation/inpainting, direct decode helpers | survival matrix: what edits SA3 preserves or erases |
 
 Evidence utilities already exist as player, descriptors, annotations,
@@ -184,6 +185,25 @@ mechanistic interpretability: capture activations, rank layers with explicit
 linear probes, then test causal patches with bounded sweeps. A residual
 direction is promoted only if it moves audio predictably across prompts/seeds
 and does not merely exploit fragile internals.
+
+The primary route is now SA3 Internal Feature Cartography:
+
+```text
+evidence atlas
+-> contrastive/internal scout
+-> branch/timestep localization
+-> sparse feature atlas targets
+-> causal patch/steer sweeps
+-> audio evidence and ledger decisions
+```
+
+Control lanes remain deterministic evidence and selectors. They can propose
+where to spend SA3-internal compute, but lane predictability alone is not
+causal SA3 evidence. The strongest native internal objects are the ones exposed
+by SA3's architecture: post-block residuals, self-attention / cross-attention /
+feedforward branch updates, local conditioning projections, adaLN
+scale/shift/gate terms, CFG/APG conditional-vs-unconditional denoised
+differences, memory tokens, and exact sampler `t/sigma/logSNR` rows.
 
 ### SA3-over-SAME Coupled Editing
 

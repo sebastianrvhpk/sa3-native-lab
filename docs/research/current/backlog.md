@@ -190,20 +190,21 @@ band lanes, onset density, active source masks, active-window correlations,
 per-lane region sweeps, full typed audio-event versus SAME-event region-sweep
 comparisons, full SAME-channel scores, full channel-lane traces, all-channel
 lane correlations, channel-region rows, compact channel-region overlap audits,
-ranked overlap top/target rows, mech-probe target manifests, optional raw
-channel-region overlap dumps, channel-family summaries, lane mechanistic
-probes, latent DSP, descriptor deltas, and listening/ledger surfaces.
+ranked overlap top/target rows, internal-cartography target manifests, optional
+raw channel-region overlap dumps, channel-family summaries, optional
+control-lane residual diagnostics, latent DSP, descriptor deltas, and
+listening/ledger surfaces.
 
 Next run: rerun the direct control-lane evidence cell on the current short clip
 with the default compact overlap audit, then inspect
-`evidence_control_lane_mech_target_manifest.json`,
+`evidence_control_lane_internal_target_manifest.json`,
 `evidence_control_lane_channel_region_overlap_summary.json`, and
 `evidence_control_lane_channel_region_overlap_targets.json`. If the manifest is
 non-empty and not just loudness/padding structure, run the evidence cell on one
-additional clip before the hour-long SA3 probe. Configure mechanistic probing
-from the strongest non-redundant manifest rows: one transient/event row, one
-spectral-density row, one SAME-motion row, and one SAME-channel-energy row when
-available.
+additional clip before spending SA3-internal GPU time. Configure the internal
+cartography scout from the strongest non-redundant manifest rows: one
+transient/event row, one spectral-density row, one SAME-motion row, and one
+SAME-channel-energy row when available.
 
 Promote if:
 
@@ -222,66 +223,53 @@ Drop or revise if:
   evidence source,
 - knob searches optimize metrics while decoded/polished audio gets worse.
 
-## Gap 6. Residual Causality
+## Gap 6. SA3 Internal Feature Cartography And Residual Causality
 
-Evidence gap: residual activations are measurable, and layer plus sampler-step,
-observed trajectory-window, and control-lane predictability can now be ranked
-with cross-validated probes, but causal audio movement is not yet established.
+Evidence gap: SA3 internal objects are now capturable as residual, branch,
+gate, CFG/APG, memory-token, sampler, and selected lane-diagnostic rows, but
+causal audio movement is not yet established.
 
-Native transition: `audio/control lanes or typed lane regions or prompt/audio examples -> residual activations -> lane/layer rows + typed region rows + layer/timestep rows + layer/window rows -> residual direction -> alpha sweep -> evidence packet`.
+Native transition: `evidence atlas or prompt/audio contrast -> selected SA3 internal surfaces/layers/timesteps -> residual/branch/gate/CFG-APG rows -> sparse-feature target rows or patch specs -> bounded patch/steer sweep -> audio evidence packet`.
 
-Current support: residual hooks, prompt/audio vector extraction, root
-`residual_probes.py` activation examples/vector containers/probe rows,
-`control_lane_probes.py` continuous lane-predictability rows, sampler-timestep
-rows with `mapping_status`, token-blocked and call-held-out control-lane
-scores, typed state/event/transition/persistence region rows with AUC and
-balanced accuracy, prevalence-matched binary region nulls, true-vs-null margin
-rows, held-out prediction curves, active/quiet and region-vs-complement
-direction previews, alpha sweeps, residual feature basis, cross-validated
-layer, sampler-timestep, trajectory-window, and control-lane probe rows,
-trajectory maps, trajectory-derived alpha schedules,
-trajectory-derived flow probe banks, player/descriptors.
+Current support: `internal_features.py` surface specs, activation summary rows,
+CFG/APG influence rows, sparse-feature scaffolds, and patch specs;
+`adapters/sa3_internal_hooks.py` branch/gate capture, CFG/APG recording,
+memory-token summaries, and clean/corrupt post-block residual patching;
+`procedures/internal_feature_cartography.py` notebook procedures; residual
+hooks, prompt/audio vector extraction, `residual_probes.py`,
+`control_lane_probes.py`, trajectory maps, trajectory-derived schedules,
+alpha sweeps, player/descriptors.
 
-Next run: run control-lane mechanistic probing on one source at true source
-duration with RMS, spectral flux, onset density, spectral-density band,
-latent-motion, and latent-channel lanes. Start with layer/window rows and null
-window margins; keep exact timestep probing disabled until the first pass
-identifies a small lane/layer/region-mode set. Then run a narrowed exact-timestep audit with
-token-preserving timestep activations and optional timestep null controls.
-Before any long audit, run the control-lane preflight cell and require a nonzero
-active-source span plus `ok` timestep sample counts when timestep probing is
-enabled.
-Inspect layer/window/timestep heatmaps, typed region AUC heatmaps,
-null-control margins, region null margins, prediction curves, active-direction
-and region-vs-complement previews, call-held-out scores, and repeatability rows
-across at least two seeds, prompts, or init-noise levels.
-Only then choose whether a bounded alpha/patch sweep is scientifically
-justified.
+Next run: run the notebook's `SA3 Internal Feature Cartography` surface
+inventory and branch/gate capture on a small selected layer set. Then run the
+CFG/APG atlas with CFG active. Use the contrastive residual scout and evidence
+atlas to choose a small set of layers/timesteps/surfaces. Export sparse-feature
+scaffold rows only for repeated candidates. Finally run a bounded clean/corrupt
+post-block residual patch sweep with alpha values from 0 to 1 and compare
+decoded audio, descriptors, and listening notes. Use wider control-lane
+residual diagnostics only as optional selectors after this scout, not as a
+default full audit.
 
 Promote if:
 
-- alpha changes target qualities monotonically or predictably,
-- probe-ranked layers, timesteps, and windows repeat across seeds or example subsets,
-- lane-predictive layers/windows repeat for the same control lane,
-- typed region-predictive layers/windows repeat for the same lane and region
-  mode,
-- lane/timestep rows report exact or honestly grouped mapping rather than
-  silently using observed-call windows,
-- true-lane rows beat shuffled/reversed/random null controls,
-- true typed-region rows beat shuffled/reversed/prevalence-matched binary null
-  controls,
-- call-held-out scores remain positive when enough observed calls are available,
-- held-out prediction curves track active source regions rather than padded
-  silence,
+- post-block residual patches move decoded audio in the predicted direction,
+- CFG/APG rows explain prompt influence timing better than whole-run averages,
+- selected layers, timesteps, branches, or gates repeat across seeds or example subsets,
+- sparse-feature targets are chosen from repeated, source-grounded surface rows,
+- exact timestep claims report sampler callback metadata and honest
+  `mapping_status`,
+- optional lane rows beat shuffled/reversed/random null controls before they
+  become selectors,
 - effects repeat across seeds/prompts,
 - artifacts remain bounded.
 
 Drop or revise if:
 
 - hooks are too fragile,
-- steering only creates artifacts,
+- patching/steering only creates artifacts,
 - layer rankings do not repeat.
-- lane probes overfit one clip, fail null controls, or only predict
+- branch/gate rows are visible but cannot be connected to audio movement,
+- lane diagnostics overfit one clip, fail null controls, or only predict
   padded/silent tails.
 
 ## Gap 7. Guidance Objective Honesty
