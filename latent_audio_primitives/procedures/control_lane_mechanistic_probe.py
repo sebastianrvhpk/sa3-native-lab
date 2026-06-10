@@ -1,4 +1,4 @@
-"""SA3 execution wrapper for control-lane mechanistic probes."""
+"""SA3 execution wrapper for optional control-lane residual diagnostics."""
 
 from __future__ import annotations
 
@@ -113,7 +113,7 @@ class ControlLaneMechanisticProbeResult:
 
 
 class SA3ControlLaneProbeExtractor:
-    """Capture SA3 residual activations and probe them against control lanes."""
+    """Capture SA3 residual activations and diagnose them against control lanes."""
 
     def __init__(
         self,
@@ -616,7 +616,7 @@ def _require_torch():
     try:
         import torch
     except ImportError as exc:
-        raise RuntimeError("PyTorch is required for control-lane mechanistic probes.") from exc
+        raise RuntimeError("PyTorch is required for control-lane residual diagnostics.") from exc
     return torch
 
 
@@ -624,5 +624,5 @@ def _require_torchaudio():
     try:
         import torchaudio
     except ImportError as exc:
-        raise RuntimeError("torchaudio is required for control-lane mechanistic probes.") from exc
+        raise RuntimeError("torchaudio is required for control-lane residual diagnostics.") from exc
     return torchaudio

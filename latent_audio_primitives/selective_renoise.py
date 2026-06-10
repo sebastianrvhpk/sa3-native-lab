@@ -171,7 +171,7 @@ def sampler_noise_from_donor_channels(
     donor_latents: Any,
     channels: Sequence[int],
 ) -> Any:
-    """Build legacy SA3 sampler noise from donor latents on selected channels.
+    """Build upstream-style SA3 sampler noise from donor latents on selected channels.
 
     This treats donor latents as the sampler ``noise`` argument, not as a
     deterministic edited ``init_data``. It is useful as a diagnostic of prior

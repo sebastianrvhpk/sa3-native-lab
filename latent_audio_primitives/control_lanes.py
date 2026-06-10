@@ -30,7 +30,7 @@ DEFAULT_CONTROL_LANE_REGION_MODES = (
 
 SOURCE_CONTROL_LANE_REGION_MODES = ("source_active", "source_quiet", "padded_tail")
 
-DEFAULT_CONTROL_LANE_MECH_TARGET_LANES = (
+DEFAULT_CONTROL_LANE_INTERNAL_TARGET_LANES = (
     "spectral_flux",
     "onset_density",
     "spectral_density_high",
@@ -41,7 +41,7 @@ DEFAULT_CONTROL_LANE_MECH_TARGET_LANES = (
     "latent_channel_energy",
 )
 
-DEFAULT_CONTROL_LANE_MECH_TARGET_MODES = (
+DEFAULT_CONTROL_LANE_INTERNAL_TARGET_MODES = (
     "crest",
     "change",
     "high",
@@ -1198,15 +1198,15 @@ def latent_channel_region_overlap_audit(
     top_k: int = 1024,
     min_iou: float = 0.5,
     max_channel_rank: int | None = 96,
-    target_lane_names: Sequence[str] = DEFAULT_CONTROL_LANE_MECH_TARGET_LANES,
-    target_region_modes: Sequence[str] = DEFAULT_CONTROL_LANE_MECH_TARGET_MODES,
+    target_lane_names: Sequence[str] = DEFAULT_CONTROL_LANE_INTERNAL_TARGET_LANES,
+    target_region_modes: Sequence[str] = DEFAULT_CONTROL_LANE_INTERNAL_TARGET_MODES,
     iou_thresholds: Sequence[float] = (0.1, 0.25, 0.5, 0.65, 0.75, 0.9),
 ) -> dict[str, Any]:
     """Audit all channel-region overlaps without retaining every raw row.
 
     The full overlap table can be very large. This helper keeps exhaustive
     counts and group summaries, plus ranked top rows and best-per-key selectors
-    for the next mechanistic probe.
+    for later SA3 internal cartography or intervention studies.
     """
 
     z = as_time_major(latent)
@@ -1338,18 +1338,18 @@ def latent_channel_region_overlap_audit(
     }
 
 
-def control_lane_mech_target_manifest_rows(
+def control_lane_internal_target_manifest_rows(
     *,
     region_rows: Sequence[Mapping[str, Any]],
     region_comparison_rows: Sequence[Mapping[str, Any]] = (),
     channel_correlation_rows: Sequence[Mapping[str, Any]] = (),
     channel_overlap_rows: Sequence[Mapping[str, Any]] = (),
-    lane_names: Sequence[str] = DEFAULT_CONTROL_LANE_MECH_TARGET_LANES,
-    region_modes: Sequence[str] = DEFAULT_CONTROL_LANE_MECH_TARGET_MODES,
+    lane_names: Sequence[str] = DEFAULT_CONTROL_LANE_INTERNAL_TARGET_LANES,
+    region_modes: Sequence[str] = DEFAULT_CONTROL_LANE_INTERNAL_TARGET_MODES,
     max_candidate_times: int = 5,
     max_supporting_channels: int = 8,
 ) -> list[dict[str, Any]]:
-    """Build auditable target rows for a control-lane mechanistic probe run."""
+    """Build auditable selector rows for SA3 internal cartography targets."""
 
     lane_set = {str(name) for name in lane_names}
     mode_set = {_canonical_region_mode(mode) for mode in region_modes}
@@ -1461,7 +1461,7 @@ def control_lane_mech_target_manifest_rows(
             + min(1.0, float(current["best_channel_abs_correlation"])) * 0.15
         )
         current["target_priority_score"] = float(score)
-        current["recommended_for_mech_probe"] = bool(
+        current["recommended_for_internal_cartography"] = bool(
             current["region_count"] > 0
             and (
                 float(current["best_audio_same_iou"]) >= 0.35
@@ -1469,12 +1469,14 @@ def control_lane_mech_target_manifest_rows(
                 or float(current["best_channel_abs_correlation"]) >= 0.35
             )
         )
-        current["maturity"] = "selector_candidate" if current["recommended_for_mech_probe"] else "microscope_only"
-        current["reason"] = _mech_target_reason(current)
+        current["maturity"] = (
+            "selector_candidate" if current["recommended_for_internal_cartography"] else "microscope_only"
+        )
+        current["reason"] = _internal_target_reason(current)
         rows.append(current)
     rows.sort(
         key=lambda row: (
-            not bool(row["recommended_for_mech_probe"]),
+            not bool(row["recommended_for_internal_cartography"]),
             -float(row["target_priority_score"]),
             str(row["lane_name"]),
             str(row["region_mode"]),
@@ -1749,8 +1751,8 @@ def regions_from_control_lane(
     """Select contiguous time regions from a lane.
 
     Modes are typed temporal predicates over the lane value, derivative, local
-    support, source validity, or signed channel value. Legacy names such as
-    ``peaks`` and ``stable`` remain accepted aliases.
+    support, source validity, or signed channel value. Older shorthand names
+    such as ``peaks`` and ``stable`` remain accepted aliases.
     Returned frame spans are end-exclusive.
     """
 
@@ -2343,6 +2345,8 @@ def _row_region_mode(row: Mapping[str, Any]) -> str:
         return _canonical_region_mode(str(row["reference_mode"]))
     if row.get("channel_mode") is not None:
         return _canonical_region_mode(str(row["channel_mode"]))
+    if row.get("region_mode") is not None:
+        return _canonical_region_mode(str(row["region_mode"]))
     if row.get("label") is not None:
         return _canonical_region_mode(str(row["label"]))
     return ""
@@ -2532,7 +2536,7 @@ def _channel_rank_band(rank: int) -> str:
     return "rank_129_plus"
 
 
-def _mech_target_reason(row: Mapping[str, Any]) -> str:
+def _internal_target_reason(row: Mapping[str, Any]) -> str:
     parts: list[str] = []
     if int(row.get("region_count", 0) or 0) > 0:
         parts.append(f"{int(row['region_count'])} typed regions")
