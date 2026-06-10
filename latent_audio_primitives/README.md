@@ -45,7 +45,7 @@ Research layers are different from code altitude:
 ```text
 SAME representation: root SAME math/operators plus evidence.
 SA3 flow-conditioning: flow rows plus SA3 procedures.
-SA3 internal trajectory: residual adapters/procedures plus trajectory cartography.
+SA3 internal trajectory: residual/internal adapters plus feature and trajectory cartography.
 SA3-over-SAME coupled editing: SAME edits plus SA3 polish/inpaint/continue procedures.
 ```
 
@@ -71,6 +71,15 @@ does not own evidence packet aggregation.
 steering vector containers, and probe rows after activations have already been
 captured. SA3 layer discovery and hook execution remain in `adapters/` and
 `procedures/`.
+
+`internal_features.py` is SA3-internal-object-first: it owns surface specs,
+activation summary rows, CFG/APG prompt-influence rows, sparse-feature scaffold
+rows, and clean/corrupt patch specs. It does not run SA3.
+
+`adapters/sa3_internal_hooks.py` owns upstream-sensitive internal access:
+branch/gate capture, CFG/APG recording, memory-token summaries, and
+post-block residual patching. This keeps compiled-block monkey-patching and
+source-path details out of root primitives.
 
 `control_lane_probes.py` is residual-lane-probe-first: it owns continuous
 ridge probes from captured SA3 residual activations to control lanes, including
