@@ -115,7 +115,8 @@ when primitive APIs change.
 | SAME edits | `apply_latent_blur(...)`, `apply_latent_dsp(...)`, `graft_latent_channels(...)`, `apply_style_direction(...)` | `z0 -> z0'` | intervention candidate after direct decode and polish comparison |
 | Flow probes | `flow_probe_bank_from_values(...)`, `flow_probe_bank_to_manifest(...)`, `sa3_flow_losses_for_prompts(...)` | target `z0` + probe bank + prompts -> flow rows | SA3-native microscope/selector |
 | Trajectory cartography | `trajectory_map_from_probe_rows(...)`, `summarize_trajectory_bands(...)`, `trajectory_cells_to_alpha_schedule(...)`, `trajectory_cells_to_flow_probe_bank(...)`, `trajectory_cells_to_cyclic_mix_schedule(...)` | residual layer/timestep rows -> ranked trajectory cells -> schedules/probe banks | microscope/selector; schedules remain intervention candidates |
-| SA3 internal feature cartography | `internal_surface_table(...)`, `SA3InternalFeatureCartographer(...).capture_surfaces(...)`, `.cfg_apg_atlas(...)`, `.sparse_feature_scaffold(...)`, `.residual_patch_sweep(...)`, `ActivationPatchSpec(...)` | prompt/source + sampler settings -> residual/branch/gate/CFG/APG rows -> selected sparse-feature targets or bounded residual patch sweeps | primary SA3-internal path; microscope/selector until patch/steer audio evidence exists |
+| SA3 internal feature cartography | `internal_surface_table(...)`, `SA3InternalFeatureCartographer(...).capture_surfaces(...)`, `.cfg_apg_atlas(...)`, `.sparse_feature_scaffold(...)`, `.residual_patch_sweep(...)`, `.branch_intervention_sweep(...)`, `ActivationPatchSpec(...)`, `BranchInterventionSpec(...)` | prompt/source + sampler settings -> residual/branch/gate/CFG/APG rows -> selected sparse-feature targets, bounded residual patch sweeps, or branch intervention sweeps | primary SA3-internal path; microscope/selector until patch/branch/steer audio evidence exists |
+| Native sampler composition | `ScalarSchedule(...)`, `PromptPhaseSpec(...)`, `SamplerCompositionPlan(...)`, `sampler_composition_step_rows(...)`, `sa3_sampler_composition_from_init_latents(...)` | source `z0` + RF schedule + prompt/guidance/anchor schedules -> composed latent output + per-step rows | sampler-state intervention candidate; needs source/baseline/method audio evidence |
 | Control-lane residual diagnostics | `control_lane_layer_probe_rows(...)`, `control_lane_window_probe_rows(...)`, `control_lane_timestep_probe_rows(...)`, `control_lane_null_layer_probe_rows(...)`, `control_lane_null_margin_table(...)`, `control_lane_region_layer_probe_rows(...)`, `control_lane_region_window_probe_rows(...)`, `control_lane_region_timestep_probe_rows(...)`, `control_lane_region_null_margin_table(...)`, `control_lane_probe_prediction_table(...)`, `control_lane_region_prediction_table(...)`, `control_lane_active_direction_table(...)`, `control_lane_region_direction_table(...)`, `SA3ControlLaneProbeExtractor(...).probe_audio_path(...)` | control lanes + typed lane-region masks + captured SA3 residual activations -> continuous lane rows, typed state/event/transition/persistence region rows, null margins, prediction rows, and direction previews | optional diagnostic selector; no longer the main SA3-internal route; typed region separability is not causal until residual patches move decoded audio |
 | Native tokenizer vocabulary | `native_tokenizer_vocabulary(...)`, `extract_prompt_tokenizer(...)` | SA3 conditioner/tokenizer -> hard prompt candidates | prompt-search support, not a separate adapter layer |
 | Prompt semantics | `make_prompt_variants(...)`, `prompt_semantic_rows(...)`, `rank_prompt_semantic_rows(...)` | prompt variants + native evidence -> prompt rows | transparency before treating text as discovered description |
@@ -141,7 +142,8 @@ metadata.
 | `cyclic_sa3.py` | SA3 internal trajectory | high-risk sampler microscope / intervention candidate | Inserts cyclic projections inside a sampler trajectory, optionally with trajectory-derived per-step mix schedules. |
 | `residual_activation_vectors.py` | SA3 internal trajectory | microscope / selector | Runs prompt-pair SA3 generations, captures residual examples, and delegates vector/probe math to `residual_probes.py`. |
 | `audio_residual_vectors.py` | SA3 internal trajectory | high-risk microscope / selector | Runs audio-conditioned SA3 paths, captures residual examples, and delegates vector/probe math to `residual_probes.py`. |
-| `internal_feature_cartography.py` | SA3 internal trajectory | microscope / selector / intervention candidate | Runs source-grounded SA3 internal surface capture, CFG/APG prompt-influence rows, sparse-feature target scaffolds, and bounded clean/corrupt residual patch sweeps. |
+| `internal_feature_cartography.py` | SA3 internal trajectory | microscope / selector / intervention candidate | Runs source-grounded SA3 internal surface capture, CFG/APG prompt-influence rows, sparse-feature target scaffolds, bounded clean/corrupt residual patch sweeps, and branch output intervention sweeps. |
+| `sampler_composition.py` | SA3 internal trajectory | high-risk intervention candidate | Runs explicit RF Euler source-latent composition with source anchoring, CFG/APG schedules, and prompt phases. |
 | `control_lane_mechanistic_probe.py` | SA3 internal trajectory plus SAME representation evidence | optional microscope / selector | Runs audio-conditioned SA3 paths and lane-predictability diagnostics; kept as a selector, not as the main SA3-internal research path. |
 | `residual_sweeps.py` | SA3 internal trajectory | high-risk intervention candidate | Renders residual steering sweeps for audition and descriptors. |
 
@@ -157,7 +159,7 @@ upstream internals everywhere.
 |---|---|---|
 | `adapters/stable_audio3.py` | confirmed | Load/generate/encode/decode through official Stable Audio 3 and SAME wrappers; convert latents into memory items. |
 | `adapters/sa3_residual_hooks.py` | confirmed | Locate SA3 DiT layers, capture residual activations, and apply residual steering vectors. |
-| `adapters/sa3_internal_hooks.py` | confirmed | Capture SA3 internal branch/gate surfaces, record CFG/APG condition-influence components, summarize memory tokens, and patch selected post-block residual activations. |
+| `adapters/sa3_internal_hooks.py` | confirmed | Capture SA3 internal branch/gate surfaces, record CFG/APG condition-influence components, summarize memory tokens, patch selected post-block residual activations, and scale/ablate/patch selected branch outputs. |
 
 Constraint: these modules may follow upstream SA3 internals. Keep that coupling
 isolated here or in a clearly named procedure.
@@ -190,7 +192,7 @@ an operator is useful.
 | `control_lanes.py` | confirmed | Time-varying envelope/flux/motion/channel lanes, summary rows, normalization, similarity, region masks, retrieval/bridge ranking, and persistence. |
 | `observability.py` | confirmed | Linear probes for whether controls are visible in latent summaries. |
 | `residual_features.py` | confirmed | Residual activation bases and directions. |
-| `internal_features.py` | confirmed | SA3 internal surface specs, activation summary rows, CFG/APG influence rows, sparse-feature scaffold rows, and clean/corrupt patch specs. |
+| `internal_features.py` | confirmed | SA3 internal surface specs, activation summary rows, CFG/APG influence rows, sparse-feature scaffold rows, clean/corrupt patch specs, and branch intervention specs. |
 | `residual_probes.py` | confirmed | Activation examples, steering-vector containers, and layer/window/timestep probe rows after residual activations are collected. |
 | `prompt_semantics.py` | confirmed | Prompt variant records, semantic tags, prompt evidence rows, and manifests. |
 | `latent_constraints.py` | confirmed | Scalar latent constraint specs, objective values/losses, and before-after constraint rows. |
@@ -243,6 +245,7 @@ interventions change generated audio, not just whether a signal is measurable.
 |---|---|---|
 | `adapters/sa3_residual_hooks.py` | confirmed | Residual activation capture and residual steering. |
 | `trajectory.py` | confirmed | Residual-timestep cartography cells, band summaries, flow-probe conversion, cyclic mix schedules, and residual alpha schedules. |
+| `sampler_composition.py` | confirmed | Scalar schedules, prompt phases, sampler-composition plan rows, RF denoised-state anchoring, and RF velocity/denoised conversions. |
 | `residual_probes.py` | confirmed | Residual activation examples, steering-vector math, and reusable layer/window/timestep probe rows. |
 | `control_lane_probes.py` | confirmed | Continuous control-lane-to-residual linear probes, token-blocked and call-held-out CV rows, observed-call window rows, token-preserving sampler-timestep rows, null controls, null-margin rows, held-out prediction rows, and active/quiet direction previews. |
 | `internal_features.py` | confirmed | SA3 internal surface inventory, branch/gate/CFG/APG row schemas, sparse-feature target selection, and patch specs. |
@@ -257,6 +260,7 @@ interventions change generated audio, not just whether a signal is measurable.
 | `observability.py` | confirmed | Linear probes for whether candidate controls are predictable from latent summaries. |
 | `guidance.py` | confirmed | Differentiable latent guidance step and loss combination. |
 | `procedures/cyclic_sa3.py` | confirmed | Sampler-time cyclic roll interventions. |
+| `procedures/sampler_composition.py` | confirmed | Source-latent explicit Euler RF sampler composition with source anchoring, CFG/APG choreography, and prompt phases. |
 
 Narrative role: these are the highest-risk methods. They stay microscopes or
 scaffolds until causal interventions survive audio review and baselines.

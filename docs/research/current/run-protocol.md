@@ -115,7 +115,8 @@ include enough evidence for its decision.
 | Latent operator control | direct decode or polish, descriptor delta, listening notes | SAME bottleneck stress rows, flow score |
 | Latent objective/guidance | objective rows, before/after latent values, direct decode or polish, listening notes | control-lane renderings, geometry report, source-preservation rows |
 | Loop/continuation | loop preview, boundary/periodicity metrics, listening notes | bridge cost, lane continuity |
-| SA3 internal feature cartography | surface inventory, contrastive residual scout rows, branch/gate rows, CFG/APG influence rows, sparse-feature scaffold rows, selected patch specs, bounded patch or alpha sweep, descriptor/listening deltas | control-lane evidence atlas, trajectory-derived flow probe bank, repeat probe run |
+| SA3 internal feature cartography | surface inventory, contrastive residual scout rows, branch/gate rows, CFG/APG influence rows, sparse-feature scaffold rows, selected patch specs, selected branch specs, bounded patch/branch/alpha sweep, descriptor/listening deltas | control-lane evidence atlas, trajectory-derived flow probe bank, repeat probe run |
+| SA3 native trajectory composition | source latent, source decode, composition plan rows, sampler step records, composed output, descriptor/listening deltas | control-lane comparison, prompt-phase flow rows, nearest-memory/source-preservation rows |
 | Residual steering | layer-probe rows, sampler-timestep rows, trajectory map, selected top-k cells/layers, vector metadata, alpha schedule, alpha sweep, descriptor/listening deltas | trajectory window rows, internal surface rows, repeat probe run, trajectory-derived flow probe bank |
 | Dataset/memory method | memory rows, cluster/donor selection evidence, output audition | heldout rows, geometry/lane scores |
 | Frontier hypothesis | source link, native-object mapping, one concrete notebook run | native disagreement panel, runtime audit |
@@ -149,6 +150,7 @@ source/donor audio paths
 prompt and negative prompt
 duration, seed, steps, CFG, init noise
 flow convention and logSNR/timestep probes when relevant
+sampler composition plan / schedules when relevant
 baseline output
 method output
 descriptor report

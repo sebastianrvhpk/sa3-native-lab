@@ -546,10 +546,14 @@ L_flow(prompt) = E ||v_theta(z_t, t, C(prompt)) - u_t||^2
   residuals, self-attention/cross-attention/feedforward branch updates, local
   conditioning projections, adaLN scale/shift/gate terms, memory tokens,
   sampler `t/sigma/logSNR` records, and CFG/APG conditional-vs-unconditional
-  denoised differences.
+  denoised differences. Its RF samplers expose the denoised estimate
+  `x - sigma * v` and use CFG/APG inside the DiT forward path.
 - Notebook impact: Defines SA3 Internal Feature Cartography. The notebook now
   studies those native objects before any wide residual-lane diagnostic. CFG/APG
   prompt-influence rows are treated as a SA3-native condition microscope.
+  Native Trajectory Composition uses the released RF sampler convention to test
+  source anchoring, CFG/APG schedules, and prompt phases as sampler-state
+  intervention candidates.
 - Status: source-confirmed architecture; local causal claims still require
   patch/steer sweeps and audio evidence.
 
@@ -579,8 +583,10 @@ L_flow(prompt) = E ||v_theta(z_t, t, C(prompt)) - u_t||^2
   patching tests whether replacing a selected activation coordinate recovers or
   changes the target behavior.
 - Notebook impact: Adds bounded clean/corrupt post-block residual patch sweeps
-  as the first causal test after scout selection. Branch-level patching remains
-  future work until post-block patching yields useful evidence.
+  as the first causal test after scout selection. Branch output scaling,
+  ablation, and clean-cache patching are now available as a lower-level
+  intervention candidate, but they need the same decoded-audio evidence before
+  promotion.
 - Status: source context translated to SA3 residual patching; local causal
   evidence must come from decoded audio and ledger decisions.
 

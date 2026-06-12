@@ -1,7 +1,7 @@
 # SA3 Native Lab Research-Layer Ontology
 
 Status: current research-layer map for the notebook-first research project as
-of 2026-06-06.
+of 2026-06-11.
 
 This document answers: which model-native research layers the SA3/SAME
 architecture exposes, what each layer can be studied on its own, what only
@@ -72,7 +72,7 @@ audio output + latent rows + flow rows + descriptors + listening notes
 |---|---|---|---|
 | SAME Representation Science | waveform `x`, encoder `E`, SAME latent `z0`, decoder `D`, `LatentItem` | compression, direct decode, geometry, latent memory, source preservation, bottleneck stress, latent DSP | direct decodes, descriptor deltas, geometry rows, nearest-memory rows, control lanes, listening notes |
 | SA3 Flow and Conditioning Science | prompt `p`, condition `C(p)`, flow state `z_t`, timestep/logSNR, velocity `v_theta` | prompt scoring, condition inversion, flow timestep bands, null/conditional-delta probes | shared flow-probe rows, prompt semantic rows, attribution, generated-audio audition |
-| SA3 Internal Trajectory Science | residual activations `a_l`, branch updates, adaLN scale/shift/gate terms, CFG/APG condition-influence vectors, memory tokens, sampler states, sampler timesteps, observed windows, guidance objectives | internal feature cartography, residual-timestep cartography, branch/gate visibility, CFG/APG prompt-influence timing, sparse-feature targets, clean/corrupt patching, sampler-state edits, guidance honesty | activation rows, internal surface rows, CFG/APG rows, trajectory maps, patch/alpha/guidance sweeps, flow/descriptor/listening disagreement |
+| SA3 Internal Trajectory Science | residual activations `a_l`, branch updates, adaLN scale/shift/gate terms, CFG/APG condition-influence vectors, memory tokens, sampler states, sampler timesteps, observed windows, guidance objectives | internal feature cartography, residual-timestep cartography, branch/gate visibility, CFG/APG prompt-influence timing, sparse-feature targets, clean/corrupt patching, branch interventions, native trajectory composition, guidance honesty | activation rows, internal surface rows, CFG/APG rows, trajectory maps, patch/branch/sampler/alpha/guidance sweeps, flow/descriptor/listening disagreement |
 | SA3-over-SAME Coupled Editing | edited SAME `z0'`, SA3 polish/init-audio/inpainting path, source masks | whether SA3 preserves, repairs, erases, or rewrites SAME edits | direct decode vs SA3 polish packets, source-preservation rows, flow loss, listening |
 
 These layers are not a linear pipeline. They are separate microscopes that
@@ -106,7 +106,7 @@ SA3 only over latent states:
 SA3 internal trajectory:
   residual, branch update, gate, CFG/APG vector, memory token, or sampler state
   -> selected feature / patched activation / scheduled steering candidate
-  patched state -> next latent state -> decoded audio
+  patched branch/residual or composed sampler state -> next latent state -> decoded audio
 
 SA3 over SAME:
   z0 or z0' -> SA3 init/polish/inpaint/continue -> z_out
@@ -134,7 +134,7 @@ Evidence:
 |---|---|---|
 | SAME Representation Science | geometry, periodicity, latent DSP, blur/filter, selective renoise/graft, style profile/direction, memory, latent constraint objectives | systematic bottleneck and direct-decode evidence |
 | SA3 Flow and Conditioning Science | flow probe banks, prompt scoring, attribution, soft/hard/readable prompt search, null-condition scaffold | predictive validity against generated audio |
-| SA3 Internal Trajectory Science | residual hooks, internal feature cartography, CFG/APG atlas rows, root residual probe rows/vectors, residual-timestep cartography, sparse-feature scaffolds, clean/corrupt patch specs, cyclic projection, guidance scaffolds | repeated causal patch/steer evidence and artifact checks |
+| SA3 Internal Trajectory Science | residual hooks, internal feature cartography, CFG/APG atlas rows, root residual probe rows/vectors, residual-timestep cartography, sparse-feature scaffolds, clean/corrupt patch specs, branch intervention specs, native trajectory composition, cyclic projection, guidance scaffolds | repeated causal patch/branch/sampler/steer evidence and artifact checks |
 | SA3-over-SAME Coupled Editing | SA3 polish, selective SA3, continuation/inpainting, direct decode helpers | survival matrix: what edits SA3 preserves or erases |
 
 Evidence utilities already exist as player, descriptors, annotations,
@@ -204,6 +204,13 @@ by SA3's architecture: post-block residuals, self-attention / cross-attention /
 feedforward branch updates, local conditioning projections, adaLN
 scale/shift/gate terms, CFG/APG conditional-vs-unconditional denoised
 differences, memory tokens, and exact sampler `t/sigma/logSNR` rows.
+
+Native trajectory composition is the sampler-state branch of this layer. It
+does not patch a transformer block. It changes the rectified-flow denoised
+estimate, CFG/APG schedule, or prompt phase at selected sampler coordinates and
+then recomputes the velocity before the Euler update. This makes it cheaper and
+more directly audible than exhaustive activation probing, but it still needs
+source/baseline/method packets before any creative-control claim.
 
 ### SA3-over-SAME Coupled Editing
 

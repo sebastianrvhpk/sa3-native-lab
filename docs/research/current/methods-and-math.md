@@ -1,7 +1,7 @@
 # SA3 Native Lab Methods and Math
 
 Status: current technical specification for SA3/SAME notebook methods as of
-2026-06-06.
+2026-06-11.
 
 This document answers: what native objects are manipulated, which transitions
 the notebook tests, how measurements are interpreted, and which conventions
@@ -108,6 +108,74 @@ SA3-only claim = prove with flow, condition, residual, or trajectory rows first.
 Coupled claim = compare direct SAME decode against SA3 polish.
 Promoted claim = add descriptors, listening notes, and ledger decisions.
 ```
+
+## SA3 Native Trajectory Composition
+
+Sampler-composition methods operate on the RF sampler state, not on SAME
+latents after the fact and not on residual activations inside a block. For SA3
+rectified-flow paths, the local convention is:
+
+```text
+x0_hat = x_t - sigma_t v_theta(x_t, sigma_t, C_t)
+v_theta = (x_t - x0_hat) / sigma_t
+x_{t+1} = x_t + (sigma_{t+1} - sigma_t) v_theta
+logSNR_t = log((1 - sigma_t) / sigma_t)
+```
+
+The implemented sampler-composition primitive keeps the inverse relation
+explicit. A source-preservation or target-anchor edit modifies the denoised
+estimate first and then recomputes the velocity:
+
+```text
+x0_hat' = (1 - w_t M) x0_hat + (w_t M) a
+v_t' = (x_t - x0_hat') / sigma_t
+x_{t+1} = x_t + (sigma_{t+1} - sigma_t) v_t'
+```
+
+where `a` is usually the source SAME latent, `M` is an optional time/channel
+mask broadcast over the latent state, and `w_t` is an explicit scalar schedule.
+Values of `w_t` outside `[0, 1]` are allowed only as deliberate creative
+extrapolation and should be labeled in the evidence packet.
+
+CFG/APG choreography and prompt phases are schedules over the same sampler
+coordinates:
+
+```text
+cfg_t = s_cfg(step_fraction, sigma_t, logSNR_t)
+apg_t = s_apg(step_fraction, sigma_t, logSNR_t)
+C_t = C(prompt_phase(step_fraction, sigma_t, logSNR_t))
+```
+
+This is implemented as an intervention candidate in
+`sampler_composition.py` and `procedures/sampler_composition.py`. It is not a
+promoted sampler. A useful result requires source decode, composed output,
+descriptor/lane comparison, and listening notes.
+
+## SA3 Internal Branch Interventions
+
+SA3 internal feature cartography now distinguishes two internal intervention
+surfaces:
+
+```text
+post-block residual patch:
+  h_l^corrupt(call) -> blend/replace/add_delta(h_l^clean(call))
+
+branch output intervention:
+  b_l(call) -> alpha b_l(call)          # scale
+  b_l(call) -> 0                        # ablate
+  b_l^corrupt(call) -> blend/replace/add_delta(b_l^clean(call))
+```
+
+Branch specs can target self-attention, cross-attention, feedforward, and local
+conditioning projection outputs when those surfaces exist in the released SA3
+block. Token/time windows and CFG batch-half selectors are explicit spec
+fields. The released SA3 DiT CFG path concatenates conditioned and
+unconditioned/negative batches internally when CFG is active, so conditional
+batch selectors are source-version-sensitive and must remain labeled as such.
+
+Branch intervention rows are causal tests only after a bounded sweep produces
+decoded audio evidence. Branch visibility by itself remains a microscope or
+selector.
 
 ## Measurement Recipes
 
@@ -1070,9 +1138,9 @@ Delta h_l^ff =
 ```
 
 The notebook captures these as branch/gate visibility rows. Branch capture is
-not automatically branch intervention. Branch-level causal editing should only
-be added after post-block residual patching proves that the selected coordinate
-matters.
+not automatically branch intervention. Branch scaling, ablation, and
+clean-cache patching are implemented as bounded intervention candidates, but
+they still need decoded-audio evidence before becoming controls.
 
 #### CFG/APG Condition Influence
 
@@ -1146,8 +1214,8 @@ patch selected calls:
 
 `alpha=0` is the corrupt baseline. `alpha=1` is full clean replacement at the
 selected coordinate. Intermediate alphas test whether the effect changes
-smoothly. This is currently post-block residual patching only; branch-level
-patching is a separate future causal surface.
+smoothly. This helper remains post-block residual patching only; branch-level
+scale/ablate/clean-cache tests use the separate branch intervention specs.
 
 #### Relationship To Control Lanes
 

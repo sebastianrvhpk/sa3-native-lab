@@ -244,11 +244,11 @@ Next run: run the notebook's `SA3 Internal Feature Cartography` surface
 inventory and branch/gate capture on a small selected layer set. Then run the
 CFG/APG atlas with CFG active. Use the contrastive residual scout and evidence
 atlas to choose a small set of layers/timesteps/surfaces. Export sparse-feature
-scaffold rows only for repeated candidates. Finally run a bounded clean/corrupt
-post-block residual patch sweep with alpha values from 0 to 1 and compare
-decoded audio, descriptors, and listening notes. Use wider control-lane
-residual diagnostics only as optional selectors after this scout, not as a
-default full audit.
+scaffold rows only for repeated candidates. Then run bounded clean/corrupt
+post-block residual patch and branch output intervention sweeps with alpha
+values from 0 to 1 or small extrapolation values. Compare decoded audio,
+descriptors, and listening notes. Use wider control-lane residual diagnostics
+only as optional selectors after this scout, not as a default full audit.
 
 Promote if:
 
@@ -271,6 +271,39 @@ Drop or revise if:
 - branch/gate rows are visible but cannot be connected to audio movement,
 - lane diagnostics overfit one clip, fail null controls, or only predict
   padded/silent tails.
+
+## Gap 6b. SA3 Native Trajectory Composition Evidence
+
+Evidence gap: source anchoring, CFG/APG schedules, and prompt phases are now
+implemented as explicit RF sampler-state interventions, but they need baseline
+and listening evidence before becoming creative controls.
+
+Native transition: `source z0 + RF schedule + composition plan -> composed SA3 latent -> decoded audio evidence`.
+
+Current support: `sampler_composition.py`,
+`procedures/sampler_composition.py`, sampler physiology rows, CFG/APG atlas
+rows, control lanes, descriptors, and the notebook's Native Trajectory
+Composition cell.
+
+Next run: use one short source clip and export source decode, plain SA3
+audio-to-audio polish, and one trajectory-composition output with its
+per-step plan rows. Start with a decaying source-anchor schedule, middle-heavy
+CFG, APG schedule, and three prompt phases. Then compare descriptor deltas,
+control-lane similarity, nearest-memory/source rows, and listening notes.
+
+Promote if:
+
+- source anchoring preserves rhythm/form better than plain audio-to-audio,
+- prompt phases create audible timbre or finish changes without erasing source,
+- CFG/APG schedules expose a repeatable tradeoff instead of random variation,
+- the plan rows are compact enough to rerun and explain.
+
+Drop or revise if:
+
+- explicit Euler composition produces worse artifacts than upstream sampling,
+- source anchoring simply copies the input,
+- prompt phases are inaudible or unstable across seeds,
+- descriptor/lane evidence disagrees with listening.
 
 ## Gap 7. Guidance Objective Honesty
 
@@ -499,6 +532,7 @@ that should now be run, audited, and revised from evidence.
 | Long-form latent composition | SAME memory / composition | continuation, bridge, and path rows before audition |
 | Prompt-condition geometry | SA3 flow/conditioning | pairwise condition distances and soft-prompt neighborhood rows |
 | Sampler physiology | SA3 internal trajectory | sampler settings, step-record summaries, output deltas |
+| Native trajectory composition | SA3 internal trajectory | source decode, plan rows, composed output, descriptor/lane deltas, listening notes |
 | Latent constraint library | latent objective candidates | constraint specs, before/after values, latent-change rows, decoded outputs |
 
 ## Priority Order
@@ -518,7 +552,7 @@ that should now be run, audited, and revised from evidence.
 8. Run long-form composition after memory items have descriptor and listening
    notes.
 9. Run sampler physiology to explain noise/step sensitivity before stronger
-   sampler interventions.
+   native trajectory-composition sweeps.
 10. Run latent constraints as direct-decode probes before SA3 polish.
 11. Then return to residual causality, guidance objective honesty, null-condition
    editing, seed repeatability, external comparison packets, and shareable

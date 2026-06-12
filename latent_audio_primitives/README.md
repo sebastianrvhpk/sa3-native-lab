@@ -35,7 +35,7 @@ upstream-version-sensitive behavior behind generic abstractions.
 
 | Layer | Modules | Object | Research Role |
 |---|---|---|---|
-| Root primitives | `schema.py`, `latent_math.py`, `geometry.py`, `control_lanes.py`, `latent_constraints.py`, `residual_probes.py`, `latent_blur.py`, `selective_renoise.py`, `flow_prompt.py`, `trajectory.py`, `prompt_semantics.py`, etc. | native objects, math, measurements, operators, search | define what the lab manipulates and measures |
+| Root primitives | `schema.py`, `latent_math.py`, `geometry.py`, `control_lanes.py`, `latent_constraints.py`, `residual_probes.py`, `latent_blur.py`, `selective_renoise.py`, `flow_prompt.py`, `trajectory.py`, `sampler_composition.py`, `prompt_semantics.py`, etc. | native objects, math, measurements, operators, search | define what the lab manipulates and measures |
 | Model boundary | `adapters/` | upstream SA3/SAME wrappers, residual hooks, tokenizer access | isolate external runtime coupling |
 | Procedures | `procedures/` | soft prompts, flow scoring, SA3 polish, selective SA3, cyclic SA3, residual probes and sweeps | run executable notebook methods |
 | Evidence | `evidence/`, `audio_descriptors.py`, `evidence/control_lane_rendering.py` | player panels, annotations, descriptor/lane/disagreement rows, SVG views | support auditioning, selectors, and decisions |
@@ -99,6 +99,12 @@ Rendering is evidence presentation, not the definition of a control lane.
 probe rows into trajectory cells, band summaries, flow probe banks, residual
 alpha schedules, and cyclic mix schedules. A trajectory-derived schedule is not
 a promoted control until sweeps survive repeated audio evidence.
+
+`sampler_composition.py` is sampler-state-first: it owns scalar schedules,
+prompt phases, RF denoised-state anchoring math, and per-step plan rows for
+source anchoring, CFG/APG choreography, and logSNR/step prompt phases. It does
+not run SA3; `procedures/sampler_composition.py` owns the explicit Euler RF
+notebook run.
 
 The full map lives in
 [`docs/research/current/primitive-map.md`](../docs/research/current/primitive-map.md).
