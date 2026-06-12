@@ -12,6 +12,7 @@ from typing import Any, Mapping, Sequence
 
 from latent_audio_primitives.internal_features import (
     ActivationPatchSpec,
+    BranchInterventionSpec,
     cfg_apg_component_stats,
     cfg_apg_rows_from_records,
     default_sa3_internal_surfaces,
@@ -294,8 +295,7 @@ class ResidualActivationPatcher:
                         patched_output = _patch_output(
                             patched_output,
                             clean_trace[call_index],
-                            alpha=spec.alpha,
-                            mode=spec.mode,
+                            spec=spec,
                         )
                     return patched_output
 
@@ -308,6 +308,88 @@ class ResidualActivationPatcher:
         finally:
             for layer_index, block in self._blocks.items():
                 block.forward = originals[layer_index]
+
+
+class SA3BranchOutputPatcher:
+    """Patch or scale SA3 branch output modules.
+
+    This patcher targets branch modules registered in ``BRANCH_SURFACE_MODULES``:
+    self-attention, cross-attention, feedforward, and local-conditioning
+    projection outputs. ``mode='scale'`` and ``mode='ablate'`` do not require a
+    clean cache. ``replace``, ``blend``, and ``add_delta`` require matching
+    clean activations captured from ``SA3InternalActivationCollector``.
+    """
+
+    def __init__(
+        self,
+        model: Any,
+        *,
+        specs: Sequence[BranchInterventionSpec | Mapping[str, Any]],
+        clean_activations: Mapping[str, Mapping[int, Sequence[Any]]] | None = None,
+    ) -> None:
+        self.model = model
+        self.specs = [_coerce_branch_spec(spec) for spec in specs]
+        self.clean_activations = {
+            str(surface): {int(layer): list(values) for layer, values in by_layer.items()}
+            for surface, by_layer in dict(clean_activations or {}).items()
+        }
+        layers = get_dit_layers(model)
+        self._modules: dict[tuple[str, int], Any] = {}
+        for spec in self.specs:
+            module_name = BRANCH_SURFACE_MODULES.get(spec.surface_name)
+            if module_name is None or module_name == "":
+                raise AudioscopeIntegrationError(
+                    f"{spec.surface_name!r} is not a branch module surface for SA3BranchOutputPatcher"
+                )
+            if spec.layer_index < 0 or spec.layer_index >= len(layers):
+                raise IndexError(f"layer index {spec.layer_index} out of range for {len(layers)} layers")
+            module = getattr(layers[spec.layer_index], module_name, None)
+            if module is None:
+                raise AudioscopeIntegrationError(
+                    f"layer {spec.layer_index} has no module {module_name!r} for {spec.surface_name!r}"
+                )
+            self._modules[(spec.surface_name, spec.layer_index)] = module
+
+    @contextmanager
+    def patch(self):
+        originals = {}
+        call_counts = {key: 0 for key in self._modules}
+        for key, module in self._modules.items():
+            surface_name, layer_index = key
+            originals[key] = module.forward
+
+            def make_patched(surface, index, original_forward):
+                def patched(*args, **kwargs):
+                    call_index = call_counts[(surface, index)]
+                    call_counts[(surface, index)] += 1
+                    output = original_forward(*args, **kwargs)
+                    specs = [
+                        spec
+                        for spec in self.specs
+                        if spec.surface_name == surface and spec.matches_call(index, call_index)
+                    ]
+                    if not specs:
+                        return output
+                    patched_output = output
+                    clean_trace = self.clean_activations.get(surface, {}).get(index, [])
+                    for spec in specs:
+                        clean_value = clean_trace[call_index] if call_index < len(clean_trace) else None
+                        patched_output = _patch_output(
+                            patched_output,
+                            clean_value,
+                            spec=spec,
+                        )
+                    return patched_output
+
+                return patched
+
+            module.forward = make_patched(surface_name, layer_index, originals[key])
+
+        try:
+            yield
+        finally:
+            for key, module in self._modules.items():
+                module.forward = originals[key]
 
 
 def get_diffusion_backbone(model: Any) -> Any:
@@ -396,25 +478,36 @@ def _first_tensor(value: Any) -> Any | None:
     return None
 
 
-def _patch_output(output: Any, clean_value: Any, *, alpha: float, mode: str) -> Any:
+def _patch_output(output: Any, clean_value: Any | None, *, spec: Any) -> Any:
     try:
         import torch
     except ImportError as exc:
         raise AudioscopeIntegrationError("PyTorch is required for residual patching.") from exc
 
     def patch_tensor(corrupt):
-        clean = clean_value.to(device=corrupt.device, dtype=corrupt.dtype)
-        if tuple(clean.shape) != tuple(corrupt.shape):
-            raise AudioscopeIntegrationError(
-                f"clean activation shape {tuple(clean.shape)} does not match corrupt shape {tuple(corrupt.shape)}"
-            )
-        if mode == "replace":
-            return clean
-        if mode == "blend":
-            return corrupt * (1.0 - float(alpha)) + clean * float(alpha)
-        if mode == "add_delta":
-            return corrupt + float(alpha) * (clean - corrupt)
-        raise ValueError("patch mode must be 'replace', 'blend', or 'add_delta'")
+        mode = str(spec.mode)
+        alpha = float(spec.alpha)
+        if mode == "scale":
+            target = corrupt * alpha
+        elif mode == "ablate":
+            target = corrupt * 0.0
+        else:
+            if clean_value is None:
+                return corrupt
+            clean = clean_value.to(device=corrupt.device, dtype=corrupt.dtype)
+            if tuple(clean.shape) != tuple(corrupt.shape):
+                raise AudioscopeIntegrationError(
+                    f"clean activation shape {tuple(clean.shape)} does not match corrupt shape {tuple(corrupt.shape)}"
+                )
+            if mode == "replace":
+                target = clean
+            elif mode == "blend":
+                target = corrupt * (1.0 - alpha) + clean * alpha
+            elif mode == "add_delta":
+                target = corrupt + alpha * (clean - corrupt)
+            else:
+                raise ValueError("patch mode must be 'replace', 'blend', 'add_delta', 'scale', or 'ablate'")
+        return _apply_tensor_selection(corrupt, target, spec, torch)
 
     if isinstance(output, torch.Tensor):
         return patch_tensor(output)
@@ -434,9 +527,93 @@ def _coerce_patch_spec(spec: ActivationPatchSpec | Mapping[str, Any]) -> Activat
         call_end=None if spec.get("call_end") is None else int(spec["call_end"]),
         step_index=None if spec.get("step_index") is None else int(spec["step_index"]),
         calls_per_step=None if spec.get("calls_per_step") is None else int(spec["calls_per_step"]),
+        token_start=None if spec.get("token_start") is None else int(spec["token_start"]),
+        token_end=None if spec.get("token_end") is None else int(spec["token_end"]),
+        token_mask_name=str(spec.get("token_mask_name", "")),
+        batch_selector=str(spec.get("batch_selector", "all")),
+        batch_indices=None if spec.get("batch_indices") is None else tuple(int(index) for index in spec["batch_indices"]),
         alpha=float(spec.get("alpha", 1.0)),
         mode=str(spec.get("mode", "blend")),
         source=str(spec.get("source", "mapping")),
         maturity=str(spec.get("maturity", "intervention_candidate")),
         note=str(spec.get("note", "")),
+    )
+
+
+def _coerce_branch_spec(spec: BranchInterventionSpec | Mapping[str, Any]) -> BranchInterventionSpec:
+    if isinstance(spec, BranchInterventionSpec):
+        return spec
+    return BranchInterventionSpec(
+        surface_name=str(spec["surface_name"]),
+        layer_index=int(spec["layer_index"]),
+        call_start=None if spec.get("call_start") is None else int(spec["call_start"]),
+        call_end=None if spec.get("call_end") is None else int(spec["call_end"]),
+        step_index=None if spec.get("step_index") is None else int(spec["step_index"]),
+        calls_per_step=None if spec.get("calls_per_step") is None else int(spec["calls_per_step"]),
+        token_start=None if spec.get("token_start") is None else int(spec["token_start"]),
+        token_end=None if spec.get("token_end") is None else int(spec["token_end"]),
+        token_mask_name=str(spec.get("token_mask_name", "")),
+        batch_selector=str(spec.get("batch_selector", "all")),
+        batch_indices=None if spec.get("batch_indices") is None else tuple(int(index) for index in spec["batch_indices"]),
+        alpha=float(spec.get("alpha", 1.0)),
+        mode=str(spec.get("mode", "scale")),
+        source=str(spec.get("source", "mapping")),
+        maturity=str(spec.get("maturity", "intervention_candidate")),
+        note=str(spec.get("note", "")),
+    )
+
+
+def _apply_tensor_selection(corrupt: Any, target: Any, spec: Any, torch) -> Any:
+    has_token_selector = spec.token_start is not None or spec.token_end is not None
+    has_batch_selector = (
+        spec.batch_indices is not None
+        or str(spec.batch_selector or "all").lower() not in {"", "all"}
+    )
+    if not has_token_selector and not has_batch_selector:
+        return target
+    if corrupt.ndim < 2:
+        raise AudioscopeIntegrationError("selected patching requires tensor with batch dimension")
+    batch_indices = _selected_batch_indices(spec, int(corrupt.shape[0]))
+    if corrupt.ndim >= 3:
+        token_count = int(corrupt.shape[-2])
+        token_start = 0 if spec.token_start is None else max(0, int(spec.token_start))
+        token_end = token_count if spec.token_end is None else min(token_count, int(spec.token_end))
+        if token_start >= token_end:
+            return corrupt
+        mask_shape = list(corrupt.shape[:-1]) + [1]
+        mask = torch.zeros(mask_shape, device=corrupt.device, dtype=corrupt.dtype)
+        mask[batch_indices, token_start:token_end, :] = 1.0
+    else:
+        if has_token_selector:
+            raise AudioscopeIntegrationError("token selection requires an activation tensor with token axis")
+        mask = torch.zeros((corrupt.shape[0], 1), device=corrupt.device, dtype=corrupt.dtype)
+        mask[batch_indices, :] = 1.0
+    return corrupt * (1.0 - mask) + target * mask
+
+
+def _selected_batch_indices(spec: Any, batch_size: int) -> list[int]:
+    if spec.batch_indices is not None:
+        indices = [int(index) for index in spec.batch_indices]
+        return [index for index in indices if 0 <= index < batch_size]
+    selector = str(spec.batch_selector or "all").lower()
+    if selector in {"", "all"}:
+        return list(range(batch_size))
+    if selector in {"first_half", "conditional", "cond"}:
+        if batch_size < 2 or batch_size % 2 != 0:
+            raise AudioscopeIntegrationError(
+                "conditional batch selection requires even CFG batch layout"
+            )
+        return list(range(batch_size // 2))
+    if selector in {"second_half", "unconditional", "uncond", "negative"}:
+        if batch_size < 2 or batch_size % 2 != 0:
+            raise AudioscopeIntegrationError(
+                "unconditional batch selection requires even CFG batch layout"
+            )
+        return list(range(batch_size // 2, batch_size))
+    if selector.startswith("batch_"):
+        index = int(selector.split("_", 1)[1])
+        return [index] if 0 <= index < batch_size else []
+    raise ValueError(
+        "batch_selector must be 'all', 'conditional', 'unconditional', "
+        "'first_half', 'second_half', 'negative', or 'batch_N'"
     )

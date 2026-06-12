@@ -120,8 +120,8 @@ class ActivationPatchSpec:
     """Post-block residual activation patch coordinate.
 
     Clean/corrupt patching is intentionally surface-specific here: this spec
-    targets post-block residual outputs from a clean cache. Branch-level causal
-    patching needs separate branch-specific support before it can use this row.
+    targets post-block residual outputs from a clean cache. Branch-level
+    interventions use ``BranchInterventionSpec`` instead.
     """
 
     layer_index: int
@@ -129,6 +129,11 @@ class ActivationPatchSpec:
     call_end: int | None = None
     step_index: int | None = None
     calls_per_step: int | None = None
+    token_start: int | None = None
+    token_end: int | None = None
+    token_mask_name: str = ""
+    batch_selector: str = "all"
+    batch_indices: tuple[int, ...] | None = None
     alpha: float = 1.0
     mode: str = "blend"
     source: str = "manual"
@@ -147,7 +152,82 @@ class ActivationPatchSpec:
         return False
 
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        return {
+            "layer_index": int(self.layer_index),
+            "call_start": _optional_int(self.call_start),
+            "call_end": _optional_int(self.call_end),
+            "step_index": _optional_int(self.step_index),
+            "calls_per_step": _optional_int(self.calls_per_step),
+            "token_start": _optional_int(self.token_start),
+            "token_end": _optional_int(self.token_end),
+            "token_mask_name": self.token_mask_name,
+            "batch_selector": self.batch_selector,
+            "batch_indices": None if self.batch_indices is None else [int(index) for index in self.batch_indices],
+            "alpha": float(self.alpha),
+            "mode": self.mode,
+            "source": self.source,
+            "maturity": self.maturity,
+            "note": self.note,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class BranchInterventionSpec:
+    """Branch output intervention coordinate.
+
+    Branch specs target module outputs such as ``self_attn_scale``,
+    ``cross_attn_scale``, ``ff_scale``, and ``to_local_embed``. They can scale
+    or ablate a branch without a clean cache, or blend/replace/add a clean
+    activation when a matching clean branch trace is provided.
+    """
+
+    surface_name: str
+    layer_index: int
+    call_start: int | None = None
+    call_end: int | None = None
+    step_index: int | None = None
+    calls_per_step: int | None = None
+    token_start: int | None = None
+    token_end: int | None = None
+    token_mask_name: str = ""
+    batch_selector: str = "all"
+    batch_indices: tuple[int, ...] | None = None
+    alpha: float = 1.0
+    mode: str = "scale"
+    source: str = "manual"
+    maturity: str = MATURITY_INTERVENTION_CANDIDATE
+    note: str = ""
+
+    def matches_call(self, layer_index: int, call_index: int) -> bool:
+        if int(layer_index) != int(self.layer_index):
+            return False
+        if self.call_start is not None and self.call_end is not None:
+            return int(self.call_start) <= int(call_index) < int(self.call_end)
+        if self.step_index is not None and self.calls_per_step:
+            start = int(self.step_index) * int(self.calls_per_step)
+            end = start + int(self.calls_per_step)
+            return start <= int(call_index) < end
+        return False
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "surface_name": self.surface_name,
+            "layer_index": int(self.layer_index),
+            "call_start": _optional_int(self.call_start),
+            "call_end": _optional_int(self.call_end),
+            "step_index": _optional_int(self.step_index),
+            "calls_per_step": _optional_int(self.calls_per_step),
+            "token_start": _optional_int(self.token_start),
+            "token_end": _optional_int(self.token_end),
+            "token_mask_name": self.token_mask_name,
+            "batch_selector": self.batch_selector,
+            "batch_indices": None if self.batch_indices is None else [int(index) for index in self.batch_indices],
+            "alpha": float(self.alpha),
+            "mode": self.mode,
+            "source": self.source,
+            "maturity": self.maturity,
+            "note": self.note,
+        }
 
 
 def default_sa3_internal_surfaces() -> list[SA3InternalSurface]:
@@ -168,9 +248,9 @@ def default_sa3_internal_surfaces() -> list[SA3InternalSurface]:
             "self_attention_residual_update",
             "self-attention residual branch update",
             "submodule forward hook on self_attn_scale",
-            "observe/select",
-            MATURITY_MICROSCOPE,
-            "capture-first; branch intervention requires extra support",
+            "observe/select/intervene",
+            MATURITY_INTERVENTION_CANDIDATE,
+            "branch output scaling, ablation, or clean-cache patching",
             "source-inferred",
             "Closer to branch contribution than raw attention output because it is after scale/gate.",
         ),
@@ -178,9 +258,9 @@ def default_sa3_internal_surfaces() -> list[SA3InternalSurface]:
             "cross_attention_residual_update",
             "prompt cross-attention residual branch update",
             "submodule forward hook on cross_attn_scale when present",
-            "observe/select",
-            MATURITY_MICROSCOPE,
-            "capture-first; branch intervention requires extra support",
+            "observe/select/intervene",
+            MATURITY_INTERVENTION_CANDIDATE,
+            "branch output scaling, ablation, or clean-cache patching",
             "source-inferred",
             "Only present on cross-attending SA3 transformer blocks.",
         ),
@@ -188,9 +268,9 @@ def default_sa3_internal_surfaces() -> list[SA3InternalSurface]:
             "feedforward_residual_update",
             "feedforward residual branch update",
             "submodule forward hook on ff_scale",
-            "observe/select",
-            MATURITY_MICROSCOPE,
-            "capture-first; branch intervention requires extra support",
+            "observe/select/intervene",
+            MATURITY_INTERVENTION_CANDIDATE,
+            "branch output scaling, ablation, or clean-cache patching",
             "source-inferred",
             "Captures the post-gate feedforward update before residual addition.",
         ),
@@ -198,9 +278,9 @@ def default_sa3_internal_surfaces() -> list[SA3InternalSurface]:
             "local_conditioning_projection",
             "local/inpaint conditioning projection",
             "submodule hook on to_local_embed when local conditioning is active",
-            "observe/select",
-            MATURITY_MICROSCOPE,
-            "capture-first; local branch intervention not promoted",
+            "observe/select/intervene",
+            MATURITY_INTERVENTION_CANDIDATE,
+            "local projection scaling, ablation, or clean-cache patching when active",
             "source-inferred",
             "Useful for inpaint/source-preservation studies.",
         ),
@@ -533,6 +613,57 @@ def patch_specs_from_rows(
                 call_end=_optional_int(row.get("call_end")),
                 step_index=_optional_int(row.get("step_index", row.get("step"))),
                 calls_per_step=_optional_int(row.get("calls_per_step")),
+                token_start=_optional_int(row.get("token_start")),
+                token_end=_optional_int(row.get("token_end")),
+                token_mask_name=str(row.get("token_mask_name", "")),
+                batch_selector=str(row.get("batch_selector", "all")),
+                batch_indices=_optional_int_tuple(row.get("batch_indices")),
+                alpha=float(alpha),
+                mode=mode,
+                source=source,
+                note=str(row.get("mapping_status", "")),
+            )
+        )
+    return specs
+
+
+def branch_intervention_specs_from_rows(
+    rows: Sequence[Mapping[str, Any] | Any],
+    *,
+    surface_name: str | None = None,
+    top_k: int = 4,
+    alpha: float = 1.0,
+    mode: str = "scale",
+    source: str = "selected_rows",
+) -> list[BranchInterventionSpec]:
+    """Convert ranked surface/layer rows into branch intervention specs."""
+
+    specs: list[BranchInterventionSpec] = []
+    normalized = [_row_to_dict(row) for row in rows]
+    normalized.sort(
+        key=lambda row: (
+            int(row.get("rank") or 10**9),
+            -float(row.get("score", row.get("accuracy_mean", row.get("rms_mean", 0.0))) or 0.0),
+        )
+    )
+    for row in normalized[: max(0, int(top_k))]:
+        layer = row.get("layer_index", row.get("layer"))
+        surface = surface_name or row.get("surface_name")
+        if layer is None or surface is None:
+            continue
+        specs.append(
+            BranchInterventionSpec(
+                surface_name=str(surface),
+                layer_index=int(layer),
+                call_start=_optional_int(row.get("call_start")),
+                call_end=_optional_int(row.get("call_end")),
+                step_index=_optional_int(row.get("step_index", row.get("step"))),
+                calls_per_step=_optional_int(row.get("calls_per_step")),
+                token_start=_optional_int(row.get("token_start")),
+                token_end=_optional_int(row.get("token_end")),
+                token_mask_name=str(row.get("token_mask_name", "")),
+                batch_selector=str(row.get("batch_selector", "all")),
+                batch_indices=_optional_int_tuple(row.get("batch_indices")),
                 alpha=float(alpha),
                 mode=mode,
                 source=source,
@@ -562,6 +693,12 @@ def sparse_feature_rows_to_table(rows: Sequence[SparseFeatureScaffoldRow]) -> li
 
 def patch_specs_to_table(specs: Sequence[ActivationPatchSpec]) -> list[dict[str, Any]]:
     """Return JSON-friendly patch specs."""
+
+    return [spec.to_dict() for spec in specs]
+
+
+def branch_intervention_specs_to_table(specs: Sequence[BranchInterventionSpec]) -> list[dict[str, Any]]:
+    """Return JSON-friendly branch intervention specs."""
 
     return [spec.to_dict() for spec in specs]
 
@@ -645,3 +782,9 @@ def _optional_float(value: Any) -> float | None:
     if value is None:
         return None
     return float(value)
+
+
+def _optional_int_tuple(value: Any) -> tuple[int, ...] | None:
+    if value is None:
+        return None
+    return tuple(int(item) for item in value)
