@@ -147,9 +147,12 @@ C_t = C(prompt_phase(step_fraction, sigma_t, logSNR_t))
 ```
 
 This is implemented as an intervention candidate in
-`sampler_composition.py` and `procedures/sampler_composition.py`. It is not a
-promoted sampler. A useful result requires source decode, composed output,
-descriptor/lane comparison, and listening notes.
+`sampler_composition.py` and `procedures/sampler_composition.py`. It is an
+explicit Euler RF path, not a transparent wrapper around every upstream sampler
+variant. Notebook runs therefore record the sampler type, `rescale_cfg`, and
+any advanced model-forward kwargs such as CFG interval or norm-threshold
+settings. It is not a promoted sampler. A useful result requires source decode,
+composed output, descriptor/lane comparison, and listening notes.
 
 ## SA3 Internal Branch Interventions
 

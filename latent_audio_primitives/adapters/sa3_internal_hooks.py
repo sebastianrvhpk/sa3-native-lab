@@ -574,7 +574,7 @@ def _apply_tensor_selection(corrupt: Any, target: Any, spec: Any, torch) -> Any:
     if corrupt.ndim < 2:
         raise AudioscopeIntegrationError("selected patching requires tensor with batch dimension")
     batch_indices = _selected_batch_indices(spec, int(corrupt.shape[0]))
-    if corrupt.ndim >= 3:
+    if corrupt.ndim == 3:
         token_count = int(corrupt.shape[-2])
         token_start = 0 if spec.token_start is None else max(0, int(spec.token_start))
         token_end = token_count if spec.token_end is None else min(token_count, int(spec.token_end))
@@ -583,6 +583,10 @@ def _apply_tensor_selection(corrupt: Any, target: Any, spec: Any, torch) -> Any:
         mask_shape = list(corrupt.shape[:-1]) + [1]
         mask = torch.zeros(mask_shape, device=corrupt.device, dtype=corrupt.dtype)
         mask[batch_indices, token_start:token_end, :] = 1.0
+    elif corrupt.ndim > 3:
+        raise AudioscopeIntegrationError(
+            "selected patching currently supports 2D batch-feature or 3D batch-token-feature tensors"
+        )
     else:
         if has_token_selector:
             raise AudioscopeIntegrationError("token selection requires an activation tensor with token axis")

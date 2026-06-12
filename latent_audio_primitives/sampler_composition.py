@@ -415,6 +415,8 @@ def coerce_scalar_schedule(
             default=scalar,
             name=name,
         )
+    if isinstance(value, str):
+        raise TypeError("scalar schedules must be numeric values, mappings, or numeric sequences")
     values = [float(item) for item in value]
     if not values:
         return None

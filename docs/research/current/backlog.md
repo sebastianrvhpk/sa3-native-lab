@@ -234,7 +234,8 @@ Native transition: `evidence atlas or prompt/audio contrast -> selected SA3 inte
 Current support: `internal_features.py` surface specs, activation summary rows,
 CFG/APG influence rows, sparse-feature scaffolds, and patch specs;
 `adapters/sa3_internal_hooks.py` branch/gate capture, CFG/APG recording,
-memory-token summaries, and clean/corrupt post-block residual patching;
+memory-token summaries, clean/corrupt post-block residual patching, and
+branch output scaling/ablation/clean-cache patching;
 `procedures/internal_feature_cartography.py` notebook procedures; residual
 hooks, prompt/audio vector extraction, `residual_probes.py`,
 `control_lane_probes.py`, trajectory maps, trajectory-derived schedules,

@@ -455,10 +455,12 @@ class SA3InternalFeatureCartographer:
 
         torch = _require_torch()
         base_specs = [_coerce_branch_spec(spec) for spec in specs]
-        run_prompt = corrupt_prompt if corrupt_prompt is not None else prompt
+        clean_required = any(spec.mode in {"replace", "blend", "add_delta"} for spec in base_specs)
+        run_prompt = corrupt_prompt if clean_required and corrupt_prompt is not None else prompt
+        if run_prompt is None:
+            run_prompt = corrupt_prompt
         if run_prompt is None:
             raise ValueError("prompt or corrupt_prompt is required")
-        clean_required = any(spec.mode in {"replace", "blend", "add_delta"} for spec in base_specs)
         if clean_required and clean_prompt is None:
             raise ValueError("clean_prompt is required for replace/blend/add_delta branch patch modes")
         generate_kwargs = dict(generate_kwargs or {})

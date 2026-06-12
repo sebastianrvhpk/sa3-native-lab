@@ -51,6 +51,8 @@ def sample_trajectory_composition_euler(
     anchor: Any = None,
     anchor_mask: Any = None,
     padding_mask: Any = None,
+    model_kwargs: Mapping[str, Any] | None = None,
+    rescale_cfg: bool = True,
     callback: Any = None,
     disable_tqdm: bool = False,
 ) -> tuple[Any, list[dict[str, Any]]]:
@@ -72,6 +74,7 @@ def sample_trajectory_composition_euler(
     condition_inputs_by_phase = dict(condition_inputs_by_phase or {"default": {}})
     if "default" not in condition_inputs_by_phase:
         raise ValueError("condition_inputs_by_phase must include a 'default' bundle")
+    model_kwargs = dict(model_kwargs or {})
     state = _as_bct(x, torch)
     t = _as_tensor(sigmas, torch).to(state.device)
     if t.ndim not in {1, 2}:
@@ -91,10 +94,11 @@ def sample_trajectory_composition_euler(
         phase = values["phase"]
         phase_key = phase.name if phase is not None else "default"
         cond_inputs = dict(condition_inputs_by_phase.get(phase_key) or condition_inputs_by_phase["default"])
+        cond_inputs.update(model_kwargs)
         cond_inputs["cfg_scale"] = float(values["cfg_scale"])
         cond_inputs["apg_scale"] = float(values["apg_scale"])
         cond_inputs.setdefault("batch_cfg", True)
-        cond_inputs.setdefault("rescale_cfg", True)
+        cond_inputs.setdefault("rescale_cfg", bool(rescale_cfg))
         cond_inputs["padding_mask"] = padding_mask
 
         if per_element_schedule:
@@ -158,6 +162,8 @@ def sa3_sampler_composition_from_init_latents(
     anchor_mask: Any = None,
     duration_padding_sec: float = 6.0,
     dist_shift: Any = None,
+    model_kwargs: Mapping[str, Any] | None = None,
+    rescale_cfg: bool = True,
     callback: Any = None,
     disable_tqdm: bool = False,
 ) -> SamplerCompositionResult:
@@ -255,6 +261,8 @@ def sa3_sampler_composition_from_init_latents(
             anchor=anchor,
             anchor_mask=anchor_mask,
             padding_mask=padding_mask,
+            model_kwargs=model_kwargs,
+            rescale_cfg=rescale_cfg,
             callback=callback,
             disable_tqdm=disable_tqdm,
         )
@@ -274,6 +282,8 @@ def sa3_sampler_composition_from_init_latents(
             "plan": resolved_plan.to_manifest(),
             "anchor_source": "init_latents" if anchor_latents is None else "anchor_latents",
             "anchor_mask": "provided" if anchor_mask is not None else None,
+            "rescale_cfg": bool(rescale_cfg),
+            "model_kwargs": _json_safe_mapping(model_kwargs or {}),
             "sampler_type": "explicit_euler_rf_composition",
             "maturity": "intervention_candidate",
             "claim": "SA3 RF sampler-state composition pending audio evidence",
@@ -390,6 +400,24 @@ def _cast_cond_inputs(cond_inputs: dict[str, Any], dtype, torch):
 
 def _write_json(path: Path, payload: Any) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+
+
+def _json_safe_mapping(mapping: Mapping[str, Any]) -> dict[str, Any]:
+    return {str(key): _json_safe_value(value) for key, value in dict(mapping).items()}
+
+
+def _json_safe_value(value: Any) -> Any:
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    if isinstance(value, Mapping):
+        return _json_safe_mapping(value)
+    if isinstance(value, (list, tuple)):
+        return [_json_safe_value(item) for item in value]
+    try:
+        json.dumps(value)
+        return value
+    except TypeError:
+        return repr(value)
 
 
 def _require_torch():

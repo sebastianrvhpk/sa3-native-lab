@@ -104,7 +104,8 @@ a promoted control until sweeps survive repeated audio evidence.
 prompt phases, RF denoised-state anchoring math, and per-step plan rows for
 source anchoring, CFG/APG choreography, and logSNR/step prompt phases. It does
 not run SA3; `procedures/sampler_composition.py` owns the explicit Euler RF
-notebook run.
+notebook run and records `rescale_cfg` plus advanced model-forward kwargs as
+experiment settings.
 
 The full map lives in
 [`docs/research/current/primitive-map.md`](../docs/research/current/primitive-map.md).
