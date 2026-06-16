@@ -34,8 +34,8 @@ Decision:
 - `Operation`: `observe`, `select`, `intervene`, `render`, `compare`, or
   `decide`.
 - `Measurement`: descriptors, flow loss, latent geometry, control lanes,
-  periodicity, nearest-memory rows, residual probes, runtime, or listening
-  notes.
+  f0/tuning-system pitch-class rows, periodicity, nearest-memory rows,
+  residual probes, runtime, or listening notes.
 - `Claim`: what success would mean: controllability, source preservation,
   prompt inversion, loopability, novelty, style transfer, selection value, or
   microscope value.
@@ -111,6 +111,9 @@ include enough evidence for its decision.
 | Claim type | Required evidence | Useful optional evidence |
 |---|---|---|
 | Prompt inversion | flow loss rows, prompt candidates, baseline prompt | loss-by-timestep, attribution, decoded audition |
+| Tuning-map inference | source audio, f0 pitch rows, pitch-event rows, pitch centers, interval-ratio edges, period/generator candidates, CPS fit rows | SAME preservation probe, active-source mask, null/shuffled event map, listening notes |
+| Tuning-system prompt probe | tuning-system manifest, prompt rows, rendered output, f0 pitch rows, target-vs-null comparison rows | flow score, pitch-track overlay, repeated seeds, descriptor rows |
+| Audio-first pitch-relation probe | audio examples, `TuningMap` target rows, SAME or audio-conditioned residual summaries, held-out readout rows | transposition nulls, shuffled labels, same-timbre/different-map controls, SAE/adapter feature rows |
 | Source-preserving edit | source audio, baseline, method output, descriptor delta, nearest-memory rows | flow score, control lanes, geometry report |
 | Latent operator control | direct decode or polish, descriptor delta, listening notes | SAME bottleneck stress rows, flow score |
 | Latent objective/guidance | objective rows, before/after latent values, direct decode or polish, listening notes | control-lane renderings, geometry report, source-preservation rows |
@@ -149,6 +152,9 @@ runtime and GPU
 source/donor audio paths
 prompt and negative prompt
 duration, seed, steps, CFG, init noise
+root note / root Hz and tuning-system manifest when relevant
+tuning-map config, pitch-event thresholds, ratio search limits, generator/CPS settings when relevant
+pitch tracker config and tolerance when relevant
 flow convention and logSNR/timestep probes when relevant
 sampler composition plan / schedules when relevant
 baseline output

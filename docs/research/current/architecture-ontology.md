@@ -70,9 +70,9 @@ audio output + latent rows + flow rows + descriptors + listening notes
 
 | Layer | Native objects | What can be studied alone | What counts as evidence |
 |---|---|---|---|
-| SAME Representation Science | waveform `x`, encoder `E`, SAME latent `z0`, decoder `D`, `LatentItem` | compression, direct decode, geometry, latent memory, source preservation, bottleneck stress, latent DSP | direct decodes, descriptor deltas, geometry rows, nearest-memory rows, control lanes, listening notes |
-| SA3 Flow and Conditioning Science | prompt `p`, condition `C(p)`, flow state `z_t`, timestep/logSNR, velocity `v_theta` | prompt scoring, condition inversion, flow timestep bands, null/conditional-delta probes | shared flow-probe rows, prompt semantic rows, attribution, generated-audio audition |
-| SA3 Internal Trajectory Science | residual activations `a_l`, branch updates, adaLN scale/shift/gate terms, CFG/APG condition-influence vectors, memory tokens, sampler states, sampler timesteps, observed windows, guidance objectives | internal feature cartography, residual-timestep cartography, branch/gate visibility, CFG/APG prompt-influence timing, sparse-feature targets, clean/corrupt patching, branch interventions, native trajectory composition, guidance honesty | activation rows, internal surface rows, CFG/APG rows, trajectory maps, patch/branch/sampler/alpha/guidance sweeps, flow/descriptor/listening disagreement |
+| SAME Representation Science | waveform `x`, encoder `E`, SAME latent `z0`, decoder `D`, `LatentItem`, tuning map | compression, direct decode, pitch-organization evidence, geometry, latent memory, source preservation, bottleneck stress, latent DSP | direct decodes, descriptor deltas, tuning-map rows, geometry rows, nearest-memory rows, control lanes, listening notes |
+| SA3 Flow and Conditioning Science | prompt `p`, condition `C(p)`, flow state `z_t`, timestep/logSNR, velocity `v_theta`, tuning-system prompt rows | prompt scoring, tuning-system prompt sweeps, condition inversion, flow timestep bands, null/conditional-delta probes | shared flow-probe rows, prompt semantic rows, tuning/f0 selectivity rows, attribution, generated-audio audition |
+| SA3 Internal Trajectory Science | residual activations `a_l`, branch updates, adaLN scale/shift/gate terms, CFG/APG condition-influence vectors, memory tokens, sampler states, sampler timesteps, observed windows, guidance objectives | internal feature cartography, residual-timestep cartography, audio-conditioned pitch-relation probes, branch/gate visibility, CFG/APG prompt-influence timing, sparse-feature targets, clean/corrupt patching, branch interventions, native trajectory composition, guidance honesty | activation rows, internal surface rows, CFG/APG rows, trajectory maps, tuning-map readout rows, patch/branch/sampler/alpha/guidance sweeps, flow/descriptor/listening disagreement |
 | SA3-over-SAME Coupled Editing | edited SAME `z0'`, SA3 polish/init-audio/inpainting path, source masks | whether SA3 preserves, repairs, erases, or rewrites SAME edits | direct decode vs SA3 polish packets, source-preservation rows, flow loss, listening |
 
 These layers are not a linear pipeline. They are separate microscopes that
@@ -132,8 +132,8 @@ Evidence:
 
 | Layer | Current support | Main gap |
 |---|---|---|
-| SAME Representation Science | geometry, periodicity, latent DSP, blur/filter, selective renoise/graft, style profile/direction, memory, latent constraint objectives | systematic bottleneck and direct-decode evidence |
-| SA3 Flow and Conditioning Science | flow probe banks, prompt scoring, attribution, soft/hard/readable prompt search, null-condition scaffold | predictive validity against generated audio |
+| SAME Representation Science | tuning-map inference, geometry, periodicity, latent DSP, blur/filter, selective renoise/graft, style profile/direction, memory, latent constraint objectives | systematic bottleneck, direct-decode, and pitch-map preservation evidence |
+| SA3 Flow and Conditioning Science | flow probe banks, prompt scoring, attribution, tuning-system prompt probes, soft/hard/readable prompt search, null-condition scaffold | predictive validity against generated audio, including whether tuning/f0 rows predict audible intonation differences |
 | SA3 Internal Trajectory Science | residual hooks, internal feature cartography, CFG/APG atlas rows, root residual probe rows/vectors, residual-timestep cartography, sparse-feature scaffolds, clean/corrupt patch specs, branch intervention specs, native trajectory composition, cyclic projection, guidance scaffolds | repeated causal patch/branch/sampler/steer evidence and artifact checks |
 | SA3-over-SAME Coupled Editing | SA3 polish, selective SA3, continuation/inpainting, direct decode helpers | survival matrix: what edits SA3 preserves or erases |
 
@@ -185,6 +185,10 @@ mechanistic interpretability: capture activations, rank layers with explicit
 linear probes, then test causal patches with bounded sweeps. A residual
 direction is promoted only if it moves audio predictably across prompts/seeds
 and does not merely exploit fragile internals.
+For pitch-relation work, the promotion target is not "the tuning system vector"
+but repeated movement of measured `TuningMap` fields under bounded residual
+intervention, with listening notes that rule out generic timbre, energy, or
+pitch-tracker artifacts.
 
 The primary route is now SA3 Internal Feature Cartography:
 

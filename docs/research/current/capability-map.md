@@ -35,7 +35,7 @@ utilities:
 | Layer / utility | Primary native objects | Main local capabilities |
 |---|---|---|
 | SAME Representation Science | `x`, `E`, `D`, `z0`, `LatentItem` | encode/decode, direct decode, geometry, bottleneck stress, latent DSP, memory, control lanes |
-| SA3 Flow and Conditioning Science | `z_t`, `t`, `C(p)`, `v_theta` | shared probe banks, prompt flow scoring, attribution, soft/hard/readable inversion, null/condition probes |
+| SA3 Flow and Conditioning Science | `z_t`, `t`, `C(p)`, `v_theta` | shared probe banks, prompt flow scoring, attribution, tuning-system prompt probes, soft/hard/readable inversion, null/condition probes |
 | SA3 Internal Trajectory Science | residual activations, branch updates, adaLN terms, CFG/APG condition-influence vectors, memory tokens, sampler states, step windows | internal feature cartography, residual capture, residual-timestep cartography, sparse-feature scaffolds, residual patch/branch/steer sweeps, native trajectory composition, cyclic projection, guidance scaffolds |
 | SA3-over-SAME Coupled Editing | edited `z0'`, init/polish/inpaint/continue paths | neighborhood renoise, selective SA3, direct decode vs polish, source-preservation checks |
 | Evidence utilities | descriptors, memory rows, annotations, manifests | player, annotation store, disagreement rows, ledger, static report candidates |
@@ -50,6 +50,8 @@ utilities:
 | Flow probe bank | timestep/logSNR, noise seed/sign, velocity convention | `flow_prompt.py`, notebook cells | reused across prompt variants and flow panels | confirmed |
 | Prompt condition `C(p)` | SA3 conditioner outputs or optimized tensors | upstream SA3 plus `flow_prompt.py`, `procedures/soft_prompt.py` | scored, optimized, attributed, auditioned | confirmed |
 | Prompt semantic row | prompt variant, tags, flow/listening evidence | `prompt_semantics.py`, notebook cells | compares raw, readable, and flow-found language | confirmed |
+| Tuning map | pitch events, centers, interval graph, ratio/generator/CPS rows, scalar targets | `tuning_maps.py`, notebook cells | turns audio pitch behavior into relational evidence and future probe targets | confirmed |
+| Tuning-system row | pitch-class cents, ratios, root, prompt terms, f0-fit metrics | `tuning_systems.py`, notebook cells | defines xenharmonic/JI prompt sweeps and scores rendered audio against target/null systems | confirmed |
 | Residual activation `a_l` | layer activation tensors | `adapters/sa3_residual_hooks.py`, `residual_probes.py`, residual procedures | captured, contrasted, probed, steered, summarized | confirmed |
 | SA3 internal surface row | residual, branch, adaLN, memory-token, or CFG/APG summary | `internal_features.py`, `adapters/sa3_internal_hooks.py`, `procedures/internal_feature_cartography.py` | captured, summarized, selected, converted into sparse-feature targets or patch specs | confirmed |
 | Sampler composition plan | scalar schedules, prompt phases, source anchor schedule | `sampler_composition.py`, `procedures/sampler_composition.py` | converted into step rows and explicit RF Euler source-latent outputs | confirmed |
@@ -71,6 +73,7 @@ utilities:
 | Geometry reports | `z0` collection -> PCA/covariance/transport rows | observe/select | root measurement | microscope | connect geometry movement to audition |
 | Periodicity and loop metrics | audio or `z0` -> loop rows | observe/compare | root measurement | microscope | compare against loop listening notes |
 | Control lanes | audio/latent -> time-varying lanes -> active span / active-window correlations / comparison rows / per-lane regions / masks / SVG evidence | observe/select/intervene candidate/render | root measurement plus evidence rendering | microscope/selector | lane similarity and lane masks must improve retrieval, review, or edits |
+| Tuning map inference | audio -> f0 rows -> pitch events -> centers -> interval graph -> ratio/generator/CPS rows | observe/select | root measurement | microscope | map fields must survive nulls, active-source checks, and listening before becoming SA3/SAME probe targets |
 | Latent memory | `LatentItem` collection -> nearest rows | select | root memory | selector | show better donor/source/novelty decisions |
 | Curriculum clustering | memory collection -> clusters/heldout rows | select | root memory | selector | show clusters improve prompt or donor choices |
 | Bridge/continuation ranking | memory rows -> ranked paths | select | root composition | selector | bridge scores must predict audible continuity |
@@ -78,6 +81,7 @@ utilities:
 | Shared flow probe banks | logSNR/timestep controls -> reusable probe manifest | observe/compare | root rows plus procedure | confirmed | use across prompt panels and ledger packets |
 | Flow attribution | prompt -> token contribution rows | observe/select | root rows plus procedure | microscope | repeat over shared probe banks |
 | Prompt semantic transparency | prompt variants -> tagged flow/listening rows | observe/select | root rows plus procedure | microscope/selector | show tags explain useful prompt changes |
+| Tuning-system prompt probe | tuning lattice + prompt seed -> rendered audio -> f0 trace -> pitch-class fit/selectivity rows | observe/select | root measurement plus notebook generation cell | microscope/selector | target wins must repeat across seeds and beat nulls with usable voiced coverage and listening notes |
 | Soft prompt inversion | target `z0` -> optimized condition | intervene/render | procedure | intervention candidate | audition against prompt/audio-to-audio baselines |
 | Trajectory-weighted soft prompt inversion | residual-timestep map -> flow probe bank -> optimized condition | select/intervene/render | root map plus procedure | intervention candidate | show trajectory-selected timesteps improve soft-prompt audio, not just loss |
 | Hard/readable prompt search | candidate text -> ranked prompts | select | root search plus procedure scorer | selector | compare readable rankings against listening |
@@ -156,6 +160,15 @@ target audio latent
   -> frozen SA3 flow probes
   -> prompt loss rows / attribution rows / timestep panels
   -> hard prompt candidates or soft prompt state
+
+tuning-system prompt family
+  -> rendered SA3 output
+  -> f0 trace / pitch-class fit rows
+  -> target-vs-null selectivity rows
+
+real-world audio
+  -> tuning map
+  -> vector targets for SAME latent, prompt-condition, or residual probes
 
 edited latent or sampler state
   -> direct SAME decode

@@ -109,6 +109,8 @@ when primitive APIs change.
 | Control lanes | `audio_same_control_lanes(...)`, `audio_mir_control_lanes(...)`, `active_source_mask_from_lanes(...)`, `active_source_span_from_lanes(...)`, `control_lane_summary_table(...)`, `control_lane_correlation_table(...)`, `control_lane_region_mode_families(...)`, `control_lane_region_sweep(...)`, `control_lane_region_sweep_comparison_table(...)`, `lane_region_table(...)`, `compare_control_lane_sets(...)`, `compare_lane_region_sets(...)`, `regions_for_control_lanes(...)`, `regions_from_control_lane(...)`, `control_lane_mask(...)`, `latent_channel_scores(...)`, `latent_channel_lanes(...)`, `latent_channel_correlation_table(...)`, `latent_channel_region_table(...)`, `latent_channel_region_overlap_table(...)`, `latent_channel_region_overlap_audit(...)`, `rank_channel_region_overlap_rows(...)`, `summarize_channel_region_overlap_rows(...)`, `control_lane_internal_target_manifest_rows(...)`, `latent_channel_family_table(...)`, `rank_control_lane_matches(...)`, `rank_control_lane_bridges(...)` | audio/latent trajectory -> lanes -> active span / summary rows / active-window correlations / comparison rows / typed state/event/transition/persistence/source/signed region sweeps / all-channel lanes / all-channel correlations / channel regions / overlap audits / internal-cartography target manifests / masks / retrieval rows | measurement first; full atlas and target manifests are microscope/selector evidence, not causal channel claims |
 | Control-lane rendering | `control_lane_svg(...)`, `control_lane_overlay_svg(...)`, `control_lane_region_svg(...)`, `control_lane_regions_svg(...)`, `control_lane_probe_heatmap_svg(...)`, `control_lane_prediction_svg(...)`, `latent_channel_heatmap_svg(...)` | lanes / regions / probe rows / prediction rows / latent channel scores -> SVG evidence views | evidence presentation; no lane math or intervention claim |
 | Descriptors | `audio_descriptor_report(audio, sample_rate)`, `descriptor_delta(a,b)` | decoded audio -> descriptor rows | evidence utility; never promotion alone |
+| Tuning maps | `infer_tuning_map(...)`, `pitch_events_from_rows(...)`, `pitch_centers_from_events(...)`, `interval_edges_from_centers(...)`, `generator_candidates_from_centers(...)`, `cps_fit_rows(...)`, `tuning_map_vector_targets(...)` | audio -> f0 rows -> pitch events -> centers -> interval graph -> ratio/generator/CPS rows -> scalar probe targets | pitch-as-information microscope; future selector/probe target for SAME/SA3 vectors |
+| Tuning systems | `default_tuning_systems(...)`, `tuning_prompt_specs(...)`, `pitch_track_rows(...)`, `tuning_comparison_rows(...)`, `tuning_selectivity_rows(...)` | tuning lattice + prompt seed -> SA3 output -> f0 trace -> pitch-class fit rows | SA3 prompt-conditioning microscope/selector; monophonic f0 evidence is not proof of intonation control |
 | Memory | `LatentMemoryIndex(items).query(...)`, `.query_controls(...)`, `.query_hybrid(...)`, `control_score(...)` | collection + query/control target -> nearest rows | selector; requires copying/source-preservation review |
 | Curriculum | `build_memory_curriculum(items, cluster_count=...)`, `nearest_memory_rows(query, items)` | collection -> clusters / nearest rows | dataset design and heldout/listening planning |
 | Composition | `ranked_continuations(source, candidates)`, `ranked_bridges(start,end,candidates)`, `best_path(items,start_id,end_id)` | memory items -> continuation/bridge/path candidates | selector before audio generation |
@@ -187,6 +189,8 @@ an operator is useful.
 | Module | Evidence | Role |
 |---|---|---|
 | `audio_descriptors.py` | confirmed | Lightweight audio descriptor reports and deltas. |
+| `tuning_systems.py` | confirmed | Xenharmonic/JI tuning-system manifests, prompt sweep rows, lightweight f0 tracking, pitch-class fit comparisons, and target-vs-null selectivity rows. |
+| `tuning_maps.py` | confirmed | Relational pitch-map inference: pitch events, pitch centers, interval-ratio edges, period candidates, compact generator fits, Wilson-style CPS fits, and scalar targets for later SAME/SA3 probes. |
 | `periodic.py` | confirmed | Autocorrelation, periodicity, spectral centroid, and loop boundary probes. |
 | `geometry.py` | confirmed | PCA, whitening, Mahalanobis distance, barycenters, covariance transport. |
 | `control_lanes.py` | confirmed | Time-varying envelope/flux/motion/channel lanes, summary rows, normalization, similarity, region masks, retrieval/bridge ranking, and persistence. |
@@ -233,6 +237,8 @@ latent under its own flow field.
 | `tokenizer_vocab.py` | confirmed | Native tokenizer vocabulary extraction and preview. |
 | `procedures/soft_prompt.py` | confirmed | Soft prompt optimization and generation hooks. |
 | `prompt_semantics.py` | confirmed | Semantic prompt variants and rows for comparing raw, readable, and flow-found prompt language. |
+| `tuning_maps.py` | confirmed | Audio-derived tuning-map rows that can become prompt, SAME-latent, or residual probe targets. |
+| `tuning_systems.py` | confirmed | Prompt families and rendered-audio f0 evidence for xenharmonic, equal-tempered, non-octave, and JI limit-set probes. |
 
 Narrative role: SA3-native prompt inversion by teacher-forced flow agreement.
 
@@ -329,7 +335,8 @@ prompt pairs or labeled audio
 ## Placement Rules
 
 - Put pure latent/audio measurements in `audio_descriptors.py`, `latent_math.py`,
-  `periodic.py`, `geometry.py`, `control_lanes.py`, or `observability.py`.
+  `periodic.py`, `geometry.py`, `control_lanes.py`, `tuning_systems.py`, or
+  `observability.py`.
 - Put pure prompt rows, velocity conventions, logSNR/timestep conversion, and
   attribution in `flow_prompt.py`; put hard/readable prompt search in
   `prompt_optimization.py` and `tokenizer_vocab.py`; put teacher-forced SA3

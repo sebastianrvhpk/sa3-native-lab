@@ -82,8 +82,8 @@ model-native research layers plus cross-cutting evidence utilities:
 
 | Layer | Main question | Notebook implication |
 |---|---|---|
-| SAME Representation Science | What does SAME preserve, expose, erase, or make editable on its own? | Run direct-decode, bottleneck, geometry, memory, DSP, and control-lane experiments before invoking SA3 polish. |
-| SA3 Flow and Conditioning Science | What does frozen SA3 know through prompt conditions, flow timesteps, and velocity fields? | Use shared flow probe banks, prompt variants, attribution, and condition inversion as SA3-native evidence. |
+| SAME Representation Science | What does SAME preserve, expose, erase, or make editable on its own? | Run direct-decode, bottleneck, geometry, memory, tuning-map, DSP, and control-lane experiments before invoking SA3 polish. |
+| SA3 Flow and Conditioning Science | What does frozen SA3 know through prompt conditions, flow timesteps, and velocity fields? | Use shared flow probe banks, prompt variants, tuning-system prompt probes, attribution, and condition inversion as SA3-native evidence. |
 | SA3 Internal Trajectory Science | What do residual streams, branch updates, condition gates, CFG/APG vectors, memory tokens, and sampler states reveal or causally control? | Run internal feature cartography first: scout, localize, select sparse-feature targets, then patch or steer only selected coordinates with audio evidence. |
 | SA3-over-SAME Coupled Editing | How does SA3 read, repair, erase, or amplify SAME latents? | Compare every coupled edit against direct SAME decode and plain SA3 polish. |
 
@@ -105,9 +105,9 @@ next, then SA3 flow, SA3 internals, and finally coupled SA3-over-SAME editing.
 | Runtime and model boundary | upstream checkpoint -> model handle | model handles, latent rates, smoke audio | implemented |
 | Evidence packet setup | output audio -> reviewable packet | player rows, descriptors, annotations, manifests | implemented |
 | Audio and SAME preparation | audio -> SAME `z0` -> `LatentItem` | saved items, summaries, chunk windows | implemented |
-| SAME representation bench | `z0` -> summaries/geometry/lanes/direct decodes | descriptor, geometry, periodicity, control-lane, bottleneck rows | implemented |
+| SAME representation bench | audio/`z0` -> summaries/geometry/lanes/tuning maps/direct decodes | descriptor, geometry, periodicity, tuning-map, control-lane, bottleneck rows | implemented |
 | SAME memory and composition bench | collection -> selector -> continuation/bridge/donor | memory indices, curriculum rows, ranked bridges | implemented |
-| SA3 flow and conditioning science | target `z0` -> flow probes -> prompt/condition score | shared probe banks, flow-loss rows, attribution, semantic prompt variants, soft prompts, prompt candidates | implemented plus null-inversion scaffold |
+| SA3 flow and conditioning science | target `z0` -> flow probes or rendered prompt sweep -> prompt/condition score | shared probe banks, flow-loss rows, attribution, semantic prompt variants, tuning-system prompt/f0 rows, soft prompts, prompt candidates | implemented plus null-inversion scaffold |
 | SA3 internal feature cartography | activation/state/branch/gate/CFG/APG -> surface rows -> selected cells/features -> bounded patch, branch intervention, sampler composition, or steer sweep -> output | contrastive residual scouts, internal surface rows, CFG/APG influence rows, sparse-feature scaffolds, residual patch specs, branch intervention specs, native trajectory-composition rows, alpha schedules, cyclic schedules | implemented as primary SA3-internal path |
 | SA3-over-SAME coupled editing bench | `z0` -> edited `z0'` -> direct decode / SA3 polish | direct decodes, SA3-polished audio, deltas, source-preservation rows | implemented |
 | External comparison bench | external artifacts -> evidence packet | Underfit/cross-model audio, descriptor/player rows | external/scaffold |
@@ -120,8 +120,8 @@ should be updated from `experiment-ledger.md`, not from speculation.
 
 | Maturity | Current methods | What is missing |
 |---|---|---|
-| Microscope | flow sign diagnostic, flow attribution, loss-by-timestep, geometry audit, periodicity, residual-timestep cartography, internal surface cartography, CFG/APG atlas, sparse-feature scaffold, sampler physiology, optional control-lane residual diagnostics | repeated listening evidence before control claims |
-| Selector | memory index, curriculum, bridge search, prompt search, tokenizer vocabulary, donor/source ranking ideas | evidence that rankings improve auditions |
+| Microscope | tuning-map inference, flow sign diagnostic, flow attribution, loss-by-timestep, tuning-system pitch-class fit rows, geometry audit, periodicity, residual-timestep cartography, internal surface cartography, CFG/APG atlas, sparse-feature scaffold, sampler physiology, optional control-lane residual diagnostics | repeated listening evidence before control claims |
+| Selector | memory index, curriculum, bridge search, prompt search, tokenizer vocabulary, tuning-map scalar target selection, tuning-system target-vs-null seed ranking, donor/source ranking ideas | evidence that rankings improve auditions |
 | Intervention candidate | neighborhood renoise, selective renoise, graft, blur/filter, neural latent DSP, style profile/direction, cyclic repair, soft prompt audition | source/baseline/method packets across clips and seeds |
 | High-risk intervention candidate | residual steering, branch output interventions, native trajectory composition, cyclic denoising projection, gradient guidance, posterior guidance, null-condition inversion | proof of causal movement without artifacts or fragile internals |
 | Promoted method | none yet | at least repeated evidence packets and ledger decisions |
@@ -133,7 +133,8 @@ should be updated from `experiment-ledger.md`, not from speculation.
 
 - Root native objects, math, measurements, and operators:
   `schema.py`, `io.py`, `latent_math.py`, `audio_descriptors.py`,
-  `geometry.py`, `periodic.py`, `control_lanes.py`, `observability.py`,
+  `geometry.py`, `periodic.py`, `control_lanes.py`, `tuning_maps.py`,
+  `tuning_systems.py`, `observability.py`,
   `latent_constraints.py`, `residual_probes.py`, `internal_features.py`, `latent_blur.py`,
   `latent_dsp.py`, `selective_renoise.py`, `looping.py`,
   `style.py`, `flow_prompt.py`, `prompt_semantics.py`,
@@ -189,6 +190,21 @@ capability map is [Capability map](capability-map.md).
   selection: the notebook exports full lane/channel artifacts, compact
   channel-region overlap audits, ranked target rows, and an internal-cartography
   target manifest before any expensive SA3-internal run is launched.
+- Tuning-system evidence is owned by `tuning_systems.py`: default xenharmonic,
+  non-octave, and JI limit-set prompt banks, lightweight monophonic f0 rows,
+  per-system pitch-class fits, and target-vs-null selectivity rows. This is a
+  prompt-conditioning microscope/selector until repeated generated outputs and
+  listening notes show stable intonation movement.
+- Tuning-map inference is owned by `tuning_maps.py`: audio f0 rows become pitch
+  events, pitch centers, interval-ratio edges, period/generator candidates,
+  Wilson-style CPS fit rows, and scalar targets for future SAME/SA3 probes.
+  This is the first pitch-as-information object and must pass listening/null
+  checks before any "tuning vector" language is used.
+- Pitch-relation representation discovery should be audio-first: measured
+  `TuningMap` fields from real or synthetic clips become targets for SAME
+  latent, audio-conditioned residual, condition-state, or adapter/SAE probes.
+  Prompt-based generation should receive discovered directions only after audio
+  evidence shows they are readable and not just verbal style priors.
 
 Conclusion: the current library shape is coherent. The remaining issue is not
 whether these files are needed; it is whether each notebook method earns
@@ -219,7 +235,7 @@ methods under review, not as a list of promoted controls.
 audio files
   -> SAME encoder
   -> SAME latents
-  -> latent memory / style profile / control lanes / DSP edits / geometry ops
+  -> latent memory / style profile / tuning maps / control lanes / DSP edits / geometry ops
   -> SAME decoder or SA3 polish
   -> audio outputs + descriptor tables + manifests + listening notes
 
@@ -239,6 +255,21 @@ prompt pairs, labeled audio sets, or sampler condition contrasts
   -> internal surface rows / steering vectors / sparse-feature targets
   -> bounded patch, branch, sampler-composition, or alpha sweeps
   -> generated outputs + probe reports
+
+tuning-system prompt family
+  -> SA3 rendered audio
+  -> monophonic f0 rows / pitch-class lattice fits
+  -> target-vs-null selectivity rows + listening notes
+
+real-world pitch behavior
+  -> tuning map
+  -> scalar map fields
+  -> SAME/condition/residual probe targets
+
+audio clips with measured pitch-relation differences
+  -> SAME latents and/or audio-conditioned SA3 residual states
+  -> linear readability probes or SAE/adapter features
+  -> later prompt-generation attachment only after audio-first evidence
 
 LoRA/style fine-tuning need
   -> use Underfit
@@ -262,6 +293,11 @@ LoRA/style fine-tuning need
   teacher-forced vector-field agreement?
 - Which logSNR bands correspond to style, structure, transient detail, or prompt
   adherence?
+- Can SA3 repeatedly render audible xenharmonic or JI limit-set differences
+  from prompt wording alone, or do f0-fit wins only reflect chance/root fitting?
+- Can real-world tuning maps be inferred robustly enough to become SAME/SA3
+  probe targets, and do these map fields exist as readable latent/residual
+  subspaces?
 - Which SAME latent edits survive direct decode and SA3 polish?
 - Which control lanes and SAME-channel families are observable, predictable,
   and intervenable after complete-atlas review rather than top-k display alone?

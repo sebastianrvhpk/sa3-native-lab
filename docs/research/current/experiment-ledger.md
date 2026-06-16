@@ -161,7 +161,7 @@ No completed runs have been recorded in this ledger yet.
 
 | Date | Ontology / Experiment | Question | Outputs | Decision | Notes |
 |---|---|---|---|---|---|
-| TBD | TBD | TBD | TBD | unknown | Add first real Colab/listening run here. |
+| 2026-06-16 | SA3-over-SAME Coupled Editing / Gain Survival | How does latent gain of 1.5 survive SA3 polish? | direct_decode, direct_edit, plain_polish, method_polish | revise | r_survive=1.3276, volume delta compressed from 4.21dB to 3.71dB by SA3 prior. |
 
 ## Open Result Questions
 
@@ -173,3 +173,9 @@ No completed runs have been recorded in this ledger yet.
 - Which control lanes are observable, predictable, and intervenable?
 - Which residual layers produce stable causal audio controls?
 - Can sampler-level guidance improve loopability without half-period collapse?
+
+| 2026-06-16 | SAME Representation / Latent Grafting | Grafting 128 channels of mutant.mp3 into dance2.mp3 | source_direct, donor_direct, graft_direct, graft_polished | revise | donor_pull=0.5030, direct graft is audible, SA3 polish shifts centroid to 2879.7Hz. |
+| 2026-06-16 | SAME Representation / FFT Graft | Grafting mutant into dance2 via fft graft | graft_fft_direct, graft_fft_polished | revise | donor_pull=0.3661, direct centroid=3373.0Hz, polished=3150.2Hz |
+| 2026-06-16 | SAME Representation / PCA Graft | Grafting mutant into dance2 via pca graft | graft_pca_direct, graft_pca_polished | revise | donor_pull=0.4524, direct centroid=3385.2Hz, polished=3420.1Hz |
+| 2026-06-16 | SAME Representation / High-Var Graft | Grafting mutant into dance2 via high-var graft | graft_high-var_direct, graft_high-var_polished | revise | donor_pull=0.4056, direct centroid=3315.6Hz, polished=3026.3Hz |
+| 2026-06-16 | SAME Representation / Low-Var Graft | Grafting mutant into dance2 via low-var graft | graft_low-var_direct, graft_low-var_polished | revise | donor_pull=0.3144, direct centroid=3621.0Hz, polished=3311.9Hz |

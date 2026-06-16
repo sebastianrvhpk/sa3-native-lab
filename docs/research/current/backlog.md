@@ -97,6 +97,94 @@ Drop or revise if:
 - flow rankings only measure vector-field agreement,
 - descriptor/listening evidence contradicts flow rankings.
 
+## Gap 2b. Tuning-System Prompt Steerability
+
+Evidence gap: it is unknown whether SA3 prompt wording can repeatedly steer
+intonation systems such as xenharmonic equal temperaments, non-octave scales,
+and JI limit sets, or whether apparent wins come from chance, root fitting,
+vibrato, or ordinary 12-TET collapse.
+
+Native transition: `tuning-system prompt row -> SA3 rendered audio -> f0 trace -> pitch-class lattice fit -> target-vs-null selectivity row`.
+
+Current support: `tuning_systems.py` defines default 12-TET reference,
+19-EDO, 31-EDO, Bohlen-Pierce 13-ED3, 5-limit JI, 7-limit septimal JI, and
+11-limit JI prompt/evidence banks; the notebook has a disabled-by-default
+tuning-system prompt probe that exports audio paths, f0 rows, comparison rows,
+and selectivity rows.
+
+Next run: generate one short monophonic seed for each default system plus the
+two null prompts, then inspect voiced coverage, target rank, target margin, and
+listening notes. Repeat any promising target win across at least three seeds
+before trying harder prompts or internal interventions.
+
+Promote if:
+
+- target systems win against neighboring systems and null prompts across seeds,
+- f0 rows have enough voiced coverage to be meaningful,
+- listening notes confirm audible interval differences rather than vibrato,
+  glissando, or timbral cues,
+- 12-TET collapse is detected and separated from true xenharmonic/JI behavior.
+
+Drop or revise if:
+
+- most outputs lack usable monophonic f0 evidence,
+- dense lattices win only because root-free fitting overfits,
+- the target prompt sounds ordinary even when pitch-class rows look good,
+- null prompts score as well as named tuning systems.
+
+## Gap 2c. Tuning Map Inference And Pitch-As-Information Probes
+
+Evidence gap: the lab needs a real tuning-map object for audio before trying
+to extract "tuning vectors" from SAME latents, prompt conditions, or SA3
+residual states. Named scales and f0 curves are not enough; the useful object
+is relational pitch information: events, centers, interval graph, low-integer
+ratio hypotheses, generator coordinates, period candidates, CPS fits, and
+uncertainty.
+
+Native transition: `audio -> f0 rows -> pitch events -> pitch centers -> interval graph -> ratio/generator/CPS evidence -> scalar vector targets`.
+
+Current support: `tuning_maps.py` infers a dependency-light `TuningMap` with
+pitch-event rows, center rows, interval-ratio candidates, compact generator
+fits, period candidates, Wilson-style CPS fit rows, and scalar fields for
+future SAME/SA3 probes. The notebook has a disabled-by-default `Tuning Map
+Inference From Audio` panel that exports the manifest and displays summary,
+center, edge, generator, and CPS rows.
+The prompt-pair residual scout was deliberately removed from this path: it
+confuses language priors with the pitch-relation representation we actually
+want to find. Existing audio-derived residual procedures can still capture
+SA3 states from audio-conditioned runs, but the first target labels should
+come from `TuningMap` evidence rather than prompt contrast wording.
+
+Next run: use one monophonic or dominant-pitch real-world clip with a known or
+interesting intonation behavior. Export the tuning-map manifest, then make a
+manual listening note for whether the map's strongest interval edges and
+generator/CPS rows describe what is actually heard. Add a shuffled-event null
+or wrong-period comparison before using any map field as a model probe target.
+Then build a small audio set with different measured pitch-relation maps and
+probe SAME summaries or audio-conditioned SA3 residual states for those map
+fields. Attach any discovered feature to prompt generation only after the
+audio-first probe has repeatable held-out evidence.
+
+Promote if:
+
+- stable pitch events and centers correspond to audible events,
+- interval-ratio rows identify plausible low-integer relations without forcing
+  every interval into JI,
+- generator/CPS rows improve explanation instead of merely overfitting,
+- scalar map fields are reusable as probe targets across at least two clips.
+- audio-conditioned SAME/residual readouts predict map fields on held-out clips
+  better than shuffled labels and timbre-only controls.
+
+Drop or revise if:
+
+- pitch extraction errors dominate the map,
+- the ratio search overfits dense candidate sets,
+- period/generator rows contradict listening,
+- the map cannot distinguish centered pitch organization from glissando,
+  vibrato, or multi-source mixtures.
+- audio-conditioned readouts mostly learn timbre, source identity, loudness,
+  or pitch-tracker artifacts instead of pitch-relation fields.
+
 ## Gap 3. Source Preservation Versus Copying
 
 Evidence gap: the notebook needs a routine panel that separates source identity,

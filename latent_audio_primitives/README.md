@@ -35,9 +35,9 @@ upstream-version-sensitive behavior behind generic abstractions.
 
 | Layer | Modules | Object | Research Role |
 |---|---|---|---|
-| Root primitives | `schema.py`, `latent_math.py`, `geometry.py`, `control_lanes.py`, `latent_constraints.py`, `residual_probes.py`, `latent_blur.py`, `selective_renoise.py`, `flow_prompt.py`, `trajectory.py`, `sampler_composition.py`, `prompt_semantics.py`, etc. | native objects, math, measurements, operators, search | define what the lab manipulates and measures |
+| Root primitives | `schema.py`, `latent_math.py`, `geometry.py`, `control_lanes.py`, `tuning_maps.py`, `tuning_systems.py`, `latent_constraints.py`, `residual_probes.py`, `latent_blur.py`, `selective_renoise.py`, `flow_prompt.py`, `trajectory.py`, `sampler_composition.py`, `prompt_semantics.py`, etc. | native objects, math, measurements, operators, search | define what the lab manipulates and measures |
 | Model boundary | `adapters/` | upstream SA3/SAME wrappers, residual hooks, tokenizer access | isolate external runtime coupling |
-| Procedures | `procedures/` | soft prompts, flow scoring, SA3 polish, selective SA3, cyclic SA3, residual probes and sweeps | run executable notebook methods |
+| Procedures | `procedures/` | soft prompts, flow scoring, SA3 polish, selective SA3, cyclic SA3, residual probes, audio-derived residual capture, and audio exports | run executable notebook methods |
 | Evidence | `evidence/`, `audio_descriptors.py`, `evidence/control_lane_rendering.py` | player panels, annotations, descriptor/lane/disagreement rows, SVG views | support auditioning, selectors, and decisions |
 
 Research layers are different from code altitude:
@@ -71,6 +71,11 @@ does not own evidence packet aggregation.
 steering vector containers, and probe rows after activations have already been
 captured. SA3 layer discovery and hook execution remain in `adapters/` and
 `procedures/`.
+
+`tuning_maps.py` is pitch-relation-measurement-first: it turns audio f0 rows
+into pitch events, pitch centers, interval edges, ratio/generator/CPS rows, and
+scalar probe targets. Those targets should first be tested against SAME latents
+or audio-conditioned SA3 states before any prompt-generation steering claim.
 
 `internal_features.py` is SA3-internal-object-first: it owns surface specs,
 activation summary rows, CFG/APG prompt-influence rows, sparse-feature scaffold

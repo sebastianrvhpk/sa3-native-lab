@@ -646,6 +646,266 @@ PromptSemanticRow = PromptVariant
 The claim is modest: tags help explain prompt changes and failures. They do not
 replace frozen-SA3 flow loss, decoded-audio descriptors, or listening notes.
 
+## Pitch As Information And Tuning Maps
+
+Pitch-Relation Representation means any internal or external representation
+that carries information about how pitch events relate across time, frequency,
+harmony, gesture, and style. It is not identical to f0, pitch class, key,
+temperament, scale, or JI. Those are projections or explanations of the richer
+relation object.
+
+Pitch evidence is treated as relational information, not only as framewise
+frequency. The native object is:
+
+```text
+TuningMap(audio) = {
+  pitch_events,
+  pitch_centers,
+  interval_edges,
+  period_candidates,
+  generator_candidates,
+  ratio_candidates,
+  CPS_fit_rows,
+  vector_targets
+}
+```
+
+Framewise f0 is only the first layer:
+
+```text
+x(t) -> f0(t), confidence(t)
+```
+
+Stable-enough voiced regions become pitch events:
+
+```text
+event_i = [t_start, t_end, median f0, cents, confidence, spread]
+```
+
+Events are clustered into pitch centers under a candidate period `P`:
+
+```text
+center_j = circular_cluster(event_cents mod P)
+```
+
+The musical information lives mainly in interval edges:
+
+```text
+edge_ij = circular_distance(center_i, center_j; P)
+```
+
+Each edge receives low-integer ratio candidates:
+
+```text
+q = a/b
+cents(q) = 1200 log2(q) mod P
+error(edge, q) = circular_distance(edge_cents, cents(q); P)
+```
+
+Candidate complexity uses Tenney height:
+
+```text
+height(q) = log2(a b)
+score(q) = error(edge, q) + lambda height(q)
+```
+
+Intervals are also given an Erlich-inspired uncertainty proxy. This is not a
+full harmonic-entropy implementation; it is a practical evidence row:
+
+```text
+p(q | edge) proportional to
+  exp(-0.5 error(edge,q)^2 / sigma^2) / max(height(q), 1)
+
+HE_proxy(edge) = -sum_q p(q) log2 p(q) / log2(N)
+```
+
+Low values mean one or a few simple ratios dominate the explanation. High
+values mean many complex or distant ratios share probability mass.
+
+Period-plus-generator candidates are compact coordinate explanations:
+
+```text
+center_j ~= k_j g mod P
+```
+
+The generator score penalizes both pitch error and coordinate sprawl:
+
+```text
+score(g) = mean_j error(center_j, k_j g)
+         + beta max_error
+         + gamma used_step_count
+         + eta mean_j |k_j|
+```
+
+Wilson-style combination product sets are graph/lattice hypotheses:
+
+```text
+CPS(n, k, factors) = {
+  product(subset) : subset in combinations(factors, k)
+}
+```
+
+For example, a hexany is a 2-out-of-4 CPS. The tuning-map row does not claim
+"this piece is a hexany"; it asks whether observed pitch centers fit the CPS
+vertex set under some root offset.
+
+Future SA3/SAME vector targets should come from scalar fields in the map:
+
+```text
+selected_period_cents
+best_generator_cents
+ratio_fit_error_cents
+ratio_fit_coverage
+harmonic_entropy_proxy_mean
+pitch_center_count
+cohesion_score
+```
+
+The claim is deliberately narrow: if these fields are predictable from SAME
+latents or SA3 internal states, they become probe targets. They become
+steering targets only after alpha sweeps move the tuning map while preserving
+rhythm, contour, source identity, and timbre.
+
+### Audio-First Pitch-Relation Representation Discovery
+
+The main pitch-relation path should be audio-conditioned, not prompt-pair
+conditioned. Prompts can become an interface later, but they should not define
+the first target. The stronger transition is:
+
+```text
+audio_i
+-> TuningMap(audio_i) = M_i
+-> SAME z0_i and/or SA3 audio-conditioned residual states h_i
+-> readout or adapter predicts M_i fields
+```
+
+Probe targets come from measured map fields:
+
+```text
+m_i = [
+  selected_period_cents,
+  best_generator_cents,
+  ratio_fit_error_cents,
+  ratio_fit_coverage,
+  harmonic_entropy_proxy_mean,
+  pitch_center_count,
+  cohesion_score
+]
+```
+
+The simplest readability test is linear:
+
+```text
+h_i = SAME summary, residual summary, condition state, or sampler-state summary
+m_i,k ~= w_k h_i + b_k
+score_k = heldout R^2, rank correlation, or classification accuracy
+```
+
+Audio examples can be real clips, synthetic calibration clips, or generated
+audio that has already been measured by `TuningMap`. The important point is
+that labels come from audio evidence rather than words. Good nulls include
+transposed audio with the same map, shuffled map labels, same f0 histogram with
+wrong interval graph, same timbre with different pitch relations, and same
+pitch relations with different timbre.
+
+An SAE-style adapter belongs after this audio-first readability pass. If scalar
+map fields are weakly linear but repeatably present, train an adapter/readout
+over captured residual or SAME activations:
+
+```text
+h_i = residual, condition, sampler, or SAME activation summary
+m_i = TuningMap(audio_i) scalar target vector
+readout:   m_i ~= W h_i
+adapter:   s_i = SAE(h_i),  m_i ~= W_s s_i
+```
+
+The adapter would be a microscope for distributed pitch-relation features. It
+becomes a steering candidate only after intervening on selected features moves
+`TuningMap` fields and survives listening review.
+
+Only after an audio-derived direction or feature is readable should it be
+attached to prompt-based generation:
+
+```text
+prompt generation + audio-derived vector/adapter feature
+-> generated audio
+-> TuningMap(output)
+-> listening and null comparison
+```
+
+## Tuning-System Prompt Probe
+
+Tuning-system probes are prompt-conditioning microscopes/selectors. They ask
+whether a rendered output has a monophonic f0 trace that fits the requested
+xenharmonic or just-intonation lattice better than nearby systems and null
+prompts.
+
+A tuning system is a folded pitch-class set:
+
+```text
+S = {s_i in [0, P)}
+P = 1200 cents for octave systems
+P = 1200 log2(3) for Bohlen-Pierce/tritave systems
+```
+
+JI scales enter as ratios:
+
+```text
+s_i = 1200 log2(r_i) mod P
+```
+
+Equal temperaments enter as divisions of a period:
+
+```text
+s_k = k P / N
+```
+
+The rendered waveform is reduced to a lightweight monophonic f0 trace with
+framewise autocorrelation:
+
+```text
+f_t = argmax_lag autocorr(x_t)[lag]
+c_t = 1200 log2(f_t / root_hz) mod P
+```
+
+For a fixed root, pitch-class error is:
+
+```text
+e_t = min_i circular_distance(c_t, s_i; P)
+```
+
+For root-free comparison, the probe fits a small root offset grid:
+
+```text
+delta* = argmin_delta mean_t min_i circular_distance(c_t, s_i + delta; P)
+```
+
+Notebook rows report:
+
+```text
+fixed_mean_abs_error_cents
+best_root_offset_cents
+best_mean_abs_error_cents
+best_within_tolerance_ratio
+voiced_coverage
+degree_coverage
+```
+
+Target selectivity is a margin, not a control claim:
+
+```text
+margin = best_non_target_error - target_error
+```
+
+Interpretation:
+
+- `target_wins` means the output is a candidate prompt/seed to audition.
+- Low voiced coverage means the pitch evidence is not usable.
+- Dense scales can fit more traces by chance; compare against null prompts,
+  neighboring systems, and listening notes.
+- Polyphonic audio, vibrato, glissando, and pitch bends are expected failure
+  modes for this dependency-light f0 microscope.
+
 ## Object Transition Math
 
 This section is organized by native-object transition. The same transition may
