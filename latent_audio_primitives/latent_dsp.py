@@ -244,6 +244,10 @@ def latent_fft_phase_shift(latents: Any, *, shift_fraction: float = 0.0) -> Any:
     bins = torch.arange(spectrum.shape[-1], device=x.device, dtype=torch.float32)
     phase = -2.0 * torch.pi * bins * float(shift_fraction)
     shifted = spectrum * torch.exp(1j * phase).view(1, 1, -1)
+    if x.shape[-1] % 2 == 0:
+        # Enforce conjugate symmetry at the Nyquist bin by keeping it purely real
+        real_nyquist = shifted[..., -1].real
+        shifted[..., -1] = torch.complex(real_nyquist, torch.zeros_like(real_nyquist))
     out = torch.fft.irfft(shifted, n=x.shape[-1], dim=-1)
     return out.to(dtype=x.dtype)
 

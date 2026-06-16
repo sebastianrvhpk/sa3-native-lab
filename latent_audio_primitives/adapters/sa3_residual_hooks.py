@@ -21,21 +21,41 @@ def _require_torch():
     return torch
 
 
+def _scan_for_dit_layers(module: Any) -> list[Any] | None:
+    try:
+        import torch.nn as nn
+    except ImportError:
+        return None
+
+    best_candidate = None
+    best_length = 0
+
+    for m in module.modules():
+        if isinstance(m, (nn.ModuleList, nn.Sequential)):
+            length = len(m)
+            if length >= 4 and length > best_length:
+                first_child = m[0]
+                child_name = first_child.__class__.__name__.lower()
+                has_attn = any("attn" in name.lower() for name, _ in first_child.named_modules())
+                is_block_class = "block" in child_name or "layer" in child_name or "attention" in child_name
+                if has_attn or is_block_class:
+                    best_candidate = m
+                    best_length = length
+
+    if best_candidate is not None:
+        return list(best_candidate)
+    return None
+
+
 def get_dit_layers(model: Any) -> list[Any]:
-    """Locate Stable Audio 3 DiT transformer blocks across common wrappers.
+    """Locate Stable Audio 3 DiT transformer blocks dynamically or via common wrappers."""
 
-    Supported shapes include:
-
-    - official ``StableAudioModel``:
-      ``model.model.model.model.transformer.layers``
-    - official ``ConditionedDiffusionModelWrapper``:
-      ``model.model.model.transformer.layers``
-    - raw ``DiffusionTransformer``:
-      ``model.transformer.layers``
-
-    This replaces audioscope's single hard-coded path so the same steering code
-    can run against the released ``stable_audio_3`` wrapper.
-    """
+    try:
+        scanned = _scan_for_dit_layers(model)
+        if scanned is not None:
+            return scanned
+    except Exception:
+        pass
 
     candidates = [
         ("model.model.model.transformer.layers", ("model", "model", "model", "transformer", "layers")),

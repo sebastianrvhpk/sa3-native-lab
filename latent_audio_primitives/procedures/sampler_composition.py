@@ -50,6 +50,7 @@ def sample_trajectory_composition_euler(
     default_apg_scale: float = 1.0,
     anchor: Any = None,
     anchor_mask: Any = None,
+    anchor_mode: str = "linear",
     padding_mask: Any = None,
     model_kwargs: Mapping[str, Any] | None = None,
     rescale_cfg: bool = True,
@@ -120,6 +121,7 @@ def sample_trajectory_composition_euler(
                 anchor,
                 strength=anchor_strength,
                 mask=anchor_mask,
+                mode=anchor_mode,
             )
             velocity = rf_velocity_from_denoised(state, anchored_denoised, t_curr_tensor)
         else:
@@ -134,6 +136,7 @@ def sample_trajectory_composition_euler(
             "cfg_scale": float(values["cfg_scale"]),
             "apg_scale": float(values["apg_scale"]),
             "anchor_strength": anchor_strength,
+            "anchor_mode": anchor_mode,
             "prompt_phase": phase_key,
             "prompt": values["prompt"],
         }
@@ -160,11 +163,14 @@ def sa3_sampler_composition_from_init_latents(
     plan: SamplerCompositionPlan | Mapping[str, Any] | None = None,
     anchor_latents: Any = None,
     anchor_mask: Any = None,
+    anchor_mode: str = "linear",
     duration_padding_sec: float = 6.0,
     dist_shift: Any = None,
     model_kwargs: Mapping[str, Any] | None = None,
     rescale_cfg: bool = True,
     callback: Any = None,
+    preview_callback: Any = None,
+    preview_interval: int | None = None,
     disable_tqdm: bool = False,
 ) -> SamplerCompositionResult:
     """Run source-latent SA3 RF sampling with trajectory composition.
@@ -249,6 +255,16 @@ def sa3_sampler_composition_from_init_latents(
         default_prompt=prompt,
     )
 
+    def composition_callback(record):
+        if callback is not None:
+            callback(record)
+        if preview_callback is not None and preview_interval is not None:
+            step = record["i"]
+            if step % preview_interval == 0 or step == steps - 1:
+                with torch.inference_mode():
+                    decoded = stable_model.decode_latents(record["denoised"])
+                preview_callback(step, decoded)
+
     with torch.inference_mode():
         latents, step_records = sample_trajectory_composition_euler(
             core.model,
@@ -260,10 +276,11 @@ def sa3_sampler_composition_from_init_latents(
             default_apg_scale=apg_scale,
             anchor=anchor,
             anchor_mask=anchor_mask,
+            anchor_mode=anchor_mode,
             padding_mask=padding_mask,
             model_kwargs=model_kwargs,
             rescale_cfg=rescale_cfg,
-            callback=callback,
+            callback=composition_callback,
             disable_tqdm=disable_tqdm,
         )
 
@@ -282,6 +299,7 @@ def sa3_sampler_composition_from_init_latents(
             "plan": resolved_plan.to_manifest(),
             "anchor_source": "init_latents" if anchor_latents is None else "anchor_latents",
             "anchor_mask": "provided" if anchor_mask is not None else None,
+            "anchor_mode": anchor_mode,
             "rescale_cfg": bool(rescale_cfg),
             "model_kwargs": _json_safe_mapping(model_kwargs or {}),
             "sampler_type": "explicit_euler_rf_composition",

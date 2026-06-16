@@ -45,6 +45,7 @@ def cyclic_mix_latents(
     *,
     strength: float = 1.0,
     symmetric: bool = True,
+    use_slerp: bool = True,
 ) -> Any:
     """Mix a latent trajectory with a cyclically shifted copy.
 
@@ -65,8 +66,15 @@ def cyclic_mix_latents(
     if strength < 0.0 or strength > 1.0:
         raise ValueError("strength must be in [0, 1]")
     rolled = cyclic_roll_latents(x, int(shift_frames))
-    target = 0.5 * (x + rolled) if symmetric else rolled
-    return x + strength * (target - x)
+
+    if use_slerp:
+        from .latent_math import slerp
+        # Blend directions symmetrically or directly along channel dimension (dim=1)
+        target = slerp(x, rolled, 0.5, dim=1) if symmetric else rolled
+        return slerp(x, target, strength, dim=1)
+    else:
+        target = 0.5 * (x + rolled) if symmetric else rolled
+        return x + strength * (target - x)
 
 
 def repeated_loop_preview_audio(audio: Any, repeats: int = 4) -> Any:

@@ -362,12 +362,12 @@ def apply_denoised_anchor(
     *,
     strength: float,
     mask: Any = None,
+    mode: str = "linear",
 ) -> Any:
     """Blend an RF denoised state toward a source/target anchor.
 
-    ``strength=0`` leaves the sampler unchanged. ``strength=1`` replaces the
-    denoised estimate by the anchor where the optional mask is active. Values
-    outside ``[0, 1]`` are allowed for deliberate creative extrapolation.
+    Supports ``mode="linear"`` and ``mode="slerp"``. ``strength=0`` leaves the
+    sampler unchanged. ``strength=1`` replaces the denoised estimate by the anchor.
     """
 
     if float(strength) == 0.0:
@@ -378,10 +378,19 @@ def apply_denoised_anchor(
             f"anchor shape {tuple(anchor_tensor.shape)} does not match denoised shape {tuple(denoised.shape)}"
         )
     weight = float(strength)
+    mode = mode.lower()
+
+    if mode == "slerp":
+        from .latent_math import slerp
+        # SA3 latent tensors are shape B x C x T. Perform slerp along channel dimension (dim=1)
+        blended = slerp(denoised, anchor_tensor, weight, dim=1)
+    else:
+        blended = denoised * (1.0 - weight) + anchor_tensor * weight
+
     if mask is None:
-        return denoised * (1.0 - weight) + anchor_tensor * weight
-    mask_tensor = _broadcast_mask(mask, denoised)
-    return denoised * (1.0 - weight * mask_tensor) + anchor_tensor * (weight * mask_tensor)
+        return blended
+    mask_tensor = _broadcast_mask(mask, blended)
+    return denoised * (1.0 - mask_tensor) + blended * mask_tensor
 
 
 def coerce_scalar_schedule(

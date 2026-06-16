@@ -65,7 +65,17 @@ def latent_constraint_value(latents: Any, spec: LatentConstraintSpec, *, referen
         delta = x[..., 1:] - x[..., :-1]
         return (delta * delta).mean()
     if spec.kind == "loop_boundary":
-        delta = x[..., 0] - x[..., -1]
+        window = int(spec.params.get("window", 1))
+        if window <= 1 or x.shape[-1] < 2 * window:
+            delta = x[..., 0] - x[..., -1]
+        else:
+            if hasattr(x, "detach"):
+                start = x[..., :window].mean(dim=-1)
+                end = x[..., -window:].mean(dim=-1)
+            else:
+                start = x[..., :window].mean(axis=-1)
+                end = x[..., -window:].mean(axis=-1)
+            delta = start - end
         return (delta * delta).mean()
     if spec.kind == "channel_energy":
         channels = list(spec.params.get("channels", []))

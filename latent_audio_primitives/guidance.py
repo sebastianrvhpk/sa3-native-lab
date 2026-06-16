@@ -41,7 +41,7 @@ def gradient_guidance_step(
     grad = torch.autograd.grad(loss, z)[0]
     grad_norm = torch.sqrt(torch.mean(grad.float() ** 2)).clamp_min(eps)
     step = grad / grad_norm if normalize else grad
-    updated = (z - float(scale) * step).detach()
+    updated = (z - float(scale) * step).detach().to(dtype=latents.dtype)
     return GuidanceStepResult(
         latents=updated,
         loss=float(loss.detach().cpu()),

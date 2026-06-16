@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import numpy as np
+from typing import Any
 
 from .schema import LatentItem
 
@@ -39,12 +40,12 @@ def latent_summary(
     *,
     include_std: bool = True,
     include_mean_abs_velocity: bool = True,
+    include_covariance: bool = False,
 ) -> np.ndarray:
     """Summarize a latent sequence for simple nearest-neighbor retrieval.
 
-    The default vector is ``concat(mean, std, mean(abs(diff)))``. It is a
-    deliberately plain baseline: future learned embeddings should prove that
-    they beat this before becoming part of the memory kernel.
+    The default vector is ``concat(mean, std, mean(abs(diff)), [optional banded covariance])``.
+    It is a baseline that captures spatial cross-correlations in a compact form.
     """
 
     z = as_time_major(latent)
@@ -57,6 +58,16 @@ def latent_summary(
             parts.append(np.zeros(z.shape[1], dtype=np.float32))
         else:
             parts.append(np.abs(velocity).mean(axis=0))
+    if include_covariance:
+        # Banded Gram covariance matrix: downsample channels to 16 bands, compute outer product
+        D = z.shape[1]
+        bands = 16
+        if D >= bands:
+            chunk_size = D // bands
+            z_bands = z[:, :chunk_size * bands].reshape(z.shape[0], bands, chunk_size).mean(axis=2)
+            z_bands = z_bands - z_bands.mean(axis=0, keepdims=True)
+            cov = (z_bands.T @ z_bands) / max(z.shape[0], 1)
+            parts.append(cov.flatten())
     return np.concatenate(parts).astype(np.float32, copy=False)
 
 
@@ -105,3 +116,50 @@ def boundary_summary(latent: LatentItem | np.ndarray, side: str, k: int = 8) -> 
     else:
         velocity = np.diff(w, axis=0).mean(axis=0)
     return state.astype(np.float32, copy=False), velocity.astype(np.float32, copy=False)
+
+
+def slerp(p: Any, q: Any, weight: float, *, dim: int = 1, eps: float = 1e-8) -> Any:
+    """Spherical linear interpolation between two PyTorch tensors along a dimension.
+
+    Handles collinear or nearly parallel tensors by falling back to linear blending.
+    Preserves norm/energy along the specified dimension.
+    """
+    try:
+        import torch
+    except ImportError as exc:
+        raise RuntimeError("PyTorch is required for slerp interpolation.") from exc
+
+    p = torch.as_tensor(p)
+    q = torch.as_tensor(q)
+
+    # Compute norms along target dimension
+    p_norm_val = p.norm(dim=dim, keepdim=True)
+    q_norm_val = q.norm(dim=dim, keepdim=True)
+
+    p_unit = p / p_norm_val.clamp_min(eps)
+    q_unit = q / q_norm_val.clamp_min(eps)
+
+    # Dot product along target dimension
+    dot = (p_unit * q_unit).sum(dim=dim, keepdim=True).clamp(-1.0, 1.0)
+    theta = dot.acos()
+    sin_theta = theta.sin()
+
+    # Mask for collinear or parallel vectors
+    collinear = sin_theta.abs() < eps
+
+    w_p = ((1.0 - weight) * theta).sin() / sin_theta.clamp_min(eps)
+    w_q = (weight * theta).sin() / sin_theta.clamp_min(eps)
+
+    # Blend directions, fallback to linear if collinear
+    blend_unit = torch.where(
+        collinear,
+        (1.0 - weight) * p_unit + weight * q_unit,
+        w_p * p_unit + w_q * q_unit
+    )
+    # Re-normalize blended unit direction vector
+    blend_unit = blend_unit / blend_unit.norm(dim=dim, keepdim=True).clamp_min(eps)
+
+    # Blend magnitudes linearly
+    blend_norm = (1.0 - weight) * p_norm_val + weight * q_norm_val
+
+    return blend_unit * blend_norm

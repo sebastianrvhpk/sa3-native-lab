@@ -192,6 +192,60 @@ def sampler_noise_from_donor_channels(
     return (1 - mask) * source + mask * donor
 
 
+def graft_latent_pca(
+    source_latents: Any,
+    donor_latents: Any,
+    principal_components: Sequence[int],
+    *,
+    amount: float = 1.0,
+) -> Any:
+    """Mix donor latents into selected PCA components of the source latents.
+
+    Projects both source and donor onto the source's principal component space,
+    grafts the selected components, and projects back, minimizing channel-bleed.
+    """
+
+    torch = _require_torch()
+    source, donor = _paired_bct(source_latents, donor_latents, torch)
+
+    B, C, T = source.shape
+    grafted_batches = []
+
+    for b in range(B):
+        X = source[b].T
+        Z = donor[b].T
+
+        mu_X = X.mean(dim=0, keepdim=True)
+        Xc = X - mu_X
+        Zc = Z - mu_X
+
+        try:
+            U, S, Vh = torch.linalg.svd(Xc, full_matrices=False)
+            V = Vh.T
+            Y = Xc @ V
+            W = Zc @ V
+
+            mask = torch.zeros(Y.shape[1], device=source.device, dtype=source.dtype)
+            for comp in principal_components:
+                if 0 <= comp < mask.shape[0]:
+                    mask[comp] = float(amount)
+
+            G = (1.0 - mask) * Y + mask * W
+
+            Xc_graft = G @ Vh
+            X_graft = Xc_graft + mu_X
+        except Exception:
+            mask = torch.zeros(C, device=source.device, dtype=source.dtype)
+            for comp in principal_components:
+                if 0 <= comp < C:
+                    mask[comp] = float(amount)
+            X_graft = (1.0 - mask) * X + mask * Z
+
+        grafted_batches.append(X_graft.T)
+
+    return torch.stack(grafted_batches, dim=0)
+
+
 def _selection_count(channel_count: int, fraction: float, block_size: int | None) -> int:
     if block_size is not None:
         return max(1, min(channel_count, int(block_size)))

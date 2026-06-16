@@ -30,7 +30,7 @@ class LatentBlurSpec:
     filter_high_gain: float = 0.0
 
 
-def apply_latent_blur(latents: Any, spec: LatentBlurSpec) -> Any:
+def apply_latent_blur(latents: Any, spec: LatentBlurSpec, *, preserve_energy: bool = True) -> Any:
     """Apply a latent blur recipe to ``B x C x T`` or ``C x T`` latents."""
 
     torch = _require_torch()
@@ -105,6 +105,19 @@ def apply_latent_blur(latents: Any, spec: LatentBlurSpec) -> Any:
         target = x.mean(dim=-1, keepdim=True).expand_as(x)
     else:
         raise ValueError(f"unknown latent blur mode: {spec.mode}")
+
+    if preserve_energy:
+        # Scale each channel of target to preserve the variance of input channel over time
+        eps = 1e-8
+        std_x = x.float().std(dim=-1, keepdim=True)
+        std_target = target.float().std(dim=-1, keepdim=True)
+        # Only scale channels where both input and target have non-trivial variance
+        scale = torch.where(
+            (std_x > 1e-5) & (std_target > 1e-5),
+            std_x / std_target.clamp_min(eps),
+            torch.ones_like(std_x)
+        )
+        target = (target.float() * scale).to(dtype=x.dtype)
 
     return x + float(spec.strength) * (target - x)
 

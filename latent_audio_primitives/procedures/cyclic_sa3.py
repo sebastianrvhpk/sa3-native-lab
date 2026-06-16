@@ -20,6 +20,7 @@ def sample_cyclic_roll_euler(
     roll_mix_schedule: Any = None,
     mix_every_n: int = 1,
     symmetric_mix: bool = True,
+    use_slerp: bool = True,
     unroll_output: bool = True,
     callback: Any = None,
     disable_tqdm: bool = False,
@@ -120,6 +121,7 @@ def sample_cyclic_roll_euler(
                 roll_frames,
                 strength=step_roll_mix,
                 symmetric=symmetric_mix,
+                use_slerp=use_slerp,
             )
 
     if mode == "alternate" and unroll_output and net_shift:
@@ -143,6 +145,7 @@ def sa3_cyclic_roll_sample_from_init_latents(
     roll_mix_schedule: Any = None,
     mix_every_n: int = 1,
     symmetric_mix: bool = True,
+    use_slerp: bool = True,
     unroll_output: bool = True,
     seed: int = 0,
     negative_prompt: str | None = None,
@@ -250,6 +253,7 @@ def sa3_cyclic_roll_sample_from_init_latents(
             roll_mix_schedule=roll_mix_schedule,
             mix_every_n=mix_every_n,
             symmetric_mix=symmetric_mix,
+            use_slerp=use_slerp,
             unroll_output=unroll_output,
             callback=callback,
             disable_tqdm=disable_tqdm,

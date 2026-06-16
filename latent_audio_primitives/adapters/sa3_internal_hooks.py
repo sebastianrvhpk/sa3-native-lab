@@ -58,6 +58,8 @@ class InternalActivationStore:
     surface_name: str
     layer_index: int | None
     activations: list[Any] = field(default_factory=list)
+    quantize_dtype: Any | None = None
+    pooling_factor: int | None = None
 
     def clear(self) -> None:
         self.activations.clear()
@@ -67,6 +69,11 @@ class InternalActivationStore:
         if act is None:
             return
         act = act.detach()
+        if self.quantize_dtype is not None:
+            act = act.to(dtype=self.quantize_dtype)
+        if self.pooling_factor is not None and self.pooling_factor > 1:
+            if act.ndim >= 2:
+                act = act[..., ::self.pooling_factor]
         if cpu_offload:
             act = act.cpu()
         self.activations.append(act)
@@ -82,11 +89,15 @@ class SA3InternalActivationCollector:
         layer_indices: list[int] | None = None,
         surfaces: Sequence[str] | None = None,
         cpu_offload: bool = True,
+        quantize_dtype: Any | None = None,
+        pooling_factor: int | None = None,
     ) -> None:
         self.model = model
         self.layer_indices = layer_indices
         self.surfaces = list(surfaces or DEFAULT_CAPTURE_SURFACES)
         self.cpu_offload = cpu_offload
+        self.quantize_dtype = quantize_dtype
+        self.pooling_factor = pooling_factor
         self._hooks: list[Any] = []
         self._stores: dict[str, dict[int | None, InternalActivationStore]] = {}
         self._unsupported: list[dict[str, Any]] = []
@@ -140,19 +151,48 @@ class SA3InternalActivationCollector:
     def __exit__(self, *_args) -> None:
         self.remove_hooks()
 
+    def _find_submodule_fuzzy(self, block: Any, surface_name: str) -> Any | None:
+        module_name = BRANCH_SURFACE_MODULES.get(surface_name)
+        if module_name == "":
+            return block
+        if module_name is not None:
+            mod = getattr(block, module_name, None)
+            if mod is not None:
+                return mod
+
+        # Fuzzy name matching
+        patterns = {
+            "self_attention_residual_update": ["self_attn", "attn_self", "self_attention"],
+            "cross_attention_residual_update": ["cross_attn", "attn_cross", "cross_attention"],
+            "feedforward_residual_update": ["ff", "mlp", "feedforward"],
+            "local_conditioning_projection": ["local_embed", "to_local", "cond_proj"],
+        }
+        words = patterns.get(surface_name, [])
+        for name, child in block.named_children():
+            name_lower = name.lower()
+            for word in words:
+                if word in name_lower and any(suffix in name_lower for suffix in ["scale", "gate", "proj", "update"]):
+                    return child
+
+        for name, child in block.named_modules():
+            name_lower = name.lower()
+            for word in words:
+                if word in name_lower and any(suffix in name_lower for suffix in ["scale", "gate", "proj"]):
+                    return child
+        return None
+
     def _register_block_surfaces(self, block: Any, layer_index: int) -> None:
         for surface_name in self.surfaces:
             if surface_name not in BRANCH_SURFACE_MODULES:
                 continue
-            module_name = BRANCH_SURFACE_MODULES[surface_name]
-            module = block if module_name == "" else getattr(block, module_name, None)
+            module = self._find_submodule_fuzzy(block, surface_name)
             if module is None:
                 self._unsupported.append(
                     {
                         "surface_name": surface_name,
                         "layer_index": int(layer_index),
                         "status": "unsupported",
-                        "reason": f"block has no {module_name or 'forward'}",
+                        "reason": f"block has no match for {surface_name}",
                     }
                 )
                 continue
@@ -186,7 +226,12 @@ class SA3InternalActivationCollector:
     def _store(self, surface_name: str, layer_index: int | None) -> InternalActivationStore:
         by_layer = self._stores.setdefault(surface_name, {})
         if layer_index not in by_layer:
-            by_layer[layer_index] = InternalActivationStore(surface_name, layer_index)
+            by_layer[layer_index] = InternalActivationStore(
+                surface_name=surface_name,
+                layer_index=layer_index,
+                quantize_dtype=self.quantize_dtype,
+                pooling_factor=self.pooling_factor,
+            )
         return by_layer[layer_index]
 
     def _make_hook(self, store: InternalActivationStore):
